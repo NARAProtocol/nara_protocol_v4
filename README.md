@@ -2,7 +2,7 @@
 
 # NARA Protocol v4
 
-**A fixed-supply, time-preference commitment protocol on Base. Lock NARA, hold a tradable position NFT; the protocol distributes NARA, ETH, and ERC-20 rewards across locked weight each epoch.**
+**A fixed-supply, time-preference commitment protocol on Base. Commit NARA, hold a tradable position NFT; the protocol distributes NARA, ETH, and ERC-20 rewards across committed weight each epoch.**
 
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.34-363636?logo=solidity)](https://soliditylang.org)
 [![Hardhat](https://img.shields.io/badge/Built%20with-Hardhat-fff100)](https://hardhat.org)
@@ -22,19 +22,19 @@
 
 ## What is NARA?
 
-NARA is built around commitment. You lock a fixed-supply token for a chosen duration; the longer you
+NARA is built around commitment. You commit a fixed-supply token for a chosen duration; the longer you
 commit, the more **weight** your position carries; and the protocol distributes its reward streams —
-NARA emissions, ETH, and any ERC-20 a partner chooses to add — across locked weight **every 15-minute
+NARA emissions, ETH, and any ERC-20 a partner chooses to add — across committed weight **every 15-minute
 epoch**. Rewards are variable, never promised, and can be zero.
 
-A lock isn't a database row you can't move — **it's an NFT**. You can sell it, fractionalize it, wrap
+A commitment isn't a database row you can't move — **it's an NFT**. You can sell it, fractionalize it, wrap
 it into a liquid staking token, or borrow against it, all without breaking the underlying commitment.
 
 And the value flywheel is built into the AMM itself: NARA's liquidity lives in a **custom Uniswap v4
-pool** whose hook taxes swap pressure and routes that flow back to lockers.
+pool** whose hook skims a small fee from every trade and routes that flow back to committers.
 
 ```
-        lock NARA (time)  ──▶  weight  ──▶  NARA + ETH + ERC-20 rewards each epoch
+      commit NARA (time)  ──▶  weight  ──▶  NARA + ETH + ERC-20 rewards each epoch
               ▲                                          │
               └──────── buy pressure + protocol fees ◀───┘  (Uniswap v4 hook → reward vault)
 ```
@@ -81,12 +81,12 @@ flowchart TD
       R[NARARewardReserve<br/>sealed emission reserve]
     end
     subgraph LIQ[Liquidity]
-      H[NARALiquidityGrowthHook<br/>Uniswap v4 · buy-pressure tax]
+      H[NARALiquidityGrowthHook<br/>Uniswap v4 · buy-weighted fee]
       V[NARALiquidityGrowthVault<br/>5 routing modes]
       P((NARA / USDC<br/>v4 pool))
     end
     subgraph POS[Positions]
-      NFT[NARAPositionNFTV4<br/>a lock IS an NFT]
+      NFT[NARAPositionNFTV4<br/>a commitment IS an NFT]
       ACC[NARAPositionAccountV4<br/>clone per position]
       G[Genesis + Bonds]
     end
@@ -107,7 +107,7 @@ flowchart TD
     NFT --> ST --> SY
     NFT --> FR
     RT --> E
-    E -->|NARA · ETH · ERC-20| U[Lockers]
+    E -->|NARA · ETH · ERC-20| U[Committers]
 ```
 
 Build order is bottom-up, reveal order is top-down: `token → engine → liquidity → positions → composability`.
@@ -119,10 +119,10 @@ Full layer model and per-contract status: [`docs/NARA_V4_PROJECT_SCOPE.md`](docs
 
 | Pillar | What it is |
 |--------|-----------|
-| **Token** | `NARAToken` — 1,000,000 fixed supply, minted once. ERC-2612 permit, ERC-1363 (`transferAndCall` to lock in one tx), capped ERC-3156 flash mint, multicall. |
+| **Token** | `NARAToken` — 1,000,000 fixed supply, minted once. ERC-2612 permit, ERC-1363 (`transferAndCall` to commit in one tx), capped ERC-3156 flash mint, multicall. |
 | **Engine** | `NARAEngine` — the settlement core: JIT epoch advance, weight-based reward accounting, NARA + ETH + ERC-20 rails. |
-| **Liquidity** | A taxed **Uniswap v4** pool (`NARALiquidityGrowthHook` + `NARALiquidityGrowthVault`) that turns swap pressure into locker rewards. |
-| **Positions** | `NARAPositionNFTV4` — a lock *is* a tradable NFT, with Genesis tiers and a bond intake path. |
+| **Liquidity** | A fee-charging **Uniswap v4** pool (`NARALiquidityGrowthHook` + `NARALiquidityGrowthVault`) that turns swap fees into committer rewards. |
+| **Positions** | `NARAPositionNFTV4` — a commitment *is* a tradable NFT, with Genesis tiers and a bond intake path. |
 | **Composability** | `stNARA`, a Pendle SY adapter, and fractional position wrappers built on top of the position layer. |
 
 ---
@@ -134,11 +134,12 @@ Full layer model and per-contract status: [`docs/NARA_V4_PROJECT_SCOPE.md`](docs
   that, writes revert `EpochStale` until anyone calls `poke()` / `advanceEpochs()`. (Better failure
   shape than a cron dependency — but frontends must surface backlog.)
 - **Weight = committed time.** `weight = amount × (1 + linearWad·r + quadraticWad·r²)`, where
-  `r = duration / maxLock`. Long locks receive a structurally higher weight (quadratic in duration).
-- **Adaptive emission.** Per-epoch NARA emission responds to lock share, stress, a warmup factor
-  (converges up to 1.0), and a decaying bootstrap weight — an incentive loop that rewards real locking.
+  `r = duration / maxDuration`. Longer commitments receive a structurally higher weight (the curve
+  accelerates with duration).
+- **Adaptive emission.** Per-epoch NARA emission responds to commitment share, stress, a warmup factor
+  (converges up to 1.0), and a decaying bootstrap weight — an incentive loop that rewards real commitment.
 - **Three reward rails.** NARA drip (emissions), **ETH** via `notifyEthRewards()`, and arbitrary
-  **ERC-20** via `notifyTokenRewards()` (role-gated — any protocol can bribe NARA lockers). Direct ETH
+  **ERC-20** via `notifyTokenRewards()` (role-gated — any protocol can reward NARA committers). Direct ETH
   transfers to the engine are rejected (`DirectEthTransferForbidden`).
 
 Details: [`docs/EMISSION_MECHANICS.md`](docs/EMISSION_MECHANICS.md) · [`docs/LOCK_APY_REFERENCE.md`](docs/LOCK_APY_REFERENCE.md).
@@ -148,7 +149,7 @@ Details: [`docs/EMISSION_MECHANICS.md`](docs/EMISSION_MECHANICS.md) · [`docs/LO
 ## 🦄 The Uniswap v4 hook
 
 NARA's liquidity home is a **custom Uniswap v4 pool**. The hook is not a neutral fee — it is an
-**asymmetric buy-pressure tax** that funds lockers, built the canonical v4 way.
+**asymmetric, buy-weighted fee** that funds committers, built the canonical v4 way.
 
 - **Correct by construction.** `NARALiquidityGrowthHook is BaseHook`. `getHookPermissions()` declares
   `beforeInitialize + beforeSwap + beforeSwapReturnDelta`, which encode to a hook address ending in
@@ -170,12 +171,12 @@ NARA's liquidity home is a **custom Uniswap v4 pool**. The hook is not a neutral
 
 ## 🎟 Positions, Genesis & bonds
 
-- **A lock is an NFT.** `NARAPositionNFTV4` mints an ERC-721 backed 1:1 by a minimal-clone account
-  (`NARAPositionAccountV4`) that owns the underlying engine position. Transfer the NFT = transfer the lock.
+- **A commitment is an NFT.** `NARAPositionNFTV4` mints an ERC-721 backed 1:1 by a minimal-clone account
+  (`NARAPositionAccountV4`) that owns the underlying engine position. Transfer the NFT = transfer the commitment.
 - **Genesis positions** carry a reward multiplier (capped 5×) and an optional `isEternal` flag;
-  Eternal positions exit only via `burnEternalGenesis()` (auto-harvest → unlock → return principal → burn).
-- **Bonds** (`NARABondDepositoryV4NFT`) sell discounted NARA for ETH, delivered as a **vesting position
-  NFT** — bond buyers become engine participants from day one. Bonds stay **closed at launch**, opened
+  Eternal positions exit only via `burnEternalGenesis()` (auto-harvest → release → return principal → burn).
+- **Bonds** (`NARABondDepositoryV4NFT`) sell NARA at a discount for ETH, delivered as a **vesting position
+  NFT** that earns from day one. Bonds stay **closed at launch**, opened
   deliberately per [`docs/NARA_V4_BOND_OPENING_CRITERIA.md`](docs/NARA_V4_BOND_OPENING_CRITERIA.md).
 
 Spec: [`docs/NARA_V4_NFT_POSITIONS.md`](docs/NARA_V4_NFT_POSITIONS.md).
@@ -190,8 +191,8 @@ Built and tested, deployed after the core proves out (needs TVL + a market):
   exchange rate rises as rewards compound. First deposit mints dead shares (inflation-attack safe).
 - **Pendle SY adapter** (`NARAStakingPoolSYV4`) — implements Pendle's SY (Standardized-Yield) interface
   over stNARA, with two reward streams (USDC + native ETH) and the NAV oracle Pendle needs.
-- **Fractional positions** (`NARAFractionalPositionV4`) — split one locked position into up to 1e12
-  units, tradable/collateralizable without breaking the engine lock.
+- **Fractional positions** (`NARAFractionalPositionV4`) — split one committed position into up to 1e12
+  units, tradable/collateralizable without breaking the engine commitment.
 
 ---
 
@@ -266,7 +267,7 @@ Strict order (full runbook: [`docs/NARA_V4_LAUNCH_RUNBOOK.md`](docs/NARA_V4_LAUN
 2. `npm run verify:v4:preflight` — hook `0x2088` bits, pool/vault wiring
 3. seed NARA/USDC liquidity → `npm run smoke:v4`
 4. `npm run deploy:v4:allocations` — position NFT layer (bonds **closed**)
-5. `npm run deploy:v4:router:lens` — router/lens/bribe
+5. `npm run deploy:v4:router:lens` — router · lens · `BribeRouterV4`
 6. composability — only after core proves out
 7. hand all roles to a Safe/timelock
 
@@ -284,7 +285,7 @@ Nothing is "done" until deployed addresses + verification are recorded in `CURRE
 | [UNISWAP_V4_HOOK.md](docs/UNISWAP_V4_HOOK.md) | Hook architecture deep-dive (`0x2088`, fee curves, anti-gaming) |
 | [EMISSION_MECHANICS.md](docs/EMISSION_MECHANICS.md) | Adaptive emission model |
 | [NARA_V4_NFT_POSITIONS.md](docs/NARA_V4_NFT_POSITIONS.md) | Position NFT + account + Genesis spec |
-| [ROUTER_LENS.md](docs/ROUTER_LENS.md) | Router / lens / bribe layer |
+| [ROUTER_LENS.md](docs/ROUTER_LENS.md) | Router · lens · `BribeRouterV4` layer |
 | [ROADMAP.md](docs/ROADMAP.md) | Product direction and phases |
 
 Full index: [`docs/README.md`](docs/README.md).
