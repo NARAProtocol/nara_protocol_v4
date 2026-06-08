@@ -172,15 +172,15 @@ New wallet apps scaffold from `templates/wallet-game-app` via `scripts/scaffold-
 | Whole-project map (this doc) | `NARA_V4_PROJECT_SCOPE.md` |
 | Every contract → purpose → deploy step | `V4_CONTRACT_INDEX.md` |
 | What's actually deployed / live state | `CURRENT_STATE.md` |
-| Launch order + economics | `NARA_V4_ECONOMIC_LAUNCH_ROADMAP.md` |
-| Phase-by-phase roadmap | `ROADMAP.md` |
+| Product direction and phases | `ROADMAP.md` |
 | Operator deploy commands | `NARA_V4_LAUNCH_RUNBOOK.md`, `V4_LAUNCH_CHECKLIST.md` |
 | NFT position spec | `NARA_V4_NFT_POSITIONS.md`, `NARA_V4_NFT_PRODUCTION_PLAN.md` |
 | Router/lens spec | `ROUTER_LENS.md` |
-| Baskets brand/strategy | `NARA_V4_BASKETS_LAUNCH_STRATEGY.md` (+ `apps/nara-baskets/CLAUDE.md`) |
-| Safety standards / v4-reset rules | repo `CLAUDE.md`, workspace-root `CLAUDE.md` |
+| Emission model | `EMISSION_MECHANICS.md`, `LOCK_APY_REFERENCE.md` |
+| Security disclosure | `../SECURITY.md` |
 
-`NARA_MASTER_CONTEXT.md` is a **v3 archive reference** — do not use it for v4 mechanics.
+The NARA Baskets product lives in its own repository. Some internal planning, strategy, and dated
+working docs are intentionally kept out of this public repository.
 
 ---
 

@@ -281,7 +281,7 @@ Nothing is "done" until deployed addresses + verification are recorded in `CURRE
 | [EMISSION_MECHANICS.md](docs/EMISSION_MECHANICS.md) | Adaptive emission model |
 | [NARA_V4_NFT_POSITIONS.md](docs/NARA_V4_NFT_POSITIONS.md) | Position NFT + account + Genesis spec |
 | [ROUTER_LENS.md](docs/ROUTER_LENS.md) | Router / lens / bribe layer |
-| [NARA_V4_ECONOMIC_LAUNCH_ROADMAP.md](docs/NARA_V4_ECONOMIC_LAUNCH_ROADMAP.md) | Launch order + economics |
+| [ROADMAP.md](docs/ROADMAP.md) | Product direction and phases |
 
 Full index: [`docs/README.md`](docs/README.md).
 

@@ -1,72 +1,49 @@
-# NARA Protocol Docs
+# NARA Protocol v4 — Documentation
 
-Last updated: 2026-06-08.
+Code and deployment scripts are the source of truth. If a doc disagrees with the code, the code wins.
 
-Primary protocol docs live in this folder. Code and deployment scripts are the source of truth.
+## ⭐ Start here
 
-## ⭐ Start here (cold-start path)
-
-1. **[NARA_V4_PROJECT_SCOPE.md](NARA_V4_PROJECT_SCOPE.md)** — whole-project map: five pillars, layer
-   model, build-vs-reveal order, exact status of every contract, audit-corrections log.
-2. **[V4_CONTRACT_INDEX.md](V4_CONTRACT_INDEX.md)** — every active v4 contract → purpose → deploy step.
+1. **[NARA_V4_PROJECT_SCOPE.md](NARA_V4_PROJECT_SCOPE.md)** — whole-project map: pillars, layer model,
+   per-contract status.
+2. **[V4_CONTRACT_INDEX.md](V4_CONTRACT_INDEX.md)** — every active contract → purpose → deploy step.
 3. **[CURRENT_STATE.md](CURRENT_STATE.md)** — canonical live state (source of truth).
-4. **[UNISWAP_V4_HOOK.md](UNISWAP_V4_HOOK.md)** — the Uniswap v4 hook deep-dive (`0x2088`, asymmetric
-   fee curves, anti-gaming, vault routing).
-5. **[NARA_V4_ECONOMIC_LAUNCH_ROADMAP.md](NARA_V4_ECONOMIC_LAUNCH_ROADMAP.md)** — launch order + economics.
+4. **[UNISWAP_V4_HOOK.md](UNISWAP_V4_HOOK.md)** — the Uniswap v4 hook deep-dive.
+
+## Technical references
+
+| Doc | Purpose |
+|-----|---------|
+| [EMISSION_MECHANICS.md](EMISSION_MECHANICS.md) | Adaptive emission model |
+| [LOCK_APY_REFERENCE.md](LOCK_APY_REFERENCE.md) | Lock weight + reward-rate reference math |
+| [NARA_V4_NFT_POSITIONS.md](NARA_V4_NFT_POSITIONS.md) | Position NFT + clone account + Genesis spec |
+| [NARA_V4_NFT_PRODUCTION_PLAN.md](NARA_V4_NFT_PRODUCTION_PLAN.md) | NFT renderer / metadata production plan |
+| [ROUTER_LENS.md](ROUTER_LENS.md) | Router / dashboard lens / position-data lens / bribe router |
+| [V4_BUILD_PLAN_COMPOSABILITY.md](V4_BUILD_PLAN_COMPOSABILITY.md) | Composability layer (stNARA / SY / fractional) build plan |
+| [NARA_V4_DASHBOARD_SPEC.md](NARA_V4_DASHBOARD_SPEC.md) | Frontend data spec (single-call lens, panels) |
+| [NARA_V4_LOCK_USER_GUIDE.md](NARA_V4_LOCK_USER_GUIDE.md) | Locking guide: duration, weight, claiming, exits |
+
+## Security & operations
+
+| Doc | Purpose |
+|-----|---------|
+| [COMPOSABILITY_AUDIT_CHECKLIST.md](COMPOSABILITY_AUDIT_CHECKLIST.md) | Composability security checklist |
+| [NARA_CUSTODY_AND_RECOVERY.md](NARA_CUSTODY_AND_RECOVERY.md) | Custody and recovery procedures |
+| [ENGINE_OPS_RUNBOOK.md](ENGINE_OPS_RUNBOOK.md) | Engine operational procedures |
+| [NARA_V4_LAUNCH_RUNBOOK.md](NARA_V4_LAUNCH_RUNBOOK.md) | Step-by-step deploy sequence with gates |
+| [V4_LAUNCH_CHECKLIST.md](V4_LAUNCH_CHECKLIST.md) | Pre-launch gates |
+| [NARA_V4_BOND_OPENING_CRITERIA.md](NARA_V4_BOND_OPENING_CRITERIA.md) | Operator checklist before opening bonds |
+| [LOCAL_TESTING.md](LOCAL_TESTING.md) | Local test environment setup |
+
+## State & direction
+
+| Doc | Purpose |
+|-----|---------|
+| [CURRENT_STATE.md](CURRENT_STATE.md) | Canonical live protocol state |
+| [NARA_V4_PUBLIC_STATE.md](NARA_V4_PUBLIC_STATE.md) | Plain-language current state for users / integrators |
+| [ROADMAP.md](ROADMAP.md) | Product direction and phases |
+
+---
 
 The repo [`../README.md`](../README.md) is the front door; [`../SECURITY.md`](../SECURITY.md) is the
-disclosure policy.
-
-## 🚨 v4 Reset — 2026-05-27
-
-v3 is retired. All v3-specific docs (lotto, arena, sponsor hub, NFT wrapper explainers, v3 deployment handoffs) were moved to `../archive/legacy-v3/docs/`. Do not reference them as active docs.
-
-## Current v4 Sources
-
-**State and planning:**
-- `CURRENT_STATE.md` — canonical live protocol state (read first)
-- `ROADMAP.md` — product direction
-- `PRD.md` — product requirements
-- `V4_LAUNCH_CHECKLIST.md` — pre-launch gates
-- `V4_NEXT_SESSION_HANDOFF.md` — latest work-in-progress handoff
-- `V4_OPPORTUNITY_GAPS.md` — identified gaps and opportunities
-
-**Deployment and operations:**
-- `V4_DEPLOYMENT_HANDOFF.md` — deployment reference
-- `V4_REDEPLOY_NO_SURPRISE_PLAN.md` — clean redeploy guide
-- `ENGINE_OPS_RUNBOOK.md` — engine operational procedures
-- `NARA_CUSTODY_AND_RECOVERY.md` — custody and recovery procedures
-- `LOCAL_TESTING.md` — local test environment setup
-
-**Technical references:**
-- `EMISSION_MECHANICS.md` — emission model documentation
-- `LOCK_APY_REFERENCE.md` — lock APY calculations
-- `COMPOSABILITY_AUDIT_CHECKLIST.md` — composability security checklist
-- `V4_BUILD_PLAN_COMPOSABILITY.md` — composability layer build plan
-- `V4_POSITIONING.md` — protocol positioning
-
-**Messaging and product:**
-- `BEGINNER_MESSAGING.md` — onboarding copy and messaging
-- `NARRATIVE_PLAYBOOK.md` — narrative and positioning playbook
-- `NARA_MASTER_CONTEXT.md` — consolidated protocol context (verify v4 accuracy before using)
-- `APPS.md` — app references (frontends need v4 ABI rebuild — not end-to-end functional yet)
-
-## Historical and Research References
-
-- `V4_AUDIT_RESPONSE_2026-04-23.md` — response to April 2026 audit
-- `V4_INCIDENT_REDEPLOY_2026-04-23.md` — incident stack notes (retired addresses)
-- `research/TECHNICAL_SPEC.md`
-- `research/COMPOSABILITY_CASCADE_REPORT.md`
-- `research/DEGEN_BOARD_STRATEGY.md`
-- `research/V4_1K_LIQUIDITY_LAUNCH_PLAN_2026-05-05.md`
-- `research/SERVICE_MONETIZATION_INVESTIGATION_2026-05-05.md`
-
-## Archived v3 Docs
-
-All v3-specific docs are in `../archive/legacy-v3/docs/`. They are read-only reference material. Do not update them or link to them from active v4 documentation.
-
-## Notes
-
-- The repository root `../README.md` remains the canonical repo readme for tooling and onboarding.
-- The protocol guidance file remains `../CLAUDE.md`.
-- The workspace-level guidance file remains `../../CLAUDE.md`.
+disclosure policy; [`../LICENSE`](../LICENSE) is MIT.
