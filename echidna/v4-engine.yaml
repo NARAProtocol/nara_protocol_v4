@@ -1,0 +1,9 @@
+testMode: property
+testLimit: 10000
+seqLen: 64
+shrinkLimit: 1000
+workers: 1
+maxValue: 0
+balanceContract: 100000000000000000000
+corpusDir: echidna/corpus/v4-engine
+coverageDir: echidna/coverage/v4-engine

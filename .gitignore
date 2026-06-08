@@ -1,0 +1,33 @@
+node_modules
+artifacts
+cache
+dist
+.env
+.env.*
+coverage
+.codex-hardhat/
+typechain-types/
+.DS_Store
+*.log
+
+# retired v3 stack (historical only — not part of the public v4 repo)
+archive/
+
+# dev / analysis artifacts (regenerated; not source)
+audit-runs/
+broadcast/
+deployments/
+slither-reports/
+aderyn-reports/
+crytic-export/
+.venv-slither/
+echidna/corpus/
+echidna/coverage/
+
+# draft launch comms — do not publish until deployed
+docs/NARA_V4_ANALYST_POSTS.md
+
+types/
+*.docx
+slither-*.json
+tmp-*.ts
