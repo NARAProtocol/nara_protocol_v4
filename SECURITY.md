@@ -43,10 +43,17 @@ launch.
 
 Report security issues **privately** — do not open a public issue for an exploitable bug.
 
-- Email: **security@naraprotocol.io** *(replace with the project's monitored security contact)*
+- Email: **security@naraprotocol.pro**
 - Include: affected contract + line, description, and a reproducing transaction sequence if possible.
 
 We aim to acknowledge within 72 hours.
+
+## Links
+
+- Website: **https://naraprotocol.pro**
+- Farcaster: **@naraprotocol**
+- X / Twitter: **[@NARA_protocol](https://x.com/NARA_protocol)**
+- Security contact: **security@naraprotocol.pro**
 
 ## Scope
 

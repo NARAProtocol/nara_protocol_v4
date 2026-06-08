@@ -22,7 +22,7 @@
 | NaraLottoPoolV2 | Retired v3 lotto snapshot |
 | BurnRunArenaV2 | Retired v3 arena snapshot |
 | Railway cron keeper | Retired v3 ops snapshot |
-| Lockboard (naraprotocol.io/mine) | Retired v3 UI snapshot |
+| Lockboard (naraprotocol.pro/mine) | Retired v3 UI snapshot |
 | NARASponsorHub + FundAdapter | Historical v3-era implementation reference. Not a v4 launch surface |
 | BurnRunArenaV3 | Archived v3-era implementation reference |
 | NaraLottoPoolV3 | Archived v3-era implementation reference |

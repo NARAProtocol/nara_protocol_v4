@@ -286,6 +286,15 @@ Full index: [`docs/README.md`](docs/README.md).
 
 ---
 
+## Community & contact
+
+- 🌐 Website: **[naraprotocol.pro](https://naraprotocol.pro)**
+- 🟣 Farcaster: **@naraprotocol**
+- 𝕏 Twitter/X: **[@NARA_protocol](https://x.com/NARA_protocol)**
+- 🔐 Security: **security@naraprotocol.pro** (see [SECURITY.md](SECURITY.md))
+
+---
+
 ## License
 
 [MIT](LICENSE) © NARA Protocol

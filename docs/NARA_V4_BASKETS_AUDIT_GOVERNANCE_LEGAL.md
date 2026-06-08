@@ -149,7 +149,7 @@ This is intentional. It's also why the next sentence matters.
 
 **Only the protocol operator's deployer wallet.** Officialness is a frontend property, not a contract property. An on-chain basket is "official" if and only if:
 
-1. The frontend at naraprotocol.io lists it
+1. The frontend at naraprotocol.pro lists it
 2. The receipt manager's `requiredAsset` equals the deployed NARA token address
 3. The receipt manager's `feeRecipient` equals the deployed `NARAIndexFeeCollectorV1`
 4. The receipt manager's adapters are all addresses the protocol has audited and approved
@@ -210,7 +210,7 @@ Hard cap is 100 bps (1%) per side.
 
 ### Curation governance — who decides which baskets exist
 
-For v1 launch: **the protocol operator decides.** No DAO, no committee, no curator role. The operator is accountable for the curation list because the operator controls naraprotocol.io and signs the deploy transactions.
+For v1 launch: **the protocol operator decides.** No DAO, no committee, no curator role. The operator is accountable for the curation list because the operator controls naraprotocol.pro and signs the deploy transactions.
 
 Post-launch options (not for v1):
 - External curators with revenue share (Reserve DTF model)

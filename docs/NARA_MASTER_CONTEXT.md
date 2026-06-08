@@ -465,7 +465,7 @@ Recovery: if Railway misses runs, the script catches up up to `maxAdvanceSteps` 
 **What it is:** 100-slot founding grid (10×10). Each slot is claimed by one wallet,
 permanently, by locking NARA at max duration through the engine.
 
-**Live route:** `https://www.naraprotocol.io/mine`
+**Live route:** `https://www.naraprotocol.pro/mine`
 **GitHub:** `https://github.com/NARAProtocol/nara-lockboard.git`
 **Platform:** Cloudflare Pages + Workers + D1
 **Pages project:** `nara-lockboard`
@@ -595,7 +595,7 @@ Config changes: propose → wait `configChangeDelay` → execute (stages for epo
 | NARABondDepository | Deployed, verified, bonds closed | **Retired** |
 | Uniswap V3 NARA/WETH | Was live, thin liquidity | **Retired** |
 | Railway epoch keeper | Was running `*/15 * * * *` | Must be retargeted to v4 |
-| Degen Board (lockboard) | Was live at naraprotocol.io/mine | Wired to v3 — needs v4 rebuild |
+| Degen Board (lockboard) | Was live at naraprotocol.pro/mine | Wired to v3 — needs v4 rebuild |
 | BurnRunArenaV2 | Was deployed, not playable | **Retired**, no v4 equivalent yet |
 | Lotto | Was live | **Retired**, no v4 equivalent yet |
 

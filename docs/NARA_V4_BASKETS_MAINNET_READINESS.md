@@ -215,7 +215,7 @@ Day 6 (T+5) — frontend
   □ Banned-word grep clean on all production frontend strings
 
 Day 7 (T+6) — public
-  □ Deploy frontend to naraprotocol.io (production)
+  □ Deploy frontend to naraprotocol.pro (production)
   □ Public announcement
   □ Monitor: fee collector inflow, first 24h conversions, paymaster credit burn
   □ Open to all jurisdictions — no securities geo-fence at launch (decision 2026-05-28)

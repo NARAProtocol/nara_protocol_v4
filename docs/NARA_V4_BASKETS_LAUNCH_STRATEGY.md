@@ -99,7 +99,7 @@ Two consequences:
 ### Public surface order
 
 ```
-naraprotocol.io (front door)
+naraprotocol.pro (front door)
   └─ Baskets (default tab) — Choose a basket, review tokens and fees, confirm
   └─ Locks (advanced tab) — Separate NARA lock flow with its own review
   └─ Bonds (operator-gated tab) — For users who want discounted NARA on a maturity schedule
@@ -110,7 +110,7 @@ This reverses today's order. Today the lockboard is the front door. After this l
 ### The funnel
 
 ```
-1. Cold user lands on naraprotocol.io
+1. Cold user lands on naraprotocol.pro
 2. Sees equal basket cards: CORE / AI / FINANCE / CULTURE
 3. Clicks "View Basket" on one card
 4. Connects Coinbase Smart Wallet (or fiat onramp via Coinbase Pay / Apple Pay)
@@ -313,7 +313,7 @@ Use Slither + manual review minimum. Echidna invariant tests on the receipt mana
 Week 1: deploy fresh v4 core (token, engine, reserve, vault, hook). 48h monitor.
 Week 2: deploy router/lens/bribe. Build Uniswap V3 adapter. Foundry fork tests.
 Week 3: deploy fee collector + 4 launch baskets. Verify on Basescan.
-Week 4: ship basket frontend at naraprotocol.io. Soft launch to power users.
+Week 4: ship basket frontend at naraprotocol.pro. Soft launch to power users.
 Week 5: open Coinbase Pay onramp + Smart Wallet + Paymaster. Public launch.
 Week 6+: collect adoption data, decide on basket additions, push NARA-lock upgrade funnel.
 ```

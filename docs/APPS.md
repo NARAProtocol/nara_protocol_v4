@@ -31,7 +31,7 @@ All frontend apps that connect to NARA contracts were wired to v3 ABIs and addre
 
 **Stack:** Vite + React (TSX) + wagmi v2 + RainbowKit + Cloudflare D1 + Cloudflare Workers
 
-**Production route:** `https://www.naraprotocol.io/mine`
+**Production route:** `https://www.naraprotocol.pro/mine`
 
 **Key files:**
 - `src/app.tsx`
@@ -62,7 +62,7 @@ All frontend apps that connect to NARA contracts were wired to v3 ABIs and addre
 
 **GitHub repo:** `https://github.com/NARAProtocol/arena_run_ui-.git`
 
-**Production route target:** `https://www.naraprotocol.io/arena`
+**Production route target:** `https://www.naraprotocol.pro/arena`
 
 **v4 status:** Was wired to `BurnRunArenaV2` (v3, retired at `0x6a1d3f01EFB35F3A8d5d6B3101f2764Bdf47cf3b`). The Arena contract has no v4 equivalent yet — see `archive/legacy-v3/PORTING_ROADMAP.md`. Non-functional until a v4 arena is deployed and the app is rebuilt.
 
