@@ -2,7 +2,7 @@
 
 # NARA Protocol v4
 
-**A fixed-supply, time-preference yield engine on Base. Lock NARA, get a tradable NFT, earn multi-asset rewards — every epoch, forever.**
+**A fixed-supply, time-preference commitment protocol on Base. Lock NARA, hold a tradable position NFT; the protocol distributes NARA, ETH, and ERC-20 rewards across locked weight each epoch.**
 
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.34-363636?logo=solidity)](https://soliditylang.org)
 [![Hardhat](https://img.shields.io/badge/Built%20with-Hardhat-fff100)](https://hardhat.org)
@@ -18,9 +18,10 @@
 
 ## What is NARA?
 
-NARA rewards **patience**. You lock a fixed-supply token for a chosen duration; the longer you commit,
-the more **weight** you carry; and weight earns a continuous stream of rewards — NARA emissions, ETH,
-and any ERC-20 a partner chooses to distribute — settled **every 15-minute epoch**.
+NARA is built around commitment. You lock a fixed-supply token for a chosen duration; the longer you
+commit, the more **weight** your position carries; and the protocol distributes its reward streams —
+NARA emissions, ETH, and any ERC-20 a partner chooses to add — across locked weight **every 15-minute
+epoch**. Rewards are variable, never promised, and can be zero.
 
 A lock isn't a database row you can't move — **it's an NFT**. You can sell it, fractionalize it, wrap
 it into a liquid staking token, or borrow against it, all without breaking the underlying commitment.
@@ -129,7 +130,7 @@ Full layer model and per-contract status: [`docs/NARA_V4_PROJECT_SCOPE.md`](docs
   that, writes revert `EpochStale` until anyone calls `poke()` / `advanceEpochs()`. (Better failure
   shape than a cron dependency — but frontends must surface backlog.)
 - **Weight = committed time.** `weight = amount × (1 + linearWad·r + quadraticWad·r²)`, where
-  `r = duration / maxLock`. Long locks earn a structural, quadratic advantage.
+  `r = duration / maxLock`. Long locks receive a structurally higher weight (quadratic in duration).
 - **Adaptive emission.** Per-epoch NARA emission responds to lock share, stress, a warmup factor
   (converges up to 1.0), and a decaying bootstrap weight — an incentive loop that rewards real locking.
 - **Three reward rails.** NARA drip (emissions), **ETH** via `notifyEthRewards()`, and arbitrary
@@ -183,8 +184,8 @@ Built and tested, deployed after the core proves out (needs TVL + a market):
 
 - **stNARA** (`NARAStakingPoolV4`) — liquid staking token over a pool of max-duration positions;
   exchange rate rises as rewards compound. First deposit mints dead shares (inflation-attack safe).
-- **Pendle SY adapter** (`NARAStakingPoolSYV4`) — Standardized Yield over stNARA with **two** reward
-  streams (USDC + native ETH). Exposes the NAV oracle Pendle needs.
+- **Pendle SY adapter** (`NARAStakingPoolSYV4`) — implements Pendle's SY (Standardized-Yield) interface
+  over stNARA, with two reward streams (USDC + native ETH) and the NAV oracle Pendle needs.
 - **Fractional positions** (`NARAFractionalPositionV4`) — split one locked position into up to 1e12
   units, tradable/collateralizable without breaking the engine lock.
 
@@ -283,6 +284,17 @@ Nothing is "done" until deployed addresses + verification are recorded in `CURRE
 | [NARA_V4_ECONOMIC_LAUNCH_ROADMAP.md](docs/NARA_V4_ECONOMIC_LAUNCH_ROADMAP.md) | Launch order + economics |
 
 Full index: [`docs/README.md`](docs/README.md).
+
+---
+
+## ⚠️ Disclaimer
+
+This repository is software, not financial advice or an offer of any product. NARA is a permissionless,
+non-custodial protocol with no admin over user principal. Tokens and positions can lose **all** value.
+Rewards are variable and are **never promised or guaranteed** — they can be zero. Nothing here is
+investment advice, and no NARA entity manages assets or promises any return. You are solely responsible
+for evaluating the protocol and complying with the laws of your jurisdiction. Pre-launch: nothing here
+is deployed to mainnet.
 
 ---
 
