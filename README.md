@@ -12,6 +12,10 @@
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Status](https://img.shields.io/badge/status-pre--launch%20(not%20deployed)-orange)](#-status)
 
+<br/>
+
+![NARA Protocol — The Commitment Engine on Base. Commit NARA, hold a tradable position NFT, and the NARAEngine distributes NARA, ETH and any ERC-20 rewards across committed weight every 15-minute epoch. A Uniswap v4 hook skims a small fee from every trade into deeper liquidity. Compose via stNARA, Pendle SY, fractionalization, and discounted bonds.](docs/assets/how-it-works.png)
+
 </div>
 
 ---
