@@ -291,7 +291,12 @@ contract NARAFractionalPositionV4 is ReentrancyGuardTransient, IERC721Receiver {
     }
 
     /// @notice Redeem NARA principal pro-rata to fraction balance.
-    ///         Last claimer receives the full remainder to prevent dust.
+    /// @dev Each claimer takes its pro-rata share of the REMAINING principal against the REMAINING
+    ///      (still-unclaimed) fractions, so the final actual claimer always sweeps the exact
+    ///      rounding remainder. (M-07 fix: the previous `principalFractionsClaimed + bal >=
+    ///      fractionCount` check was dead whenever any fraction never claimed — e.g. lost/burned
+    ///      bearer fractions — stranding the remainder. The share of fractions that are never
+    ///      claimed remains unrecoverable by design, as with any bearer instrument.)
     function claimPrincipal(address to) external nonReentrant returns (uint256 naraOut) {
         if (!unlocked) revert PositionNotMatured();
         if (principalClaimed[msg.sender]) revert AlreadyClaimed();
@@ -301,12 +306,13 @@ contract NARAFractionalPositionV4 is ReentrancyGuardTransient, IERC721Receiver {
         uint256 bal = balanceOf[msg.sender];
         if (bal == 0) revert ZeroAmount();
 
-        bool isLast = (principalFractionsClaimed + bal >= fractionCount);
-        if (isLast) {
-            naraOut = principalReturned - principalPaid;
-        } else {
-            naraOut = (principalReturned * bal) / fractionCount;
-        }
+        uint256 remainingFractions = fractionCount - principalFractionsClaimed;
+        uint256 remainingPrincipal = principalReturned - principalPaid;
+        // bal >= remainingFractions only when this holder owns every still-unclaimed fraction,
+        // so it cleanly drains the exact remainder; otherwise strict pro-rata of what remains.
+        naraOut = bal >= remainingFractions
+            ? remainingPrincipal
+            : (remainingPrincipal * bal) / remainingFractions;
 
         principalClaimed[msg.sender]  = true;
         principalFractionsClaimed    += bal;

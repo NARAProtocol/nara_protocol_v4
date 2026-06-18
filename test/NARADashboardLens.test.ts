@@ -90,7 +90,7 @@ async function injectEnginePosition(
         weight,
         activationEpoch,
         unlockEpoch,
-        _reserved0:      0n,
+        tokenWeight:     0n,
         naraDebtRay:     0n,
         ethDebtRay:      0n,
     };
@@ -119,7 +119,7 @@ async function injectNftPosition(
         weight,
         activationEpoch,
         unlockEpoch,
-        _reserved0:      0n,
+        tokenWeight:     0n,
         naraDebtRay:     0n,
         ethDebtRay:      0n,
     };

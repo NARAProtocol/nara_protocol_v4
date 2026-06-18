@@ -888,6 +888,75 @@ describe("NARAEngine v4 — multi-token bribes", () => {
         await expect(engine.connect(alice).extend(1n, 10n))
             .to.emit(engine, "Extended");
     });
+
+    // M-05 (audit 2026-06-10): in production BribeRouterV4 (permissionless notify) and the
+    // growth vault HOLD REWARD_NOTIFIER_ROLE, so a *legitimate* token-reward notify used to set a
+    // global latch that permanently disabled extend() for every active position. The fix freezes
+    // a position's token-reward weight (`tokenWeight`) once token rewards are live, so extend()
+    // works again while still preventing the larger post-extend weight from over-crediting token
+    // rewards. The test above only proves an UNAUTHORIZED caller can't notify; these prove the
+    // real-world authorized path now behaves correctly.
+    it("M-05 fix: extend() succeeds for active positions even after an authorized token-reward notify", async () => {
+        const { token, engine, engineAddr } = await launchSystem(ethers, deployer, treasury);
+        const aliceAddr = await alice.getAddress();
+
+        await token.connect(treasury).transfer(aliceAddr, 1_000n * ONE);
+        await token.connect(alice).approve(engineAddr, 1_000n * ONE);
+        await engine.connect(alice).lock(1_000n * ONE, 100n, 0n);
+        await mineTime(ethers, EPOCH_SECONDS * 5n);
+        await engine.connect(alice).poke(); // position now active, not matured
+
+        const bribe = await deployErc20(ethers, briber, await briber.getAddress());
+        await grantRewardNotifier(ethers, engine, deployer, briber);
+        await bribe.connect(briber).approve(engineAddr, 1_000n * ONE);
+        await engine.connect(briber).notifyTokenRewards(await bribe.getAddress(), 1_000n * ONE);
+
+        // Fixed: extend() is no longer disabled by a live token-reward stream.
+        await expect(engine.connect(alice).extend(1n, 10n)).to.emit(engine, "Extended");
+    });
+
+    it("M-05 fix: extending does NOT over-credit token rewards (token weight frozen, no insolvency)", async () => {
+        const { token, engine, engineAddr } = await launchSystem(ethers, deployer, treasury);
+        const aliceAddr = await alice.getAddress();
+        const bob = (await ethers.getSigners())[4];
+        const bobAddr = await bob.getAddress();
+
+        // Two equal active lockers.
+        await token.connect(treasury).transfer(aliceAddr, 1_000n * ONE);
+        await token.connect(treasury).transfer(bobAddr, 1_000n * ONE);
+        await token.connect(alice).approve(engineAddr, 1_000n * ONE);
+        await token.connect(bob).approve(engineAddr, 1_000n * ONE);
+        await engine.connect(alice).lock(1_000n * ONE, 100n, 0n);
+        const bobId = await engine.connect(bob).lock.staticCall(1_000n * ONE, 100n, 0n);
+        await engine.connect(bob).lock(1_000n * ONE, 100n, 0n);
+        await mineTime(ethers, EPOCH_SECONDS * 5n);
+        await engine.connect(alice).poke();
+
+        const bribe = await deployErc20(ethers, briber, await briber.getAddress());
+        const bribeAddr = await bribe.getAddress();
+        await grantRewardNotifier(ethers, engine, deployer, briber);
+        await bribe.connect(briber).approve(engineAddr, 4_000n * ONE);
+
+        // Bribe #1 while weights are equal.
+        await engine.connect(briber).notifyTokenRewards(bribeAddr, 1_000n * ONE);
+
+        // Alice extends (live weight grows). Token weight must stay frozen at the original.
+        await engine.connect(alice).extend(1n, 50n);
+
+        // Bribe #2 after the extend.
+        await engine.connect(briber).notifyTokenRewards(bribeAddr, 1_000n * ONE);
+
+        await engine.connect(alice).claimTokenRewards(1n, bribeAddr, aliceAddr);
+        await engine.connect(bob).claimTokenRewards(bobId, bribeAddr, bobAddr);
+        const aliceGot = await bribe.balanceOf(aliceAddr);
+        const bobGot = await bribe.balanceOf(bobAddr);
+
+        // Equal frozen token weight => equal token-reward claims (extend gave Alice no token-share boost).
+        const diff = aliceGot > bobGot ? aliceGot - bobGot : bobGot - aliceGot;
+        expect(diff).to.be.lte(10n); // rounding dust only
+        // Solvency: total claimed never exceeds total notified.
+        expect(aliceGot + bobGot).to.be.lte(2_000n * ONE);
+    });
 });
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -1179,5 +1248,46 @@ describe("NARAEngine v4 — admin controls", () => {
         await expect(
             engine.connect(deployer).setLockEthFee(BigInt(2e16)),
         ).to.be.revertedWithCustomError(engine, "InvalidConfig");
+    });
+
+    // M-04 (audit 2026-06-10): rewardReserve.availableRewards()/releaseToEngine() are consulted
+    // inside _advanceOneEpoch. A reserve that reverts there used to freeze every user mutation
+    // (all go through _jitAdvanceFresh). The fix wraps both calls in try/catch and falls back to
+    // locally-held emission funds, so a misbehaving reserve can never brick the engine.
+    it("M-04: a reverting reward reserve does not freeze epoch advancement (fails open)", async () => {
+        const { token, engine, tokenAddr, engineAddr } = await launchSystem(ethers, deployer, treasury);
+        const aliceAddr = await alice.getAddress();
+
+        // Active locker so epoch advances distribute NARA (distributedNara > 0 -> reserve consulted).
+        await token.connect(treasury).transfer(aliceAddr, 1_000n * ONE);
+        await token.connect(alice).approve(engineAddr, 1_000n * ONE);
+        await engine.connect(alice).lock(1_000n * ONE, 100n, 0n);
+        await mineTime(ethers, EPOCH_SECONDS * 5n);
+        await engine.connect(alice).poke();
+
+        // Wire a reserve that passes setRewardReserve validation but can be flipped hostile.
+        const badReserve = await ethers.deployContract(
+            "contracts/v4/mocks/MockMaliciousRewardReserve.sol:MockMaliciousRewardReserve",
+            [],
+            deployer,
+        );
+        await badReserve.waitForDeployment();
+        await badReserve.configure(tokenAddr, engineAddr);
+        await engine.connect(deployer).setRewardReserve(await badReserve.getAddress());
+
+        // Flip it hostile: availableRewards()/releaseToEngine() now revert.
+        await badReserve.setBoom(true);
+
+        // Epoch advance must still succeed and actually distribute (reserve revert is caught).
+        await mineTime(ethers, EPOCH_SECONDS);
+        const before = (await engine.epochStateView()).epoch;
+        await expect(engine.connect(alice).advanceEpoch()).to.emit(engine, "EpochAdvanced");
+        const snap = await engine.epochStateView();
+        expect(snap.epoch).to.be.gt(before);
+        expect(snap.distributedNara).to.be.gt(0n); // confirms the reserve path was exercised
+
+        // And ordinary user flows are not bricked either.
+        await mineTime(ethers, EPOCH_SECONDS);
+        await engine.connect(alice).poke(); // reverts here would fail the test
     });
 });

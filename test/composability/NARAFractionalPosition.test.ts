@@ -247,6 +247,42 @@ describe("NARAFractionalPositionV4", () => {
     expect(await frac.unlocked()).to.equal(true);
   });
 
+  it("M-07: indivisible fractions — final claimer sweeps the exact remainder, no dust stranded", async () => {
+    const f = await deployFixture();
+    const ownerAddr = await f.owner.getAddress();
+    const buyer1Addr = await f.buyer1.getAddress();
+    const buyer2Addr = await f.buyer2.getAddress();
+
+    // 7 fractions over 1000e18 principal => indivisible, so rounding dust would otherwise strand.
+    const frac = await createAndBind(f, 7n);
+    await frac.connect(f.owner).transfer(buyer1Addr, 2n);
+    await frac.connect(f.owner).transfer(buyer2Addr, 2n); // owner keeps 3
+
+    const position = await f.engine.positionOf(f.positionId);
+    await f.engine.setCurrentEpoch(position.unlockEpoch);
+    await frac.unlockPosition();
+
+    const principal = await frac.principalReturned();
+    expect(principal).to.equal(f.amount);
+
+    const o0 = await f.nara.balanceOf(ownerAddr);
+    const b1_0 = await f.nara.balanceOf(buyer1Addr);
+    const b2_0 = await f.nara.balanceOf(buyer2Addr);
+
+    // All three holders claim (owner is NOT the cumulative-last under the old broken check).
+    await frac.connect(f.owner).claimPrincipal(ownerAddr);
+    await frac.connect(f.buyer1).claimPrincipal(buyer1Addr);
+    await frac.connect(f.buyer2).claimPrincipal(buyer2Addr);
+
+    const recovered =
+      ((await f.nara.balanceOf(ownerAddr)) - o0) +
+      ((await f.nara.balanceOf(buyer1Addr)) - b1_0) +
+      ((await f.nara.balanceOf(buyer2Addr)) - b2_0);
+    // Full participation recovers the entire principal with zero stranded dust.
+    expect(recovered).to.equal(principal);
+    expect(await f.nara.balanceOf(await frac.getAddress())).to.equal(0n);
+  });
+
   it("accounts Genesis reward tokens received during fractional unlock", async () => {
     const f = await deployFixture();
     const ownerAddr = await f.owner.getAddress();

@@ -97,7 +97,7 @@ struct EpochSnapshot {
 /// Layout (5 storage slots):
 ///  slot 0: owner (20) + createdEpoch (8) + flags (4) = 32
 ///  slot 1: amount (16) + weight (16)                  = 32
-///  slot 2: activationEpoch (8) + unlockEpoch (8) + _reserved0 (16) = 32
+///  slot 2: activationEpoch (8) + unlockEpoch (8) + tokenWeight (16) = 32
 ///  slot 3: naraDebtRay (32)
 ///  slot 4: ethDebtRay  (32)
 struct Position {
@@ -108,7 +108,11 @@ struct Position {
     uint128 weight;
     uint64 activationEpoch;
     uint64 unlockEpoch;
-    uint128 _reserved0;
+    // Weight basis for instant-distribution token (bribe / pool-fee) rewards. Set to `weight`
+    // at lock time. extend() only raises it while no token reward has ever been notified; once
+    // token rewards are live it is frozen, so a larger post-extend weight can never retroactively
+    // over-credit token rewards (sum of tokenWeight <= activeTotalWeight). (Was `_reserved0`.)
+    uint128 tokenWeight;
     uint256 naraDebtRay;
     uint256 ethDebtRay;
 }

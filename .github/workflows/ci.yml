@@ -1,0 +1,86 @@
+name: NARA v4 CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+# Node 20 needs the transient-storage polyfill for Hardhat (see CLAUDE.md). Setting it at the
+# job level applies to every hardhat/tsx invocation, including those spawned by the analyzers.
+jobs:
+  # ── Blocking gate: must stay green ──────────────────────────────────────────
+  build-test-size:
+    name: build · test · size
+    runs-on: ubuntu-latest
+    env:
+      NODE_OPTIONS: --require ./polyfill.cjs
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Compile
+        run: npm run build
+      - name: Test (full v4 suite)
+        run: npm test
+      - name: Bytecode size limits (24576 / 49152)
+        run: npm run size
+
+  # ── Free static analysis (advisory; review the output, don't ignore it) ──────
+  slither:
+    name: slither (advisory)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    env:
+      NODE_OPTIONS: --require ./polyfill.cjs
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: npm ci
+      - run: pip install slither-analyzer
+      - name: Slither (v4 production contracts)
+        run: slither . --filter-paths "node_modules|contracts/v4/mocks|test" || true
+
+  aderyn:
+    name: aderyn (advisory)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    env:
+      NODE_OPTIONS: --require ./polyfill.cjs
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Install Aderyn (Cyfrin)
+        run: |
+          curl -L https://raw.githubusercontent.com/Cyfrin/aderyn/dev/cyfrinup/install | bash
+          echo "$HOME/.cyfrin/bin" >> "$GITHUB_PATH"
+      - name: Aderyn (v4 contracts)
+        run: aderyn --src contracts/v4 . || true
+
+  # ── Free property fuzzing of the engine invariants (advisory) ────────────────
+  echidna:
+    name: echidna (advisory)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Echidna (v4 engine property harness)
+        uses: crytic/echidna-action@v2
+        with:
+          files: echidna/harnesses/EchidnaNARAEngineV4Harness.sol
+          contract: EchidnaNARAEngineV4Harness
+          config: echidna/v4-engine.yaml
+          solc-version: 0.8.34

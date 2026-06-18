@@ -232,7 +232,7 @@ contract MockNARAEngineV4 {
             weight: uint128(amount * durationEpochs),
             activationEpoch: activation,
             unlockEpoch: unlockEpoch,
-            _reserved0: 0,
+            tokenWeight: 0,
             naraDebtRay: 0,
             ethDebtRay: 0
         });

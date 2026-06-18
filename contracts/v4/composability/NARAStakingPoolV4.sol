@@ -361,6 +361,12 @@ contract NARAStakingPoolV4 is ERC20, ReentrancyGuardTransient, AccessControl, IE
     }
 
     function _autoHarvestForUserPath() internal {
+        // M-08 fix: during emergencyShutdown the keeper harvest loop is frozen (_harvestRange
+        // reverts EmergencyActive). Skip the opportunistic auto-harvest here instead of letting
+        // it revert, so the exit path (queueRedeem -> unlockMatured -> claimRedemption) keeps
+        // working and holders are never trapped. Redemptions price off already-tracked value;
+        // un-harvested rewards simply remain for the remaining holders.
+        if (emergencyShutdown) return;
         uint256 len = underlyingTokenIds.length;
         if (len == 0) return;
         if (len > MAX_AUTO_HARVEST_POSITIONS) len = MAX_AUTO_HARVEST_POSITIONS;

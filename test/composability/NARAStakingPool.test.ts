@@ -313,6 +313,35 @@ describe("NARAStakingPoolV4", () => {
     expect(await f.ethers.provider.getBalance(poolAddr)).to.equal(ethAmount);
   });
 
+  it("M-08: holders can still exit (queue + claim) during emergencyShutdown", async () => {
+    const f = await deployFixture();
+    const userAddr = await f.user.getAddress();
+    const { tokenId, positionId, amount } = await openPoolPosition(f); // deposit + lockLiquid
+
+    await f.pool.connect(f.admin).setEmergencyShutdown(true);
+
+    // Inflows are frozen...
+    await f.nara.connect(f.user).approve(await f.pool.getAddress(), ONE);
+    await expect(f.pool.connect(f.user).deposit(ONE, 0))
+      .to.be.revertedWithCustomError(f.pool, "EmergencyActive");
+
+    // ...but holders are NOT trapped: queueRedeem works during shutdown (previously reverted
+    // EmergencyActive via the auto-harvest path).
+    const shares = await f.pool.balanceOf(userAddr);
+    await f.pool.connect(f.user).queueRedeem(shares);
+
+    // Mature the underlying position, convert to liquid, and claim the redemption.
+    const position = await f.engine.positionOf(positionId);
+    await f.engine.setCurrentEpoch(position.unlockEpoch);
+    await f.pool.connect(f.keeper).unlockMatured(tokenId);
+
+    const before = await f.nara.balanceOf(userAddr);
+    await f.pool.connect(f.user).claimRedemption(0);
+    const recovered = (await f.nara.balanceOf(userAddr)) - before;
+    expect(recovered).to.be.gt(0n);
+    expect(recovered).to.equal(amount - (await f.pool.DEAD_SHARES()));
+  });
+
   it("SY claims pool USDC through Pendle rewards and native ETH through a separate path", async () => {
     const f = await deployFixture();
     const SY = await f.ethers.getContractFactory("NARAStakingPoolSYV4", f.admin);

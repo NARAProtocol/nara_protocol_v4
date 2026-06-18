@@ -124,7 +124,7 @@ contract MockEngineForRouter {
             weight:           uint128(amount * uint256(durationEpochs)),
             activationEpoch:  settledEpoch + _activationDelayEpochs + 1,
             unlockEpoch:      settledEpoch + durationEpochs + 1,
-            _reserved0:       0,
+            tokenWeight:      0,
             naraDebtRay:      0,
             ethDebtRay:       0
         });

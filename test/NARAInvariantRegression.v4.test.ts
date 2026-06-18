@@ -338,9 +338,11 @@ describe("NARA v4 invariant regression suite", () => {
     const [claimableNara, claimableEth] = await engine.claimableRewards(alicePosition);
     expect(claimableNara + claimableEth).to.be.gt(0n);
     await engine.connect(alice).claimRewards(alicePosition, aliceAddr);
+    // M-05 fix: extend() is no longer disabled once token rewards are live (token-reward weight
+    // is frozen instead), so this now succeeds and core accounting must still hold.
     await expect(
       engine.connect(alice).extend(alicePosition, 10n),
-    ).to.be.revertedWithCustomError(engine, "InvalidExtension");
+    ).to.emit(engine, "Extended");
     await expectEngineAccounting(engine, token, knownPositions);
 
     const { vault, positionNft, dep, vaultAlloc } = await deployNftBondStack(

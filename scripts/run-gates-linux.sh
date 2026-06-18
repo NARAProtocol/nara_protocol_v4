@@ -36,9 +36,22 @@ fi
 log "node $(node -v)  npm $(npm -v)"
 
 # 4) npm deps (needed for @openzeppelin / @uniswap import resolution)
-log "npm ci (this pulls OZ/uniswap for import resolution)"
-npm ci --no-audit --no-fund >/tmp/npmci.log 2>&1 || npm install --no-audit --no-fund >/tmp/npmci.log 2>&1
-log "npm deps installed"
+# NOTE: --legacy-peer-deps is REQUIRED. @typechain/hardhat@9.1.0 declares a peer of
+# hardhat@^2.9.9 while the project uses hardhat@3.x, so a strict install fails ERESOLVE.
+log "npm ci --legacy-peer-deps (this pulls OZ/uniswap for import resolution)"
+npm ci --legacy-peer-deps --no-audit --no-fund >/tmp/npmci.log 2>&1 \
+  || { log "npm ci failed, retrying with npm install --legacy-peer-deps"; npm install --legacy-peer-deps --no-audit --no-fund >>/tmp/npmci.log 2>&1; } \
+  || { log "retry npm install --legacy-peer-deps once more"; npm install --legacy-peer-deps --no-audit --no-fund >>/tmp/npmci.log 2>&1; }
+# Hard guard: the analyzers MUST have dependencies, otherwise they silently produce
+# invalid output (echidna/slither fail to compile; aderyn reports false positives like
+# "contract locks Ether" because it can't see the OZ base contracts). Fail loud instead.
+if [ ! -f node_modules/@openzeppelin/contracts/utils/math/Math.sol ]; then
+  log "FATAL: npm dependencies missing (node_modules/@openzeppelin not found)."
+  log "Analyzer results would be INVALID without dependencies. Aborting. Last npm log:"
+  tail -40 /tmp/npmci.log
+  exit 1
+fi
+log "npm deps installed ($(ls node_modules | wc -l) packages)"
 
 # 5) solc 0.8.34 + crytic-compile
 log "installing solc-select + crytic-compile"

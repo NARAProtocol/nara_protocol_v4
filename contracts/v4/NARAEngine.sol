@@ -241,7 +241,13 @@ contract NARAEngine is
     }
 
     function rewardReserveAvailable() public view returns (uint256) {
-        return address(rewardReserve) == address(0) ? 0 : rewardReserve.availableRewards();
+        if (address(rewardReserve) == address(0)) return 0;
+        // Fail-open: a misbehaving reserve must not be able to brick epoch advancement (M-04).
+        try rewardReserve.availableRewards() returns (uint256 a) {
+            return a;
+        } catch {
+            return 0;
+        }
     }
 
     function claimableRewards(uint256 positionId) external view returns (uint256 naraAmount, uint256 ethAmount) {
@@ -260,7 +266,7 @@ contract NARAEngine is
         return NARAEngineAccountingLib.previewTokenAccrual(
             _positionTokenDebtRay[token],
             positionId,
-            uint256(p.weight),
+            uint256(p.tokenWeight),
             _tokenRewardEndIndex(p, token),
             _tokenIndexAtOrBefore(token, p.activationEpoch - 1)
         );
@@ -472,7 +478,7 @@ contract NARAEngine is
             weight: _toUint128(weight),
             activationEpoch: activationEpoch,
             unlockEpoch: unlockEpoch,
-            _reserved0: 0,
+            tokenWeight: _toUint128(weight),
             naraDebtRay: DEBT_UNINITIALISED,
             ethDebtRay: DEBT_UNINITIALISED
         });
@@ -512,7 +518,6 @@ contract NARAEngine is
 
         EngineConfig memory c = config;
         bool inactive = ep < p.activationEpoch;
-        if (!inactive && _tokenRewardsNotified) revert InvalidExtension();
         uint256 oldWeight = uint256(p.weight);
 
         if (!inactive) {
@@ -548,6 +553,8 @@ contract NARAEngine is
             } else {
                 _saturatingSub(scheduledActivationWeight, p.activationEpoch, storedOldWeight - newWeight);
             }
+            // Not yet accruing token rewards (accrual starts at activationEpoch): safe to track new weight.
+            p.tokenWeight = _toUint128(newWeight);
         } else {
             if (newWeight >= storedOldWeight) {
                 activeTotalWeight += newWeight - storedOldWeight;
@@ -557,6 +564,9 @@ contract NARAEngine is
             }
             p.naraDebtRay = Math.mulDiv(newWeight, naraIndexRay, RAY);
             p.ethDebtRay = Math.mulDiv(newWeight, ethIndexRay, RAY);
+            // Token-reward weight is frozen once any token reward is live, so the larger
+            // post-extend weight cannot retroactively over-credit instant-distribution rewards.
+            if (!_tokenRewardsNotified) p.tokenWeight = _toUint128(newWeight);
         }
 
         _saturatingSub(scheduledDeactivationWeight, oldUnlockEpoch, storedOldWeight);
@@ -699,7 +709,7 @@ contract NARAEngine is
         amount = NARAEngineAccountingLib.tokenAccrual(
             _positionTokenDebtRay[token],
             positionId,
-            uint256(p.weight),
+            uint256(p.tokenWeight),
             _tokenRewardEndIndex(p, token),
             _tokenIndexAtOrBefore(token, p.activationEpoch - 1)
         );
@@ -821,8 +831,13 @@ contract NARAEngine is
             }
             if (nextSnapshot.distributedNara > local) {
                 uint256 shortfall = nextSnapshot.distributedNara - local;
-                rewardReserve.releaseToEngine(shortfall);
-                trackedEmissionReserve += shortfall;
+                // Fail-open: if the reserve reverts, distribute only locally-held funds this
+                // epoch rather than letting a bad reserve freeze the whole engine (M-04).
+                try rewardReserve.releaseToEngine(shortfall) {
+                    trackedEmissionReserve += shortfall;
+                } catch {
+                    nextSnapshot.distributedNara = local;
+                }
             }
             trackedEmissionReserve -= nextSnapshot.distributedNara;
         }
