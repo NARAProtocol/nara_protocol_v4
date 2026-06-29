@@ -1,5 +1,6 @@
 import hre from "hardhat";
 import { expect } from "chai";
+import { deployRenderer } from "./helpers/art";
 
 const ONE = 10n ** 18n;
 const ACTION_DELAY = 86_400n;
@@ -59,9 +60,7 @@ async function deployFixture() {
   const accountImpl: any = await Account.deploy();
   await accountImpl.waitForDeployment();
 
-  const Renderer = await ethers.getContractFactory("NARAPositionRendererV4", deployer);
-  const renderer: any = await Renderer.deploy();
-  await renderer.waitForDeployment();
+  const renderer: any = await deployRenderer(ethers, deployer);
 
   const NFT = await ethers.getContractFactory("NARAPositionNFTV4", deployer);
   const positionNft: any = await NFT.deploy(
@@ -314,9 +313,7 @@ describe("NARABondDepositoryV4NFT", () => {
     const accountImpl: any = await Account.deploy();
     await accountImpl.waitForDeployment();
 
-    const Renderer = await ethers.getContractFactory("NARAPositionRendererV4", deployer);
-    const renderer: any = await Renderer.deploy();
-    await renderer.waitForDeployment();
+    const renderer: any = await deployRenderer(ethers, deployer);
 
     const NFT = await ethers.getContractFactory("NARAPositionNFTV4", deployer);
     const positionNft: any = await NFT.deploy(
@@ -367,9 +364,7 @@ describe("NARABondDepositoryV4NFT", () => {
     const accountImpl: any = await Account.deploy();
     await accountImpl.waitForDeployment();
 
-    const Renderer = await ethers.getContractFactory("NARAPositionRendererV4", deployer);
-    const renderer: any = await Renderer.deploy();
-    await renderer.waitForDeployment();
+    const renderer: any = await deployRenderer(ethers, deployer);
 
     const NFT = await ethers.getContractFactory("NARAPositionNFTV4", deployer);
     const positionNft: any = await NFT.deploy(

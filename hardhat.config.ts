@@ -51,6 +51,18 @@ if (BASE_RPC_URL) {
     url: BASE_RPC_URL,
     accounts: PRIVATE_KEY ? [PRIVATE_KEY] : [],
   };
+  // Base mainnet fork for integration tests against real Uniswap v4 (PoolManager / PositionManager
+  // / Permit2). Only present when an RPC is configured; fork tests skip otherwise.
+  optionalNetworks.baseFork = {
+    type: "edr-simulated",
+    chainType: "op",
+    allowUnlimitedContractSize: true,
+    blockGasLimit: 60_000_000,
+    hardfork: "isthmus",
+    forking: {
+      url: BASE_RPC_URL,
+    },
+  };
 }
 
 export default defineConfig({

@@ -53,7 +53,7 @@ happen, baskets can't route. It is the foundation everything sits on.
 | **Core** | `deploy:v4:base:usdc` (`deployV4BaseUsdc.ts`) | Token, Engine, RewardReserve, LiquidityGrowthHook, LiquidityGrowthVault, Launcher, Create2HookDeployer |
 | **Liquidity** | `seedV4Liquidity.ts` + `smoke:v4` | (no new contract — seeds the NARA/USDC v4 pool) |
 | **Allocation** | `deploy:v4:allocations` (`deployV4Allocations.ts`) | PositionNFT, PositionAccount, **PositionRenderer**, GenesisRewardDistributor, BondVault, BondDepository(NFT + raw), OpsVault |
-| **Router / Lens** | `deploy:v4:router:lens` (`deployRouterLens.ts`) | Router, DashboardLens, **PositionDataLensV1**, BribeRouter |
+| **Router / Lens** | `deploy:v4:router:lens` (`deployRouterLens.ts`) | Router, DashboardLens, **PositionDataLensV1**, **ProtocolStatsLensV1**, BribeRouter, **CirculatingSupplyV1** |
 | **Composability** | `deployComposabilityV4.ts` | StakingPool (stNARA), StakingPoolSY (Pendle), FractionalPosition + Factory |
 | **Baskets** (separate Foundry pkg) | `DeployMainnetReady.s.sol` | 4 immutable basket managers + fee collector + 5 DEX adapters |
 
@@ -85,8 +85,10 @@ columns that matter are **test coverage** and the **non-code prerequisite** to d
 | `NARAOpsVaultV4` | Allocation | ✅ (alloc tests) | token |
 | `router/NARARouter` | Router | ✅ `NARARouter.test.ts` | engine |
 | `router/NARADashboardLens` | Router | ✅ `NARADashboardLens.test.ts` | engine, NFT |
-| `router/NARAPositionDataLensV1` | Router | ✅ `NARAPositionDataLensV1.test.ts` | engine, NFT |
+| `router/NARAPositionDataLensV1` | Router | ✅ `NARAPositionDataLensV1.test.ts` | engine, NFT; now incl. weight share / age / countdown / lifetime earned / realized return — see `NARA_V4_POSITION_STATS_AND_CLAIM_FEES.md` |
+| `router/NARAProtocolStatsLensV1` | Router | ✅ `NARAProtocolStatsLensV1.test.ts` | engine; one-call protocol headline stats (all-time ETH distributed, runway, totals). See `NARA_V4_POSITION_STATS_AND_CLAIM_FEES.md` |
 | `router/BribeRouterV4` | Router | ✅ `NARABribeRouterV4.test.ts` | engine; grant `REWARD_NOTIFIER_ROLE` after deploy |
+| `router/NARACirculatingSupplyV1` | Router | ✅ `NARACirculatingSupplyV1.test.ts` (25) | token + the excluded wallet set (reserve/bonds/vesting/dead — treasury stays circulating). Genesis ≈ 110k. See `CIRCULATING_SUPPLY.md` |
 | `composability/NARAStakingPoolV4` (stNARA) | Composability | ✅ `composability/NARAStakingPool.test.ts` | core + allocation + **TVL** |
 | `composability/NARAStakingPoolSYV4` (Pendle SY) | Composability | ✅ (staking pool tests) | stNARA pool |
 | `composability/NARAFractionalPositionV4` + Factory | Composability | ✅ `composability/NARAFractionalPosition.test.ts` | NFT |
@@ -175,6 +177,7 @@ New wallet apps scaffold from `templates/wallet-game-app` via `scripts/scaffold-
 | Product direction and phases | `ROADMAP.md` |
 | Operator deploy commands | `NARA_V4_LAUNCH_RUNBOOK.md`, `V4_LAUNCH_CHECKLIST.md` |
 | NFT position spec | `NARA_V4_NFT_POSITIONS.md`, `NARA_V4_NFT_PRODUCTION_PLAN.md` |
+| NFT protocol-wide role / gap audit | `NARA_V4_NFT_PROTOCOL_ROLE_AUDIT.md` |
 | Router/lens spec | `ROUTER_LENS.md` |
 | Emission model | `EMISSION_MECHANICS.md`, `LOCK_APY_REFERENCE.md` |
 | Security disclosure | `../SECURITY.md` |

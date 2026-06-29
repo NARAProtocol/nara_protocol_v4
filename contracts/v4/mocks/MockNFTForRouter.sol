@@ -92,4 +92,14 @@ contract MockNFTForRouter {
         if (revertGenesis) revert("not genesis");
         return _genesisToken[tokenId];
     }
+
+    uint16 public naraClaimFeeBps;
+    uint16 public tokenClaimFeeBps;
+    address public claimFeeRecipient;
+
+    function setClaimFees(uint16 naraBps, uint16 tokenBps, address recipient) external {
+        naraClaimFeeBps = naraBps;
+        tokenClaimFeeBps = tokenBps;
+        claimFeeRecipient = recipient;
+    }
 }

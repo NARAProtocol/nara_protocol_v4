@@ -57,6 +57,9 @@ interface ILensNFT {
     function positionInfo(uint256 tokenId) external view returns (Position memory);
     function claimableGenesisEth(uint256 tokenId) external view returns (uint256);
     function claimableGenesisToken(uint256 tokenId) external view returns (uint256);
+    function naraClaimFeeBps() external view returns (uint16);
+    function tokenClaimFeeBps() external view returns (uint16);
+    function claimFeeRecipient() external view returns (address);
 }
 
 interface ILensRouter {
@@ -89,6 +92,11 @@ contract NARADashboardLens {
         uint96  unlockFeeWei;
         uint64  maxLockEpochs;
         uint64  activationDelayEpochs;
+        // Wrapper-level claim fees (NARAPositionNFTV4). Apply only to claims routed
+        // through the NFT wrapper; engine.lock() EOA positions are not affected.
+        uint16  naraClaimFeeBps;
+        uint16  tokenClaimFeeBps;
+        address claimFeeRecipient;
     }
 
     struct PositionState {
@@ -212,7 +220,10 @@ contract NARADashboardLens {
             lockFeeWei:             ENGINE.lockFeeWei(),
             unlockFeeWei:           ENGINE.unlockFeeWei(),
             maxLockEpochs:          cfg.maxLockEpochs,
-            activationDelayEpochs:  cfg.activationDelayEpochs
+            activationDelayEpochs:  cfg.activationDelayEpochs,
+            naraClaimFeeBps:        NFT.naraClaimFeeBps(),
+            tokenClaimFeeBps:       NFT.tokenClaimFeeBps(),
+            claimFeeRecipient:      NFT.claimFeeRecipient()
         });
 
         // Protocol totals

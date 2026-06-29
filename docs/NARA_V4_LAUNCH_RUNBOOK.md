@@ -1,6 +1,6 @@
 # NARA v4 Launch Runbook
 
-Last updated: 2026-05-28.  
+Last updated: 2026-06-29.  
 Source of truth: `CURRENT_STATE.md`, `ROADMAP.md`, deploy scripts.  
 This doc turns the roadmap phases into a concrete command-by-command operator sequence.
 
@@ -32,12 +32,18 @@ Complete every item before running anything on Base mainnet.
 
 ```bash
 cd nara-protocol-hardhat
-npm run deploy:v4:base:usdc
+V4_SKIP_COMPOUNDER=1 npm run deploy:v4:base:usdc
 ```
+
+> **Why `V4_SKIP_COMPOUNDER=1`:** the script requires either `V4_COMPOUNDER_ADDRESS` or
+> `V4_SKIP_COMPOUNDER=1`, and the compounder cannot exist yet — it takes the vault address that *this*
+> step creates. So deploy the vault now with the compounder unset, then deploy + wire the compounder
+> in **Step 4b**. (If you skip this flag the step throws.)
 
 **What it deploys:**
 - `NARALauncher` → `NARAToken` + `NARAEngine` (atomic via CREATE2)
-- `NARALiquidityGrowthVault`
+- `NARARewardReserve`
+- `NARALiquidityGrowthVault` (compounder left unset — wired in Step 4b)
 - `Create2HookDeployer` → `NARALiquidityGrowthHook` (hook address low bits must be `0x2088`)
 - Registers and seeds NARA/USDC pool on Uniswap v4
 
@@ -90,6 +96,48 @@ After seeding:
 ```bash
 npm run v4:env:sync:write    # captures LP NFT token ID from liquidity seed log
 ```
+
+---
+
+## Step 4b — Deploy Liquidity Compounder (close the POL flywheel)
+
+The vault's default `Liquidity` route mode compounds the skim back into protocol-owned liquidity, but
+it is **inert until a compounder is wired** (`vault._compoundUnchecked` reverts with none set). Deploy
+the production compounder now that the vault + pool exist, then wire it.
+
+```bash
+NODE_OPTIONS="--require ./polyfill.cjs" \
+  NARA_TOKEN_V4=<addr> USDC_ADDRESS=<usdc> ADMIN_ADDRESS=<safe> \
+  LIQUIDITY_VAULT_V4=<vault_from_step1> \
+  V4_POOL_MANAGER=<pm> V4_POSITION_MANAGER=<posm> V4_PERMIT2=<permit2> V4_HOOK=<hook_from_step1> \
+  V4_POOL_FEE=3000 V4_TICK_SPACING=60 \
+  npx hardhat run scripts/deployLiquidityCompounderV4.ts --network base
+```
+
+**Deploys:** `NARALiquidityCompounderV4` — full-range, no-swap, exact-spend POL adder. Owner is set to
+the Safe (`ADMIN_ADDRESS`) at construction; POL is owner-recoverable via a **7-day recovery timelock**
+(`proposeRecovery` → wait `RECOVERY_DELAY` → `executeRecovery`: migrate / sweep / wind-down).
+
+**Wire it (vault owner = deployer until Step 9):**
+```bash
+# vault.setCompounder(<compounder_address>)   — required, or Liquidity mode stays inert
+# Run one validation compound (small) and confirm a real position was added before freezing.
+# vault.freezeCompounder()                     — one-way; do AFTER validation (may defer to post-monitoring)
+```
+
+**Gate:**
+```
+□ NARALiquidityCompounderV4 deployed; owner == Safe
+□ vault.setCompounder(compounder) done; vault.compounder() == compounder
+□ Route mode is Liquidity (default)
+□ A validation compound minted a real full-range position (compounder.positionTokenId() != 0)
+□ vault.freezeCompounder() executed once satisfied (or explicitly deferred + tracked)
+□ Compounder address recorded into .env (V4_COMPOUNDER_ADDRESS) and CURRENT_STATE.md from the
+  liquidity-compounder-v4-*.json deploy log (the env-sync reads the core deploy log, not this one)
+```
+
+Code is fork-validated against live v4 (`test/fork/NARALiquidityCompounderV4.fork.test.ts`); this step
+is deployment + wiring only.
 
 ---
 
@@ -165,12 +213,13 @@ ENGINE_V4=<engine_address> POSITION_NFT_V4=<nft_address> npm run deploy:v4:route
 
 **Output:** `deployments/router-lens-8453.json`
 
-**Deploys:**
+**Deploys (all six):**
 - `NARARouter` — permit + sync + lock, permissionless `syncEpochs()`, keeper replacement
 - `NARADashboardLens` — single-call `getUserState()` for all frontends
+- `NARAPositionDataLensV1` — typed live-data surface for position NFTs
+- `NARAProtocolStatsLensV1` — one-call protocol-wide stats (clock, participation, real-yield, runway)
+- `NARACirculatingSupplyV1` — circulating-supply oracle (CoinGecko/CMC excluded-address method)
 - `BribeRouterV4` — permissionless ERC-20 bribe delivery to NARA lockers
-
-This step also deploys `NARAPositionDataLensV1`, the typed live-data surface for position NFTs.
 
 **Critical post-deploy action (without this, `BribeRouterV4.notify()` reverts):**
 
@@ -230,8 +279,10 @@ All deployer-owned roles must be transferred to Safe/timelocked admin before pub
 □ NARAEngine: PARAM_ROLE → Safe
 □ NARAEngine: TREASURY_ROLE → Safe
 □ NARAEngine: REWARD_NOTIFIER_ROLE held by BribeRouterV4 (already set)
-□ NARALiquidityGrowthVault: owner → Safe
+□ NARALiquidityGrowthVault: owner → Safe (do this AFTER setCompounder/freezeCompounder, or have the Safe run those)
 □ NARALiquidityGrowthHook: owner → Safe
+□ NARALiquidityCompounderV4: owner == Safe (set at deploy — confirm, no transfer needed)
+□ vault.freezeCompounder() executed (or deferred + tracked) — one-way lock of the compounder address
 □ NARABondVaultV4: all roles → Safe
 □ NARABondDepositoryV4NFT: all roles → Safe
 □ NARAPositionNFTV4: owner → Safe

@@ -1,5 +1,6 @@
 import { expect } from "chai";
 import hre from "hardhat";
+import { deployRenderer } from "./helpers/art";
 
 const ONE = 10n ** 18n;
 const USDC = 10n ** 6n;
@@ -592,8 +593,7 @@ describe("NARALiquidityGrowth v4 - vault routing", () => {
         const accountImpl = await ethers.deployContract("NARAPositionAccountV4", [], owner);
         await accountImpl.waitForDeployment();
 
-        const renderer = await ethers.deployContract("NARAPositionRendererV4", [], owner);
-        await renderer.waitForDeployment();
+        const renderer = await deployRenderer(ethers, owner);
 
         const positionNft = await ethers.deployContract(
             "NARAPositionNFTV4",
@@ -670,8 +670,7 @@ describe("NARALiquidityGrowth v4 - vault routing", () => {
         const accountImpl = await ethers.deployContract("NARAPositionAccountV4", [], owner);
         await accountImpl.waitForDeployment();
 
-        const renderer = await ethers.deployContract("NARAPositionRendererV4", [], owner);
-        await renderer.waitForDeployment();
+        const renderer = await deployRenderer(ethers, owner);
 
         const positionNft = await ethers.deployContract(
             "NARAPositionNFTV4",

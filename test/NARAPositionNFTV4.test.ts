@@ -1,6 +1,7 @@
 import hre from "hardhat";
 import { expect } from "chai";
 import type { Signer } from "ethers";
+import { deployRenderer } from "./helpers/art";
 
 const ONE = 10n ** 18n;
 const USDC = 10n ** 6n;
@@ -51,9 +52,14 @@ async function deployFixture(options: {
   const accountImpl: any = await Account.deploy();
   await accountImpl.waitForDeployment();
 
-  const Renderer = await ethers.getContractFactory(options.rendererContract ?? "NARAPositionRendererV4", deployer);
-  const renderer: any = await Renderer.deploy();
-  await renderer.waitForDeployment();
+  let renderer: any;
+  if (options.rendererContract) {
+    const Renderer = await ethers.getContractFactory(options.rendererContract, deployer);
+    renderer = await Renderer.deploy();
+    await renderer.waitForDeployment();
+  } else {
+    renderer = await deployRenderer(ethers, deployer);
+  }
 
   const NFT = await ethers.getContractFactory("NARAPositionNFTV4", deployer);
   const nft: any = await NFT.deploy(
@@ -167,9 +173,7 @@ describe("NARAPositionNFTV4", () => {
     const accountImpl: any = await Account.deploy();
     await accountImpl.waitForDeployment();
 
-    const Renderer = await ethers.getContractFactory("NARAPositionRendererV4", deployer);
-    const renderer: any = await Renderer.deploy();
-    await renderer.waitForDeployment();
+    const renderer: any = await deployRenderer(ethers, deployer);
 
     const NFT = await ethers.getContractFactory("NARAPositionNFTV4", deployer);
     const nft: any = await NFT.deploy(
@@ -250,9 +254,7 @@ describe("NARAPositionNFTV4", () => {
     const accountImpl: any = await Account.deploy();
     await accountImpl.waitForDeployment();
 
-    const Renderer = await ethers.getContractFactory("NARAPositionRendererV4", deployer);
-    const renderer: any = await Renderer.deploy();
-    await renderer.waitForDeployment();
+    const renderer: any = await deployRenderer(ethers, deployer);
 
     const NFT = await ethers.getContractFactory("NARAPositionNFTV4", deployer);
     const nft: any = await NFT.deploy(
@@ -463,18 +465,22 @@ describe("NARAPositionNFTV4", () => {
     const svg = decodeSvgDataUri(metadata.image);
     const collection = decodeJsonDataUri(await f.nft.contractURI());
 
-    expect(metadata.name).to.equal("NARA Position #1");
-    expect(metadata.background_color).to.equal("080B12");
+    expect(metadata.name).to.equal("NARA Position #000001 · New");
+    expect(metadata.background_color).to.equal("070A12");
     expect(metadata.attributes.map((attribute: any) => attribute.trait_type)).to.deep.equal([
-      "Artwork",
-      "Artwork Index",
       "Position ID",
-      "Origin",
+      "Yield Tier",
+      "Core",
+      "Module",
+      "Provenance",
+      "Storage",
+      "Renderer",
       "Created Epoch",
     ]);
-    expect(svg).to.contain('viewBox="0 0 1200 1200"');
-    expect(svg).to.contain("Axis");
-    expect(svg).to.contain("MANUAL ORIGIN");
+    expect(svg).to.contain('viewBox="0 0 1000 1000"');
+    expect(svg).to.contain(">NARA</text>");
+    expect(svg).to.contain("ON-CHAIN / RENDERER V4");
+    expect(svg).to.contain("MANUAL");
     expect(collection.name).to.equal("NARA Positions");
     expect(decodeSvgDataUri(collection.image)).to.contain('viewBox="0 0 1600 900"');
     expect(collection.banner_image).to.equal(collection.image);
@@ -498,12 +504,12 @@ describe("NARAPositionNFTV4", () => {
     }
   });
 
-  it("assigns all eight deterministic equal-status artwork compositions", async () => {
+  it("assigns deterministic equal-status instrument modules and unique art per token", async () => {
     const f = await deployFixture();
     const amount = wad(10);
     await f.nara.connect(f.alice).approve(await f.nft.getAddress(), amount * 8n);
 
-    const names: string[] = [];
+    const validModules = ["Yield Arc", "Pressure Scar", "Orbit Field", "Ledger Fragment", "Streak Crown", "Demand Trace"];
     const images: string[] = [];
     for (let tokenId = 1; tokenId <= 8; tokenId += 1) {
       await f.nft.connect(f.alice).mintAndLock(amount, 96, 0, { value: LOCK_FEE });
@@ -511,13 +517,15 @@ describe("NARAPositionNFTV4", () => {
       const attributes = Object.fromEntries(
         metadata.attributes.map((attribute: any) => [attribute.trait_type, attribute.value]),
       );
-      names.push(attributes.Artwork);
+      expect(validModules).to.include(attributes.Module);
+      expect(attributes.Provenance).to.equal("Manual");
+      expect(attributes.Storage).to.equal("Fully On Chain");
+      // module is a deterministic function of tokenId (renderer-side)
+      expect(Number(await f.renderer.artworkIndex(tokenId))).to.be.within(0, 5);
       images.push(metadata.image);
-      expect(attributes["Artwork Index"]).to.equal(tokenId - 1);
-      expect(metadata.description).to.contain("equal-status");
     }
 
-    expect(names).to.deep.equal(["Axis", "Archive", "Field", "Interval", "Orbit", "Relay", "Signal", "Vault"]);
+    // Every token renders a distinct instrument (IDs differ even when module repeats).
     expect(new Set(images).size).to.equal(8);
   });
 
@@ -657,7 +665,7 @@ describe("NARAPositionNFTV4", () => {
     const attributes = Object.fromEntries(
       metadata.attributes.map((attribute: any) => [attribute.trait_type, attribute.value]),
     );
-    expect(attributes.Origin).to.equal("Genesis Bond");
+    expect(attributes.Provenance).to.equal("Genesis");
     expect(attributes["Genesis Round"]).to.equal(1);
     expect(attributes["Genesis Tier"]).to.equal(10);
     expect(attributes["Genesis Reward Multiplier Bps"]).to.equal(20_000);
@@ -981,5 +989,209 @@ describe("NARAPositionNFTV4", () => {
 
     await f.genesisDistributor.notifyEthRewards({ value: f.ethers.parseEther("1") });
     expect(await f.nft.claimableGenesisEth(2)).to.equal(f.ethers.parseEther("1.5"));
+  });
+});
+
+describe("NARAPositionNFTV4 — wrapper claim fees", () => {
+  it("defaults to 0 / no recipient and enforces the cap + freeze", async () => {
+    const f = await deployFixture();
+    expect(await f.nft.naraClaimFeeBps()).to.equal(0n);
+    expect(await f.nft.tokenClaimFeeBps()).to.equal(0n);
+    expect(await f.nft.claimFeeRecipient()).to.equal(f.ethers.ZeroAddress);
+
+    await expect(f.nft.connect(f.deployer).setClaimFees(1001, 0))
+      .to.be.revertedWithCustomError(f.nft, "NARAPositionNFTV4__ClaimFeeTooHigh");
+    await expect(f.nft.connect(f.deployer).setClaimFees(0, 1001))
+      .to.be.revertedWithCustomError(f.nft, "NARAPositionNFTV4__ClaimFeeTooHigh");
+
+    await f.nft.connect(f.deployer).setClaimFees(1000, 1000);
+    expect(await f.nft.naraClaimFeeBps()).to.equal(1000n);
+
+    await f.nft.connect(f.deployer).freezeClaimFees();
+    await expect(f.nft.connect(f.deployer).setClaimFees(0, 0))
+      .to.be.revertedWithCustomError(f.nft, "NARAPositionNFTV4__ClaimFeesFrozen");
+    await expect(f.nft.connect(f.deployer).setClaimFeeRecipient(await f.treasury.getAddress()))
+      .to.be.revertedWithCustomError(f.nft, "NARAPositionNFTV4__ClaimFeesFrozen");
+  });
+
+  it("skims naraClaimFeeBps to the recipient and forwards ETH untouched", async () => {
+    const f = await deployFixture();
+    await mintPosition(f, f.alice);
+
+    const recipient = await f.treasury.getAddress();
+    const receiver = await f.bob.getAddress(); // distinct from caller to avoid gas noise
+    await f.nft.connect(f.deployer).setClaimFees(500, 0); // 5% NARA
+    await f.nft.connect(f.deployer).setClaimFeeRecipient(recipient);
+
+    const engineAddr = await f.engine.getAddress();
+    const ethAmt = f.ethers.parseEther("1");
+    await f.nara.mint(engineAddr, wad(100));
+    await f.deployer.sendTransaction({ to: engineAddr, value: ethAmt });
+    await f.engine.setClaimable(1, wad(100), ethAmt);
+
+    const recipNaraBefore = await f.nara.balanceOf(recipient);
+    const bobNaraBefore = await f.nara.balanceOf(receiver);
+    const bobEthBefore = await f.ethers.provider.getBalance(receiver);
+
+    await f.nft.connect(f.alice).claimRewards(1, receiver);
+
+    // 5% of 100 NARA to treasury, 95 to receiver, full 1 ETH passes through.
+    expect((await f.nara.balanceOf(recipient)) - recipNaraBefore).to.equal(wad(5));
+    expect((await f.nara.balanceOf(receiver)) - bobNaraBefore).to.equal(wad(95));
+    expect((await f.ethers.provider.getBalance(receiver)) - bobEthBefore).to.equal(ethAmt);
+  });
+
+  it("skims tokenClaimFeeBps on bribe-token claims", async () => {
+    const f = await deployFixture();
+    await mintPosition(f, f.alice);
+
+    const recipient = await f.treasury.getAddress();
+    const receiver = await f.bob.getAddress();
+    await f.nft.connect(f.deployer).setClaimFees(0, 300); // 3% token
+    await f.nft.connect(f.deployer).setClaimFeeRecipient(recipient);
+
+    const Reward = await f.ethers.getContractFactory("MockERC20", f.deployer);
+    const reward: any = await Reward.deploy("Reward", "RWD", 18);
+    await reward.waitForDeployment();
+    const rewardAddr = await reward.getAddress();
+    await reward.mint(await f.engine.getAddress(), wad(50));
+    await f.engine.setTokenClaimable(1, rewardAddr, wad(50));
+
+    const recipBefore = await reward.balanceOf(recipient);
+    const bobBefore = await reward.balanceOf(receiver);
+
+    const got = await f.nft.connect(f.alice).claimTokenRewards.staticCall(1, rewardAddr, receiver);
+    await f.nft.connect(f.alice).claimTokenRewards(1, rewardAddr, receiver);
+
+    // 3% of 50 = 1.5 to treasury, 48.5 to receiver; return value is net.
+    expect((await reward.balanceOf(recipient)) - recipBefore).to.equal(wad(15) / 10n); // 1.5
+    expect((await reward.balanceOf(receiver)) - bobBefore).to.equal(wad(485) / 10n);   // 48.5
+    expect(got).to.equal(wad(485) / 10n);
+  });
+
+  it("stays full pass-through when fees are set but recipient is unset", async () => {
+    const f = await deployFixture();
+    await mintPosition(f, f.alice);
+    await f.nft.connect(f.deployer).setClaimFees(500, 500); // rates set, no recipient
+
+    await f.nara.mint(await f.engine.getAddress(), wad(10));
+    await f.engine.setClaimable(1, wad(10), 0);
+    const before = await f.nara.balanceOf(await f.bob.getAddress());
+    await f.nft.connect(f.alice).claimRewards(1, await f.bob.getAddress());
+    expect((await f.nara.balanceOf(await f.bob.getAddress())) - before).to.equal(wad(10));
+  });
+});
+
+describe("NARAPositionNFTV4 — lifetime stats & metadata refresh", () => {
+  it("accumulates lifetime earned and emits ERC-4906 MetadataUpdate on claim", async () => {
+    const f = await deployFixture();
+    await mintPosition(f, f.alice);
+    const engineAddr = await f.engine.getAddress();
+    const ethAmt = f.ethers.parseEther("0.5");
+    await f.nara.mint(engineAddr, wad(100));
+    await f.deployer.sendTransaction({ to: engineAddr, value: ethAmt });
+    await f.engine.setClaimable(1, wad(100), ethAmt);
+
+    await expect(f.nft.connect(f.alice).claimRewards(1, await f.bob.getAddress()))
+      .to.emit(f.nft, "MetadataUpdate").withArgs(1);
+
+    expect(await f.nft.lifetimeNaraClaimed(1)).to.equal(wad(100));
+    expect(await f.nft.lifetimeEthClaimed(1)).to.equal(ethAmt);
+  });
+
+  it("evolves the Yield Tier as realized ETH earnings cross thresholds", async () => {
+    const f = await deployFixture();
+    await mintPosition(f, f.alice);
+    const engineAddr = await f.engine.getAddress();
+    const tierOf = async () => {
+      const md = decodeJsonDataUri(await f.nft.tokenURI(1));
+      return md.attributes.find((a: any) => a.trait_type === "Yield Tier").value;
+    };
+
+    expect(await tierOf()).to.equal("New");
+
+    const oneEth = f.ethers.parseEther("1");
+    await f.deployer.sendTransaction({ to: engineAddr, value: oneEth });
+    await f.engine.setClaimable(1, 0, oneEth);
+    await f.nft.connect(f.alice).claimRewards(1, await f.alice.getAddress());
+
+    expect(await tierOf()).to.equal("One ETH Club");
+  });
+});
+
+describe("NARAPositionNFTV4 — evolving artwork", () => {
+  const svgOf = async (f: any, id = 1) => {
+    const md = decodeJsonDataUri(await f.nft.tokenURI(id));
+    return decodeSvgDataUri(md.image);
+  };
+
+  it("renders a quiet New-tier core — muted, no orbits, no calibration", async () => {
+    const f = await deployFixture();
+    await mintPosition(f, f.alice);
+    const svg = await svgOf(f);
+    expect(svg).to.include("STATE NEW"); // identity band, uppercased
+    expect(svg).to.include("#6F6B63"); // warm ash / dormant tier color
+    expect(svg).to.not.include("<ellipse"); // orbit rings only at tier 2+
+    expect(svg).to.not.include('stroke-dasharray="3 30"'); // gold calibration ring only at tier 3+
+  });
+
+  it("upgrades the core structure as realized ETH crosses thresholds", async () => {
+    const f = await deployFixture();
+    await mintPosition(f, f.alice);
+    const engineAddr = await f.engine.getAddress();
+    const oneEth = f.ethers.parseEther("1");
+    await f.deployer.sendTransaction({ to: engineAddr, value: oneEth });
+    await f.engine.setClaimable(1, 0, oneEth);
+    await f.nft.connect(f.alice).claimRewards(1, await f.alice.getAddress());
+
+    const svg = await svgOf(f);
+    expect(svg).to.include("STATE ONE ETH CLUB");
+    expect(svg).to.include("#A88745"); // old brass tier color
+    expect(svg).to.include("<ellipse"); // orbit rings present
+    expect(svg).to.include('stroke-dasharray="3 30"'); // gold calibration ring engaged
+  });
+
+  it("flags Genesis and Eternal provenance in the artwork", async () => {
+    const f = await deployFixture();
+    await mintGenesisPosition(f, f.alice, wad(1_000), 96n, 1, 1, 20_000, true);
+    const svg = await svgOf(f);
+    expect(svg).to.include("ETERNAL");
+    expect(svg).to.include("GENESIS");
+  });
+});
+
+describe("NARAPositionNFTV4 — deterministic rendering (V1 modules)", () => {
+  const svgOf = async (f: any, id = 1) =>
+    decodeSvgDataUri(decodeJsonDataUri(await f.nft.tokenURI(id)).image);
+
+  it("renders identical art for the same token across calls (deterministic)", async () => {
+    const f = await deployFixture();
+    await mintPosition(f, f.alice);
+    expect(await f.nft.tokenURI(1)).to.equal(await f.nft.tokenURI(1));
+  });
+
+  it("renders distinct art per token (identity from token+position+epoch)", async () => {
+    const f = await deployFixture();
+    await f.nara.connect(f.alice).approve(await f.nft.getAddress(), wad(2_000));
+    await f.nft.connect(f.alice).mintAndLock(wad(1_000), 96, 0, { value: LOCK_FEE });
+    await f.nft.connect(f.alice).mintAndLock(wad(1_000), 96, 0, { value: LOCK_FEE });
+    expect(await svgOf(f, 1)).to.not.equal(await svgOf(f, 2));
+  });
+
+  it("includes the Scar, Lattice and Glyph modules", async () => {
+    const f = await deployFixture();
+    await mintPosition(f, f.alice);
+    const svg = await svgOf(f);
+    expect(svg).to.include("rotate("); // Scar notch group + lattice node transforms
+    expect(svg).to.include('r="332"'); // Lattice outer coordinate ring
+    expect(svg).to.match(/x="90[56]"|x="912"|cx="913"/); // Glyph notation column
+  });
+
+  it("exposes the deterministic module trait from token data", async () => {
+    const f = await deployFixture();
+    await mintPosition(f, f.alice);
+    const md = decodeJsonDataUri(await f.nft.tokenURI(1));
+    const mod = md.attributes.find((a: any) => a.trait_type === "Module").value;
+    expect(["Yield Arc", "Pressure Scar", "Orbit Field", "Ledger Fragment", "Streak Crown", "Demand Trace"]).to.include(mod);
   });
 });

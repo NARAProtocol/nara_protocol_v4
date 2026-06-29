@@ -74,7 +74,8 @@ These are the current v4 source contracts. A fresh mainnet deploy from these sou
 | `NARABondDepositoryV4` | `contracts/v4/NARABondDepositoryV4.sol` | Direct raw-position bond depository; not the preferred launch path |
 | `NARABondDepositoryV4NFT` | `contracts/v4/NARABondDepositoryV4NFT.sol` | NFT bond depository; preferred launch path |
 | `NARALiquidityGrowthHook` | `contracts/v4/NARALiquidityGrowthHook.sol` | Uniswap v4 exact-input hook with dynamic fee curves |
-| `NARALiquidityGrowthVault` | `contracts/v4/NARALiquidityGrowthVault.sol` | Pool-fee vault for LP compounding, engine routing, and Genesis routing |
+| `NARALiquidityGrowthVault` | `contracts/v4/NARALiquidityGrowthVault.sol` | Pool-fee vault for LP compounding, engine routing, and Genesis routing. LP compounding plugs in an external `ILiquidityCompounder` — production adapter is `NARALiquidityCompounderV4` (see "Liquidity Routing" below). |
+| `NARALiquidityCompounderV4` | `contracts/v4/NARALiquidityCompounderV4.sol` | Production POL compounder: adds the vault's NARA/USDC skim as a **full-range** Uniswap v4 position (PositionManager + Permit2). No-swap, exact-spend, remainder-banking. POL is owner-recoverable via a **7-day recovery timelock** (propose→wait→execute: migrate / sweep banked / wind-down), so holders get a ≥7-day exit window; renounce ownership later for permanent POL. Built, unit-tested (8 tests) + **Base fork-validated** against live PoolManager/PositionManager/Permit2; **not yet deployed/wired** (needs deploy + `setCompounder`). |
 | `NARAOpsVaultV4` | `contracts/v4/NARAOpsVaultV4.sol` | One-shot operations vesting vault capped at `10,000 NARA` |
 
 ---
@@ -152,7 +153,17 @@ Bond term controls:
 - `Genesis`: route USDC to `NARAGenesisRewardDistributorV4`.
 - `GenesisSplit`: split USDC between Genesis rewards and LP compounding.
 
-Launch expectation: begin in `Liquidity` mode to build depth, then move to `Split`, `Engine`, or Genesis routing after liquidity and operations are ready.
+Launch expectation: begin in `Liquidity` mode to build depth (POL-first), then move to `Split`, `Engine`, or Genesis routing after liquidity and operations are ready. The skim is designed to **build protocol-owned liquidity first** and redirect to lockers later — it is not a "tax that funds lockers" by default.
+
+> **Flywheel status (2026-06-29): compounder built, awaiting deploy.** `Liquidity` mode compounds via
+> an **external `ILiquidityCompounder` adapter** (`vault.setCompounder`). The production adapter now
+> exists — **`NARALiquidityCompounderV4`** (full-range, no-swap, exact-spend, POL custody), unit-tested
+> through the real vault + a faithful PositionManager/Permit2 mock. **Remaining before it runs on
+> mainnet:** deploy via `scripts/deployLiquidityCompounderV4.ts`, then the Safe calls
+> `vault.setCompounder` + `freezeCompounder`, plus a Base fork test against the real PositionManager.
+> Until then the vault reverts compounding (no compounder set) and `Liquidity` mode is inert. The
+> harvest (hook) + routing (vault) were always built and self-sustaining; this closes the loop. See
+> `UNISWAP_V4_HOOK.md`.
 
 ---
 

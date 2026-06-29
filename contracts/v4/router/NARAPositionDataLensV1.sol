@@ -8,6 +8,8 @@ interface INARAPositionDataEngineV1 {
     function epochStateView() external view returns (EpochSnapshot memory);
     function claimableRewards(uint256 positionId) external view returns (uint256 naraAmount, uint256 ethAmount);
     function claimableTokenRewards(uint256 positionId, address token) external view returns (uint256 amount);
+    function activeTotalWeight() external view returns (uint256);
+    function EPOCH_LENGTH() external view returns (uint64);
 }
 
 interface INARAPositionDataNFTV1 {
@@ -19,6 +21,8 @@ interface INARAPositionDataNFTV1 {
     function genesisRewardDistributor() external view returns (address);
     function positionIdOf(uint256 tokenId) external view returns (uint256);
     function positionInfo(uint256 tokenId) external view returns (Position memory);
+    function lifetimeNaraClaimed(uint256 tokenId) external view returns (uint256);
+    function lifetimeEthClaimed(uint256 tokenId) external view returns (uint256);
     function genesisMetadataOf(uint256 tokenId)
         external
         view
@@ -71,6 +75,14 @@ contract NARAPositionDataLensV1 {
         uint64 unlockEpoch;
         uint128 amount;
         uint128 weight;
+        // Live engagement + realized-performance stats (facts, not projections).
+        uint256 weightShareWad;        // position weight / live active total weight (1e18 = 100%)
+        uint64  ageEpochs;             // epochs elapsed since creation
+        uint64  epochsToUnlock;        // epochs remaining until unlock (0 if matured/pending-unknown)
+        uint256 secondsToUnlock;       // epochsToUnlock * EPOCH_LENGTH
+        uint256 lifetimeNaraEarned;    // NARA delivered to holders over the position's life
+        uint256 lifetimeEthEarned;     // ETH delivered to holders over the position's life
+        uint256 realizedNaraReturnBps; // lifetimeNaraEarned vs principal, to date (bps, unit-consistent)
         uint256 claimableNara;
         uint256 claimableEth;
         uint256 claimableGenesisEth;
@@ -141,6 +153,24 @@ contract NARAPositionDataLensV1 {
         data.pending = settled.epoch < p.activationEpoch;
         data.active = settled.epoch >= p.activationEpoch && settled.epoch < p.unlockEpoch;
         data.matured = p.unlockEpoch != 0 && settled.epoch >= p.unlockEpoch;
+
+        // Engagement: share of live active weight, age, and time-to-unlock.
+        uint256 totalWeight = ENGINE.activeTotalWeight();
+        if (totalWeight != 0) {
+            data.weightShareWad = (uint256(p.weight) * 1e18) / totalWeight;
+        }
+        if (live >= p.createdEpoch) data.ageEpochs = live - p.createdEpoch;
+        if (p.unlockEpoch > live) {
+            data.epochsToUnlock = p.unlockEpoch - live;
+            data.secondsToUnlock = uint256(data.epochsToUnlock) * ENGINE.EPOCH_LENGTH();
+        }
+
+        // Realized performance (historical facts). NARA-vs-NARA stays unit-consistent.
+        data.lifetimeNaraEarned = POSITION_NFT.lifetimeNaraClaimed(tokenId);
+        data.lifetimeEthEarned = POSITION_NFT.lifetimeEthClaimed(tokenId);
+        if (p.amount != 0) {
+            data.realizedNaraReturnBps = (data.lifetimeNaraEarned * 10_000) / uint256(p.amount);
+        }
 
         try ENGINE.claimableRewards(positionId) returns (uint256 naraAmount, uint256 ethAmount) {
             data.claimableNara = naraAmount;

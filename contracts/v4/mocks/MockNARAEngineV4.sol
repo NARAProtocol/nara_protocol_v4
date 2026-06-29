@@ -17,6 +17,8 @@ contract MockNARAEngineV4 {
     uint64 public maxLock = 35040;
     uint64 public currentEpoch;
     uint64 public settledEpoch;
+    uint256 public activeTotalWeight;
+    uint64 public epochLengthValue = 900;
     bool public revertOnNotify;
     bool public revertOnLock;
 
@@ -65,6 +67,14 @@ contract MockNARAEngineV4 {
     function setCurrentEpoch(uint64 v) external {
         currentEpoch = v;
         settledEpoch = v;
+    }
+
+    function setActiveTotalWeight(uint256 v) external {
+        activeTotalWeight = v;
+    }
+
+    function EPOCH_LENGTH() external view returns (uint64) {
+        return epochLengthValue;
     }
 
     function setSettledEpoch(uint64 v) external {

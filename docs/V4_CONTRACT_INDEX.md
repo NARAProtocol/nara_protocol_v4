@@ -1,6 +1,6 @@
 # NARA v4 Contract Index
 
-Last updated: 2026-06-07.
+Last updated: 2026-06-29.
 **Start here for v4.** Maps every active v4 contract to its purpose, deploy step, and canonical doc.
 Active sources live **only** in `contracts/v4/`. Everything else is archived/retired.
 
@@ -23,7 +23,8 @@ Active sources live **only** in `contracts/v4/`. Everything else is archived/ret
 | `NARALauncher.sol` | Atomic CREATE2 deploy of token + engine (no half-wired state). | `NARA_V4_LAUNCH_RUNBOOK.md` |
 | `NARARewardReserve.sol` | Sealed NARA reward reserve; admin cannot sweep, only the engine pulls. | `EMISSION_MECHANICS.md` |
 | `NARALiquidityGrowthHook.sol` | Taxed Uniswap v4 hook (default 5%/5%, cap 25%/20%). Hook address low bits must be `0x2088`. | `research/V4_1K_LIQUIDITY_LAUNCH_PLAN_2026-05-05.md` |
-| `NARALiquidityGrowthVault.sol` | Receives hook tax. `routeMode`: Liquidity (default, compounds LP) / Engine / Split / Genesis / GenesisSplit. | `research/V4_1K_LIQUIDITY_LAUNCH_PLAN_2026-05-05.md` |
+| `NARALiquidityGrowthVault.sol` | Receives hook tax. `routeMode`: Liquidity (default, compounds LP) / Engine / Split / Genesis / GenesisSplit. POL-first by design. | `UNISWAP_V4_HOOK.md`, `research/V4_1K_LIQUIDITY_LAUNCH_PLAN_2026-05-05.md` |
+| `NARALiquidityCompounderV4.sol` | Production `ILiquidityCompounder` — closes the POL flywheel. Adds the vault's NARA/USDC skim as a permanent **full-range** Uniswap v4 position (PositionManager + Permit2). No-swap, exact-spend, remainder-banking, POL custody. Built + unit-tested; deploy via `scripts/deployLiquidityCompounderV4.ts` then `vault.setCompounder`. | `UNISWAP_V4_HOOK.md`, `V4_OPPORTUNITY_GAPS.md` |
 | `utils/Create2HookDeployer.sol` | Mines + deploys the hook at the required `0x2088` address. | `NARA_V4_LAUNCH_RUNBOOK.md` |
 
 ## Engine internals
@@ -38,9 +39,9 @@ Active sources live **only** in `contracts/v4/`. Everything else is archived/ret
 
 | Contract | Purpose | Doc |
 |---|---|---|
-| `NARAPositionNFTV4.sol` | ERC-721 lock positions ("veNARA NFT"). A lock **is** the NFT. | **`NARA_V4_NFT_POSITIONS.md`** |
+| `NARAPositionNFTV4.sol` | ERC-721 lock positions ("veNARA NFT"). A lock **is** the NFT. The **single** NFT collection — genesis/eternal are flags inside it, not separate collections. Also holds **wrapper-level claim fees** (`naraClaimFeeBps`/`tokenClaimFeeBps`, default 0, cap 10%), per-position **lifetime earned** tracking, and ERC-4906 refresh emits. | **`NARA_V4_NFT_POSITIONS.md`**, `NARA_V4_NFT_PROTOCOL_ROLE_AUDIT.md`, `NARA_V4_POSITION_STATS_AND_CLAIM_FEES.md` |
 | `NARAPositionAccountV4.sol` | EIP-1167 clone account per NFT; owns the engine position. | `NARA_V4_NFT_POSITIONS.md` |
-| `NARAPositionRendererV4.sol` | Immutable fully on-chain art, stable token metadata, and collection metadata. | `NARA_V4_NFT_POSITIONS.md` |
+| `NARAPositionRendererV4.sol` | Immutable on-chain art + metadata. Art **evolves** with realized-earnings **Yield Tier** (New→Apex) + Genesis/Eternal flags; cache-safe (tx-driven drivers only). **Canonical art direction: `NARA_V4_NFT_ART_DESIGN_BIBLE.md`** (7-module sacred-machine system + status/gap). | `NARA_V4_NFT_ART_DESIGN_BIBLE.md`, `NARA_V4_POSITION_STATS_AND_CLAIM_FEES.md` |
 | `NARAGenesisRewardDistributorV4.sol` | Parallel ETH + USDC reward pool for genesis NFTs, weighted by reward weight. | `NARA_V4_NFT_POSITIONS.md` (rewards section) |
 | `NARABondVaultV4.sol` | Sealed bond NARA inventory. | `NARA_V4_BOND_OPENING_CRITERIA.md` |
 | `NARABondDepositoryV4NFT.sol` | **Canonical** bond path: sells discounted NARA, delivers vesting genesis NFTs. | `NARA_V4_BOND_OPENING_CRITERIA.md` |
@@ -53,8 +54,10 @@ Active sources live **only** in `contracts/v4/`. Everything else is archived/ret
 |---|---|---|
 | `router/NARARouter.sol` | Permit + sync + lock in one tx; permissionless `syncEpochs()` (replaces the keeper). | `ROUTER_LENS.md` |
 | `router/NARADashboardLens.sol` | Single-call `getUserState()` for any frontend. | `ROUTER_LENS.md`, `NARA_V4_DASHBOARD_SPEC.md` |
-| `router/NARAPositionDataLensV1.sol` | Typed live position-NFT data for apps and future integrations; batches capped at 100. | `ROUTER_LENS.md`, `NARA_V4_NFT_POSITIONS.md` |
+| `router/NARAPositionDataLensV1.sol` | Typed live position-NFT data for apps; batches capped at 100. Now also returns **weight share, age, time-to-unlock, lifetime earned, realized NARA return (bps)**. | `ROUTER_LENS.md`, `NARA_V4_NFT_POSITIONS.md`, `NARA_V4_POSITION_STATS_AND_CLAIM_FEES.md` |
+| `router/NARAProtocolStatsLensV1.sol` | **One-call protocol headline stats**: all-time ETH distributed to lockers, NARA emitted, total locked, positions, emission runway, treasury. For homepages/aggregators. | `NARA_V4_POSITION_STATS_AND_CLAIM_FEES.md` |
 | `router/BribeRouterV4.sol` | Permissionless `notify(token, amount)` → engine. Any protocol can bribe NARA lockers. Needs `REWARD_NOTIFIER_ROLE`. | `ROUTER_LENS.md` |
+| `router/NARACirculatingSupplyV1.sol` | Trustless **market** circulating-supply oracle for listings (CoinGecko/CMC/DexScreener). `circulatingSupply = cappedTotal − Σ(reserve+bonds+vesting+dead)`; user-locked AND treasury count as circulating (≠ engine's emission free-float). Genesis ≈ 110k. Immutable, ownerless, versioned. `excludedAccounts()` publishes the exact set for listing review. | `CIRCULATING_SUPPLY.md` |
 
 ## Composability (deploy step 8 — code-complete, deploy only with a market + oracle)
 

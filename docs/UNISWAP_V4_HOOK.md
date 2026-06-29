@@ -7,8 +7,31 @@
 
 NARA's liquidity home is a **single custom Uniswap v4 pool** (NARA/USDC). The pool's hook is not a
 neutral fee rail — it is an **asymmetric, anti-gameable buy-pressure tax** that skims a fee from every
-swap and routes it to a vault that funds NARA lockers. This document explains how it works and why it
-is correct.
+swap into a vault.
+
+> **READ THIS FIRST — the mechanism is POL-first, not locker-first.** The vault's **default route mode
+> is `Liquidity`** (`NARALiquidityGrowthVault` constructor sets `routeMode = RouteMode.Liquidity`). The
+> skim is designed to **compound back into protocol-owned liquidity (POL) first**, building depth.
+> Redirecting the skim to lockers (`Engine` / `Split` / `Genesis` / `GenesisSplit`) is a **later
+> operator switch**, taken once the book is deep. Do **not** describe the hook as "a tax that funds
+> lockers" — that is a later phase, not the default. (An earlier version of this doc led with the
+> locker framing; it was wrong-ordered and corrected on 2026-06-29.)
+>
+> **✅ FLYWHEEL BRICK BUILT + FORK-VALIDATED (2026-06-29) — awaiting deploy only.** The hook and vault
+> were always fully built; the POL stage is intentionally **pluggable** (the vault calls an external
+> `ILiquidityCompounder.compound(...)` adapter, set via `vault.setCompounder`, lockable via
+> `freezeCompounder`, hardened by `CompounderDidNotSpend` + `minLiquidityAdded` slippage guards). The
+> production adapter now exists: **`contracts/v4/NARALiquidityCompounderV4.sol`** — full-range, no-swap,
+> exact-spend, remainder-banking, POL custody, with a **7-day recovery timelock** (propose→wait→execute)
+> so holders always get an exit window. Tested two ways: 8 unit tests through the **real vault**, **and
+> a Base mainnet fork test** (`test/fork/NARALiquidityCompounderV4.fork.test.ts`) that adds real
+> full-range liquidity through the **live** PoolManager + PositionManager + Permit2 — encoding certified
+> end-to-end. **Still required before mainnet value:** deploy via
+> `scripts/deployLiquidityCompounderV4.ts`, then `vault.setCompounder` + `freezeCompounder` (Safe).
+> Until deployed + wired, `Liquidity` mode is still inert (`_compoundUnchecked` reverts with no
+> compounder). `mocks/MockLiquidityCompounder.sol` remains a test-only stub. See §5 and CURRENT_STATE.md.
+
+This document explains how the hook works and why it is correct.
 
 ---
 
@@ -109,7 +132,7 @@ The vault receives every skim and routes it by **mode**:
 
 | Mode | Behavior |
 |------|----------|
-| `Liquidity` | compound NARA/USDC back into the LP position (default at launch — builds depth) |
+| `Liquidity` | **default** — compound NARA/USDC back into the LP position via the external compounder adapter to build depth. Production adapter: **`NARALiquidityCompounderV4`** (full-range, no-swap). Still **inert until deployed + `setCompounder`'d**. |
 | `Engine` | route NARA to the engine emission reserve, USDC to the engine ERC-20 reward stream |
 | `Split` | part to engine, part to LP |
 | `Genesis` | route USDC to the Genesis reward distributor |
@@ -142,3 +165,10 @@ funds NARA lockers**. The adapter is a pure consumer; it needs no hook permissio
 
 No correctness issues found in the hook on this pass. As with the rest of the protocol, an independent
 human review is recommended before mainnet value — see [`../SECURITY.md`](../SECURITY.md).
+
+**Scope of this ✅:** these checks cover the **hook and vault**. The convert-to-liquidity layer
+(`NARALiquidityCompounderV4`) is now built and unit-tested (through the real vault + a faithful
+PositionManager/Permit2 mock), but is **not yet certified end-to-end on mainnet**: it still needs
+deployment, `setCompounder` wiring, and a Base fork test against the real PositionManager. Treat
+"Liquidity mode" as built-and-tested but not-yet-operational until the compounder is deployed,
+fork-validated, reviewed, and `setCompounder`'d.

@@ -10,6 +10,15 @@
  *   BRIBE_REWARD_TOKEN
  *   BRIBE_MIN_AMOUNT
  *   V4_ALLOW_UNVERIFIED_ROUTER_LAYER=1
+ *
+ *   --- NARACirculatingSupplyV1 (market circulating-supply oracle) ---
+ *   NARA_V4            token address (required to deploy the tracker)
+ *   CIRC_EXCLUDED      comma-separated non-market wallets to net out. Launch set:
+ *                        rewardReserve, bondVault, teamVestingWallet,
+ *                        0x000000000000000000000000000000000000dEaD
+ *                      (treasury is NOT excluded — earmarked for game sponsorship, so it
+ *                       counts as circulating). Omit to skip the tracker. Must be unique, non-zero.
+ *   CIRC_MAX_SUPPLY_CAP supply ceiling in wei (default 1_000_000e18).
  */
 
 import hre from "hardhat";
@@ -94,6 +103,14 @@ async function main() {
   console.log("Deployed:", positionDataLensAddress);
   if (isMainnet) await verify(positionDataLensAddress, [engineAddress, nftAddress]);
 
+  console.log("\n-- NARAProtocolStatsLensV1 --");
+  const ProtocolStatsLens = await ethers.getContractFactory("NARAProtocolStatsLensV1");
+  const protocolStatsLens = await ProtocolStatsLens.deploy(engineAddress);
+  await protocolStatsLens.waitForDeployment();
+  const protocolStatsLensAddress = await protocolStatsLens.getAddress();
+  console.log("Deployed:", protocolStatsLensAddress);
+  if (isMainnet) await verify(protocolStatsLensAddress, [engineAddress]);
+
   console.log("\n-- BribeRouterV4 --");
   const bribeRewardToken = process.env.BRIBE_REWARD_TOKEN;
   const bribeMinAmount = process.env.BRIBE_MIN_AMOUNT;
@@ -111,6 +128,42 @@ async function main() {
     console.log("Skipped. Set BRIBE_REWARD_TOKEN and BRIBE_MIN_AMOUNT to deploy.");
   }
 
+  console.log("\n-- NARACirculatingSupplyV1 --");
+  const ONE = 10n ** 18n;
+  let circulatingSupplyAddress: string | null = null;
+  const naraTokenForCirc = process.env.NARA_V4 ? ethers.getAddress(process.env.NARA_V4) : undefined;
+  const circExcludedRaw = process.env.CIRC_EXCLUDED;
+  if (naraTokenForCirc && circExcludedRaw) {
+    const maxSupplyCap = process.env.CIRC_MAX_SUPPLY_CAP
+      ? BigInt(process.env.CIRC_MAX_SUPPLY_CAP)
+      : 1_000_000n * ONE;
+    const excluded = circExcludedRaw
+      .split(",")
+      .map((a) => a.trim())
+      .filter((a) => a.length > 0)
+      .map((a) => ethers.getAddress(a));
+    if ((await ethers.provider.getCode(naraTokenForCirc)) === "0x") {
+      throw new Error(`NARA_V4 has no code: ${naraTokenForCirc}`);
+    }
+    const seen = new Set<string>();
+    for (const a of excluded) {
+      const key = a.toLowerCase();
+      if (seen.has(key)) throw new Error(`CIRC_EXCLUDED contains a duplicate: ${a}`);
+      seen.add(key);
+    }
+    const Circ = await ethers.getContractFactory("NARACirculatingSupplyV1");
+    const circ = await Circ.deploy(naraTokenForCirc, maxSupplyCap, excluded);
+    await circ.waitForDeployment();
+    circulatingSupplyAddress = await circ.getAddress();
+    console.log("Deployed:", circulatingSupplyAddress);
+    console.log("Excluded:", excluded.join(", "));
+    console.log("circulatingSupply:", (await circ.circulatingSupply()).toString());
+    console.log("ACTION: submit excludedAccounts() to CoinGecko/CMC as the excluded list.");
+    if (isMainnet) await verify(circulatingSupplyAddress, [naraTokenForCirc, maxSupplyCap, excluded]);
+  } else {
+    console.log("Skipped. Set NARA_V4 and CIRC_EXCLUDED to deploy the circulating-supply oracle.");
+  }
+
   const output = {
     network: network.chainId.toString(),
     deployer: deployer.address,
@@ -119,7 +172,9 @@ async function main() {
     NARARouter: routerAddress,
     NARADashboardLens: dashboardLensAddress,
     NARAPositionDataLensV1: positionDataLensAddress,
+    NARAProtocolStatsLensV1: protocolStatsLensAddress,
     BribeRouterV4: bribeRouterAddress,
+    NARACirculatingSupplyV1: circulatingSupplyAddress,
     timestamp: new Date().toISOString(),
   };
 

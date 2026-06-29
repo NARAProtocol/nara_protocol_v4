@@ -1,6 +1,6 @@
 # V4 Launch Checklist
 
-Last updated: 2026-05-27.
+Last updated: 2026-06-29.
 
 This is the operator-safe checklist for the next fresh v4 launch. Code and deployment scripts are the source of truth.
 
@@ -34,29 +34,53 @@ Historical context only:
 
 ## Required Current Contracts
 
-Fresh core deploy must use:
+Fresh core deploy (`deploy:v4:base:usdc`) must use:
 
 - `NARALauncher`
 - `NARAToken`
 - `NARAEngine`
+- `NARARewardReserve`
 - `NARALiquidityGrowthVault`
 - `NARALiquidityGrowthHook`
 - `Create2HookDeployer`
+
+Liquidity compounder deploy (`scripts/deployLiquidityCompounderV4.ts`, after the vault exists — closes the POL flywheel):
+
+- `NARALiquidityCompounderV4`  ← then `vault.setCompounder(...)`, then `vault.freezeCompounder()` once validated. **Without this, `Liquidity` route mode is inert and the skim never compounds.**
 
 Allocation deploy must use, if bonds or NFT positions are in launch scope:
 
 - `NARAOpsVaultV4`
 - `NARABondVaultV4`
 - `NARAPositionAccountV4`
+- `NARAPositionRendererV4` (links library `NARAPositionArtV1`)
 - `NARAPositionNFTV4`
 - `NARAGenesisRewardDistributorV4`
 - `NARABondDepositoryV4NFT`
+
+Router / lens / bribe deploy (`deploy:v4:router:lens`) must use:
+
+- `NARARouter`
+- `NARADashboardLens`
+- `NARAPositionDataLensV1`
+- `NARAProtocolStatsLensV1`
+- `NARACirculatingSupplyV1`
+- `BribeRouterV4`  ← then grant `REWARD_NOTIFIER_ROLE` to it on the engine
 
 Optional composability deploy must use:
 
 - `NARAStakingPoolV4`
 - `NARAStakingPoolSYV4`
 - `NARAFractionalPositionFactoryV4`
+
+> Intentionally NOT deployed: `NARABondDepositoryV4` (raw-position bond path — superseded by the NFT
+> path) and `NARAFractionalPositionV4` (deployed per-position by the factory at runtime, not at launch).
+> Everything else under `contracts/v4/` (excluding `mocks/`, `interfaces/`, `libraries/`) is covered above.
+>
+> **Automated guard:** `test/deployCoverage.test.ts` (runs in `npm test`) fails if any deployable v4
+> contract is not referenced by a `scripts/deploy*.ts` script. When you add a new contract, either wire
+> it into a deploy script or add it to that test's `INTENTIONALLY_NOT_DEPLOYED` map with a reason —
+> otherwise the suite goes red. This is what makes "we forgot to deploy X" impossible to ship silently.
 
 ---
 
@@ -519,12 +543,15 @@ npm run test:invariants:v4
 npm run test:composability:v4
 npm test
 npm run size
-npm run deploy:v4:base:usdc
+V4_SKIP_COMPOUNDER=1 npm run deploy:v4:base:usdc   # compounder wired separately below
 npm run v4:env:sync
 npm run v4:env:sync:write
 npm run verify:v4:preflight
 npx tsx scripts/seedV4Liquidity.ts
 npm run v4:env:sync:write
+# Step 4b — close the POL flywheel (needs the vault from core deploy):
+NODE_OPTIONS="--require ./polyfill.cjs" npx hardhat run scripts/deployLiquidityCompounderV4.ts --network base
+# then (vault owner): vault.setCompounder(<compounder>) -> validate one compound -> vault.freezeCompounder()
 npm run smoke:v4
 ```
 
@@ -537,6 +564,11 @@ Remove-Item Env:V4_ALLOC_DRY_RUN
 ```bash
 npm run deploy:v4:allocations
 npm run verify:v4:allocations
+# Router / lens / bribe layer (deploys Router, DashboardLens, PositionDataLens, ProtocolStatsLens, CirculatingSupply, BribeRouter):
+ENGINE_V4=<engine> POSITION_NFT_V4=<nft> npm run deploy:v4:router:lens
+# then grant REWARD_NOTIFIER_ROLE to BribeRouterV4 on the engine (see runbook Step 7)
+# Optional composability:
+NODE_OPTIONS="--require ./polyfill.cjs" npx hardhat run scripts/deployComposabilityV4.ts --network base
 ```
 
 Only after the relevant commands pass should the stack be treated as launch-ready.

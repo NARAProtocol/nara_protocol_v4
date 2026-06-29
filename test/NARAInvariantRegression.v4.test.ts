@@ -1,6 +1,7 @@
 import hre from "hardhat";
 import { expect } from "chai";
 import type { Signer } from "ethers";
+import { deployRenderer } from "./helpers/art";
 
 const ONE = 10n ** 18n;
 const MAX_SUPPLY = 1_000_000n * ONE;
@@ -205,9 +206,7 @@ async function deployNftBondStack(ethers: any, deployer: Signer, treasury: Signe
   const accountImpl = await Account.deploy();
   await accountImpl.waitForDeployment();
 
-  const Renderer = await ethers.getContractFactory("NARAPositionRendererV4", deployer);
-  const renderer = await Renderer.deploy();
-  await renderer.waitForDeployment();
+  const renderer = await deployRenderer(ethers, deployer);
 
   const NFT = await ethers.getContractFactory("NARAPositionNFTV4", deployer);
   const positionNft = await NFT.deploy(

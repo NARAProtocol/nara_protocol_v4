@@ -1,6 +1,7 @@
 import hre from "hardhat";
 import { expect } from "chai";
 import type { Signer } from "ethers";
+import { deployRenderer } from "./helpers/art";
 
 const ONE = 10n ** 18n;
 const USDC = 10n ** 6n;
@@ -28,9 +29,7 @@ async function deployFixture() {
   const account: any = await Account.deploy();
   await account.waitForDeployment();
 
-  const Renderer = await ethers.getContractFactory("NARAPositionRendererV4", deployer);
-  const renderer: any = await Renderer.deploy();
-  await renderer.waitForDeployment();
+  const renderer: any = await deployRenderer(ethers, deployer);
 
   const NFT = await ethers.getContractFactory("NARAPositionNFTV4", deployer);
   const nft: any = await NFT.deploy(

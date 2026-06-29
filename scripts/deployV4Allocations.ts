@@ -193,9 +193,17 @@ async function estimateGasFloor(
     "contracts/v4/NARAPositionAccountV4.sol:NARAPositionAccountV4",
     deployer,
   );
+  const positionArtFactory = await ethers.getContractFactory(
+    "contracts/v4/libraries/NARAPositionArtV1.sol:NARAPositionArtV1",
+    deployer,
+  );
+  // Renderer links the art library; the placeholder link address does not affect deploy gas.
   const positionRendererFactory = await ethers.getContractFactory(
     "contracts/v4/NARAPositionRendererV4.sol:NARAPositionRendererV4",
-    deployer,
+    {
+      libraries: { "project/contracts/v4/libraries/NARAPositionArtV1.sol:NARAPositionArtV1": deployer.address },
+      signer: deployer,
+    },
   );
   const positionNftFactory = await ethers.getContractFactory(
     "contracts/v4/NARAPositionNFTV4.sol:NARAPositionNFTV4",
@@ -213,6 +221,7 @@ async function estimateGasFloor(
   const opsTx = await opsFactory.getDeployTransaction(tokenAddress, opsOwner, opsVestingSeconds);
   const bondVaultTx = await bondVaultFactory.getDeployTransaction(deployer.address, bondActionDelay, bondAmount);
   const positionAccountTx = await positionAccountFactory.getDeployTransaction();
+  const positionArtTx = await positionArtFactory.getDeployTransaction();
   const positionRendererTx = await positionRendererFactory.getDeployTransaction();
   // Use tokenAddress as the placeholder implementation/NFT/vault for constructor gas estimation.
   // The real addresses are unknown before deployment; constructors only check code length.
@@ -241,6 +250,7 @@ async function estimateGasFloor(
     await ethers.provider.estimateGas({ ...opsTx, from: deployer.address }) +
     await ethers.provider.estimateGas({ ...bondVaultTx, from: deployer.address }) +
     await ethers.provider.estimateGas({ ...positionAccountTx, from: deployer.address }) +
+    await ethers.provider.estimateGas({ ...positionArtTx, from: deployer.address }) +
     await ethers.provider.estimateGas({ ...positionRendererTx, from: deployer.address }) +
     await ethers.provider.estimateGas({ ...positionNftTx, from: deployer.address }) +
     await ethers.provider.estimateGas({ ...genesisDistributorTx, from: deployer.address }) +
@@ -471,12 +481,23 @@ async function main() {
   const positionAccountAddress = await positionAccount.getAddress();
   console.log("NARAPositionAccountV4:", positionAccountAddress);
 
-  console.log("Step 5: deploy immutable position renderer");
-  const positionRenderer = await ethers.deployContract(
-    "contracts/v4/NARAPositionRendererV4.sol:NARAPositionRendererV4",
+  console.log("Step 5: deploy immutable position art library + renderer");
+  const positionArt = await ethers.deployContract(
+    "contracts/v4/libraries/NARAPositionArtV1.sol:NARAPositionArtV1",
     [],
     deployer,
   );
+  await positionArt.waitForDeployment();
+  const positionArtAddress = await positionArt.getAddress();
+  console.log("NARAPositionArtV1:", positionArtAddress);
+  const positionRendererFactory = await ethers.getContractFactory(
+    "contracts/v4/NARAPositionRendererV4.sol:NARAPositionRendererV4",
+    {
+      libraries: { "project/contracts/v4/libraries/NARAPositionArtV1.sol:NARAPositionArtV1": positionArtAddress },
+      signer: deployer,
+    },
+  );
+  const positionRenderer = await positionRendererFactory.deploy();
   await positionRenderer.waitForDeployment();
   const positionRendererAddress = await positionRenderer.getAddress();
   console.log("NARAPositionRendererV4:", positionRendererAddress);
