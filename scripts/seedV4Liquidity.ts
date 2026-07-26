@@ -9,7 +9,7 @@
  *   BASE_RPC_URL or BASE_MAINNET_RPC_URL
  *
  * Optional env:
- *   V4_NARA_TOKEN          default: 0x58c209B95350aFBEFa17137CEd209f8c4b7D896D
+ *   V4_NARA_TOKEN          required fresh deployment address
  *   V4_SEED_NARA           default: 30     (human NARA, 18 decimals)
  *   V4_SEED_USDC           default: 300    (human USDC, 6 decimals)
  *   V4_SEED_SLIPPAGE_BPS   default: 200    (2% max slippage on each token)

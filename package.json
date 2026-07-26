@@ -31,6 +31,7 @@
     "deploy:v4:pool:only": "hardhat run scripts/redeployPoolOnly.ts --network base",
     "verify:v4:allocations": "hardhat run scripts/verifyV4AllocationsLive.ts --network base",
     "verify:v4:preflight": "tsx scripts/verifyV4Preflight.ts",
+    "verify:v4:preseed": "tsx scripts/verifyV4Preflight.ts --pre-seed",
     "verify:v4:launch-gates": "tsx scripts/verifyV4LaunchGates.ts",
     "smoke:v4": "tsx scripts/smokeTestV4Deployment.ts",
     "v4:env:sync": "tsx scripts/syncV4FreshEnv.ts",

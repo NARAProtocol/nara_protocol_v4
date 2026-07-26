@@ -49,10 +49,9 @@ Pool ID: `0xbb3287f32b95e96301c9582e8bf7e81fa362e4b9eea00cf016c537cf5970dff3`
 
 ## Explorer status
 
-- Launcher source verified on BaseScan and Blockscout.
-- Token source verified on BaseScan, Blockscout, and Sourcify.
-- Remaining explorer submissions are non-protocol operations and may be retried
-  without changing on-chain state.
+- Launcher and token source verified on BaseScan, Blockscout, and Sourcify.
+- Engine, reward reserve, liquidity vault, CREATE2 deployer, and hook source
+  verified on BaseScan.
 
 ## Activation status
 

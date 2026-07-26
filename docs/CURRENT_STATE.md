@@ -1,8 +1,6 @@
 # Current State
 
-Last updated: 2026-07-04 (Renderer V5 action-accretion pass: standard cards now render claim
-phyllotaxis, extension sediment, and a compact C/E action ledger; Genesis/Eternal plates render
-archive accretion. Full suite and bytecode size gate re-run green).
+Last updated: 2026-07-26 (fresh v4 controlled Stage A deployment on Base mainnet).
 
 This is the canonical state document for the active NARA workspace. Code is the source of truth. When this document conflicts with Solidity or deployment scripts, update this document.
 
@@ -21,7 +19,9 @@ Resume v4 work from:
 On **2026-05-27** the project committed to a clean fresh start on v4. The entire v3 protocol stack is **retired**. This is unconditional — not conditional on the v4 redeploy completing.
 
 - v3 is not "still live until v4 launches." v3 is retired now.
-- A fresh NARA token will launch from `contracts/v4/NARAToken.sol` with a new address. The v3 token `0xE444de61752bD13D1D37Ee59c31ef4e489bd727C` is permanently retired.
+- The fresh NARA token deployed from `contracts/v4/NARAToken.sol` at
+  `0x65E247AA3aa9C0131b2984b894c3D24c41341D7A`. The v3 token
+  `0xE444de61752bD13D1D37Ee59c31ef4e489bd727C` remains permanently retired.
 - All v3 mainnet contracts are archived at `archive/legacy-v3/`. See [archive/legacy-v3/README.md](../archive/legacy-v3/README.md) for the full retired-address table.
 - The only current code path is `contracts/v4/`.
 - Frontend apps (`apps/nara-lockboard/`, `apps/nara-lotto/`, `apps/nara-arena/`) were wired to v3 ABIs and are non-functional end-to-end until rebuilt for v4.
@@ -32,7 +32,11 @@ On **2026-05-27** the project committed to a clean fresh start on v4. The entire
 
 The v4 incident stack deployed on 2026-04-23 is retired for launch purposes. It remains relevant only for recovery, accounting, and historical analysis.
 
-The next production launch must use a fresh v4 redeploy from the current repo code. Do not market, integrate, or reuse the retired v4 incident stack as the public launch candidate.
+The fresh v4 core was deployed from release
+`3215b69a1154b9c30957cd8d875b636dedc9d0ca` on 2026-07-26. This is a
+controlled Stage A deployment: core contracts and the sealed reserve are live,
+but the pool is uninitialized, has no liquidity, and is not a public market.
+Do not market or reuse the retired v4 incident stack.
 
 Current launch constraint: operator has approximately `$1k` for liquidity. Treat the next v4 launch as a calibrated lock/NFT launch, not a full public trading launch. The detailed plan is [research/V4_1K_LIQUIDITY_LAUNCH_PLAN_2026-05-05.md](research/V4_1K_LIQUIDITY_LAUNCH_PLAN_2026-05-05.md).
 
@@ -59,7 +63,8 @@ Any AI, developer, or operator reading this document must treat v4 as a differen
 
 ## v4 Core Contracts in Repo
 
-These are the current v4 source contracts. A fresh mainnet deploy from these sources is the next launch step.
+These are the current v4 source contracts. The Stage A subset identified below
+has been deployed; the remaining launch surfaces are still pending.
 
 | Contract | Path | Role |
 |---|---|---|
@@ -171,7 +176,8 @@ Launch expectation: begin in `Liquidity` mode to build depth (POL-first), then m
 
 ## v4 Composability Layer
 
-Status: code complete in repo, not yet deployed, awaiting fresh v4 core mainnet redeploy.
+Status: code complete in repo, not yet deployed. The fresh v4 core prerequisite
+now exists, but composability remains a later phase.
 
 | Contract | Path | Purpose |
 |---|---|---|
@@ -292,6 +298,37 @@ The next v4 launch candidate is not production-ready until all gates below are t
 - Public docs and frontend addresses are updated only after successful deployment verification.
 
 ---
+
+## Fresh v4 Stage A Deployment — Base Mainnet
+
+Deployed 2026-07-26 from RC3 commit
+`3215b69a1154b9c30957cd8d875b636dedc9d0ca`.
+
+| Contract | Address | Status |
+|---|---|---|
+| `NARALauncher` | `0x90505C8c382519B168C6ab773Ed15D5ac99c9956` | One-shot launch complete |
+| `NARAToken` | `0x65E247AA3aa9C0131b2984b894c3D24c41341D7A` | Deployed; 1,000,000 fixed supply |
+| `NARAEngine` | `0xbC2492BA73dE35d1114b5c18d7db633aca8963c9` | Deployed |
+| `NARARewardReserve` | `0x5F3FF409b74395b031e0C5D6abdD7D8895d2c7AD` | Sealed with 650,000 NARA |
+| `NARALiquidityGrowthVault` | `0xc0cf9bCf8879182368b1CdBDC81B6a143fFA2988` | Deployed; compounder unset |
+| `Create2HookDeployer` | `0xC045644303E43cbb1E3c3E3fC851246F5c590834` | Ownership transferred to final admin |
+| `NARALiquidityGrowthHook` | `0x9a01c2DcF713cDB12B8ef4Eb264D5c3203b06088` | Pool registered |
+
+Pool ID:
+`0xbb3287f32b95e96301c9582e8bf7e81fa362e4b9eea00cf016c537cf5970dff3`.
+
+This deployment is deliberately dormant:
+
+- PoolManager slot-zero price is zero; the pool is uninitialized.
+- No LP NFT or public liquidity exists.
+- The compounder, position NFT, allocations, router/lenses, bonds, and
+  composability layer are not deployed.
+- Existing apps remain v3-wired and must not be enabled against this stack.
+- Final admin and treasury are EOAs. Custody/recovery acceptance or migration
+  to a verified Safe is required before public activation.
+
+Canonical evidence:
+`deployments/v4-base-usdc-2026-07-26-controlled-stage-a.json`.
 
 ## Retired v4 Incident Stack
 

@@ -1,6 +1,6 @@
 # NARA v4 — Public State
 
-Last updated: 2026-05-28.  
+Last updated: 2026-07-26.
 Audience: users, analysts, external protocols, integrators.  
 Maintained by: protocol operator. Update every time deployment state changes.
 
@@ -8,7 +8,9 @@ Maintained by: protocol operator. Update every time deployment state changes.
 
 ## One-Sentence State
 
-**v4 code is complete and audited. Fresh mainnet deploy pending. Nothing is live on Base yet.**
+**The fresh v4 token, engine, reward reserve, and liquidity-routing contracts
+are deployed on Base. The pool is not initialized, there is no liquidity, and
+no public app or market is live yet.**
 
 ---
 
@@ -17,11 +19,11 @@ Maintained by: protocol operator. Update every time deployment state changes.
 | Surface | Status | Notes |
 |---|---|---|
 | v4 contracts (code) | Complete | 360 tests passing (2026-06-07), static analysis clean |
-| v4 mainnet deploy | Pending | No approved public v4 address yet |
+| v4 mainnet deploy | Stage A complete | Fresh core deployed; public activation pending |
 | v3 contracts | Retired 2026-05-27 | Archived, not operational |
-| NARA token | No live token | New token deploys with fresh v4 launch |
-| NARA/USDC pool | Pending | Deploys as part of v4 core launch |
-| Locking | Pending | Available once v4 is deployed |
+| NARA token | Deployed | Fixed supply minted; no public market yet |
+| NARA/USDC pool | Registered only | Uninitialized, zero liquidity |
+| Locking | Contract deployed | No approved public frontend yet |
 | Bonds | Closed at launch | Opens separately after verification |
 | stNARA / staking pool | Pending | Deploys in composability phase |
 | Pendle SY adapter | Pending | After stNARA is deployed and validated |
@@ -30,17 +32,19 @@ Maintained by: protocol operator. Update every time deployment state changes.
 
 ---
 
-## What Will Be Live At v4 Launch
+## What Is Deployed in Stage A
 
-At fresh deploy, the following are immediately live:
+The following contracts are deployed:
 
 1. **NARAToken** — 1,000,000 NARA fixed supply, ERC-20 with EIP-2612 permit, ERC-1363, flash mint.
 2. **NARAEngine** — lock NARA for any duration, earn NARA + ETH rewards each epoch.
-3. **NARAPositionNFTV4** — every lock position is a tradable ERC-721 NFT.
-4. **NARA/USDC pool** — Uniswap v4, dynamic hook fees routing to the vault.
-5. **NARALiquidityGrowthVault** — collects pool fees, routes to LP depth or engine rewards.
-6. **NARARouter** — one-tx permit + lock + sync. Permissionless `syncEpochs()`. No keeper needed.
-7. **NARADashboardLens** — single `getUserState()` call returns all wallet + position + epoch data.
+3. **NARARewardReserve** — holds the sealed 650,000 NARA emission reserve.
+4. **NARALiquidityGrowthHook** — registered for the intended NARA/USDC pool.
+5. **NARALiquidityGrowthVault** — deployed and bound to the hook and engine.
+
+The pool is not initialized, the compounder is not deployed, and no LP
+position exists. Position NFT, router, lenses, bonds, and composability
+contracts are not part of Stage A.
 
 ---
 
@@ -76,7 +80,7 @@ At fresh deploy, the following are immediately live:
 ## Locking Mechanics (for analysts)
 
 - **Supply:** 1,000,000 NARA total. Fixed. No inflation.
-- **Reward reserve:** 700,000 NARA sealed at deployment. Distributed to lockers over time via the emission model.
+- **Reward reserve:** 650,000 NARA sealed at deployment. Distributed to lockers over time via the emission model.
 - **Duration range:** 1 epoch minimum (activation delay + 1) up to 35,040 epochs (~1 year at 15-min epochs).
 - **Weight formula:** quadratic in duration. Max-duration lock earns up to ~3× the weight per NARA vs shortest lock.
 - **Activation delay:** 3 epochs after locking, weight becomes active and earning begins.
@@ -108,19 +112,21 @@ When bonds open:
 
 ## Deployed Contract Addresses
 
-*Will be populated after fresh v4 mainnet deploy. Until then, all addresses are pending.*
+Stage A addresses are populated below. Pending entries have not been deployed.
 
 | Contract | Address |
 |---|---|
-| NARAToken | `— pending —` |
-| NARAEngine | `— pending —` |
+| NARAToken | `0x65E247AA3aa9C0131b2984b894c3D24c41341D7A` |
+| NARAEngine | `0xbC2492BA73dE35d1114b5c18d7db633aca8963c9` |
+| NARARewardReserve | `0x5F3FF409b74395b031e0C5D6abdD7D8895d2c7AD` |
 | NARAPositionNFTV4 | `— pending —` |
 | NARAPositionAccountV4 (impl) | `— pending —` |
 | NARAGenesisRewardDistributorV4 | `— pending —` |
 | NARABondVaultV4 | `— pending —` |
 | NARABondDepositoryV4NFT | `— pending —` |
-| NARALiquidityGrowthHook | `— pending —` |
-| NARALiquidityGrowthVault | `— pending —` |
+| NARALiquidityGrowthHook | `0x9a01c2DcF713cDB12B8ef4Eb264D5c3203b06088` |
+| NARALiquidityGrowthVault | `0xc0cf9bCf8879182368b1CdBDC81B6a143fFA2988` |
+| CREATE2 Hook Deployer | `0xC045644303E43cbb1E3c3E3fC851246F5c590834` |
 | NARARouter | `— pending —` |
 | NARADashboardLens | `— pending —` |
 | BribeRouterV4 | `— pending —` |
