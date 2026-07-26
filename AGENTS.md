@@ -2,7 +2,7 @@
 
 This file is read by AI coding assistants that look for `AGENTS.md` on entry (OpenAI Codex, Cursor, DeepSeek, Gemini, and others). The companion file [CLAUDE.md](CLAUDE.md) carries the same context framed for Claude / Anthropic models.
 
-Last updated: 2026-05-27.
+Last updated: 2026-07-26.
 
 ## 🚨 v4 RESET — READ FIRST
 
@@ -10,7 +10,13 @@ On **2026-05-27** the project committed to a clean fresh start on the v4 stack.
 
 - **Active code path:** `contracts/v4/` — this is the only Solidity source tree in the active compile.
 - **Archived:** `archive/legacy-v3/` — the entire v3 protocol stack (token, engine, bond, NFT wrapper, reward reserve) plus all v3 satellites (Arena, Lotto, MisterMint, Sponsor Hub) was moved here. It is frozen.
-- **New token:** a fresh NARA token will be launched from `contracts/v4/NARAToken.sol` with a brand-new address. The v3 mainnet token `0xE444de61752bD13D1D37Ee59c31ef4e489bd727C` is **retired**.
+- **Active token:** the fresh `NARAToken` is deployed on Base at
+  `0x65E247AA3aa9C0131b2984b894c3D24c41341D7A`. The v3 mainnet token
+  `0xE444de61752bD13D1D37Ee59c31ef4e489bd727C` is **retired**.
+- **Deployment state:** Stage A is already deployed. The registered NARA/USDC
+  pool is uninitialized and has no liquidity. Do not repeat the core deployment.
+- **Launch scope:** NARA Baskets only. Lockboard and composability are deferred;
+  Lotto and Arena are retired.
 - **Other retired Base mainnet addresses** are listed in `archive/legacy-v3/README.md`. Do not surface them as "live" or "current" in any output.
 
 ## Rules of engagement

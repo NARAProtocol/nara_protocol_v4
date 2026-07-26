@@ -28,8 +28,8 @@ Engine address (v3, retired): `0x62250aEE40F37e2eb2cd300E5a429d7096C8868F`
 ### Why this function almost never has a legitimate use
 
 Every ETH-receiving path in the engine is accounted for:
-- `receive() external payable` ([L231](../contracts/NARAEngineV2.sol#L231)) — routes direct transfers to `_queueEthRewards`, which goes into rewards.
-- `notifyEthRewards()` ([L306](../contracts/NARAEngineV2.sol#L306)) — same.
+- `receive() external payable` ([L231](../archive/legacy-v3/contracts/NARAEngineV2.sol#L231)) — routes direct transfers to `_queueEthRewards`, which goes into rewards.
+- `notifyEthRewards()` ([L306](../archive/legacy-v3/contracts/NARAEngineV2.sol#L306)) — same.
 - `lock()` / `unlock()` / `unlockBatch()` — `msg.value` goes to `accumulatedTreasuryEthFees`.
 
 **The only way "excess" ETH can appear in the contract is:**
@@ -41,7 +41,7 @@ If you see non-zero "excess" and none of the above is obviously true, **stop and
 
 ### The H-4 bug (why this matters even when you do sweep)
 
-The on-chain safety check at [L402](../contracts/NARAEngineV2.sol#L402):
+The on-chain safety check at [L402](../archive/legacy-v3/contracts/NARAEngineV2.sol#L402):
 
 ```solidity
 uint256 reserved = totalEthRewardsReceived - totalEthRewardsClaimed - totalEthSweptToTreasury;
@@ -63,7 +63,7 @@ safe_sweep_amount = address(engine).balance
 
 ### Computing `totalEthSweptToTreasury` off-chain
 
-Note: `totalEthSweptToTreasury` is an `internal` state variable ([L91](../contracts/NARAEngineV2.sol#L91)) — **no public getter exists.** Reconstruct it by summing all `TreasuryEthFeesWithdrawn(address indexed to, uint256 amount)` event logs from contract genesis:
+Note: `totalEthSweptToTreasury` is an `internal` state variable ([L91](../archive/legacy-v3/contracts/NARAEngineV2.sol#L91)) — **no public getter exists.** Reconstruct it by summing all `TreasuryEthFeesWithdrawn(address indexed to, uint256 amount)` event logs from contract genesis:
 
 ```ts
 const filter = engine.filters.TreasuryEthFeesWithdrawn();

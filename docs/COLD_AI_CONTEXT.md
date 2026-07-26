@@ -26,8 +26,10 @@ The only active Solidity source tree is `contracts/v4/`.
 
 Core active contracts:
 
-- `NARAToken.sol`: fresh fixed-supply token for the next v4 launch.
-- `NARAEngine.sol`: frozen core lock, reward, treasury fee, and emission engine.
+- `NARAToken.sol`: fixed-supply token deployed in controlled Stage A at
+  `0x65E247AA3aa9C0131b2984b894c3D24c41341D7A`.
+- `NARAEngine.sol`: frozen core lock, reward, treasury fee, and emission engine,
+  deployed at `0xbC2492BA73dE35d1114b5c18d7db633aca8963c9`.
 - `NARAPositionNFTV4.sol`: frozen core NFT wrapper/controller for positions.
 - `NARAPositionAccountV4.sol`: account clone used by position NFTs.
 - `NARAGenesisRewardDistributorV4.sol`: Genesis reward accounting.
@@ -79,6 +81,16 @@ Deprecated or out-of-scope assumptions:
 - hand-written ABIs are not the source of truth.
 
 Use generated active v4 Hardhat artifacts for ABIs.
+
+## Current deployment and launch scope
+
+Controlled Stage A is deployed. The NARA/USDC pool is registered but
+uninitialized and has no liquidity. The current launch product is NARA Baskets.
+Position NFTs, bonds, router/lenses, lockboard, allocations, and composability
+are deferred. Lotto, Arena, and the old cron are retired.
+
+Do not repeat the core deployment. Do not invent addresses for deferred
+contracts. Keep baskets in preview until verified deployment manifests exist.
 
 ## Monitor Stack
 

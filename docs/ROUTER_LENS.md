@@ -1,10 +1,11 @@
 # NARA v4 Router + Lens
 
-Last updated: 2026-06-07.
+Last updated: 2026-07-26.
 
 ## What this is
 
-Two thin contracts that sit in front of the v4 engine so any app (lockboard, lotto, arena, future) gets a one-call lazy UX without touching the engine.
+Deferred router/read-layer contracts for a future v4 position frontend. They are
+not part of the current baskets-only launch and are not deployed.
 
 - **`NARARouter`** — permit + sync + lock in one tx, plus permissionless `syncEpochs()` (replaces the Railway cron keeper).
 - **`NARADashboardLens`** — single `getUserState(user, positionIds[], nftTokenIds[])` call returns wallet, epoch, fees, totals, positions, NFT positions. Replaces ~17 fan-out reads.
@@ -24,7 +25,6 @@ Two thin contracts that sit in front of the v4 engine so any app (lockboard, lot
 | [test/NARADashboardLens.test.ts](../test/NARADashboardLens.test.ts) | 28 tests, all passing |
 | [test/NARABribeRouterV4.test.ts](../test/NARABribeRouterV4.test.ts) | 14 tests, all passing |
 | [scripts/deployRouterLens.ts](../scripts/deployRouterLens.ts) | Deploy + verify all three |
-| [apps/nara-lockboard/src/shared/nara.ts](../../apps/nara-lockboard/src/shared/nara.ts) | `routerAbi`, `lensAbi`, `bribeRouterAbi`, env-overridable addresses |
 | [cron/DEPRECATED.md](../../cron/DEPRECATED.md) | Railway keeper retirement notice |
 
 ## Router surface
@@ -74,9 +74,9 @@ Railway cron is retired — see [cron/DEPRECATED.md](../../cron/DEPRECATED.md).
 
 ## Deploy
 
-```bash
-ENGINE_V4=0x... POSITION_NFT_V4=0x... npm run deploy:v4:router:lens
-```
+Deployment is currently blocked because `NARAPositionNFTV4` is deferred and no
+production position-NFT address exists. Do not invent an address or run
+`npm run deploy:v4:router:lens` for the baskets-only launch.
 
 Writes addresses to `deployments/router-lens-<chainId>.json`. Set `VITE_NARA_ROUTER_ADDRESS` / `VITE_NARA_LENS_ADDRESS` in any consuming app's env, or hardcode in `nara.ts`.
 
@@ -108,6 +108,7 @@ The FOX report conclusion: "Solidity architecture is largely ready. Operational 
 ## Status (2026-05-28)
 
 - Code complete, 70/70 new tests passing (28 router + 28 lens + 14 bribe router).
-- **Not yet deployed to mainnet** — waiting on fresh v4 engine + NFT deploy (per CURRENT_STATE.md).
+- **Not deployed to mainnet.** The fresh engine exists, but the position NFT and
+  this router/lens layer are deferred from the baskets-only launch.
 - After engine deploy: run `npm run deploy:v4:router:lens`, then grant `REWARD_NOTIFIER_ROLE` to `BribeRouterV4`.
 - Frontend wiring deferred per user decision. Each app imports ABIs/addresses from `nara.ts`.

@@ -4,13 +4,10 @@ Last updated: 2026-07-26 (fresh v4 controlled Stage A deployment on Base mainnet
 
 This is the canonical state document for the active NARA workspace. Code is the source of truth. When this document conflicts with Solidity or deployment scripts, update this document.
 
-Resume v4 work from:
-
-- [V4_NEXT_SESSION_HANDOFF.md](V4_NEXT_SESSION_HANDOFF.md)
-- [research/V4_1K_LIQUIDITY_LAUNCH_PLAN_2026-05-05.md](research/V4_1K_LIQUIDITY_LAUNCH_PLAN_2026-05-05.md)
-- [V4_AUDIT_RESPONSE_2026-04-23.md](V4_AUDIT_RESPONSE_2026-04-23.md)
-- [V4_INCIDENT_REDEPLOY_2026-04-23.md](V4_INCIDENT_REDEPLOY_2026-04-23.md)
-- [COMPOSABILITY_AUDIT_CHECKLIST.md](COMPOSABILITY_AUDIT_CHECKLIST.md)
+Resume current launch work from this document and
+[NARA_V4_LAUNCH_RUNBOOK.md](NARA_V4_LAUNCH_RUNBOOK.md). Older handoffs,
+incident reports, and research plans are historical inputs, not executable
+instructions.
 
 ---
 
@@ -24,7 +21,9 @@ On **2026-05-27** the project committed to a clean fresh start on v4. The entire
   `0xE444de61752bD13D1D37Ee59c31ef4e489bd727C` remains permanently retired.
 - All v3 mainnet contracts are archived at `archive/legacy-v3/`. See [archive/legacy-v3/README.md](../archive/legacy-v3/README.md) for the full retired-address table.
 - The only current code path is `contracts/v4/`.
-- Frontend apps (`apps/nara-lockboard/`, `apps/nara-lotto/`, `apps/nara-arena/`) were wired to v3 ABIs and are non-functional end-to-end until rebuilt for v4.
+- `apps/nara-baskets/` is the only current launch frontend. It must remain in
+  preview until verified basket deployment manifests exist. Lockboard is
+  deferred; Lotto and Arena are retired.
 
 ---
 
@@ -38,7 +37,10 @@ controlled Stage A deployment: core contracts and the sealed reserve are live,
 but the pool is uninitialized, has no liquidity, and is not a public market.
 Do not market or reuse the retired v4 incident stack.
 
-Current launch constraint: operator has approximately `$1k` for liquidity. Treat the next v4 launch as a calibrated lock/NFT launch, not a full public trading launch. The detailed plan is [research/V4_1K_LIQUIDITY_LAUNCH_PLAN_2026-05-05.md](research/V4_1K_LIQUIDITY_LAUNCH_PLAN_2026-05-05.md).
+Current launch scope: NARA Baskets only. The NARA/USDC pool must be initialized,
+seeded, smoke-tested, and observed for the documented soak period before any
+basket can be enabled. Position NFTs, bonds, router/lenses, lockboard, and
+composability are deferred. Lotto and Arena are retired.
 
 ---
 
@@ -255,35 +257,41 @@ Last full run — **2026-07-04**:
   **136 passing, 5 fork-dependent skipped, 0 failing** in the environment-free
   full suite on 2026-07-26.
 
-> Historical note: pre-reset runs cited "568 passing" — that count predates the 2026-05-27 v4 reset
-> that archived the v3 stack and its tests. The active v4 suite is the 360 above.
+> Historical note: pre-reset runs cited different totals because they included
+> code and tests that are no longer in the active v4 compile. Use the dated
+> results above or rerun the commands; do not reuse historical totals.
 
 ---
 
-## v4 Deployment Order
+## Current Activation Order
 
-The current public-launch scope is NARA Baskets only. Position NFTs, bonds,
-router/lenses, lockboard, and composability remain deferred. The historical
-full-protocol order below is retained for those later phases:
+The Stage A core already exists. Do not redeploy it.
 
-1. Deploy fresh v4 core with `npm run deploy:v4:base:usdc`.
-2. Sync fresh launch config with `npm run v4:env:sync`, review `.env.v4.fresh`, then run `npm run v4:env:sync:write`.
-3. Run `npm run verify:v4:preflight`.
-4. Seed NARA/USDC liquidity with `scripts/seedV4Liquidity.ts`.
-5. Rerun `npm run v4:env:sync:write` so `.env` captures the real LP NFT token ID from `deployments/v4-liquidity-seed-latest.json`.
-6. Run `npm run smoke:v4`.
-7. Deploy v4 allocations if applicable with `npm run deploy:v4:allocations`.
-8. Open NFT bond depository only after terms, capacity, treasury, and Genesis metadata are verified.
-9. Deploy composability layer with `scripts/deployComposabilityV4.ts`.
-10. Transfer all production roles to the intended Safe or timelock.
-11. Start with a small monitored deposit and watch for at least 48 hours before public promotion.
-12. Contact Pendle with the deployed `NARAStakingPoolSYV4` address only after local and testnet/fork reward-index checks pass.
+1. Deploy and wire `NARALiquidityCompounderV4`; complete the required ownership
+   and recovery-policy review.
+2. Run `npm run verify:v4:preseed`.
+3. Initialize and seed the registered NARA/USDC pool with the approved,
+   explicitly reviewed transaction.
+4. Run `npm run v4:env:sync:write` so `.env` records the real LP NFT token ID
+   from `deployments/v4-liquidity-seed-latest.json`.
+5. Run `npm run verify:v4:preflight` and `npm run smoke:v4`.
+6. Complete and record the required stability soak.
+7. Run the complete basket deployment sequence on an exact Base-mainnet fork.
+   Validate every adapter, executor, selector, immutable constructor value, and
+   the fee collector's irreversible allowlist freeze before broadcast.
+8. Broadcast the basket sequence only with an approved contract Safe/timelock
+   as fee-collector admin. The deployment script rejects an EOA admin.
+9. Save and verify a deployment manifest for every basket.
+10. Run basket buy, sell, and `withdrawUnderlying` smoke tests.
+11. Keep every frontend basket in preview until its manifest and smoke evidence
+    pass the production gates.
 
 ---
 
-## v4 Launch Gates
+## Current Baskets Activation Gates
 
-The next v4 launch candidate is not production-ready until all gates below are true:
+The deployed Stage A core is deliberately dormant. The baskets product is not
+ready for production activation until all gates below are true:
 
 - `npm run build` passes.
 - `npm test` passes.
@@ -294,9 +302,14 @@ The next v4 launch candidate is not production-ready until all gates below are t
 - `npm run verify:v4:preflight` passes against the intended deployment config.
 - `npm run smoke:v4` passes after liquidity is seeded.
 - `npm run launch:gates` passes. This wraps safe local/static gates and the read-only preflight.
-- Composability focused tests pass if composability is included in launch.
-- Static analysis is run for in-scope v4 contracts.
-- Admin, treasury, emergency, market, cap, and owner roles are assigned to production-controlled addresses.
+- Basket Foundry build, non-fork tests, and required Base-fork proofs pass.
+- The NARA pool is initialized, liquid, smoke-tested, and has completed the
+  required stability soak.
+- The compounder is deployed, wired, and verified.
+- The basket fee-collector admin is an approved contract Safe/timelock.
+- Every basket has a verified deployment manifest.
+- Admin, treasury, emergency, and owner roles for in-scope deployed contracts
+  are assigned to approved production-controlled addresses.
 - All deployment constructor inputs match the intended Base addresses.
 - Public docs and frontend addresses are updated only after successful deployment verification.
 
@@ -326,9 +339,9 @@ This deployment is deliberately dormant:
 - No LP NFT or public liquidity exists.
 - The compounder, position NFT, allocations, router/lenses, bonds, and
   composability layer are not deployed.
-- Existing apps remain v3-wired and must not be enabled against this stack.
-- The launch frontend scope is `apps/nara-baskets` only. The lockboard is
-  deferred; Lotto and Arena remain retired.
+- `apps/nara-baskets/` contains the fresh v4 launch configuration but remains
+  fail-closed in preview until verified manager/adapter manifests exist.
+  Lockboard is deferred; Lotto and Arena remain retired.
 - Final admin and treasury are EOAs. Custody/recovery acceptance or migration
   to a verified Safe is required before public activation.
 
@@ -353,7 +366,8 @@ Retired stack facts from prior notes:
 
 - LP NFT `2187473` still exists, but liquidity is `0`.
 - The custom-hook NARA/USDC v4 pool is retired.
-- The next launch must come from a fresh deploy using current `NARALiquidityGrowthHook` and `NARALiquidityGrowthVault` code.
+- The fresh replacement stack is the Stage A deployment documented above. Do
+  not redeploy or reuse this retired incident stack.
 
 ---
 
@@ -361,7 +375,7 @@ Retired stack facts from prior notes:
 
 | Script or command | Purpose |
 |---|---|
-| `npm run deploy:v4:base:usdc` | Full v4 core deploy with canonical deployment output |
+| `npm run deploy:v4:base:usdc` | Full v4 core deploy command; Stage A is already deployed, so do not run again without explicit approval |
 | `npm run v4:env:sync` | Generate `.env.v4.fresh` from a fresh deploy log and refuse retired incident-stack addresses |
 | `npm run v4:env:sync:write` | Merge the generated fresh V4 launch keys into `.env` after review |
 | `npm run deploy:v4:allocations` | Deploy or configure v4 allocations |
@@ -389,7 +403,7 @@ Retired stack facts from prior notes:
 - Active launch frontend: `apps/nara-baskets/`.
 - Deferred frontend: `apps/nara-lockboard/`.
 - Retired frontends: `apps/nara-lotto/` and `apps/nara-arena/`.
-- Active cron folder: `cron/` — cron targets v3 engine and must be retargeted for v4 before use
+- Retired cron folder: `cron/` — targets the retired v3 engine; do not run or retarget it
 - Historical only: `archive/legacy-field/` and `archive/checkpoints/`
 
 ---

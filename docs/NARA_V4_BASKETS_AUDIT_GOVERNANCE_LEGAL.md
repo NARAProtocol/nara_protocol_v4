@@ -214,7 +214,9 @@ Hard cap is 100 bps (1%) per side.
 - Set per basket from observed route depth, volatility, and quote precision.
 - Do not describe this setting as a user risk tier or suitability label.
 
-**Step 6 — Pre-deploy verification.** Run on Base Sepolia first. Test buy, sell, `withdrawUnderlying` for each asset. Confirm no asset misbehaves.
+**Step 6 — Pre-deploy verification.** Run the complete sequence on an exact
+Base-mainnet fork. Test buy, sell, and `withdrawUnderlying` for every launch
+basket. Confirm every configured token transfers exactly as required.
 
 **Step 7 — Mainnet deploy.** Run `script/CreateReceiptBasketExample.s.sol` with the verified config. Save deployed address to `deployments/baskets-base.json`.
 
@@ -448,7 +450,7 @@ Hard gates derived from the audit. None of these are optional.
 | A-08b | Pre-built "kill-switch" geo-fence worker held in reserve, not deployed | Part 3 — flippable in minutes if regulatory action lands | Pending |
 | A-09 | Operating entity decision (Cayman / Swiss / BVI / DAO LLC) | Part 3 — entity-structure note | Pending |
 | A-10 | Slither + Echidna + external review on adapter + collector before mainnet | Defense-in-depth | Pending |
-| A-11 | Base Sepolia full-flow smoke test (buy, sell, withdrawUnderlying) per launch basket | Pre-mainnet hygiene | Pending |
+| A-11 | Exact Base-mainnet fork full-flow smoke test (buy, sell, `withdrawUnderlying`) per launch basket | Pre-mainnet hygiene | Pending |
 | A-12 | `baskets.ts` registry committed and reviewed before frontend ships | Curation gate | Pending |
 | A-13 | Fee collector V2: after wiring legit executors/selectors, call `freezeAllowlist()` (one-way); grant `SWAPPER_ROLE` and `EXECUTOR_MANAGER_ROLE` to **separate** keys | F-14 — unfrozen allowlist + combined roles can skim pre-swap fees | Pending |
 | A-14 | Confirm the receipt's **owner-only / non-delegable** model is intended before the immutable deploy (no approvals, not marketplace-listable); align all user copy | F-03 — permanent at deploy; docs corrected 2026-06-30 | Pending |

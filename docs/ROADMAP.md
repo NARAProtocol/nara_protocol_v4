@@ -36,12 +36,14 @@ The frontend is a launch and education surface. The protocol thesis is the durab
 
 ## Current Starting Point
 
-As of 2026-05-27 (v4 reset):
+As of 2026-07-26:
 
 - v3 is **retired**. All v3 mainnet contracts are archived at `archive/legacy-v3/`. See `archive/legacy-v3/README.md` for retired addresses.
 - The 2026-04-23 v4 incident stack is retired for launch purposes.
-- There is no approved public v4 launch candidate yet.
-- Next production launch must be a fresh v4 redeploy from current repo code.
+- Controlled Stage A is deployed and deliberately dormant.
+- The registered NARA/USDC pool is uninitialized and has no liquidity.
+- The current product launch scope is NARA Baskets only.
+- Do not repeat the core deployment.
 - Current v4 code uses `NARALiquidityGrowthHook` and `NARALiquidityGrowthVault`.
 - Current v4 launch pair is NARA/Base native USDC.
 - Current public bond path is `NARABondDepositoryV4NFT`.
@@ -84,7 +86,8 @@ commands and dated stamp (test counts drift; do not hard-code them here). As of 
 
 Status: active.
 
-Goal: keep the workspace synchronized while v4 waits for fresh redeploy.
+Goal: keep the workspace synchronized while the deployed Stage A stack remains
+dormant and the baskets activation gates are completed.
 
 Deliverables:
 

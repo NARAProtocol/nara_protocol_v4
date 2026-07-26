@@ -386,8 +386,8 @@ Do NOT open bonds during launch day. See `NARA_V4_BOND_OPENING_CRITERIA.md` for 
 
 | Role | Address | Notes |
 |---|---|---|
-| Admin / Safe | TBD — set at deploy | Owns all protocol roles post Step 9 |
-| Treasury | TBD — set at deploy | Receives ETH fees, NARA treasury float |
+| Current final admin | `0xC019Dc79412c4b20103ac4ce97B2615FF45D490d` | Stage A EOA; Safe migration or explicit custody acceptance required before activation |
+| Current treasury | `0xfe3A8678A9c729438BB11718bD1391E7Ab491E8e` | Receives treasury assets; currently an EOA |
 | Deployer | Ephemeral EOA | No roles retained after Step 9 |
 | BribeRouterV4 | Set at Step 7 | Holds REWARD_NOTIFIER_ROLE |
 

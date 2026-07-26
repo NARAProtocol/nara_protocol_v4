@@ -20,7 +20,7 @@ The audit (`NARA_V4_BASKETS_AUDIT_GOVERNANCE_LEGAL.md`) flagged HIGH-trust issue
 | Audit finding | Resolution |
 |---|---|
 | F-08 HIGH: `sweepToken` admin escape for USDC fees | `NARAIndexFeeCollectorV2.sol` removes `sweepToken` entirely. Only path out of the contract is swap → NARA/WETH → engine. |
-| F-09 HIGH: selector allowlist load-bearing | Same V2 keeps selector allowlist but documents the exact 4-byte values for SwapRouter02 (`exactInputSingle = 0x04e45aaf`, `exactInput = 0xb858183f`). Multicall and proxy selectors explicitly denied. |
+| F-09 HIGH: selector allowlist load-bearing | V2 keeps an executor/selector allowlist. The launch script accepts one `EXECUTOR_0_SELECTOR`, configures it, and permanently freezes the allowlist. The reviewed launch value is `exactInputSingle = 0x04e45aaf`. |
 | F-10 MEDIUM: zero-input swap accepted | V2 reverts on `actualIn == 0`. |
 | F-11 MEDIUM: admin can stop swaps and stranded fees | V2 mitigated by F-08 fix — even if swaps stop, no admin extraction path exists. Fees can only flow forward to engine. |
 | F-13 INFO: `sweepETH` admin escape for stuck ETH | V2 removes `sweepETH`. Idle ETH can only be sent to engine via `notifyNativeEth`. |
@@ -34,10 +34,10 @@ The V1 fee collector remains in the repo for compatibility but **must not be use
 
 | File | Purpose | Status |
 |---|---|---|
-| `nara-category-baskets-v1/src/NARAIndexFeeCollectorV2.sol` | Sweep-resistant fee router | Built — needs `forge test` after Foundry install |
-| `nara-category-baskets-v1/src/adapters/UniswapV3BasketAdapterV1.sol` | Single-hop V3 SwapRouter02 adapter | Built — needs `forge test` after Foundry install |
+| `nara-category-baskets-v1/src/NARAIndexFeeCollectorV2.sol` | Sweep-resistant fee router | Built and covered by the Foundry suite |
+| `nara-category-baskets-v1/src/adapters/UniswapV3BasketAdapterV1.sol` | Single-hop V3 SwapRouter02 adapter | Built and covered by unit/fork tests |
 | `nara-category-baskets-v1/script/DeployMainnetReady.s.sol` | Atomic deploy: adapter + V2 collector + first basket | Built — runs against Base mainnet (`chainid 8453`) |
-| `nara-category-baskets-v1/config/launch-baskets.json` | Curation manifest for the 4 launch baskets | Templated — operator fills `<TBD>` token candidates |
+| `nara-category-baskets-v1/config/launch-baskets.json` | Curation manifest for the 4 launch baskets | Populated with current candidates; deployment evidence remains pending |
 
 ---
 
@@ -66,7 +66,7 @@ The V1 fee collector remains in the repo for compatibility but **must not be use
 | G1-5 | Adapter unit tests + fork test | Engineering | New `test/UniswapV3BasketAdapterV1.t.sol` against Base fork |
 | G1-6 | Slither clean (no MEDIUM+ unresolved) | Engineering | `slither .` output reviewed; high/medium triaged |
 | G1-7 | Manual review of `_executeSwap` against allowlist bypass | Engineering | Document selector check is gas-cheap and reverts before any external call |
-| G1-8 | External audit on V2 collector + adapter | Operator | Vendor sign-off (recommended: zellic, Code4rena, Spearbit) |
+| G1-8 | Review status stated accurately | Operator | Internal review evidence recorded; no independent audit claimed |
 
 ### Gate 2 — operational keys
 
@@ -76,9 +76,9 @@ The V1 fee collector remains in the repo for compatibility but **must not be use
 | G2-2 | Safe has a timelock module | Operator | Module address visible in Safe UI; minimum delay ≥ 24h documented |
 | G2-3 | Deployer EOA is ephemeral and pre-funded | Operator | Wallet has ≥ 0.05 ETH and no other roles |
 | G2-4 | Deployer address renounces all roles in deploy tx | Automatic | `DeployMainnetReady.s.sol` does this; verify with `hasRole` after deploy |
-| G2-5 | Selector allowlist set to exact V3 selectors only | Automatic | Deploy script sets `exactInputSingle = 0x04e45aaf`; `exactInput = 0xb858183f` set in a separate Safe tx if multi-hop is needed |
+| G2-5 | Selector allowlist contains the single reviewed launch selector | Automatic | `EXECUTOR_0_SELECTOR` is set before `freezeAllowlist()`; it cannot be expanded afterward |
 | G2-6 | No `multicall`, `selfPermit`, or proxy selectors allowlisted | Operator | Manual review of fee collector `allowedSelector` mapping post-deploy |
-| G2-7 | `SWAPPER_ROLE` and `EXECUTOR_MANAGER_ROLE` granted to **separate** keys (not one address) | Operator | `hasRole` shows distinct holders — prevents one compromised key from both adding a malicious executor and swapping through it (F-14) |
+| G2-7 | All three collector roles transferred to `ADMIN` | Automatic | The script grants admin, swapper, and executor-manager roles to the contract Safe/timelock and renounces deployer roles |
 | G2-8 | After legit executors/selectors are wired, call `freezeAllowlist()` (one-way) | Operator | `allowlistFrozen() == true`; `setAllowedExecutor`/`setAllowedSelector` now revert `AllowlistFrozen` — definitive close of the F-14 pre-swap-skim window |
 
 ### Gate 3 — asset curation (per basket)
@@ -103,9 +103,9 @@ For each basket in `launch-baskets.json`, verify these on launch day:
 | G4-1 | `apps/nara-baskets/` exists with Degen Board design tokens | Engineering | App scaffolded, dev server runs |
 | G4-2 | `baskets.ts` registry generated from `launch-baskets.json` after deploy | Engineering | Addresses populated, ABI exports correct |
 | G4-3 | Frontend verifies `manager.requiredAsset() == NARA_TOKEN` at runtime for each basket | Engineering | Mismatched basket triggers visible warning and refuses listing (defense against F-02) |
-| G4-4 | Buy flow: USDC permit → Quote Worker → basket buy in single Smart Wallet UserOp | Engineering | E2E test on Base Sepolia |
+| G4-4 | Buy flow works with the production transaction builder | Engineering | E2E test on an exact Base-mainnet fork |
 | G4-5 | Quote Worker (Cloudflare) live and tested | Engineering | Per-asset V3 quote with adjustable slippage, returns `BuyParams` |
-| G4-6 | Receipt page: shows position contents, current value, sell + withdraw CTAs | Engineering | Verified visually on Sepolia receipts |
+| G4-6 | Receipt page: shows position contents, current value, sell + withdraw CTAs | Engineering | Verified with exact-fork receipts |
 | G4-7 | "Withdraw underlying" path tested per launch basket | Engineering | Receipt burns, underlying tokens land in wallet |
 | G4-8 | Coinbase Smart Wallet + Paymaster sponsorship policy set | Operator | CDP allowlist: adapter + manager + USDC permit |
 | G4-9 | OFAC sanctions block at infra layer (no securities geo-fence — open to all jurisdictions) | Engineering | Cloudflare WAF default rules cover sanctioned countries; no `cf-ipcountry` securities block at launch |
@@ -139,15 +139,19 @@ For each basket in `launch-baskets.json`, verify these on launch day:
 
 ---
 
-## Pre-launch dry run (Base Sepolia)
+## Pre-launch dry run (exact Base-mainnet fork)
 
-Before mainnet, run this sequence on Base Sepolia with a small test stack:
+Before any broadcast, run the complete production deployment sequence on an
+exact Base-mainnet fork:
 
-1. Deploy v4 core to Sepolia (separate script).
-2. Deploy `UniswapV3BasketAdapterV1` pointing to Sepolia SwapRouter02 (`0x94cC0AaC535CCDB3C01d6787D6413C739ae12bc4`).
-3. Deploy `NARAIndexFeeCollectorV2` with deployer-only admin.
-4. Set `exactInputSingle = 0x04e45aaf` as allowed selector.
-5. Deploy a test "NARA CORE Basket" pointing to Sepolia tokens (any verified ERC-20s, low decimals).
+1. Use the existing Stage A v4 core addresses from `CURRENT_STATE.md`.
+2. Verify code exists at every configured token, router, Permit2, engine, and
+   hook address.
+3. Use the intended contract Safe/timelock as `ADMIN`; the script rejects EOAs.
+4. Set the single reviewed `EXECUTOR_0_SELECTOR`.
+5. Confirm `DeployMainnetReady.s.sol` freezes the allowlist, deploys the
+   immutable basket manager, transfers all collector roles to `ADMIN`, and
+   renounces every deployer role.
 6. Mint receipts: buy basket with 10 USDC.
 7. Sell receipt to USDC.
 8. Buy basket again. Test `withdrawUnderlying` to a separate address.
@@ -275,12 +279,12 @@ These need human judgment, not engineering execution.
 These are the explicit hand-offs to the operator:
 
 - Run `forge test` — Foundry is not installed in this environment
-- Deploy to Sepolia or mainnet — needs the operator's keys and live RPC
+- Broadcast to mainnet — needs explicit operator approval, keys, and live RPC
 - Set up the Safe — needs the operator's signers and Gnosis Safe UI
 - Set up CDP Paymaster sponsorship — needs operator's CDP project
 - Cloudflare geo-fence Worker — easy to write; needs operator's CF account to deploy
 - ToS drafting — needs counsel
-- External audit — needs vendor
+- Independent audit — not performed and not claimed
 
 Everything that can be done in code is done. The remaining items are operational and human-judgment.
 
@@ -295,7 +299,8 @@ forge build
 forge test --fuzz-runs 1000
 ```
 
-If both succeed, the contract layer is mainnet-ready pending external audit. Move to Gate 0 (v4 core deploy).
+If both succeed, continue with the remaining activation gates. Stage A is
+already deployed; do not repeat the v4 core deployment.
 
 If `forge test` fails on the new V2 collector or adapter, the test files for them need to be added (placeholders not included in this drop because Foundry is not available to verify the test code). Templates are in `test/NARAIndexFeeCollectorV1.t.sol` and the new tests should mirror those structures.
 
