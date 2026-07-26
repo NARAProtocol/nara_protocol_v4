@@ -7,6 +7,9 @@
  *
  * Optional env:
  *   ROUTER_ADDRESS
+ *   ENGINE_OPS_ROUTER_ADDRESS
+ *   ENGINE_OPS_PARAM_OPERATOR
+ *   ENGINE_OPS_TREASURY_OPERATOR
  *   BRIBE_REWARD_TOKEN
  *   BRIBE_MIN_AMOUNT
  *   V4_ALLOW_UNVERIFIED_ROUTER_LAYER=1
@@ -111,6 +114,52 @@ async function main() {
   console.log("Deployed:", protocolStatsLensAddress);
   if (isMainnet) await verify(protocolStatsLensAddress, [engineAddress]);
 
+  console.log("\n-- NARAEngineOpsRouterV1 --");
+  const opsParamOperator = process.env.ENGINE_OPS_PARAM_OPERATOR
+    ? ethers.getAddress(process.env.ENGINE_OPS_PARAM_OPERATOR)
+    : undefined;
+  const opsTreasuryOperator = process.env.ENGINE_OPS_TREASURY_OPERATOR
+    ? ethers.getAddress(process.env.ENGINE_OPS_TREASURY_OPERATOR)
+    : undefined;
+  let engineOpsRouterAddress: string | null = process.env.ENGINE_OPS_ROUTER_ADDRESS
+    ? ethers.getAddress(process.env.ENGINE_OPS_ROUTER_ADDRESS)
+    : null;
+  if (engineOpsRouterAddress) {
+    if ((await ethers.provider.getCode(engineOpsRouterAddress)) === "0x") {
+      throw new Error(`ENGINE_OPS_ROUTER_ADDRESS has no code: ${engineOpsRouterAddress}`);
+    }
+    const opsRouter = await ethers.getContractAt("NARAEngineOpsRouterV1", engineOpsRouterAddress);
+    if ((await opsRouter.ENGINE()).toLowerCase() !== engineAddress.toLowerCase()) {
+      throw new Error("ENGINE_OPS_ROUTER_ADDRESS is not paired with ENGINE_V4");
+    }
+    if (
+      opsParamOperator &&
+      (await opsRouter.PARAM_OPERATOR()).toLowerCase() !== opsParamOperator.toLowerCase()
+    ) {
+      throw new Error("ENGINE_OPS_ROUTER_ADDRESS PARAM_OPERATOR does not match ENGINE_OPS_PARAM_OPERATOR");
+    }
+    if (
+      opsTreasuryOperator &&
+      (await opsRouter.TREASURY_OPERATOR()).toLowerCase() !== opsTreasuryOperator.toLowerCase()
+    ) {
+      throw new Error("ENGINE_OPS_ROUTER_ADDRESS TREASURY_OPERATOR does not match ENGINE_OPS_TREASURY_OPERATOR");
+    }
+    console.log("Existing:", engineOpsRouterAddress);
+  } else if (opsParamOperator || opsTreasuryOperator) {
+    if (!opsParamOperator || !opsTreasuryOperator) {
+      throw new Error("Set both ENGINE_OPS_PARAM_OPERATOR and ENGINE_OPS_TREASURY_OPERATOR to deploy NARAEngineOpsRouterV1");
+    }
+    const EngineOpsRouter = await ethers.getContractFactory("NARAEngineOpsRouterV1");
+    const opsRouter = await EngineOpsRouter.deploy(engineAddress, opsParamOperator, opsTreasuryOperator);
+    await opsRouter.waitForDeployment();
+    engineOpsRouterAddress = await opsRouter.getAddress();
+    console.log("Deployed:", engineOpsRouterAddress);
+    console.log("ACTION REQUIRED: grant PARAM_ROLE and TREASURY_ROLE to", engineOpsRouterAddress);
+    if (isMainnet) await verify(engineOpsRouterAddress, [engineAddress, opsParamOperator, opsTreasuryOperator]);
+  } else {
+    console.log("Skipped. Set ENGINE_OPS_PARAM_OPERATOR and ENGINE_OPS_TREASURY_OPERATOR to deploy.");
+  }
+
   console.log("\n-- BribeRouterV4 --");
   const bribeRewardToken = process.env.BRIBE_REWARD_TOKEN;
   const bribeMinAmount = process.env.BRIBE_MIN_AMOUNT;
@@ -173,6 +222,7 @@ async function main() {
     NARADashboardLens: dashboardLensAddress,
     NARAPositionDataLensV1: positionDataLensAddress,
     NARAProtocolStatsLensV1: protocolStatsLensAddress,
+    NARAEngineOpsRouterV1: engineOpsRouterAddress,
     BribeRouterV4: bribeRouterAddress,
     NARACirculatingSupplyV1: circulatingSupplyAddress,
     timestamp: new Date().toISOString(),

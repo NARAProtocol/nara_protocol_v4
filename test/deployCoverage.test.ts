@@ -24,6 +24,7 @@ const INTENTIONALLY_NOT_DEPLOYED: Record<string, string> = {
   NARAEngineTypes: "types/structs only — not a deployable contract",
   NARABondDepositoryV4: "raw-position bond path superseded by NARABondDepositoryV4NFT",
   NARAFractionalPositionV4: "deployed per-position by NARAFractionalPositionFactoryV4 at runtime, not at launch",
+  NARAPositionRendererV4: "legacy renderer kept for artifact compatibility; launch uses modular NARAPositionRendererV5",
 };
 
 function listSolFiles(dir: string, rel = ""): { name: string; rel: string }[] {

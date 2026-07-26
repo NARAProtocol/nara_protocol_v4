@@ -19,7 +19,6 @@ import {EngineConfig} from "./NARAEngineTypes.sol";
 interface INARAEngineV4 {
     function lockFeeWei() external view returns (uint96);
     function lockFeeBps() external view returns (uint16);
-    function previewWeight(uint256 amount, uint64 durationEpochs) external view returns (uint256);
     function lockFor(address owner, uint256 amount, uint64 durationEpochs, uint256 minWeight)
         external payable returns (uint256 positionId);
     function notifyEthRewards() external payable;
@@ -51,8 +50,8 @@ contract NARABondDepositoryV4 is AccessControl, Pausable, ReentrancyGuard {
 
     /// @notice Min price timelock: 24 hours protects buyers from sudden repricing.
     uint64 public constant MIN_PRICE_DELAY = 1 days;
-    /// @notice Manual fixed-price terms expire quickly so stale prices cannot drain inventory.
-    uint64 public constant MAX_TERMS_AGE = 1 days;
+    /// @notice Manual fixed-price terms expire quickly, with a one-day refresh margin.
+    uint64 public constant MAX_TERMS_AGE = 2 days;
 
     // ─── Roles ─────────────────────────────────────────────────────────────────
     bytes32 public constant TERMS_ROLE    = keccak256("TERMS_ROLE");
@@ -80,6 +79,7 @@ contract NARABondDepositoryV4 is AccessControl, Pausable, ReentrancyGuard {
     error PauseRequired();
     error PriceZero();
     error PriceDelayTooShort();
+    error PriceDelayTooLong();
     error PriceStale();
 
     // ─── Structs ───────────────────────────────────────────────────────────────
@@ -176,6 +176,7 @@ contract NARABondDepositoryV4 is AccessControl, Pausable, ReentrancyGuard {
         if (treasury_ == address(this)) revert InvalidTreasury();
         if (adminDelaySeconds_ == 0) revert InvalidTerms();
         if (adminDelaySeconds_ < MIN_PRICE_DELAY) revert PriceDelayTooShort();
+        if (adminDelaySeconds_ > MAX_TERMS_AGE - MIN_PRICE_DELAY) revert PriceDelayTooLong();
         if (nara_.code.length == 0 || engine_.code.length == 0 || vault_.code.length == 0)
             revert NotAContract();
 
@@ -465,6 +466,7 @@ contract NARABondDepositoryV4 is AccessControl, Pausable, ReentrancyGuard {
     function _grossUpForLockFee(uint256 netAmount) internal view returns (uint256) {
         uint16 feeBps = engine.lockFeeBps();
         if (feeBps == 0) return netAmount;
+        if (feeBps >= BPS) revert InvalidTerms();
         uint256 denominator = BPS - feeBps;
         return (netAmount * BPS + denominator - 1) / denominator;
     }

@@ -11,7 +11,7 @@ see `NARA_V4_NFT_PROTOCOL_ROLE_AUDIT.md`.
 Source contracts:
 - `contracts/v4/NARAPositionNFTV4.sol`
 - `contracts/v4/NARAPositionAccountV4.sol`
-- `contracts/v4/NARAPositionRendererV4.sol` (+ linked `contracts/v4/libraries/NARAPositionArtV1.sol`)
+- `contracts/v4/NARAPositionRendererV5.sol` (+ modular `NARAArt*V1` contracts)
 - `contracts/v4/router/NARAPositionDataLensV1.sol`
 - `contracts/v4/NARAGenesisRewardDistributorV4.sol` (parallel reward pool, separate doc territory)
 
@@ -75,7 +75,9 @@ A position earns from **two independent pools**:
 
 ## Lifecycle functions
 
-- `extendLock(tokenId, additionalEpochs)` — extends maturity; sweeps any stray NARA/ETH to owner.
+- `extendLock(tokenId, additionalEpochs)` — extends maturity; forwards rewards settled by the engine
+  extension path to the owner, records lifetime delivered rewards, and applies the wrapper NARA claim
+  fee when that fee path is active. Explicit `sweepAccount*` calls recover unrelated stray account balances.
 - `unlock(tokenId)` / `unlockTo(tokenId, to)` — `msg.value == engine.unlockFeeWei()`. Claims genesis
   rewards first, unlocks the engine position, sweeps principal+rewards to `to`, **burns the NFT**, and
   records `closedRewardOwnerOfPosition` so the ex-owner can still pull trailing ERC-20 rewards via
@@ -104,42 +106,46 @@ A position earns from **two independent pools**:
 
 ## On-chain metadata
 
-`NARAPositionRendererV4` renders fully on-chain base64 SVG + JSON (art logic lives in the linked
-`libraries/NARAPositionArtV1.sol`). The *why* of the art is `NARA_V4_NFT_ART_DESIGN_BIBLE.md`; the
+`NARAPositionRendererV5` renders fully on-chain base64 SVG + JSON through modular art contracts
+(`NARAArtMetadataV1`, `NARAArtCorePlateV1`, `NARAArtGenesisPlateV1`, and
+`NARAArtSecurityPrintV1`). The *why* of the art is `NARA_V4_NFT_ART_DESIGN_BIBLE.md`; the
 *how* is `NARA_V4_NFT_RENDERER_README.md`. Two kinds of inputs drive a token, by design:
 
 - **Mint-fixed identity (cache-safe):** `keccak256(tokenId, positionId, createdEpoch)` is the art
   seed. It picks one of **six deterministic module compositions** and drives the Scar angle/width,
   Lattice node field, and Glyph fingerprint. These never change after mint — same token always
   renders the same base identity.
-- **Realized earnings tier (tx-driven, cache-safe):** a **Yield Tier** (`New → Earning → Productive
-  → One ETH Club → Apex`) derived from the position's **realized** `lifetimeEthClaimed`. It escalates
-  the art *structurally* (ring/orbit count, calibration, scar sculpting), not just by color. Because
-  it only moves on a token-specific claim transaction, it is safe to cache.
+- **Realized tier (tx-driven, cache-safe):** a **Realized Tier** (`New -> Activated -> Rewarded
+  -> One ETH Mark -> Apex`) derived from the position's **realized** `lifetimeEthClaimed`. It escalates
+  the art *structurally* (security-print layers, calibration, scar sculpting), not just by color.
+  Claim count and extension count are also realized token-specific facts; they drive claim
+  phyllotaxis, extension sediment, and the compact C/E action ledger. Because these inputs only move
+  on token-specific transactions, they are safe to cache.
 - **Genesis / Eternal flags (mint-fixed):** switch the card into archive modes (provenance plate,
   ledger, seal).
 
 `MetadataUpdate` (ERC-4906) fires on `claimRewards` and `extendLock` so marketplaces refresh the
 cached image when the realized tier or lock changes.
 
-**Deliberately NOT used in the art:** current epoch, productive/claimable state, unlock epoch, reward
+**Deliberately NOT used in the art:** current epoch, live active/claimable state, unlock epoch, reward
 share, and live claimables. Those change *without* a token transaction, so putting them in cached
 marketplace metadata would let the image silently go stale. They belong to the live UI via
 `NARAPositionDataLensV1`, never the cached artwork.
 
 **Compliance line:** the art encodes **realized historical facts + provenance only — never expected
-return, projected yield, or rarity-implies-value framing.** The Yield Tier is "ETH this position has
-already paid out," a fact, not a forecast. See `NARA_V4_POSITION_STATS_AND_CLAIM_FEES.md`.
+return, projected yield, or rarity-implies-value framing.** The Realized Tier is based on ETH already
+delivered through the wrapper, a fact, not a forecast. See `NARA_V4_POSITION_STATS_AND_CLAIM_FEES.md`.
 
-Canonical trait list (kept in sync in `NARA_V4_NFT_RENDERER_README.md`): `Position ID`, `Yield Tier`,
-`Core`, `Module`, `Provenance`, `Storage` (Fully On Chain), `Renderer` (V4), `Created Epoch`, plus
+Canonical trait list (kept in sync in `NARA_V4_NFT_RENDERER_README.md`): `Position ID`, `Realized Tier`,
+`Core`, `Module`, `Provenance`, `Storage` (Fully On Chain), `Renderer` (V5 Modular), `Created Epoch`,
+`Claim Count`, `Extension Count`, plus
 Genesis traits (`Round`, `Tier`, `Multiplier`, `Minted At`, `Eternal`) on genesis tokens.
 
 > Spec note (2026-06-29): an earlier version of this section described "eight equal-status artworks"
-> that "never encode rarity" and called all metadata "deliberately stable." That predates the V4
-> renderer's realized-earnings tier system. The current rule is narrower and is the one above:
+> that "never encode rarity" and called all metadata "deliberately stable." That predates the current
+> modular renderer's Realized Tier system. The current rule is narrower and is the one above:
 > **art evolves only on mint-fixed or realized-fact (tx-driven) inputs — never on live per-epoch
-> state — and never encodes expected return.** Structural tier escalation from realized earnings is
+> state — and never encodes expected return.** Structural tier escalation from realized delivered rewards is
 > intentional and cache-safe; it is not cosmetic rarity.
 
 `contractURI()` provides fully on-chain collection image, banner, featured image, and collection

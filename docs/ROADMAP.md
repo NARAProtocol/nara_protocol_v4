@@ -18,7 +18,7 @@ Current v4 thesis:
 - Dynamic liquidity-growth hook through `NARALiquidityGrowthHook`.
 - Fee routing through `NARALiquidityGrowthVault`.
 - Tradable lock positions through `NARAPositionNFTV4` and `NARAPositionAccountV4`, with immutable
-  on-chain art and stable marketplace metadata via `NARAPositionRendererV4`.
+  on-chain art and stable marketplace metadata via the modular `NARAPositionRendererV5`.
 - Public bond path through `NARABondDepositoryV4NFT`, not raw direct-lock bonds.
 - Genesis reward accounting through `NARAGenesisRewardDistributorV4`.
 - Lazy UX + read layer: `NARARouter` (permit+sync+lock, permissionless `syncEpochs()`),

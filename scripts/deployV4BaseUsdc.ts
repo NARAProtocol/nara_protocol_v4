@@ -303,7 +303,7 @@ async function main() {
   const tokenSymbol = env("V4_TOKEN_SYMBOL", "NARA");
   const initialNaraAmount = ethers.parseUnits(env("V4_INITIAL_NARA_AMOUNT"), 18);
   const initialUsdcAmount = ethers.parseUnits(env("V4_INITIAL_USDC_AMOUNT"), 6);
-  const emissionReserveAmount = ethers.parseUnits(env("V4_EMISSION_RESERVE_NARA", "700000"), 18);
+  const emissionReserveAmount = ethers.parseUnits(env("V4_EMISSION_RESERVE_NARA", "650000"), 18);
   const hookSaltLabel = env("V4_HOOK_SALT_LABEL", "NARA-V4-BASE-USDC-HOOK-1");
   const engineSalt = ethers.keccak256(ethers.toUtf8Bytes(env("V4_ENGINE_SALT_LABEL", "NARA-V4-BASE-USDC-ENGINE-1")));
   const maxHookSaltIterations = envNumber("V4_HOOK_SALT_MAX_ITERATIONS", "2000000");
@@ -353,10 +353,15 @@ async function main() {
   const cfg = buildEngineConfig(ethers);
 
   console.log("Step 1: deploy launcher");
-  const launcher = await ethers.deployContract("contracts/v4/NARALauncher.sol:NARALauncher", [], deployer);
+  const launcher = await ethers.deployContract("contracts/v4/NARALauncher.sol:NARALauncher", [deployer.address], deployer);
   await launcher.waitForDeployment();
   const launcherAddress = await launcher.getAddress();
+  const launcherAdmin = await launcher.launcherAdmin();
+  if (launcherAdmin.toLowerCase() !== deployer.address.toLowerCase()) {
+    throw new Error(`NARALauncher admin mismatch: expected ${deployer.address}, got ${launcherAdmin}`);
+  }
   console.log("NARALauncher: ", launcherAddress);
+  console.log("Launcher admin:", launcherAdmin);
 
   console.log("Step 2: launch token and engine");
   const engineCreationCode = await buildEngineCreationCode(

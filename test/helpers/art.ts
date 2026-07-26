@@ -1,16 +1,25 @@
-// Shared helper: deploy the NARAPositionArtV1 library and a renderer linked to it.
-// The renderer delegates all SVG/metadata building to the linked library.
-const ART_FQN = "project/contracts/v4/libraries/NARAPositionArtV1.sol:NARAPositionArtV1";
-
 export async function deployRenderer(ethers: any, signer: any): Promise<any> {
-  const Art = await ethers.getContractFactory("NARAPositionArtV1", signer);
-  const art = await Art.deploy();
-  await art.waitForDeployment();
-  const Renderer = await ethers.getContractFactory("NARAPositionRendererV4", {
-    libraries: { [ART_FQN]: await art.getAddress() },
-    signer,
-  });
-  const renderer = await Renderer.deploy();
+  const Metadata = await ethers.getContractFactory("NARAArtMetadataV1", signer);
+  const SecurityPrint = await ethers.getContractFactory("NARAArtSecurityPrintV1", signer);
+  const metadata = await Metadata.deploy();
+  const securityPrint = await SecurityPrint.deploy();
+  await metadata.waitForDeployment();
+  await securityPrint.waitForDeployment();
+
+  const CorePlate = await ethers.getContractFactory("NARAArtCorePlateV1", signer);
+  const GenesisPlate = await ethers.getContractFactory("NARAArtGenesisPlateV1", signer);
+  const corePlate = await CorePlate.deploy(await securityPrint.getAddress());
+  const genesisPlate = await GenesisPlate.deploy();
+  await corePlate.waitForDeployment();
+  await genesisPlate.waitForDeployment();
+
+  const Renderer = await ethers.getContractFactory("NARAPositionRendererV5", signer);
+  const renderer = await Renderer.deploy(
+    await metadata.getAddress(),
+    await corePlate.getAddress(),
+    await genesisPlate.getAddress(),
+    await securityPrint.getAddress(),
+  );
   await renderer.waitForDeployment();
   return renderer;
 }

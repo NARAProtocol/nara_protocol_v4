@@ -691,6 +691,11 @@ describe("II. NARABondVaultV4", () => {
         .to.be.revertedWithCustomError(vault, "NotAContract");
     });
 
+    it("reverts InvalidMarket when proposing the vault itself", async () => {
+      await expect(vault.proposeMarket(await vault.getAddress()))
+        .to.be.revertedWithCustomError(vault, "InvalidMarket");
+    });
+
     it("proposeMarket emits MarketChangeProposed", async () => {
       const addr = await mockMarket.getAddress();
       await expect(vault.proposeMarket(addr))
@@ -901,6 +906,61 @@ describe("II. NARABondVaultV4", () => {
       expect(await localVault.market()).to.equal(marketCAddr);
       expect(await localVault.previousMarket()).to.equal(marketBAddr);
     });
+
+    it("force-clears a stuck previous market without freeing its release cap", async () => {
+      const { vault: localVault, nara: localNara } = await deployBondVaultWired(ethers, deployer, ALLOC);
+      const MockMarket = await ethers.getContractFactory("MockNARAEngineV4", deployer);
+      const marketA = await MockMarket.deploy();
+      const marketB = await MockMarket.deploy();
+      const marketC = await MockMarket.deploy();
+      await marketA.waitForDeployment();
+      await marketB.waitForDeployment();
+      await marketC.waitForDeployment();
+      const marketAAddr = await marketA.getAddress();
+      const marketBAddr = await marketB.getAddress();
+      const marketCAddr = await marketC.getAddress();
+
+      await localVault.proposeMarket(marketAAddr);
+      await mineTime(ethers, ACTION_DELAY + 1n);
+      await localVault.executeMarketChange();
+      await localVault.proposeReleaseCap(ALLOC);
+      await mineTime(ethers, ACTION_DELAY + 1n);
+      await localVault.executeReleaseCapChange();
+
+      await ethers.provider.send("hardhat_impersonateAccount", [marketAAddr]);
+      await ethers.provider.send("hardhat_setBalance", [marketAAddr, "0x1000000000000000000"]);
+      const marketASigner = await ethers.getSigner(marketAAddr);
+      const pulled = wad(100);
+      await (localVault.connect(marketASigner) as any).pullToMarket(pulled);
+      await ethers.provider.send("hardhat_stopImpersonatingAccount", [marketAAddr]);
+      expect(await localNara.balanceOf(marketAAddr)).to.equal(pulled);
+
+      await localVault.proposeMarket(marketBAddr);
+      await mineTime(ethers, ACTION_DELAY + 1n);
+      await localVault.executeMarketChange();
+      expect(await localVault.previousMarket()).to.equal(marketAAddr);
+      expect(await localVault.excludedMarketBalance()).to.equal(pulled);
+
+      await localVault.proposeMarket(marketCAddr);
+      await mineTime(ethers, ACTION_DELAY + 1n);
+      await expect(localVault.executeMarketChange())
+        .to.be.revertedWithCustomError(localVault, "PreviousMarketStillPendingReturns");
+      await expect(localVault.clearPreviousMarket())
+        .to.be.revertedWithCustomError(localVault, "PreviousMarketStillPendingReturns");
+
+      await expect(localVault.forceClearPreviousMarket())
+        .to.emit(localVault, "PreviousMarketForceCleared")
+        .withArgs(marketAAddr, pulled);
+      expect(await localVault.previousMarket()).to.equal(ethers.ZeroAddress);
+      expect(await localVault.excludedMarketBalance()).to.equal(0n);
+      expect(await localVault.netReleased()).to.equal(pulled);
+      expect(await localVault.availableToPull()).to.equal(ALLOC - pulled);
+
+      await localVault.executeMarketChange();
+      expect(await localVault.market()).to.equal(marketCAddr);
+      expect(await localVault.previousMarket()).to.equal(marketBAddr);
+      expect(await localNara.balanceOf(marketAAddr)).to.equal(pulled);
+    });
   });
 
   // ─── G. sweepForeignToken ─────────────────────────────────────────────────
@@ -1028,6 +1088,21 @@ describe("III. NARABondDepositoryV4", () => {
       )).to.be.revertedWithCustomError(D, "PriceDelayTooShort");
     });
 
+    it("reverts PriceDelayTooLong when adminDelay consumes the terms freshness margin", async () => {
+      const { nara, engine, vault, deployerAddr } = await baseContracts();
+      const D = await ethers.getContractFactory("NARABondDepositoryV4", deployer);
+      const t = defaultTerms(ethers);
+      await expect(D.deploy(
+        await nara.getAddress(),
+        await engine.getAddress(),
+        await vault.getAddress(),
+        deployerAddr,
+        deployerAddr,
+        ACTION_DELAY + 1n,
+        t,
+      )).to.be.revertedWithCustomError(D, "PriceDelayTooLong");
+    });
+
     it("reverts InvalidTerms when initialTerms.remainingCapacityNara != 0", async () => {
       const { nara, engine, vault, deployerAddr } = await baseContracts();
       const D = await ethers.getContractFactory("NARABondDepositoryV4", deployer);
@@ -1087,6 +1162,21 @@ describe("III. NARABondDepositoryV4", () => {
       expect(live.discountBps).to.equal(1000n);
       await dep.unpause();
     });
+
+    it("keeps active terms fresh through the minimum timelock refresh window", async () => {
+      const ctx = await deployFull(ethers);
+      await openMarket(ctx, wad(5_000));
+      const msgValue = LOCK_FEE_WEI + ethers.parseEther("0.1");
+      expect(await ctx.dep.quoteBond(msgValue)).to.be.gt(0n);
+
+      await ctx.dep.proposeTerms(defaultTerms(ethers, { discountBps: 750 }));
+      await mineTime(ethers, ACTION_DELAY + 1n);
+
+      expect(await ctx.dep.quoteBond(msgValue)).to.be.gt(0n);
+      await ctx.dep.pause();
+      await ctx.dep.executeTerms();
+      expect((await ctx.dep.terms()).discountBps).to.equal(750n);
+    });
   });
 
   // ─── C. addCapacity ───────────────────────────────────────────────────────
@@ -1134,7 +1224,7 @@ describe("III. NARABondDepositoryV4", () => {
       await mineTime(ethers, ACTION_DELAY + 1n);
       await dep.pause();
       await dep.executeTerms();
-      await mineTime(ethers, ACTION_DELAY + 1n);
+      await mineTime(ethers, 2n * ACTION_DELAY + 1n);
 
       await expect(dep.addCapacity(wad(100)))
         .to.be.revertedWithCustomError(dep, "PriceStale");
@@ -1185,6 +1275,18 @@ describe("III. NARABondDepositoryV4", () => {
       await expect(
         (dep.connect(alice) as any).buyBond(0n, { value: tooSmall })
       ).to.be.revertedWithCustomError(dep, "DepositTooSmall");
+    });
+
+    it("reverts InvalidTerms instead of panicking when engine lockFeeBps is 100%", async () => {
+      await ctx.engine.setLockFeeBps(10_000);
+      const msgValue = LOCK_FEE_WEI + ethers.parseEther("0.1");
+
+      await expect(dep.quoteBond(msgValue))
+        .to.be.revertedWithCustomError(dep, "InvalidTerms");
+      await expect((dep.connect(alice) as any).buyBond(0n, { value: msgValue }))
+        .to.be.revertedWithCustomError(dep, "InvalidTerms");
+
+      await ctx.engine.setLockFeeBps(200);
     });
 
     it("computes correct payout at 5% discount on 100 NARA/ETH price", async () => {
@@ -1266,7 +1368,7 @@ describe("III. NARABondDepositoryV4", () => {
       const msgValue = LOCK_FEE_WEI + ethers.parseEther("0.01");
       expect(await dep.quoteBond(msgValue)).to.be.gt(0n);
 
-      await mineTime(ethers, ACTION_DELAY + 1n);
+      await mineTime(ethers, 2n * ACTION_DELAY + 1n);
 
       expect(await dep.quoteBond(msgValue)).to.equal(0n);
       await expect((dep.connect(alice) as any).buyBond(0n, { value: msgValue }))

@@ -142,7 +142,7 @@ contract MockNARAEngineV4 {
         return positions[id];
     }
 
-    function epochStateView() external view returns (EpochSnapshot memory snap) {
+    function epochState() external view returns (EpochSnapshot memory snap) {
         snap.epoch = settledEpoch;
     }
 

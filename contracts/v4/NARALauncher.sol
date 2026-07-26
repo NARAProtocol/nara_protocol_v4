@@ -29,8 +29,10 @@ import {NARAToken} from "./NARAToken.sol";
 contract NARALauncher {
     /// @notice Only this address can execute the one-shot launch.
     /// @dev This prevents a public mempool front-run between launcher deploy
-    ///      and launch execution. The launched token and engine remain adminless
-    ///      except for the engine's explicit roles.
+    ///      and launch execution. The address is explicit so factory deployments
+    ///      cannot accidentally assign launch authority to the factory itself.
+    ///      The launched token and engine remain adminless except for the
+    ///      engine's explicit roles.
     address public immutable launcherAdmin;
 
     /// @notice Exposed while `launch()` is executing so the engine constructor
@@ -65,8 +67,9 @@ contract NARALauncher {
     error UnauthorizedLauncher();
     error AddressMismatch(address expected, address actual);
 
-    constructor() {
-        launcherAdmin = msg.sender;
+    constructor(address admin_) {
+        if (admin_ == address(0)) revert ZeroAddress();
+        launcherAdmin = admin_;
     }
 
     /// @notice Deploy the NARA token and engine atomically.

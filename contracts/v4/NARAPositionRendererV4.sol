@@ -28,7 +28,7 @@ interface INARAPositionNFTV4Render {
 /// @notice Thin, fully on-chain renderer for NARA position NFTs. Reads chain state and delegates
 ///         all SVG/metadata building to the linked NARAPositionArtV1 library, keeping this contract
 ///         small while the art lives in its own deployed bytecode.
-/// @dev Art drivers are realized facts (earnings tier) or mint-fixed (Genesis/Eternal/identity
+/// @dev Art drivers are realized facts (delivered-reward tier) or mint-fixed (Genesis/Eternal/identity
 ///      seed) — never live values — so cached marketplace images stay valid and encode facts +
 ///      provenance, not expected return. Live position data lives in NARAPositionDataLensV1.
 contract NARAPositionRendererV4 is INARAPositionRendererV4 {

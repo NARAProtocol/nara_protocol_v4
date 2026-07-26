@@ -272,9 +272,17 @@ describe("NARABondDepositoryV4NFT", () => {
 
     const msgValue = LOCK_FEE + f.ethers.parseEther("0.25");
     expect(await f.dep.quoteBond(msgValue)).to.be.gt(0n);
-    const signed = await signedBondQuote(f, f.alice, await f.alice.getAddress(), msgValue, undefined, undefined, ACTION_DELAY + 1_000n);
+    const signed = await signedBondQuote(
+      f,
+      f.alice,
+      await f.alice.getAddress(),
+      msgValue,
+      undefined,
+      undefined,
+      2n * ACTION_DELAY + 1_000n,
+    );
 
-    await mineTime(f.ethers, ACTION_DELAY + 1n);
+    await mineTime(f.ethers, 2n * ACTION_DELAY + 1n);
 
     expect(await f.dep.quoteBond(msgValue)).to.equal(0n);
     await expect(f.dep.connect(f.alice).buyBondWithQuote(
@@ -287,6 +295,42 @@ describe("NARABondDepositoryV4NFT", () => {
       .to.be.revertedWithCustomError(f.dep, "PriceStale");
     await expect(f.dep.connect(f.alice).buyBond(0, { value: msgValue }))
       .to.be.revertedWithCustomError(f.dep, "SignedQuoteRequired");
+  });
+
+  it("keeps active terms fresh through the minimum timelock refresh window", async () => {
+    const f = await deployFixture();
+    await openMarket(f);
+
+    const msgValue = LOCK_FEE + f.ethers.parseEther("0.25");
+    expect(await f.dep.quoteBond(msgValue)).to.be.gt(0n);
+
+    await f.dep.proposeTerms(defaultTerms(f.ethers, { discountBps: 750 }));
+    await mineTime(f.ethers, ACTION_DELAY + 1n);
+
+    expect(await f.dep.quoteBond(msgValue)).to.be.gt(0n);
+    await f.dep.pause();
+    await f.dep.executeTerms();
+    expect((await f.dep.terms()).discountBps).to.equal(750n);
+  });
+
+  it("reverts InvalidTerms instead of panicking when engine lockFeeBps is 100%", async () => {
+    const f = await deployFixture();
+    await openMarket(f);
+
+    const msgValue = LOCK_FEE + f.ethers.parseEther("0.25");
+    const signed = await signedBondQuote(f, f.alice, await f.alice.getAddress(), msgValue);
+    await f.engine.setLockFeeBps(10_000);
+
+    await expect(f.dep.quoteBond(msgValue))
+      .to.be.revertedWithCustomError(f.dep, "InvalidTerms");
+    await expect(f.dep.connect(f.alice).buyBondWithQuote(
+      signed.minPayout,
+      signed.maxPayout,
+      signed.deadline,
+      signed.signature,
+      { value: msgValue },
+    ))
+      .to.be.revertedWithCustomError(f.dep, "InvalidTerms");
   });
 
   it("requires at least 1 day admin delay for price terms", async () => {
@@ -338,6 +382,17 @@ describe("NARABondDepositoryV4NFT", () => {
       ACTION_DELAY - 1n,
       defaultTerms(ethers),
     )).to.be.revertedWithCustomError(Dep, "PriceDelayTooShort");
+
+    await expect(Dep.deploy(
+      await nara.getAddress(),
+      await engine.getAddress(),
+      await vault.getAddress(),
+      await positionNft.getAddress(),
+      deployerAddr,
+      treasuryAddr,
+      ACTION_DELAY + 1n,
+      defaultTerms(ethers),
+    )).to.be.revertedWithCustomError(Dep, "PriceDelayTooLong");
   });
 
   it("rejects invalid Genesis bond term metadata", async () => {
@@ -463,7 +518,7 @@ describe("NARABondDepositoryV4NFT", () => {
     await mineTime(f.ethers, ACTION_DELAY + 1n);
     await f.dep.pause();
     await f.dep.executeTerms();
-    await mineTime(f.ethers, ACTION_DELAY + 1n);
+    await mineTime(f.ethers, 2n * ACTION_DELAY + 1n);
 
     await expect(f.dep.addCapacity(wad(100)))
       .to.be.revertedWithCustomError(f.dep, "PriceStale");

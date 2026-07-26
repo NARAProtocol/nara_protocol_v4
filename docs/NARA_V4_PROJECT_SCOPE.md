@@ -77,7 +77,7 @@ columns that matter are **test coverage** and the **non-code prerequisite** to d
 | `NARALauncher` / `utils/Create2HookDeployer` | Core | ✅ (deploy-path) | none |
 | `NARAPositionNFTV4` | Allocation | ✅ `NARAPositionNFTV4.test.ts` | engine |
 | `NARAPositionAccountV4` | Allocation | ✅ (NFT tests) | deployed as clone impl |
-| `NARAPositionRendererV4` | Allocation | ✅ `NARAPositionNFTV4.test.ts` (art/metadata/fallback) | deploy **before** NFT (NFT references it) |
+| `NARAPositionRendererV5` | Allocation | ✅ `NARAPositionNFTV4.test.ts` (art/metadata/fallback) | deploy **before** NFT (NFT references it) |
 | `NARAGenesisRewardDistributorV4` | Allocation | ✅ (NFT + genesis tests) | engine, NFT |
 | `NARABondVaultV4` | Allocation | ✅ `NARABondV4.test.ts` | engine |
 | `NARABondDepositoryV4NFT` (canonical bond path) | Allocation | ✅ `NARABondV4NFT.test.ts` | NFT, vault — **stays closed at launch** |
@@ -220,7 +220,7 @@ What was stale/wrong before this audit, so a cold AI knows not to trust the old 
 2. **"568 passing"** (was in `CURRENT_STATE.md` + `ROADMAP.md`). **Stale** — predates the 2026-05-27
    v4 reset that archived the v3 tests. Live count is 360. Both docs now reference the command + a
    dated stamp instead of a frozen number.
-3. **Router/lens layer + `NARAPositionRendererV4` missing** from `CURRENT_STATE.md` tables (those docs
+3. **Router/lens layer + `NARAPositionRendererV5` missing** from `CURRENT_STATE.md` tables (those docs
    were frozen at 2026-05-27, before the 2026-05-28 router work and 2026-06 NFT-presentation work).
    Added.
 4. **"94 pass, 1 skip"** for baskets (in workspace-root `CLAUDE.md`). **Stale** — suite grew to 136

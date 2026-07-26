@@ -25,7 +25,7 @@ contract MockStatsEngineV1 {
     uint256 public circulatingSupply;
     uint256 public epochEmission;
 
-    function epochStateView() external view returns (EpochSnapshot memory s) {
+    function epochState() external view returns (EpochSnapshot memory s) {
         s.epoch = settledEpoch;
         s.circulatingSupply = circulatingSupply;
         s.emission = epochEmission;

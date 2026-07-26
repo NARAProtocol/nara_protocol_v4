@@ -43,6 +43,7 @@ const NFT_ABI = [
   "function genesisMinter(address) view returns (bool)",
   "function genesisRewardDistributor() view returns (address)",
   "function owner() view returns (address)",
+  "function claimFeesFrozen() view returns (bool)",
 ];
 const ENGINE_ABI = [
   ...ACCESS_ABI,
@@ -132,6 +133,13 @@ async function main() {
     const n = new ethers.Contract(nftA!, NFT_ABI, provider);
     const d = (await n.genesisRewardDistributor()) as string;
     return [d.toLowerCase() === genesisA!.toLowerCase(), `genesisRewardDistributor=${d}`];
+  });
+
+  // SEAM-08/09: NFT claim fees frozen.
+  await gate("SEAM-08/09 claim fees frozen", [nftA], async () => {
+    const n = new ethers.Contract(nftA!, NFT_ABI, provider);
+    const frozen = (await n.claimFeesFrozen()) as boolean;
+    return [frozen, `claimFeesFrozen=${frozen}`];
   });
 
   // M-02 / M-09: bond roles — PRICE_SIGNER separated from TERMS; deployer renounced; Safe holds admin.

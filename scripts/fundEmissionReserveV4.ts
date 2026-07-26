@@ -11,7 +11,7 @@
  *   V4_ENGINE               fresh v4 NARAEngine address
  *
  * Optional env:
- *   V4_EMISSION_RESERVE_NARA  NARA amount to deposit (default 700000)
+ *   V4_EMISSION_RESERVE_NARA  NARA amount to deposit (default 650000)
  */
 
 import hre from "hardhat";
@@ -32,7 +32,7 @@ async function main() {
   const treasurySigner = new ethers.Wallet(treasuryKey, ethers.provider);
   const tokenAddress  = ethers.getAddress(requiredEnv("V4_NARA_TOKEN"));
   const engineAddress = ethers.getAddress(requiredEnv("V4_ENGINE"));
-  const amount = ethers.parseUnits(process.env.V4_EMISSION_RESERVE_NARA ?? "700000", 18);
+  const amount = ethers.parseUnits(process.env.V4_EMISSION_RESERVE_NARA ?? "650000", 18);
 
   console.log("Fund emission reserve");
   console.log("Treasury:  ", treasurySigner.address);

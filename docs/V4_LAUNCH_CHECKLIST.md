@@ -53,7 +53,7 @@ Allocation deploy must use, if bonds or NFT positions are in launch scope:
 - `NARAOpsVaultV4`
 - `NARABondVaultV4`
 - `NARAPositionAccountV4`
-- `NARAPositionRendererV4` (links library `NARAPositionArtV1`)
+- `NARAPositionRendererV5` (uses modular `NARAArt*V1` contracts)
 - `NARAPositionNFTV4`
 - `NARAGenesisRewardDistributorV4`
 - `NARABondDepositoryV4NFT`

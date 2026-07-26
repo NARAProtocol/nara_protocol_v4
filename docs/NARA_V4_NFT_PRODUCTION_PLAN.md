@@ -1,6 +1,6 @@
 # NARA v4 NFT Production Plan
 
-Last updated: 2026-06-07.
+Last updated: 2026-07-04.
 
 This is the production checklist for NARA v4 position NFTs. It covers art, metadata, utility data,
 deployment, verification, and launch operations without changing core engine custody or accounting.
@@ -9,7 +9,9 @@ deployment, verification, and launch operations without changing core engine cus
 
 - `NARAPositionNFTV4`: bearer ERC-721 and owner-driven position operations.
 - `NARAPositionAccountV4`: restricted EIP-1167 clone that owns the engine position.
-- `NARAPositionRendererV4`: immutable fully on-chain art and stable marketplace metadata.
+- `NARAPositionRendererV5`: immutable fully on-chain art and stable marketplace metadata, split
+  across `NARAArtMetadataV1`, `NARAArtSecurityPrintV1`, `NARAArtCorePlateV1`, and
+  `NARAArtGenesisPlateV1`.
 - `NARAPositionDataLensV1`: typed live financial and lifecycle data for apps and future projects.
 - `NARAGenesisRewardDistributorV4`: separate Genesis ETH/token reward accounting.
 
@@ -19,7 +21,8 @@ typed lens instead of stale marketplace caches.
 
 ## Completed implementation gates
 
-- Eight fully on-chain 1200x1200 SVG compositions plus on-chain collection image/banner.
+- Modular fully on-chain 1000x1000 SVG compositions for all realized tiers, Genesis/Eternal archive
+  plates, deterministic module variants, and rare-hit QA proofs.
 - Stable JSON metadata with numeric attributes and fixed Genesis provenance.
 - Minimal on-chain token and collection fallback if the renderer fails.
 - ERC-721, ERC-2981, ERC-4906, and `contractURI()` interoperability.
@@ -28,7 +31,8 @@ typed lens instead of stale marketplace caches.
   reward notifications with a post-mint weight boost.
 - Live data lens separates NFT owner, clone account, and engine-position custodian.
 - Pending/active/matured state uses settled epoch.
-- Deployment scripts deploy renderer before NFT and data lens after the allocation layer.
+- Deployment scripts must deploy the V5 renderer modules before `NARAPositionNFTV4`, and the data
+  lens after the allocation layer.
 - Live verification checks renderer code/version/art count, collection URI, pairing, and royalty freeze.
 - Focused tests cover art, metadata validity/stability, fallback, royalties, ownership, lifecycle,
   claimables, Genesis data, and bounded batches.
@@ -37,8 +41,9 @@ typed lens instead of stale marketplace caches.
 
 1. Run `npm run test:nft:v4`, full `npm test`, `npm run size`, and v4 static-analysis gates.
 2. Rerun the independent Solidity audit against the final commit and resolve every confirmed issue.
-3. Review all eight SVGs and collection art in at least one browser and one marketplace-compatible
-   metadata decoder.
+3. Review the generated SVG gallery, `rare-showcase.html`, and `thumbnail-qa.html` in at least one
+   browser and one marketplace-compatible metadata decoder. The thumbnail gate must check 64, 128,
+   and 300px on light, neutral, and dark surfaces.
 4. Confirm production environment values, especially NFT owner Safe, royalty receiver/BPS, royalty
    freeze, engine, token, treasury, and Genesis reward token.
 5. Deploy the allocation layer with bonds inactive and capacity zero.
@@ -48,7 +53,24 @@ typed lens instead of stale marketplace caches.
    unlock/burn, artwork, fallback assumptions, and live lens reads.
 9. Complete the 48-hour monitored observation period before public promotion or bond opening.
 
-## Validation performed on 2026-06-07
+## Validation performed on 2026-07-04
+
+- Full Hardhat compile passed for 65 Solidity files with solc 0.8.34.
+- Focused NFT/data-lens suite: 61 passing.
+- `npm run size` passed; all deployable artifacts are within EVM size limits.
+  - `NARAArtCorePlateV1`: 15,510 deployed bytes.
+  - `NARAArtGenesisPlateV1`: 11,940 deployed bytes.
+  - `NARAArtMetadataV1`: 5,252 deployed bytes.
+  - `NARAArtSecurityPrintV1`: 9,249 deployed bytes.
+  - `NARAPositionRendererV5`: 4,972 deployed bytes.
+  - `NARAPositionNFTV4`: 21,562 deployed bytes.
+  - `NARAEngine`: 24,554 deployed bytes.
+- `scripts/previewPositionArt.ts` generated a clean current-only preview folder with the tier gallery,
+  forced rare-hit showcase, and thumbnail QA contact sheet.
+- External asset scan of the generated preview output found no remote font imports or external asset
+  URLs.
+
+## Historical validation performed on 2026-06-07 (pre-V5 renderer split)
 
 - Focused NFT/data-lens/dashboard suite: 72 passing.
 - Full Hardhat regression suite: 360 passing, 0 failing.

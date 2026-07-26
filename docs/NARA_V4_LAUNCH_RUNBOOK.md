@@ -14,6 +14,7 @@ Complete every item before running anything on Base mainnet.
 □ PRIVATE_KEY is the intended deployer EOA. Not a hot wallet.
 □ BASE_RPC_URL points to a reliable Base mainnet RPC (Alchemy/Infura/Coinbase).
 □ BASESCAN_API_KEY is set for contract verification.
+□ `NARALauncher` constructor admin will be the deployer EOA that calls `launch()`.
 □ V4_ADMIN_ADDRESS is a Safe or cold-wallet — NOT the deployer.
 □ V4_TREASURY_ADDRESS is a Safe or cold-wallet — NOT the deployer.
 □ Deployer wallet has at least 0.05 ETH on Base for gas.
@@ -52,6 +53,9 @@ V4_SKIP_COMPOUNDER=1 npm run deploy:v4:base:usdc
 **Immediate gate — stop if any fails:**
 ```
 □ v4-base-usdc-latest.json written
+□ `NARALauncher.launcherAdmin()` matched the deployer before `launch()`
+□ `NARAToken.FLASH_FEE_SINK()` equals deployed `NARAEngine`
+□ `NARAEngine.NARA()` equals deployed `NARAToken`
 □ Hook address low bits == 0x2088
 □ Hook.NARA_TOKEN == deployed NARAToken address
 □ Hook.VAULT == deployed Vault address
@@ -187,7 +191,11 @@ V4_BOND_ACTIVE=false
 - `NARAOpsVaultV4`
 - `NARABondVaultV4`
 - `NARAPositionAccountV4` (implementation)
-- `NARAPositionRendererV4` (immutable on-chain art and metadata)
+- `NARAArtMetadataV1`
+- `NARAArtSecurityPrintV1`
+- `NARAArtCorePlateV1`
+- `NARAArtGenesisPlateV1`
+- `NARAPositionRendererV5` (immutable modular on-chain art and metadata)
 - `NARAPositionNFTV4`
 - `NARAGenesisRewardDistributorV4`
 - `NARABondDepositoryV4NFT` (bonds closed by default)

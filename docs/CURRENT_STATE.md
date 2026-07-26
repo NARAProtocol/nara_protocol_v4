@@ -1,8 +1,8 @@
 # Current State
 
-Last updated: 2026-06-07 (scope-coherence audit: added the router/lens layer + `NARAPositionRendererV4`,
-corrected the stale "568 passing" count to the live 360, and made the verification section
-command-driven instead of hard-coding drift-prone numbers).
+Last updated: 2026-07-04 (Renderer V5 action-accretion pass: standard cards now render claim
+phyllotaxis, extension sediment, and a compact C/E action ledger; Genesis/Eternal plates render
+archive accretion. Full suite and bytecode size gate re-run green).
 
 This is the canonical state document for the active NARA workspace. Code is the source of truth. When this document conflicts with Solidity or deployment scripts, update this document.
 
@@ -68,7 +68,7 @@ These are the current v4 source contracts. A fresh mainnet deploy from these sou
 | `NARAEngine` | `contracts/v4/NARAEngine.sol` | Core locking, JIT epoch advance, NARA/ETH/ERC-20 reward accounting |
 | `NARAPositionNFTV4` | `contracts/v4/NARAPositionNFTV4.sol` | ERC-721 controller for v4 engine positions |
 | `NARAPositionAccountV4` | `contracts/v4/NARAPositionAccountV4.sol` | Per-NFT clone account that owns the engine position |
-| `NARAPositionRendererV4` | `contracts/v4/NARAPositionRendererV4.sol` | Immutable fully on-chain art (8 variants), stable marketplace metadata, collection metadata. Added in the 2026-06 NFT presentation pass. |
+| `NARAPositionRendererV5` | `contracts/v4/NARAPositionRendererV5.sol` | Immutable modular fully on-chain art, security-print SVG plates, stable marketplace metadata, collection metadata. Uses `NARAArtMetadataV1`, `NARAArtCorePlateV1`, `NARAArtGenesisPlateV1`, and `NARAArtSecurityPrintV1`. |
 | `NARAGenesisRewardDistributorV4` | `contracts/v4/NARAGenesisRewardDistributorV4.sol` | ETH and ERC-20 reward accounting for Genesis positions |
 | `NARABondVaultV4` | `contracts/v4/NARABondVaultV4.sol` | Bond inventory vault with market and cap timelocks |
 | `NARABondDepositoryV4` | `contracts/v4/NARABondDepositoryV4.sol` | Direct raw-position bond depository; not the preferred launch path |
@@ -119,6 +119,8 @@ If epoch backlog exceeds `MAX_JIT_ADVANCE`, user-facing engine mutations revert 
 
 - `lockWithPermit(uint256 amount, uint64 durationEpochs, uint256 minWeight, uint256 deadline, uint8 v, bytes32 r, bytes32 s)` for approve-and-lock in one transaction. Uses JIT advance — handles up to `MAX_JIT_ADVANCE = 8` epochs of backlog.
 - `onTransferReceived(address operator, address from, uint256 value, bytes calldata data)` for ERC-1363 `transferAndCall` locking when the flat lock ETH fee is zero. **No JIT advance** — reverts `EpochStale` on any epoch backlog. Epoch must be fully current before calling. Data encoding: `abi.encode(uint64 durationEpochs, uint256 minWeight, address positionOwner)` — if `positionOwner` is zero it defaults to `from`.
+- Prefer protocol wrappers such as `NARARouter.syncAndLockWithPermit` or NFT `mintAndLockWithPermit` for permit-based user flows. Raw `NARAToken.multicall([permit, action])` cannot ignore a permit nonce that was consumed earlier, so it is front-run griefable.
+- For ERC-1363 `transferFromAndCall`, an approved operator can spend the holder's allowance and choose the encoded `positionOwner`. This is not more power than the allowance grants, but integrations should not approve untrusted operators.
 
 ### Genesis Positions
 
@@ -140,7 +142,7 @@ Eternal Genesis positions cannot be unlocked through normal NFT paths. After mat
 Bond term controls:
 
 - Terms require at least `MIN_PRICE_DELAY = 1 day` before execution.
-- Terms older than `MAX_TERMS_AGE = 1 day` are stale and cannot be used for purchases.
+- Terms older than `MAX_TERMS_AGE = 2 days` are stale and cannot be used for purchases.
 - Term and capacity changes require the depository to be paused where enforced by code.
 
 ### Liquidity Routing
@@ -214,12 +216,12 @@ NODE_OPTIONS="--require ./polyfill.cjs" npm run size              # bytecode siz
 npm run slither:v4                                                # static analysis
 ```
 
-Last full run — **2026-06-07**:
+Last full run — **2026-07-04**:
 
-- Full Hardhat suite: **360 passing, 0 failing, 0 skipped** (357 `it` + 72 `describe`; runner count
-  includes loop-generated cases). Run `npx hardhat test` for the live number.
-- Bytecode size gate: all deployable artifacts within EVM limits. `NARAEngine` 24,454 ·
-  `NARAPositionNFTV4` 19,010 · `NARAPositionRendererV4` 11,906 · `NARAPositionDataLensV1` 5,980 ·
+- Full Hardhat suite: **449 passing, 0 failing, 0 skipped**. Run `npx hardhat test` for the live number.
+- Bytecode size gate: all deployable artifacts within EVM limits. `NARAEngine` 24,554 ·
+  `NARAPositionNFTV4` 21,562 · `NARAPositionRendererV5` 4,960 · `NARAArtCorePlateV1` 11,437 ·
+  `NARAArtSecurityPrintV1` 8,938 · `NARAArtGenesisPlateV1` 8,050 · `NARAArtMetadataV1` 4,701 · `NARAPositionDataLensV1` 7,017 ·
   `NARAStakingPoolSYV4` 8,482 bytes.
 - Slither v4 gate: completed (exit 0). Findings on the new contracts are intentional (best-effort
   `try/catch` unused-returns) or benign (trusted owner-set distributor, `nonReentrant` entry points).

@@ -151,6 +151,23 @@ describe("NARAPositionNFTV4", () => {
     expect(await f.nara.balanceOf(await f.engine.getAddress())).to.equal(amount);
   });
 
+  it("bricks the account implementation while allowing NFT-created clones to initialize", async () => {
+    const f = await deployFixture();
+    expect(await f.accountImpl.initialized()).to.equal(true);
+    await expect(
+      f.accountImpl.initialize(await f.engine.getAddress(), await f.nara.getAddress(), await f.nft.getAddress()),
+    ).to.be.revertedWithCustomError(f.accountImpl, "NARAPositionAccountV4__AlreadyInitialized");
+
+    await mintPosition(f, f.alice);
+    const account = await f.nft.accountOf(1);
+    const Account = await f.ethers.getContractFactory("NARAPositionAccountV4", f.deployer);
+    const clone: any = Account.attach(account);
+
+    expect(await clone.initialized()).to.equal(true);
+    expect(await clone.factory()).to.equal(await f.nft.getAddress());
+    expect(await clone.positionId()).to.equal(1n);
+  });
+
   it("supports permit-based mint and lock with the real v4 token", async () => {
     const { ethers } = await hre.network.connect();
     const [deployer, alice, treasury] = await ethers.getSigners();
@@ -330,13 +347,24 @@ describe("NARAPositionNFTV4", () => {
     expect(await f.nara.balanceOf(await f.bob.getAddress())).to.equal(before + wad(10));
   });
 
-  it("rejects transferring a position NFT to its own clone account", async () => {
+  it("rejects transferring a position NFT to sink addresses and clone accounts", async () => {
     const f = await deployFixture();
     await mintPosition(f, f.alice);
     const account = await f.nft.accountOf(1);
 
     await expect(
       f.nft.connect(f.alice).transferFrom(await f.alice.getAddress(), account, 1),
+    ).to.be.revertedWithCustomError(f.nft, "NARAPositionNFTV4__InvalidReceiver");
+
+    await expect(
+      f.nft.connect(f.alice).transferFrom(await f.alice.getAddress(), await f.nft.getAddress(), 1),
+    ).to.be.revertedWithCustomError(f.nft, "NARAPositionNFTV4__InvalidReceiver");
+
+    await f.nara.connect(f.bob).approve(await f.nft.getAddress(), wad(1_000));
+    await f.nft.connect(f.bob).mintAndLock(wad(1_000), 96, 0, { value: LOCK_FEE });
+    const otherAccount = await f.nft.accountOf(2);
+    await expect(
+      f.nft.connect(f.alice).transferFrom(await f.alice.getAddress(), otherAccount, 1),
     ).to.be.revertedWithCustomError(f.nft, "NARAPositionNFTV4__InvalidReceiver");
   });
 
@@ -422,6 +450,8 @@ describe("NARAPositionNFTV4", () => {
     expect(p.unlockEpoch).to.equal(oldUnlock + 24n);
     expect(await f.nara.balanceOf(await f.alice.getAddress())).to.equal(before + wad(12));
     expect(await f.nara.balanceOf(await f.nft.accountOf(1))).to.equal(0n);
+    expect(await f.nft.lifetimeNaraClaimed(1)).to.equal(wad(12));
+    expect(await f.nft.lifetimeExtendCount(1)).to.equal(1n);
   });
 
   it("unlocks mature positions, burns the NFT, and forwards principal", async () => {
@@ -465,26 +495,56 @@ describe("NARAPositionNFTV4", () => {
     const svg = decodeSvgDataUri(metadata.image);
     const collection = decodeJsonDataUri(await f.nft.contractURI());
 
-    expect(metadata.name).to.equal("NARA Position #000001 · New");
+    expect(metadata.name).to.equal("NARA Position #000001 / New");
     expect(metadata.background_color).to.equal("070A12");
     expect(metadata.attributes.map((attribute: any) => attribute.trait_type)).to.deep.equal([
       "Position ID",
-      "Yield Tier",
+      "Realized Tier",
       "Core",
       "Module",
       "Provenance",
       "Storage",
       "Renderer",
+      "Incision Register",
       "Created Epoch",
+      "Claim Count",
+      "Extension Count",
     ]);
+    expect(metadata.attributes.find((attribute: any) => attribute.trait_type === "Renderer").value).to.equal("V5 Modular");
     expect(svg).to.contain('viewBox="0 0 1000 1000"');
     expect(svg).to.contain(">NARA</text>");
-    expect(svg).to.contain("ON-CHAIN / RENDERER V4");
+    expect(svg).to.contain("ON-CHAIN / RENDERER V5");
     expect(svg).to.contain("MANUAL");
+    const tokenJson = JSON.stringify(metadata);
+    for (const stale of ["Yield Tier", "One ETH Club", "STATE EARNING", "PRODUCTIVE", "RENDERER V4"]) {
+      expect(tokenJson).to.not.include(stale);
+      expect(svg).to.not.include(stale);
+    }
+    expect(tokenJson.toLowerCase()).to.not.include("expected return");
+    expect(tokenJson.toLowerCase()).to.not.include("projected yield");
     expect(collection.name).to.equal("NARA Positions");
     expect(decodeSvgDataUri(collection.image)).to.contain('viewBox="0 0 1600 900"');
     expect(collection.banner_image).to.equal(collection.image);
     expect(collection.featured_image).to.equal(collection.image);
+  });
+
+  it("wires the modular V5 renderer to the expected art modules", async () => {
+    const f = await deployFixture();
+    const metadataAddr = await f.renderer.METADATA();
+    const corePlateAddr = await f.renderer.CORE_PLATE();
+    const genesisPlateAddr = await f.renderer.GENESIS_PLATE();
+    const collectionArtAddr = await f.renderer.COLLECTION_ART();
+    const metadata: any = await f.ethers.getContractAt("NARAArtMetadataV1", metadataAddr);
+    const corePlate: any = await f.ethers.getContractAt("NARAArtCorePlateV1", corePlateAddr);
+    const genesisPlate: any = await f.ethers.getContractAt("NARAArtGenesisPlateV1", genesisPlateAddr);
+    const securityPrint: any = await f.ethers.getContractAt("NARAArtSecurityPrintV1", collectionArtAddr);
+
+    expect(await f.renderer.RENDERER_VERSION()).to.equal(5n);
+    expect(await metadata.METADATA_VERSION()).to.equal(1n);
+    expect(await corePlate.CORE_PLATE_VERSION()).to.equal(1n);
+    expect(await genesisPlate.GENESIS_PLATE_VERSION()).to.equal(1n);
+    expect(await securityPrint.SECURITY_PRINT_VERSION()).to.equal(1n);
+    expect(await corePlate.SECURITY_PRINT()).to.equal(collectionArtAddr);
   });
 
   it("keeps marketplace metadata stable while live financial data changes", async () => {
@@ -493,7 +553,6 @@ describe("NARAPositionNFTV4", () => {
     const before = await f.nft.tokenURI(1);
 
     await f.engine.setCurrentEpoch(500);
-    await f.nft.connect(f.alice).extendLock(1, 10);
     await f.engine.setClaimable(1, wad(123), ONE);
 
     const after = await f.nft.tokenURI(1);
@@ -509,7 +568,7 @@ describe("NARAPositionNFTV4", () => {
     const amount = wad(10);
     await f.nara.connect(f.alice).approve(await f.nft.getAddress(), amount * 8n);
 
-    const validModules = ["Yield Arc", "Pressure Scar", "Orbit Field", "Ledger Fragment", "Streak Crown", "Demand Trace"];
+    const validModules = ["Archive Arc", "Pressure Scar", "Orbit Field", "Ledger Fragment", "Crown Trace", "Signal Trace"];
     const images: string[] = [];
     for (let tokenId = 1; tokenId <= 8; tokenId += 1) {
       await f.nft.connect(f.alice).mintAndLock(amount, 96, 0, { value: LOCK_FEE });
@@ -797,6 +856,32 @@ describe("NARAPositionNFTV4", () => {
     expect(await f.usdc.balanceOf(await f.bob.getAddress())).to.equal(reward);
   });
 
+  it("M-01: unlocks Genesis principal even if the close notification reverts", async () => {
+    const f = await deployFixture({ setGenesisDistributor: false });
+    const RevertingDistributor = await f.ethers.getContractFactory("MockRevertingGenesisRewardDistributorV4", f.deployer);
+    const revertingDistributor: any = await RevertingDistributor.deploy(await f.nft.getAddress(), await f.usdc.getAddress());
+    await revertingDistributor.waitForDeployment();
+    await f.nft.setGenesisRewardDistributor(await revertingDistributor.getAddress());
+
+    const principal = wad(1_000);
+    await mintGenesisPosition(f, f.alice, principal, 20n);
+    const position = await f.engine.positionOf(1);
+    await f.engine.setCurrentEpoch(position.unlockEpoch);
+
+    const aliceBefore = await f.nara.balanceOf(await f.alice.getAddress());
+    const unlockTx = await f.nft.connect(f.alice).unlock(1, { value: UNLOCK_FEE });
+    await expect(unlockTx).to.emit(f.nft, "GenesisCloseNotifyFailed").withArgs(1n);
+    await expect(unlockTx).to.emit(f.nft, "PositionUnlocked").withArgs(1n, 1n, await f.alice.getAddress());
+
+    await expect(f.nft.ownerOf(1))
+      .to.be.revertedWithCustomError(f.nft, "ERC721NonexistentToken")
+      .withArgs(1n);
+    const meta = await f.nft.genesisMetadataOf(1);
+    expect(meta.isGenesis).to.equal(false);
+    expect(await f.nft.totalGenesisRewardWeight()).to.equal(0n);
+    expect(await f.nara.balanceOf(await f.alice.getAddress())).to.equal(aliceBefore + principal);
+  });
+
   it("burns Eternal Genesis to an alternate receiver for contract owners", async () => {
     const f = await deployFixture();
     const Owner = await f.ethers.getContractFactory("MockEthRejectingNftOwnerV4", f.deployer);
@@ -940,6 +1025,28 @@ describe("NARAPositionNFTV4", () => {
     expect(await f.nft.claimableGenesisToken(1)).to.equal(0n);
   });
 
+  it("rejects Genesis token claims to the distributor itself", async () => {
+    const f = await deployFixture();
+    await mintGenesisPosition(f, f.alice, wad(1_000), 20n);
+
+    const reward = 50n * USDC;
+    const distributor = await f.genesisDistributor.getAddress();
+    await f.usdc.mint(await f.deployer.getAddress(), reward);
+    await f.usdc.approve(distributor, reward);
+    await f.genesisDistributor.notifyTokenRewards(reward);
+
+    await expect(f.nft.connect(f.alice).claimGenesisToken(1, distributor))
+      .to.be.revertedWithCustomError(f.genesisDistributor, "InvalidReceiver");
+    await expect(f.genesisDistributor.connect(f.alice).claimToken(1, distributor))
+      .to.be.revertedWithCustomError(f.genesisDistributor, "InvalidReceiver");
+
+    expect(await f.genesisDistributor.claimableToken(1)).to.equal(reward);
+    expect(await f.genesisDistributor.totalTokenClaimed()).to.equal(0n);
+
+    await f.genesisDistributor.connect(f.alice).claimToken(1, await f.bob.getAddress());
+    expect(await f.usdc.balanceOf(await f.bob.getAddress())).to.equal(reward);
+  });
+
   it("claims Genesis ETH before unlock clears reward weight", async () => {
     const f = await deployFixture();
     await mintGenesisPosition(f, f.alice, wad(1_000), 20n, 1, 1, 20_000, false);
@@ -1004,10 +1111,17 @@ describe("NARAPositionNFTV4 — wrapper claim fees", () => {
     await expect(f.nft.connect(f.deployer).setClaimFees(0, 1001))
       .to.be.revertedWithCustomError(f.nft, "NARAPositionNFTV4__ClaimFeeTooHigh");
 
+    await expect(f.nft.connect(f.deployer).setClaimFeeRecipient(await f.nft.getAddress()))
+      .to.be.revertedWithCustomError(f.nft, "NARAPositionNFTV4__InvalidReceiver");
+
     await f.nft.connect(f.deployer).setClaimFees(1000, 1000);
     expect(await f.nft.naraClaimFeeBps()).to.equal(1000n);
 
-    await f.nft.connect(f.deployer).freezeClaimFees();
+    await expect(f.nft.connect(f.deployer).freezeClaimFees())
+      .to.be.revertedWithCustomError(f.nft, "NARAPositionNFTV4__InvalidReceiver");
+
+    await f.nft.connect(f.deployer).setClaimFeeRecipient(await f.treasury.getAddress());
+    await expect(f.nft.connect(f.deployer).freezeClaimFees()).to.emit(f.nft, "ClaimFeesFrozen");
     await expect(f.nft.connect(f.deployer).setClaimFees(0, 0))
       .to.be.revertedWithCustomError(f.nft, "NARAPositionNFTV4__ClaimFeesFrozen");
     await expect(f.nft.connect(f.deployer).setClaimFeeRecipient(await f.treasury.getAddress()))
@@ -1039,6 +1153,36 @@ describe("NARAPositionNFTV4 — wrapper claim fees", () => {
     expect((await f.nara.balanceOf(recipient)) - recipNaraBefore).to.equal(wad(5));
     expect((await f.nara.balanceOf(receiver)) - bobNaraBefore).to.equal(wad(95));
     expect((await f.ethers.provider.getBalance(receiver)) - bobEthBefore).to.equal(ethAmt);
+  });
+
+  it("applies naraClaimFeeBps to rewards settled during extendLock", async () => {
+    const f = await deployFixture();
+    await mintPosition(f, f.alice);
+
+    const recipient = await f.treasury.getAddress();
+    const owner = await f.alice.getAddress();
+    await f.nft.connect(f.deployer).setClaimFees(500, 0); // 5% NARA
+    await f.nft.connect(f.deployer).setClaimFeeRecipient(recipient);
+
+    const engineAddr = await f.engine.getAddress();
+    const ethAmt = f.ethers.parseEther("0.25");
+    await f.nara.mint(engineAddr, wad(100));
+    await f.deployer.sendTransaction({ to: engineAddr, value: ethAmt });
+    await f.engine.setClaimable(1, wad(100), ethAmt);
+
+    const recipNaraBefore = await f.nara.balanceOf(recipient);
+    const ownerNaraBefore = await f.nara.balanceOf(owner);
+    const ownerEthBefore = await f.ethers.provider.getBalance(owner);
+    const tx = await f.nft.connect(f.alice).extendLock(1, 10);
+    const receipt = await tx.wait();
+    const gas = receipt!.gasUsed * receipt!.gasPrice;
+
+    expect((await f.nara.balanceOf(recipient)) - recipNaraBefore).to.equal(wad(5));
+    expect((await f.nara.balanceOf(owner)) - ownerNaraBefore).to.equal(wad(95));
+    expect((await f.ethers.provider.getBalance(owner)) - ownerEthBefore + gas).to.equal(ethAmt);
+    expect(await f.nft.lifetimeNaraClaimed(1)).to.equal(wad(95));
+    expect(await f.nft.lifetimeEthClaimed(1)).to.equal(ethAmt);
+    expect(await f.nft.lifetimeExtendCount(1)).to.equal(1n);
   });
 
   it("skims tokenClaimFeeBps on bribe-token claims", async () => {
@@ -1097,25 +1241,36 @@ describe("NARAPositionNFTV4 — lifetime stats & metadata refresh", () => {
 
     expect(await f.nft.lifetimeNaraClaimed(1)).to.equal(wad(100));
     expect(await f.nft.lifetimeEthClaimed(1)).to.equal(ethAmt);
+    expect(await f.nft.lifetimeClaimCount(1)).to.equal(1n);
   });
 
-  it("evolves the Yield Tier as realized ETH earnings cross thresholds", async () => {
+  it("evolves the Realized Tier as delivered ETH crosses thresholds", async () => {
     const f = await deployFixture();
     await mintPosition(f, f.alice);
     const engineAddr = await f.engine.getAddress();
     const tierOf = async () => {
       const md = decodeJsonDataUri(await f.nft.tokenURI(1));
-      return md.attributes.find((a: any) => a.trait_type === "Yield Tier").value;
+      return md.attributes.find((a: any) => a.trait_type === "Realized Tier").value;
+    };
+    const claimEth = async (amount: bigint) => {
+      await f.deployer.sendTransaction({ to: engineAddr, value: amount });
+      await f.engine.setClaimable(1, 0, amount);
+      await f.nft.connect(f.alice).claimRewards(1, await f.alice.getAddress());
     };
 
     expect(await tierOf()).to.equal("New");
 
-    const oneEth = f.ethers.parseEther("1");
-    await f.deployer.sendTransaction({ to: engineAddr, value: oneEth });
-    await f.engine.setClaimable(1, 0, oneEth);
-    await f.nft.connect(f.alice).claimRewards(1, await f.alice.getAddress());
+    await claimEth(1n);
+    expect(await tierOf()).to.equal("Activated");
 
-    expect(await tierOf()).to.equal("One ETH Club");
+    await claimEth(f.ethers.parseEther("0.1") - 1n);
+    expect(await tierOf()).to.equal("Rewarded");
+
+    await claimEth(f.ethers.parseEther("0.9"));
+    expect(await tierOf()).to.equal("One ETH Mark");
+
+    await claimEth(f.ethers.parseEther("9"));
+    expect(await tierOf()).to.equal("Apex");
   });
 });
 
@@ -1125,14 +1280,16 @@ describe("NARAPositionNFTV4 — evolving artwork", () => {
     return decodeSvgDataUri(md.image);
   };
 
-  it("renders a quiet New-tier core — muted, no orbits, no calibration", async () => {
+  it("renders a quiet New-tier security-print core with no calibration band", async () => {
     const f = await deployFixture();
     await mintPosition(f, f.alice);
     const svg = await svgOf(f);
     expect(svg).to.include("STATE NEW"); // identity band, uppercased
     expect(svg).to.include("#6F6B63"); // warm ash / dormant tier color
-    expect(svg).to.not.include("<ellipse"); // orbit rings only at tier 2+
-    expect(svg).to.not.include('stroke-dasharray="3 30"'); // gold calibration ring only at tier 3+
+    expect(svg).to.include('data-nara="quiet-reserve"'); // one true negative-space field
+    expect(svg.indexOf('data-nara="quiet-reserve"')).to.be.lessThan(svg.indexOf('data-nara="scar"'));
+    expect(svg).to.include("<ellipse"); // security-print rosette is present even at New
+    expect(svg).to.not.include('stroke-dasharray="3 30"'); // calibration ring only at tier 3+
   });
 
   it("upgrades the core structure as realized ETH crosses thresholds", async () => {
@@ -1145,10 +1302,43 @@ describe("NARAPositionNFTV4 — evolving artwork", () => {
     await f.nft.connect(f.alice).claimRewards(1, await f.alice.getAddress());
 
     const svg = await svgOf(f);
-    expect(svg).to.include("STATE ONE ETH CLUB");
+    expect(svg).to.include("STATE ONE ETH MARK");
     expect(svg).to.include("#A88745"); // old brass tier color
     expect(svg).to.include("<ellipse"); // orbit rings present
-    expect(svg).to.include('stroke-dasharray="3 30"'); // gold calibration ring engaged
+    expect(svg).to.include('stroke-dasharray="3 30"'); // calibration ring engaged
+    expect(svg).to.include('dur="18s"'); // motion is slow breath, not spectacle
+    expect(svg).to.not.match(/dur="[0-5](?:\.\d+)?s"/);
+  });
+
+  it("keeps standard cards visibly accreting after the old six-action ceiling", async () => {
+    const f = await deployFixture();
+    await mintPosition(f, f.alice);
+    const engineAddr = await f.engine.getAddress();
+    let afterSixClaims = "";
+
+    for (let i = 0; i < 7; i++) {
+      await f.nara.mint(engineAddr, wad(1));
+      await f.engine.setClaimable(1, wad(1), 0);
+      await f.nft.connect(f.alice).claimRewards(1, await f.alice.getAddress());
+      if (i === 5) afterSixClaims = await svgOf(f);
+    }
+
+    const afterSevenClaims = await svgOf(f);
+    expect(afterSevenClaims).to.not.equal(afterSixClaims);
+    expect(afterSevenClaims).to.include('data-nara="claim-phyllotaxis"');
+    expect(afterSevenClaims).to.include('data-nara="action-ledger"');
+    expect(afterSevenClaims).to.include(">CLAIMS: 7 | EXTENDS: 0</text>");
+
+    let afterSixExtends = "";
+    for (let i = 0; i < 7; i++) {
+      await f.nft.connect(f.alice).extendLock(1, 1);
+      if (i === 5) afterSixExtends = await svgOf(f);
+    }
+
+    const afterSevenExtends = await svgOf(f);
+    expect(afterSevenExtends).to.not.equal(afterSixExtends);
+    expect(afterSevenExtends).to.include('data-nara="extension-sediment"');
+    expect(afterSevenExtends).to.include(">CLAIMS: 7 | EXTENDS: 7</text>");
   });
 
   it("flags Genesis and Eternal provenance in the artwork", async () => {
@@ -1157,10 +1347,33 @@ describe("NARAPositionNFTV4 — evolving artwork", () => {
     const svg = await svgOf(f);
     expect(svg).to.include("ETERNAL");
     expect(svg).to.include("GENESIS");
+    expect(svg).to.include('data-nara="archive-scar"');
+  });
+
+  it("lets Genesis and Eternal archive plates accrete holder actions", async () => {
+    const f = await deployFixture();
+    await mintGenesisPosition(f, f.alice, wad(1_000), 96n, 1, 1, 20_000, true);
+    const engineAddr = await f.engine.getAddress();
+    const initial = await svgOf(f);
+
+    await f.nara.mint(engineAddr, wad(3));
+    await f.engine.setClaimable(1, wad(3), 0);
+    await f.nft.connect(f.alice).claimRewards(1, await f.alice.getAddress());
+
+    const afterClaim = await svgOf(f);
+    expect(afterClaim).to.not.equal(initial);
+    expect(afterClaim).to.include('data-nara="archive-accretion"');
+    expect(afterClaim).to.include('data-nara="action-ledger"');
+    expect(afterClaim).to.include(">CLAIMS: 1 | EXTENDS: 0</text>");
+
+    await f.nft.connect(f.alice).extendLock(1, 1);
+    const afterExtend = await svgOf(f);
+    expect(afterExtend).to.not.equal(afterClaim);
+    expect(afterExtend).to.include(">CLAIMS: 1 | EXTENDS: 1</text>");
   });
 });
 
-describe("NARAPositionNFTV4 — deterministic rendering (V1 modules)", () => {
+describe("NARAPositionNFTV4 — deterministic rendering (V5 modules)", () => {
   const svgOf = async (f: any, id = 1) =>
     decodeSvgDataUri(decodeJsonDataUri(await f.nft.tokenURI(id)).image);
 
@@ -1178,13 +1391,13 @@ describe("NARAPositionNFTV4 — deterministic rendering (V1 modules)", () => {
     expect(await svgOf(f, 1)).to.not.equal(await svgOf(f, 2));
   });
 
-  it("includes the Scar, Lattice and Glyph modules", async () => {
+  it("includes the Scar, microprint, and security rosette modules", async () => {
     const f = await deployFixture();
     await mintPosition(f, f.alice);
     const svg = await svgOf(f);
-    expect(svg).to.include("rotate("); // Scar notch group + lattice node transforms
-    expect(svg).to.include('r="332"'); // Lattice outer coordinate ring
-    expect(svg).to.match(/x="90[56]"|x="912"|cx="913"/); // Glyph notation column
+    expect(svg).to.include("rotate("); // scar notch + rosette transforms
+    expect(svg).to.include("NARA POSITION"); // microprint border
+    expect(svg).to.include("<ellipse"); // security-print rosette
   });
 
   it("exposes the deterministic module trait from token data", async () => {
@@ -1192,6 +1405,6 @@ describe("NARAPositionNFTV4 — deterministic rendering (V1 modules)", () => {
     await mintPosition(f, f.alice);
     const md = decodeJsonDataUri(await f.nft.tokenURI(1));
     const mod = md.attributes.find((a: any) => a.trait_type === "Module").value;
-    expect(["Yield Arc", "Pressure Scar", "Orbit Field", "Ledger Fragment", "Streak Crown", "Demand Trace"]).to.include(mod);
+    expect(["Archive Arc", "Pressure Scar", "Orbit Field", "Ledger Fragment", "Crown Trace", "Signal Trace"]).to.include(mod);
   });
 });

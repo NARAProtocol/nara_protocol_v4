@@ -52,7 +52,7 @@ contract NARABondDepositoryV4NFT is AccessControl, Pausable, ReentrancyGuard, EI
     uint32 public constant MAX_GENESIS_REWARD_MULTIPLIER_BPS = 50_000;
     uint256 public constant MAX_REWARD_SPLIT_WAD = 1e18;
     uint64 public constant MIN_PRICE_DELAY = 1 days;
-    uint64 public constant MAX_TERMS_AGE = 1 days;
+    uint64 public constant MAX_TERMS_AGE = 2 days;
 
     bytes32 public constant TERMS_ROLE = keccak256("TERMS_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
@@ -82,6 +82,7 @@ contract NARABondDepositoryV4NFT is AccessControl, Pausable, ReentrancyGuard, EI
     error PauseRequired();
     error PriceZero();
     error PriceDelayTooShort();
+    error PriceDelayTooLong();
     error PriceStale();
     error SignedQuoteRequired();
     error QuoteExpired();
@@ -184,6 +185,7 @@ contract NARABondDepositoryV4NFT is AccessControl, Pausable, ReentrancyGuard, EI
         if (treasury_ == address(this)) revert InvalidTreasury();
         if (adminDelaySeconds_ == 0) revert InvalidTerms();
         if (adminDelaySeconds_ < MIN_PRICE_DELAY) revert PriceDelayTooShort();
+        if (adminDelaySeconds_ > MAX_TERMS_AGE - MIN_PRICE_DELAY) revert PriceDelayTooLong();
         if (nara_.code.length == 0 || engine_.code.length == 0 || vault_.code.length == 0 || positionNft_.code.length == 0) {
             revert NotAContract();
         }
@@ -550,6 +552,7 @@ contract NARABondDepositoryV4NFT is AccessControl, Pausable, ReentrancyGuard, EI
     function _grossUpForLockFee(uint256 netAmount) internal view returns (uint256) {
         uint16 feeBps = engine.lockFeeBps();
         if (feeBps == 0) return netAmount;
+        if (feeBps >= BPS) revert InvalidTerms();
         uint256 denominator = BPS - feeBps;
         return (netAmount * BPS + denominator - 1) / denominator;
     }

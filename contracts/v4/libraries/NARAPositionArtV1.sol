@@ -6,7 +6,7 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 /// @title NARAPositionArtV1
 /// @notice Fully on-chain art + metadata builder for NARA position NFTs, deployed as a separate
 ///         linked library so the renderer contract stays small. Pure/stateless. All drivers are
-///         realized facts (earnings tier) or mint-fixed (Genesis/Eternal) — never live values —
+///         realized facts (delivered-reward tier) or mint-fixed (Genesis/Eternal) — never live values —
 ///         so cached images stay valid and the art encodes facts/provenance, not expected return.
 /// @dev `public` entry points (svg/name/attributes/collectionSVG/moduleName) deploy in this library
 ///      and are reached from the renderer via DELEGATECALL (linked at deploy). Internal helpers are
@@ -21,7 +21,7 @@ library NARAPositionArtV1 {
     string internal constant IVORY = "#D8D1BD";    // bone ivory (lines + text)
     string internal constant MUTED = "#6F6B63";    // warm ash graphite — dormant, no blue
     string internal constant IRON = "#8C8A82";     // lit smoked steel — activated, neutral (no blue)
-    string internal constant COPPER = "#397C68";   // oxidized copper green (productive)
+    string internal constant COPPER = "#397C68";   // oxidized copper green (rewarded)
     string internal constant BRASS = "#A88745";    // old brass (recognized rare)
     string internal constant AMBER = "#C2772E";    // peat / burned amber (apex + signature)
     string internal constant PAPER = "#C7B98D";    // aged paper ivory (Genesis archive)
@@ -41,6 +41,7 @@ library NARAPositionArtV1 {
         uint256 tokenId,
         uint256 positionId
     ) public pure returns (string memory) {
+        tier = _clampTier(tier);
         return string.concat(
             '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" role="img">',
             "<title>NARA Position #", tokenId.toString(),
@@ -60,9 +61,10 @@ library NARAPositionArtV1 {
     function name(uint8 tier, bool isGenesis, bool isEternal, uint256 tokenId)
         public pure returns (string memory)
     {
+        tier = _clampTier(tier);
         if (isEternal) return string.concat("NARA Eternal Ledger #", _pad6(tokenId));
         if (isGenesis) return string.concat("NARA Genesis Archive #", _pad6(tokenId));
-        return string.concat("NARA Position #", _pad6(tokenId), " \\u00B7 ", _tierName(tier));
+        return string.concat("NARA Position #", _pad6(tokenId), " / ", _tierName(tier));
     }
 
     function attributes(
@@ -77,9 +79,10 @@ library NARAPositionArtV1 {
         uint32 mult,
         uint64 mintedAt
     ) public pure returns (string memory) {
+        tier = _clampTier(tier);
         return string.concat(
             '{"display_type":"number","trait_type":"Position ID","value":', positionId.toString(),
-            '},{"trait_type":"Yield Tier","value":"', _tierName(tier),
+            '},{"trait_type":"Realized Tier","value":"', _tierName(tier),
             '"},{"trait_type":"Core","value":"', _coreClass(tier),
             '"},{"trait_type":"Module","value":"', moduleName(moduleIdx),
             '"},{"trait_type":"Provenance","value":"', isGenesis ? "Genesis" : "Manual",
@@ -93,12 +96,12 @@ library NARAPositionArtV1 {
     }
 
     function moduleName(uint8 index) public pure returns (string memory) {
-        if (index == 0) return "Yield Arc";
+        if (index == 0) return "Archive Arc";
         if (index == 1) return "Pressure Scar";
         if (index == 2) return "Orbit Field";
         if (index == 3) return "Ledger Fragment";
-        if (index == 4) return "Streak Crown";
-        return "Demand Trace";
+        if (index == 4) return "Crown Trace";
+        return "Signal Trace";
     }
 
     function collectionSVG() public pure returns (string memory) {
@@ -118,16 +121,16 @@ library NARAPositionArtV1 {
     // ======================================================================
     function _tierName(uint8 tier) internal pure returns (string memory) {
         if (tier == 4) return "Apex";
-        if (tier == 3) return "One ETH Club";
-        if (tier == 2) return "Productive";
-        if (tier == 1) return "Earning";
+        if (tier == 3) return "One ETH Mark";
+        if (tier == 2) return "Rewarded";
+        if (tier == 1) return "Activated";
         return "New";
     }
 
     function _coreClass(uint8 tier) internal pure returns (string memory) {
         if (tier == 4) return "Radiant";
         if (tier == 3) return "Calibrated";
-        if (tier == 2) return "Productive";
+        if (tier == 2) return "Marked";
         if (tier == 1) return "Active";
         return "Dormant";
     }
@@ -256,23 +259,21 @@ library NARAPositionArtV1 {
     }
 
     function _scar(uint8 tier, uint256 seed) internal pure returns (string memory) {
-        // The blood-oxide cut is NARA's signature mark — present on every card, always in dried
-        // blood (SCAR), never neon. Width grows with tier; Apex adds an amber radiation spine.
+        // The blood-oxide cut is NARA's signature mark: present on every card, never neon.
         string memory a = ((seed >> 8) % 360).toString();
         string memory ew = tier >= 4 ? "5" : tier >= 2 ? "3.5" : "2.5";
         string memory body = string.concat(
             '<g transform="rotate(', a, ' 500 430)">',
             '<path d="M500 430 L392 97 A350 350 0 0 1 608 97 Z" fill="', BG, '"/>',
-            '<path d="M500 430 L392 97 M500 430 L608 97" stroke="', SCAR, '" stroke-width="', ew, '" opacity="0.95"/>',
-            '<path d="M392 97 A350 350 0 0 1 608 97" fill="none" stroke="', SCAR, '" stroke-width="', ew, '" opacity="0.7"/>'
+            '<path d="M500 430 L392 97 M500 430 L608 97" stroke="', SCAR, '" stroke-width="', ew, '" opacity="0.88"/>',
+            '<path d="M392 97 A350 350 0 0 1 608 97" fill="none" stroke="', SCAR, '" stroke-width="', ew, '" opacity="0.55"/>'
         );
-        if (tier >= 4) body = string.concat(body, '<path d="M500 430 L500 84" stroke="', AMBER, '" stroke-width="2.5" opacity="0.7"/>');
         return string.concat(body, "</g>");
     }
 
     function _sigil(string memory col, uint8 tier) internal pure returns (string memory) {
         string memory pulse = tier >= 3
-            ? '<animate attributeName="stroke-opacity" values="0.75;1;0.75" dur="5s" repeatCount="indefinite"/>'
+            ? '<animate attributeName="stroke-opacity" values="0.68;0.92;0.68" dur="18s" repeatCount="indefinite"/>'
             : "";
         return string.concat(
             '<g stroke="', col, '" stroke-width="7" stroke-linecap="round" fill="none">', pulse,
@@ -353,7 +354,7 @@ library NARAPositionArtV1 {
     /// @dev One distinct readout per deterministic NARA module, all in the same grammar.
     function _module(uint8 moduleIdx, uint8 tier, string memory col) internal pure returns (string memory) {
         if (moduleIdx == 0) {
-            // Yield Arc — output arc band over the core
+            // Archive Arc — output arc band over the core
             return string.concat('<circle cx="500" cy="430" r="156" fill="none" stroke="', col, '" stroke-width="4" stroke-linecap="round" stroke-dasharray="120 800" transform="rotate(40 500 430)" opacity="0.8"/>');
         }
         if (moduleIdx == 1) {
@@ -381,11 +382,15 @@ library NARAPositionArtV1 {
             );
         }
         if (moduleIdx == 4) {
-            // Streak Crown — abstract crown of ring segments above the core
+            // Crown Trace — abstract ring segments above the core
             return string.concat('<circle cx="500" cy="430" r="150" fill="none" stroke="', col, '" stroke-width="6" stroke-linecap="round" stroke-dasharray="14 26" transform="rotate(-90 500 430)" opacity="0.8"/>');
         }
-        // Demand Trace — twin signal flow lines through the field
+        // Signal Trace — twin signal flow lines through the field
         return string.concat('<path d="M250 470 Q500 410 750 470 M250 506 Q500 446 750 506" fill="none" stroke="', col, '" stroke-width="2" opacity="0.5"/>');
+    }
+
+    function _clampTier(uint8 tier) internal pure returns (uint8) {
+        return tier > 4 ? 4 : tier;
     }
 
     // ======================================================================

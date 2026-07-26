@@ -1,13 +1,14 @@
 # NARA Position NFT Art Direction Bible v1
 
-Last updated: 2026-06-29.
-Status: **canonical art direction** for `contracts/v4/NARAPositionRendererV4.sol`. This is the source
-of truth; the current renderer is a partial implementation (see Appendix A — Status & Gap).
+Last updated: 2026-07-04.
+Status: **canonical art direction** for `contracts/v4/NARAPositionRendererV5.sol` and its modular
+`NARAArt*V1` contracts. This is the source of truth; see Appendix A for implementation status.
 
 **Hard engineering constraints (always apply, do not violate when implementing):**
 - Fully on-chain SVG; **no uploaded/IPFS image**. Engine is immutable and at the EIP-170 size limit —
   all NFT art/logic lives in the renderer/wrapper, **never the engine**.
-- **Cache-safe drivers only:** art may change with **realized earnings tier (tx-driven)** or
+- **Cache-safe drivers only:** art may change with **realized delivered-reward tier (tx-driven)**,
+  **claim/extension action counts (tx-driven)**, or
   **mint-fixed flags (Genesis/Eternal)** — never live per-epoch values. `MetadataUpdate` (ERC-4906)
   fires on claim/extend so marketplaces refresh.
 - **Compliance:** art encodes **realized facts + provenance, never expected return** or speculative
@@ -34,6 +35,20 @@ Every shape must come from NARA mechanics — no random decoration. If a ring ex
 something. If a scar exists, it must mean something. If a glow exists, it must mean something. If a
 glyph exists, it must come from token data. This is the main rule that makes the collection different.
 
+## 2.1 Perception constraints added 2026-07-04
+
+The immutable renderer should be beautiful because it is lawful, not because it is loud.
+
+- **One anchor, one void, one signature:** one central Core, one true quiet reserve, one Scar.
+- **Contrast budget by scale:** fine detail stays low opacity; large forms carry the visual weight.
+- **Color as event:** tier color is scarce and earned by realized state; the Scar red stays unique.
+- **Lawful density:** complexity comes from deterministic security-print systems, not random noise.
+- **Stratigraphy:** holder actions accrete as durable marks, not repaint. Claims grow as ordered
+  phyllotaxis around the Core/Seal; extensions settle as downward ledger sediment.
+- **Motion is breath:** animation must be slow, optional, and never required for the static artwork.
+- **Thumbnail and long-look test:** the Core, Scar, and tier color must survive at 300px; full size
+  should keep rewarding inspection without becoming visual stress.
+
 ## 3. Visual identity in one sentence
 
 **NARA art is a calm, sacred, economic reactor mapped onto an on-chain position system.**
@@ -51,8 +66,8 @@ protocol civilization, not a social-media artist. Cues: central core · ritual g
 institutional frame · seal marks · glyph language.
 
 **Theme 2 — Economic reactor.** Show production cost, demand, mining pressure, issuance as energy.
-Cues: pressure channels · cost trace lines · demand axis · issuance axis · productive glow · yield
-arcs · claimed/unclaimed states.
+Cues: pressure channels · cost trace lines · issuance axis · realized-state glow · archive
+arcs · claim/extension history marks.
 
 **Theme 3 — Cartographic position map.** Every NFT is a coordinate in a larger NARA world. Cues:
 lattice fields · position coordinates · token territory · network zones · ring maps · epoch bands ·
@@ -66,18 +81,18 @@ archive grids.
    rewards study.
 2. **The Scar** — NARA's most important unique mark: a clean cut / missing segment / fracture / notch
    in the ring system. Engineered, never accidental. Means scarcity · mining cost · contested issuance
-   · extraction pressure · incomplete potential. (T0 one clean missing segment → wider for productive
-   → gold-edged for One ETH Club → sculpted radiant for Apex → archive scar for Genesis.)
+   · extraction pressure · incomplete potential. (T0 one clean missing segment → wider for Rewarded
+   → calibrated for One ETH Mark → sculpted radiant for Apex → archive scar for Genesis.)
 3. **The Pulse** — timing rings = time. Epoch rhythm · claim window · streak continuity · maturity ·
    heartbeat. Subtle, never noisy halos. T0 faint → T1 one active → T2 layered → T3 calibrated → T4
    ceremonial.
 4. **The Lattice** — the position map. Place inside NARA · relation to the mining field · network
    territory · coordinate. Faint background map lines / radial zones / grid fragments / coordinate
    arcs. Visible, not loud.
-5. **The Trace** — economic behavior: output · demand · cost · yield · productive pressure · flow.
+5. **The Trace** — economic behavior: output · cost · time · realized reward history · signal flow.
    Thin lines / channels / small bars / pressure meters / calibrated output marks. Integrated into the
    machine, not normal chart design.
-6. **The Seal** — rare-status stamp (protocol stamp, not a sticker): Genesis · Eternal · One ETH Club ·
+6. **The Seal** — rare-status stamp (protocol stamp, not a sticker): Genesis · Eternal · One ETH Mark ·
    Apex · special provenance. Restrained gold / ivory / deep blue.
 7. **The Glyphs** — deterministic micro-marks from token data: identity fingerprint · on-chain
    determinism · native NARA language · inspection reward. NOT letters — segmented notation (tiny cut
@@ -109,8 +124,8 @@ overlay, bevel edges, and uneven line opacity — not bloom.
 ## 8. Typography
 
 Hierarchy: NARA wordmark → position number → tier & state → token id → renderer/provenance metadata.
-Technical, clean, readable. Good labels: `NARA`, `POSITION 000001`, `TOKEN 000001`, `STATE EARNING`,
-`TIER 02`, `FULLY ON CHAIN`, `RENDERER V4`, `GENESIS`, `ETERNAL`, `CLAIM WINDOW ACTIVE`.
+Technical, clean, readable. Good labels: `NARA`, `POSITION 000001`, `TOKEN 000001`, `STATE ACTIVATED`,
+`TIER 02`, `FULLY ON CHAIN`, `RENDERER V5`, `GENESIS`, `ETERNAL`, `CLAIM WINDOW ACTIVE`.
 Avoid casual words: fresh · quiet · glow · fun · lucky · rare vibes. Sound like protocol metadata,
 not social copy.
 
@@ -127,14 +142,14 @@ not social copy.
 
 - **Tier 0 — New / Dormant artifact:** single Core ring · faint center node · small Scar · minimal
   Pulse · very light Lattice · no major Trace · no Seal · low glow. Silent, not unfinished.
-- **Tier 1 — Earning / Activated machine:** stronger Core · one visible Pulse · one active Trace
+- **Tier 1 — Activated / Active machine:** stronger Core · one visible Pulse · one active Trace
   channel · clear issuance axis · brighter center · small glyph cluster · readable state label. The
   machine woke up.
-- **Tier 2 — Productive / Running reactor:** dual-ring Core · productive green Trace · more Pulse
-  density · stronger Lattice · visible claim arc · multiple output channels · active inner chamber.
+- **Tier 2 — Rewarded / Marked reactor:** dual-ring Core · oxidized copper Trace · more Pulse
+  density · stronger Lattice · visible claim arc · multiple history marks · active inner chamber.
   Alive even when static.
-- **Tier 3 — One ETH Club / Recognized high-status instrument:** controlled gold calibration marks ·
-  stronger Seal · refined symmetry · more precise Pulse · gold-touched Scar · higher glyph complexity
+- **Tier 3 — One ETH Mark / Recognized high-status instrument:** controlled brass calibration marks ·
+  stronger Seal · refined symmetry · more precise Pulse · restrained Scar · higher glyph complexity
   · premium frame. Gold as authority, not paint — never a whole-yellow card.
 - **Tier 4 — Apex / Ceremonial reactor relic:** multi-ring Core · radiant center · sculpted Scar ·
   full Lattice · complex glyph field · Apex Seal · controlled halo · strongest depth · rare border
@@ -146,21 +161,21 @@ not social copy.
 
 ## 11. Variant system (replace random variants with NARA subsystems)
 
-- **Yield Arc** — claim window, earning curve, output flow → arc bands around the Core.
-- **Pressure Bars** — demand & cost pressure → calibrated bars integrated into frame/Trace (not a
+- **Archive Arc** — claim-history arc band around the Core.
+- **Pressure Scar** — cost pressure → calibrated bars integrated into frame/Trace (not a
   normal chart).
 - **Orbit Field** — position inside the wider NARA map → orbit paths, coordinate rings, network nodes.
 - **Scar Wave** — contested issuance & production stress → distorted ring cuts, fracture arcs,
   controlled tension lines.
 - **Ledger Grid** — Genesis/Eternal provenance → archive lines, block records, chain marks, seal
   geometry.
-- **Streak Crown** — repeated participation → crown-like ring segments around the Core (abstract, not
-  a literal crown).
+- **Crown Trace** — abstract crown-like ring segments around the Core. This is ornament/provenance
+  notation only; it does not imply a streak mechanic.
 
 ## 12. Trait generation (from real NARA data)
 
-Inputs: token id · position id · tier · state · productive status · claim status · streak length ·
-genesis flag · eternal flag · mint block · epoch number · miner-history marker.
+Inputs: token id · position id · tier · state · claim count · extension count ·
+genesis flag · eternal flag · mint block · epoch number · provenance marker.
 Generated visual traits: Core type · ring count · Scar type · Scar angle · Pulse density · Lattice
 family · Trace system · Seal class · Glyph cluster · frame class · glow level · archive mark.
 Rule: randomness only inside strict taste boundaries. Controlled determinism makes a collectible
@@ -190,7 +205,7 @@ constant movement · rainbow · meme bounce. Living machine, not slot machine.
 - **Circle cards** → keep circular identity, redesign as the NARA Core; add Scar, Pulse, Lattice,
   Trace, Glyphs, better frame, better typography.
 - **Bar variant** → Pressure Bars (economic logic).
-- **Arc variant** → Yield Arc (claim window + output).
+- **Arc variant** → Archive Arc (claim-history arc band).
 - **Orbit variant** → Orbit Field (position mapping).
 - **Zigzag variant** → remove or convert to Scar Wave (current pink zigzag is too generic).
 - **Genesis card** → keep direction, make more archival: ledger marks, hash fragments, provenance
@@ -226,27 +241,36 @@ collectible, and impossible to fake as real NARA provenance.
 
 ## Appendix A — Current implementation status & gap
 
-What `NARAPositionRendererV4` does today (2026-06-29) vs this bible:
+What `NARAPositionRendererV5` + `NARAArt*V1` do today (2026-07-04) vs this bible:
+
+Action accretion is implemented: standard cards use claim phyllotaxis, extension sediment, and a
+compact C/E action ledger; Genesis/Eternal plates use calmer archive accretion.
+
+Renderer production hardening is implemented: SVGs use no remote font imports or external assets,
+rare predicates have visible QA marks, and the preview script writes full-size, rare-showcase, and
+thumbnail QA pages.
 
 Implemented:
-- ✅ **Core** (central reactor: disc + concentric rings + issuance/demand axis), tier-escalating
-  structure (ring/orbit count, glow, calibration tick-ring at T3+, apex halo), bold strokes.
-- ✅ **Pulse** (concentric rings), basic **Lattice** (background grid), **Trace** (productive green
-  arc, gold calibration ticks).
+- ✅ **Core** (central reactor: disc, axis, restrained glow, calibration tick-ring at T3+),
+  protected by a true quiet reserve.
+- ✅ **Pulse** (slow center pulse), low-contrast security print, **Trace** (restrained signal
+  lines, brass calibration ticks).
+- ✅ **Scar** (standard missing-segment Scar plus archive Scar on Genesis/Eternal seals).
 - ✅ **Seal** (Genesis/Eternal markers + archival ledger plate for Genesis).
-- ✅ Layered plate, controlled palette (deep navy / electric cobalt `#3A6BFF` / ivory / green / gold),
-  identity band, status marker, restrained animation, tx-driven tier (cache-safe).
+- ✅ Layered plate, mineral palette, identity band, status marker, restrained animation,
+  tx-driven tier (cache-safe).
+- ✅ Registration marks, compact action counter, forced rare-hit previews, and 64/128/300px thumbnail
+  review output.
 
-Gap to this bible (renderer-only build order; engine untouched; pass §17/§18 each step):
-1. ❌ **The Scar** — the signature subtraction element is absent. **Highest priority.** (4 Scar types,
-   deterministic Scar angle; gold-edged at T3, sculpted at T4, archive scar at Genesis.)
-2. ❌ **Deterministic Glyphs** — no notation language / per-token glyph cluster + micro-border
-   fragments yet.
-3. ❌ **Distinct module subsystems** — Yield Arc / Pressure Bars / Orbit Field / Scar Wave / Ledger
-   Grid / Streak Crown are currently labels + orbit tilt, not visually distinct readouts.
-4. ❌ **Cartographic Lattice** — current grid is decorative, not a coordinate/position map tied to
+Remaining optional polish (renderer-only build order; engine untouched; pass §17/§18 each step):
+1. ❌ **Deterministic micro-notation** — no richer per-token glyph cluster beyond microprint and
+   low-contrast security marks yet.
+2. ❌ **Distinct module subsystems** — Archive Arc / Pressure Scar / Orbit Field / Signal Trace / Ledger
+   Fragment / Crown Trace can be made even more visually distinct.
+3. ❌ **Cartographic Lattice** — current grid is decorative, not a coordinate/position map tied to
    token/position id.
-5. ⚠️ **Pulse/Trace not yet "timed structure"** — exist visually but not bound to epoch/claim/streak
+4. ⚠️ **Pulse/Trace not yet "timed structure"** — exist visually but not bound to epoch/claim/streak
    data.
 
-Renderer size budget: currently ~19 KB of the 24,576-byte limit (engine stays untouched).
+Renderer size budget: V5 is split across modules; each module must remain under the 24,576-byte
+deployed-code limit. Engine stays untouched.

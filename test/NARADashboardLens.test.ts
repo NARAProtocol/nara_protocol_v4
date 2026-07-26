@@ -233,7 +233,7 @@ describe("NARADashboardLens", () => {
 
             const expectedFee    = (amount * 200n) / 10_000n; // 20e18
             const expectedNet    = amount - expectedFee;       // 980e18
-            const expectedWeight = expectedNet * duration;     // 98_000e18 (mock: weight = amount * duration)
+            const expectedWeight = expectedNet;                // mock config has zero duration multipliers
 
             expect(netAmount).to.equal(expectedNet);
             expect(weight).to.equal(expectedWeight);

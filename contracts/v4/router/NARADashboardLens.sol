@@ -3,6 +3,7 @@ pragma solidity 0.8.34;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../NARAEngineTypes.sol";
+import {NARAEngineModelLib} from "../libraries/NARAEngineModelLib.sol";
 
 // ---------------------------------------------------------------
 // Interfaces — must match the actual deployed contracts' ABI.
@@ -34,7 +35,7 @@ struct LensEpochSnapshot {
 interface ILensEngine {
     function NARA() external view returns (address);
     function currentEpoch() external view returns (uint64);
-    function epochStateView() external view returns (LensEpochSnapshot memory);
+    function epochState() external view returns (LensEpochSnapshot memory);
     function config() external view returns (EngineConfig memory);
     function nextPositionId() external view returns (uint256);
     function positionOf(uint256 positionId) external view returns (Position memory);
@@ -44,7 +45,6 @@ interface ILensEngine {
     function claimFeeBps() external view returns (uint16);
     function lockFeeWei() external view returns (uint96);
     function unlockFeeWei() external view returns (uint96);
-    function previewWeight(uint256 amount, uint64 durationEpochs) external view returns (uint256);
     function claimableRewards(uint256 positionId) external view returns (uint256 naraAmount, uint256 ethAmount);
     function emissionReserve() external view returns (uint256);
     function rewardReserveAvailable() external view returns (uint256);
@@ -195,7 +195,7 @@ contract NARADashboardLens {
         uint256[] calldata nftTokenIds
     ) external view returns (UserDashboardState memory s) {
         address nara = ENGINE.NARA();
-        LensEpochSnapshot memory snap = ENGINE.epochStateView();
+        LensEpochSnapshot memory snap = ENGINE.epochState();
         uint64 live = ENGINE.currentEpoch();
 
         // Wallet
@@ -256,7 +256,7 @@ contract NARADashboardLens {
     /// @notice Epoch state only — cheap call for the auto-sync effect.
     function getEpochState() external view returns (EpochState memory) {
         uint64 live    = ENGINE.currentEpoch();
-        uint64 settled = ENGINE.epochStateView().epoch;
+        uint64 settled = ENGINE.epochState().epoch;
         return EpochState({
             currentEpoch:  live,
             settledEpoch:  settled,
@@ -272,7 +272,7 @@ contract NARADashboardLens {
         uint16 feeBps = ENGINE.lockFeeBps();
         uint256 feeAmount = (amount * feeBps) / 10_000;
         netAmount  = amount - feeAmount;
-        weight     = ENGINE.previewWeight(netAmount, durationEpochs);
+        weight     = NARAEngineModelLib.computeWeight(ENGINE.config(), netAmount, durationEpochs);
         lockFeeEth = ENGINE.lockFeeWei();
     }
 

@@ -5,7 +5,7 @@ import {EpochSnapshot} from "../NARAEngineTypes.sol";
 
 interface INARAProtocolStatsEngineV1 {
     function currentEpoch() external view returns (uint64);
-    function epochStateView() external view returns (EpochSnapshot memory);
+    function epochState() external view returns (EpochSnapshot memory);
     function EPOCH_LENGTH() external view returns (uint64);
     function GENESIS_TIMESTAMP() external view returns (uint64);
     function treasury() external view returns (address);
@@ -78,7 +78,7 @@ contract NARAProtocolStatsLensV1 {
 
     /// @notice Returns the full set of protocol headline statistics in one call.
     function getProtocolStats() external view returns (ProtocolStats memory s) {
-        EpochSnapshot memory snap = ENGINE.epochStateView();
+        EpochSnapshot memory snap = ENGINE.epochState();
 
         s.statsVersion = STATS_VERSION;
 

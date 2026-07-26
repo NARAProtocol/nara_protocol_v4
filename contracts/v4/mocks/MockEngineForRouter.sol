@@ -89,7 +89,7 @@ contract MockEngineForRouter {
 
     function currentEpoch() external view returns (uint64) { return liveEpoch; }
 
-    function epochStateView() external view returns (EpochSnapshot memory snap) {
+    function epochState() external view returns (EpochSnapshot memory snap) {
         snap.epoch            = settledEpoch;
         snap.totalLocked      = _totalLocked;
         snap.activeTotalWeight = _activeTotalWeight;

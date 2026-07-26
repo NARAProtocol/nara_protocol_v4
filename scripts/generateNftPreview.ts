@@ -12,9 +12,9 @@ async function main() {
 
   const cases = [
     { tier: 0, name: "Tier 0 - New (fresh, quiet)", genesis: false, eternal: false, tokenId: 1, positionId: 1, module: 0 },
-    { tier: 1, name: "Tier 1 - Earning (>0)", genesis: false, eternal: false, tokenId: 2, positionId: 2, module: 1 },
-    { tier: 2, name: "Tier 2 - Productive (>=0.1 ETH, glow)", genesis: false, eternal: false, tokenId: 3, positionId: 3, module: 2 },
-    { tier: 3, name: "Tier 3 - One ETH Club (>=1 ETH, gold)", genesis: false, eternal: false, tokenId: 4, positionId: 4, module: 3 },
+    { tier: 1, name: "Tier 1 - Activated (>0)", genesis: false, eternal: false, tokenId: 2, positionId: 2, module: 1 },
+    { tier: 2, name: "Tier 2 - Rewarded (>=0.1 ETH)", genesis: false, eternal: false, tokenId: 3, positionId: 3, module: 2 },
+    { tier: 3, name: "Tier 3 - One ETH Mark (>=1 ETH)", genesis: false, eternal: false, tokenId: 4, positionId: 4, module: 3 },
     { tier: 4, name: "Tier 4 - Apex (>=10 ETH, amber)", genesis: false, eternal: false, tokenId: 5, positionId: 5, module: 4 },
     { tier: 0, name: "Eternal Ledger (unlocked via burn only)", genesis: true, eternal: true, tokenId: 6, positionId: 6, module: 0 },
     { tier: 0, name: "Genesis Archive", genesis: true, eternal: false, tokenId: 7, positionId: 7, module: 0 },

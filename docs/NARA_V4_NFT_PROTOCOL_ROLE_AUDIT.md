@@ -42,11 +42,11 @@ most should not be built unless the underlying mechanic ships first.
 | Bonds | `NARABondDepositoryV4NFT.mintGenesisAndLockFor(...)` delivers discounted NARA as a genesis NFT | ✅ bond = NFT delivery | Covered |
 | Genesis users | `GenesisMetadata{roundId,tierId,rewardMultiplierBps,eternal,rewardWeight}` + parallel pool | ✅ flag inside the same NFT | Covered |
 | Eternal / long-term | `isEternal` → no normal unlock; only `burnEternalGenesis` after maturity | ✅ | Covered |
-| High-value users | `lifetimeEthClaimed` → renderer Yield Tier 0–4 | ✅ realized-earnings tier | Covered |
+| High-value users | `lifetimeEthClaimed` → renderer Realized Tier 0–4 | ✅ realized delivered-reward tier | Covered |
 | Staking | `NARAStakingPoolV4` holds a pool of position NFTs, mints `stNARA` ERC-20 | ⚠️ consumes NFTs, mints ERC-20 | Covered (no NFT needed) |
 | Fractional position | `NARAFractionalPositionV4` splits one NFT into ERC-20 units | ⚠️ consumes one NFT, mints ERC-20 | Covered (no NFT needed) |
 | Liquidity support | `NARALiquidityGrowthVault/Hook` exists; no NFT tied to LP | ❌ | Missing — decide if it should exist |
-| Streaks | No streak logic in contracts (only an art *label* "Streak Crown") | ❌ | Not built — do not imply it exists |
+| Streaks | No streak logic in contracts; the abstract `Crown Trace` art label is not streak logic | ❌ | Not built — do not imply streak mechanics exist |
 | Boosts | No boost mechanic | ❌ | Not built |
 | Access gates | None | ❌ | Not built |
 | Governance / reputation | None in code | ❌ | Not built |
@@ -61,19 +61,19 @@ most should not be built unless the underlying mechanic ships first.
 | # | Tier | Entry (real) | NFT change | Trait | Transfer | Built |
 |---|---|---|---|---|---|---|
 | 0 | Observer | Connect wallet, no lock | No NFT | — | n/a | 🟢 (by absence) |
-| 1 | Locked holder (base) | `mintAndLock` any amount | Position NFT, Yield Tier "New" | `Yield Tier: New`, `Position ID`, `Created Epoch` | Transferable | 🟢 |
-| 2 | Earning | `lifetimeEthClaimed > 0` | Lit steel core, defined scar | `Yield Tier: Earning` | Transferable | 🟢 |
-| 3 | Productive | ≥ 0.1 ETH claimed | Copper trace arc, 2 rings | `Yield Tier: Productive` | Transferable | 🟢 |
-| 4 | One ETH Club | ≥ 1 ETH claimed | Brass calibration ring | `Yield Tier: One ETH Club` | Transferable | 🟢 |
-| 5 | Apex | ≥ 10 ETH claimed | Burned-amber halo, 4 rings | `Yield Tier: Apex` | Transferable | 🟢 |
+| 1 | Locked holder (base) | `mintAndLock` any amount | Position NFT, Realized Tier "New" | `Realized Tier: New`, `Position ID`, `Created Epoch` | Transferable | 🟢 |
+| 2 | Activated | `lifetimeEthClaimed > 0` | Lit steel core, defined scar | `Realized Tier: Activated` | Transferable | 🟢 |
+| 3 | Rewarded | ≥ 0.1 ETH claimed | Copper trace arc, history marks | `Realized Tier: Rewarded` | Transferable | 🟢 |
+| 4 | One ETH Mark | ≥ 1 ETH claimed | Brass calibration ring | `Realized Tier: One ETH Mark` | Transferable | 🟢 |
+| 5 | Apex | ≥ 10 ETH claimed | Burned-amber restrained halo | `Realized Tier: Apex` | Transferable | 🟢 |
 | 6 | Bond buyer | Buy via `NARABondDepositoryV4NFT` | Genesis flag + reward weight | `Provenance: Genesis`, `Round`, `Tier` | Transferable | 🟢 |
 | 7 | Genesis | Minted by allowlisted genesis minter | Genesis archive art | `Provenance: Genesis` | Transferable | 🟢 |
 | 8 | Eternal / Founder grade | Genesis + `eternal=true` | Eternal ledger art, no normal unlock | `Eternal: true` | Transferable, non-exitable until maturity | 🟢 |
 | — | Streak holder | needs streak mechanic | — | — | — | 🟠 not built |
 | — | Liquidity supporter | needs LP→NFT link | — | — | — | 🟠 not built |
 
-The "first miner / earning / productive / one-ETH / ten-ETH / apex" ladder already exists as the
-realized Yield Tier system, keyed off `lifetimeEthClaimed` (a realized fact), not a vanity counter.
+The "new / activated / rewarded / one-ETH / ten-ETH / apex" ladder already exists as the
+Realized Tier system, keyed off `lifetimeEthClaimed` (a realized fact), not a vanity counter.
 
 ---
 
@@ -89,8 +89,8 @@ Early unlock: impossible for eternal; normal genesis unlocks like any position (
 `closedRewardOwnerOfPosition` for trailing bribes). "Collectible after redemption" is **not possible
 today** (unlock burns the NFT) — would require a new soulbound "spent bond" stub on burn. Defer.
 
-**Mining position NFT** — do not build. Mining is just a productive locked position; the position NFT +
-Yield Tier already encodes it.
+**Mining position NFT** — do not build. Mining is not a v4 mechanic; the position NFT +
+Realized Tier already encodes delivered-reward history.
 
 **History NFT** — do not build. History is captured by `lifetimeEthClaimed`/`lifetimeNaraClaimed` +
 events for indexers. Redundant.
@@ -118,8 +118,8 @@ zero soulbound assets, which is correct because it has zero pure-credential mech
 ## 5. Utility rules
 
 The single position NFT carries five legitimate reasons at once: **receipt** (the lock), **claim
-right** (owner-gated), **economic state** (weight/earnings), **proof/provenance** (genesis/eternal),
-**status** (Yield Tier). That is why one collection suffices. Reject any proposed NFT that cannot name
+right** (owner-gated), **economic state** (weight/delivered rewards), **proof/provenance** (genesis/eternal),
+**status** (Realized Tier). That is why one collection suffices. Reject any proposed NFT that cannot name
 one of: proof, access, receipt, status, history, economic state.
 
 ---
@@ -137,7 +137,7 @@ expected return. See `NARA_V4_NFT_POSITIONS.md` (On-chain metadata) and the rend
 
 | Risk | Level | Mitigation in code | Action |
 |---|---|---|---|
-| Pay-to-win (buy into high tier) | Low | Yield Tier keys off realized ETH claimed, not deposit | Keep tier = realized earnings, never deposit size |
+| Pay-to-win (buy into high tier) | Low | Realized Tier keys off realized ETH claimed, not deposit | Keep tier = realized delivered rewards, never deposit size |
 | Whale/insider genesis multiplier | Medium | 5× cap, mint-fixed, reviewed terms, sync-before-change | Publish per-round multipliers |
 | Wash trading for status | Low | royalties default 0; tier not separately tradable | Keep royalty 0 + frozen at launch |
 | Claim-fee rug optics | Medium | cap 10%, inert by default, one-way `freezeClaimFees` | Launch with fees 0 and freeze, or publicly commit a ceiling |
@@ -160,7 +160,7 @@ The current architecture is right — do not expand the NFT surface.
 
 ## 9. Build plan
 
-**V1 (now):** ship what exists — single position NFT, genesis/eternal flags, Yield Tier art, claim
+**V1 (now):** ship what exists — single position NFT, genesis/eternal flags, Realized Tier art, claim
 fees inert + frozen at 0, royalties 0 + frozen. Publish genesis multipliers per round. (Spec drift
 between `NARA_V4_NFT_POSITIONS.md` and the renderer was reconciled 2026-06-29.)
 
@@ -180,7 +180,7 @@ history NFT, duplicate genesis collection. Each duplicates one event across mult
 
 ## 10. Findings summary
 
-- **Covered:** position, lock, mining(=productive position), claims, bonds, genesis, eternal,
+- **Covered:** position, lock, delivered-reward history, claims, bonds, genesis, eternal,
   high-value status, staking, fractional.
 - **Missing (decide):** liquidity-supporter recognition.
 - **Not built (do not market as live):** streaks, boosts, access gates, governance, reputation,

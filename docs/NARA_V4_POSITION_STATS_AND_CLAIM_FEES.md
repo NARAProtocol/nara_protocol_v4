@@ -74,25 +74,25 @@ Per-position realized earnings, accumulated in the wrapper (engine doesn't track
 
 ---
 
-## 3. Yield Tier — realized-earnings ladder (the FOMO ladder)
+## 3. Realized Tier — delivered-rewards ladder
 
-Tier is derived purely from `lifetimeEthClaimed` (hard-asset proof). Defined in the renderer
-(`_tierIndex` / `_tierName` / `_tierColor`) and surfaced as the `Yield Tier` NFT trait.
+Tier is derived purely from `lifetimeEthClaimed` (delivered ETH already received through the wrapper).
+Defined in the modular renderer and surfaced as the `Realized Tier` NFT trait.
 
 | Tier | Threshold (lifetime ETH delivered) | Name | Art color |
 |---|---|---|---|
 | 0 | 0 | `New` | `#8f9099` muted grey (no frame, no glow) |
-| 1 | > 0 | `Earning` | `#8cc8ff` soft blue |
-| 2 | ≥ 0.1 ETH | `Productive` | `#56d6a9` teal (glow engages) |
-| 3 | ≥ 1 ETH | `One ETH Club` | `#f2c14e` gold (thick frame) |
+| 1 | > 0 | `Activated` | lit smoked steel |
+| 2 | ≥ 0.1 ETH | `Rewarded` | oxidized copper security-print layer |
+| 3 | ≥ 1 ETH | `One ETH Mark` | old brass calibration marks |
 | 4 | ≥ 10 ETH | `Apex` | `#ffd24a` radiant gold (max glow) |
 
-Tier moves only on a claim tx → cache-safe, and `MetadataUpdate` forces marketplace refresh on each
-claim. Crossing a tier is itself a designed FOMO moment.
+Tier moves only on token-specific reward delivery txs → cache-safe, and `MetadataUpdate` forces
+marketplace refresh on each claim or extension.
 
 ---
 
-## 4. Evolving on-chain art — `NARAPositionRendererV4.sol`
+## 4. Evolving on-chain art — `NARAPositionRendererV5.sol`
 
 > Canonical art direction lives in **`NARA_V4_NFT_ART_DESIGN_BIBLE.md`** (the 7-module sacred-machine
 > system + tier logic + status/gap). The summary below is the current implementation.
@@ -168,7 +168,9 @@ forever. This is why the lens exposes `realizedNaraReturnBps` (historical) and n
 ## 9. Files touched this session
 
 - `contracts/v4/NARAPositionNFTV4.sol` — claim fees, lifetime tracking, `receive()`, ERC-4906 emits.
-- `contracts/v4/NARAPositionRendererV4.sol` — Yield Tier helpers, evolving SVG (frame/glow/status strip).
+- `contracts/v4/NARAPositionRendererV5.sol` — modular renderer coordinator.
+- `contracts/v4/NARAArtMetadataV1.sol` — safe trait vocabulary and JSON attributes.
+- `contracts/v4/NARAArtCorePlateV1.sol` / `NARAArtGenesisPlateV1.sol` / `NARAArtSecurityPrintV1.sol` — SVG plates and security-printing modules.
 - `contracts/v4/router/NARAPositionDataLensV1.sol` — enriched `PositionData`.
 - `contracts/v4/router/NARADashboardLens.sol` — `FeeConfig` now includes the wrapper claim fees + recipient.
 - `contracts/v4/router/NARAProtocolStatsLensV1.sol` — **new** protocol headline-stats lens.

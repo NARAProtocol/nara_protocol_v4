@@ -14,7 +14,7 @@ import {IERC3156FlashLender} from "@openzeppelin/contracts/interfaces/IERC3156Fl
 ///  - ERC20Permit (EIP-2612 gasless approvals, domain validated via EIP-712)
 ///  - ERC20FlashMint (ERC-3156 flash loans; fee = 10 bps, routed to FLASH_FEE_SINK, hard-capped)
 ///  - ERC1363 (transferAndCall / approveAndCall for single-tx dApp flows)
-///  - Multicall (batch calls for permit + action in one user tx)
+///  - Multicall (batch calls; protocol permit wrappers are preferred for permit + lock flows)
 ///
 /// Immutability guarantees:
 ///  - MAX_SUPPLY is minted once in constructor; flash mints are bounded and repaid in the same transaction.
@@ -32,8 +32,9 @@ contract NARAToken is ERC20, ERC20Permit, ERC20FlashMint, ERC1363, Multicall {
     uint16 public constant FLASH_FEE_BPS = 10;
 
     /// @notice Receiver of flash loan fees. Typically the NARA engine.
-    /// @dev Immutable. Set once at deploy. Routing fees to the engine sends them
-    /// to lockers via `notifyEthRewards` / equivalent NARA-denominated distribution.
+    /// @dev Immutable. Set once at deploy. When this is the engine, NARA flash
+    /// fees arrive as a token-balance surplus and are absorbed into the emission
+    /// reserve by syncEmissionReserve or epoch advancement.
     address public immutable FLASH_FEE_SINK;
 
     error ZeroAddress();

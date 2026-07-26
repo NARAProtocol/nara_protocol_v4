@@ -5,7 +5,7 @@ import {EpochSnapshot, Position} from "../NARAEngineTypes.sol";
 
 interface INARAPositionDataEngineV1 {
     function currentEpoch() external view returns (uint64);
-    function epochStateView() external view returns (EpochSnapshot memory);
+    function epochState() external view returns (EpochSnapshot memory);
     function claimableRewards(uint256 positionId) external view returns (uint256 naraAmount, uint256 ethAmount);
     function claimableTokenRewards(uint256 positionId, address token) external view returns (uint256 amount);
     function activeTotalWeight() external view returns (uint256);
@@ -133,7 +133,7 @@ contract NARAPositionDataLensV1 {
     function getPositionData(uint256 tokenId) public view returns (PositionData memory data) {
         uint256 positionId = POSITION_NFT.positionIdOf(tokenId);
         Position memory p = POSITION_NFT.positionInfo(tokenId);
-        EpochSnapshot memory settled = ENGINE.epochStateView();
+        EpochSnapshot memory settled = ENGINE.epochState();
         uint64 live = ENGINE.currentEpoch();
 
         data.dataVersion = DATA_VERSION;

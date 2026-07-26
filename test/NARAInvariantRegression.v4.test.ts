@@ -154,7 +154,7 @@ async function mineTime(ethers: any, seconds: bigint) {
 async function advanceToLive(ethers: any, engine: any) {
   for (let i = 0; i < 16; i++) {
     const live = await engine.currentEpoch();
-    const state = await engine.epochStateView();
+    const state = await engine.epochState();
     if (state.epoch >= live) return;
     await engine.advanceEpochs(64);
   }
@@ -165,7 +165,7 @@ async function launchSystem(ethers: any, deployer: Signer, treasury: Signer) {
   const deployerAddr = await deployer.getAddress();
   const treasuryAddr = await treasury.getAddress();
 
-  const launcher = await ethers.deployContract("NARALauncher", [], deployer);
+  const launcher = await ethers.deployContract("NARALauncher", [deployerAddr], deployer);
   await launcher.waitForDeployment();
 
   const cfg = defaultEngineConfig(ethers);
@@ -265,7 +265,7 @@ async function deployNftBondStack(ethers: any, deployer: Signer, treasury: Signe
 }
 
 async function expectEngineAccounting(engine: any, token: any, positionIds: bigint[]) {
-  const state = await engine.epochStateView();
+  const state = await engine.epochState();
   let totalLocked = 0n;
   let activeWeight = 0n;
 
@@ -469,10 +469,10 @@ describe("NARA v4 invariant regression suite", () => {
       bondValue,
       undefined,
       undefined,
-      ACTION_DELAY + 1_000n,
+      2n * ACTION_DELAY + 1_000n,
     );
 
-    await mineTime(ethers, ACTION_DELAY + 1n);
+    await mineTime(ethers, 2n * ACTION_DELAY + 1n);
     await advanceToLive(ethers, engine);
 
     expect(await dep.quoteBond(bondValue)).to.equal(0n);

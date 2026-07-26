@@ -59,7 +59,7 @@ Review these before each bond term activation:
 | Max discount | Ceiling on total discount (TWAP + base + inventory boost) | < 30% |
 | Demand penalty | Reduces discount as purchases accumulate in a period | Must be active |
 | Min/max bond price | Hard clamps on ETH-per-NARA | Set to prevent manipulation extremes |
-| Term duration | How long a bond term stays valid | MAX_TERMS_AGE = 1 day |
+| Term duration | How long a bond term stays valid | MAX_TERMS_AGE = 2 days |
 | Execution delay | MIN_PRICE_DELAY before terms can be used | 1 day minimum |
 
 ---
