@@ -324,6 +324,8 @@ This deployment is deliberately dormant:
 - The compounder, position NFT, allocations, router/lenses, bonds, and
   composability layer are not deployed.
 - Existing apps remain v3-wired and must not be enabled against this stack.
+- The launch frontend scope is `apps/nara-baskets` only. The lockboard is
+  deferred; Lotto and Arena remain retired.
 - Final admin and treasury are EOAs. Custody/recovery acceptance or migration
   to a verified Safe is required before public activation.
 

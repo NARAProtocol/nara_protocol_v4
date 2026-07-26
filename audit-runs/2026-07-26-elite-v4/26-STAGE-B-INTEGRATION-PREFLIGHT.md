@@ -43,53 +43,45 @@ activation was performed during this stage.
    - Revoke `REWARD_NOTIFIER_ROLE` from the human final admin. Keep it only on
      approved notifier contracts such as the vault and later BribeRouter.
 
-2. **Deploy the allocation and position layer**
-   - `NARAPositionAccountV4`
-   - `NARAPositionNFTV4` and renderer dependencies
-   - `NARAGenesisRewardDistributorV4`
-   - `NARABondVaultV4` and `NARABondDepositoryV4NFT`, initially closed
-   - `NARAOpsVaultV4`
-   - Verify all source and run `verify:v4:allocations`.
-
-3. **Deploy the integration layer**
-   - `NARARouter`
-   - `NARADashboardLens`
-   - `NARAPositionDataLensV1`
-   - `NARAProtocolStatsLensV1`
-   - `NARAEngineOpsRouterV1`
-   - `BribeRouterV4`
-   - Grant only the intended notifier and operations roles.
-
-4. **Complete the indexer configuration**
-   - The Ponder indexer exists; do not build a second core indexer.
-   - Its full profile correctly remains fail-closed until the position NFT,
-     bond/ops allocation contracts, operations router, break-glass Safe, and
-     database URL exist.
-   - Once deployed, populate the remaining `V4_*` addresses and start the
-     indexer from block `49148235`.
-
-5. **Rebuild frontend integrations**
-   - Lockboard, lotto, and arena still contain retired v3 addresses/ABIs.
-   - Lotto and arena remain retired and must not be re-enabled.
-   - Rebuild the lockboard against generated v4 token/engine/NFT/router/lens
-     ABIs after those contracts are deployed. Do not perform an address-only
-     swap against v3 ABIs.
-
-6. **Deploy and freeze the liquidity compounder**
+2. **Deploy and freeze the liquidity compounder**
    - Deploy `NARALiquidityCompounderV4`.
    - Verify source and ownership.
    - Final admin calls `vault.setCompounder`, validates the real route, then
      `vault.freezeCompounder`.
 
-7. **Initialize and seed only after review**
+3. **Initialize and seed only after review**
    - Review exact NARA/USDC price, amounts, ticks, slippage, deadlines, and
      ownership of the LP NFT.
    - Initialize the registered pool and seed liquidity.
    - Record the real LP NFT ID and rerun environment sync.
 
-8. **Final gates**
+4. **Deploy and verify NARA Baskets**
+   - Launch scope is the standalone `nara-category-baskets-v1` Foundry package.
+   - Deploy `NARAIndexFeeCollectorV2`, all five immutable adapters including
+     `UniswapV4BasketAdapterV1`, and one
+     `NARAImmutableBasketPositionManagerV1` per basket.
+   - Every immutable manager must use the fresh NARA address, the v4 adapter,
+     the reviewed NARA/USDC hook pool, and the V2 fee collector.
+   - Save and verify one immutable manifest for CORE, AI, FINANCE, and CULTURE.
+
+5. **Integrate only the baskets frontend**
+   - Configure `apps/nara-baskets` from the verified basket manifests.
+   - Run manifest/env parity, typecheck, builder tests, and production build.
+   - The lockboard is not part of this launch and will not be rebuilt.
+   - Lotto and Arena remain retired and must not be re-enabled.
+
+6. **Complete basket monitoring**
+   - The Ponder monitor exists; do not build a second core indexer.
+   - Add the deployed basket managers and V2 fee collector to its fresh-address
+     configuration and monitor their events from their deployment blocks.
+   - Full position-NFT, bond, router, and composability monitoring is deferred
+     because those protocol surfaces are outside the baskets-only launch.
+
+7. **Final gates**
    - `npm run verify:v4:preflight`
-   - `npm run verify:v4:launch-gates` with every required address populated
+   - Basket Foundry build, unit/fuzz/invariant, Base fork, and deployed-manifest
+     verification gates
+   - baskets frontend `check:manifest-env`, typecheck, tests, and production build
    - transactional smoke test only with explicit operator approval
    - minimum 48-hour observation of roles, epoch advancement, hook/vault
      accounting, indexer correctness, and alert delivery
@@ -104,4 +96,5 @@ activation was performed during this stage.
 - Launch-gate diagnostic: 5 PASS, 2 FAIL, 9 SKIP
   - FAIL: compounder unset
   - FAIL: human final admin holds `REWARD_NOTIFIER_ROLE`
-  - SKIP: undeployed allocation/router/bond/NFT surfaces
+  - SKIP: allocation/router/bond/NFT surfaces are outside the baskets-only
+    launch and must remain disabled
