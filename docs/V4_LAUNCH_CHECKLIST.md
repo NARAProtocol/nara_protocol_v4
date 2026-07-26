@@ -297,14 +297,14 @@ BASE_RPC_URL=
 Required reviewed seed overrides:
 
 ```bash
-V4_SEED_NARA=3000
+V4_SEED_NARA=60000
 V4_SEED_USDC=300
 V4_SEED_SLIPPAGE_BPS=200
 ```
 
-These values target an opening price of `$0.10` per NARA and an implied
-`$100,000` FDV. They use `3,000` of the locked `70,000 NARA` LP allocation.
-The remaining `67,000 NARA` is reserved for separately reviewed later
+These values target an opening price of `$0.005` per NARA and an implied
+`$5,000` FDV. They use `60,000` of the locked `70,000 NARA` LP allocation.
+The remaining `10,000 NARA` is reserved for separately reviewed later
 liquidity additions. The executable script still has a historical `30 NARA`
 default, so operators must set these overrides explicitly and verify the printed
 amounts before signing. Documentation approval does not authorize execution.

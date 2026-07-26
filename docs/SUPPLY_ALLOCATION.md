@@ -37,16 +37,16 @@ The reviewed initial position is:
 
 | Asset | Amount |
 |---|---:|
-| NARA | 3,000 |
+| NARA | 60,000 |
 | Base native USDC | 300 |
 
 This ratio initializes the pool at:
 
-- `$0.10` per NARA;
-- `$100,000` implied fully diluted valuation on the fixed 1,000,000 supply; and
+- `$0.005` per NARA;
+- `$5,000` implied fully diluted valuation on the fixed 1,000,000 supply; and
 - approximately `$600` of two-sided pool value.
 
-The remaining `67,000 NARA` liquidity allocation stays in custody. Any later
+The remaining `10,000 NARA` liquidity allocation stays in custody. Any later
 liquidity addition is a separate production action requiring its own balance,
 price-impact, custody, and transaction review.
 
@@ -55,8 +55,8 @@ price-impact, custody, and transaction review.
 - The NARA/USDC pool is currently uninitialized and has no liquidity.
 - Do not use the historical `30 NARA + 300 USDC` seed values; that ratio implies
   `$10` per NARA and a `$10,000,000` FDV.
-- Do not deposit all `70,000 NARA` against `300 USDC`; that ratio implies roughly
-  `$0.004286` per NARA and a roughly `$4,286` FDV.
+- Do not use the superseded `3,000 NARA + 300 USDC` ratio; it implies `$0.10`
+  per NARA and a `$100,000` FDV.
 - Use Base native USDC at
   `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`.
 - Documentation changes do not authorize token transfers, approvals, pool

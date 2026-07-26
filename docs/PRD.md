@@ -350,8 +350,9 @@ Fresh v4 launch scope:
 - Approved minimum float is `V4_MIN_TREASURY_FLOAT_NARA=150000`.
 - It preserves the locked `70,000 NARA` LP allocation, `40,000 NARA` external
   team vesting allocation, and `40,000 NARA` treasury allocation.
-- The controlled initial pool seed is `3,000 NARA + 300 USDC`, targeting
-  `$0.10` per NARA. The remaining `67,000 NARA` LP allocation stays in custody
+- The controlled initial pool seed is `60,000 NARA + 300 USDC`, targeting
+  `$0.005` per NARA and approximately `$5,000` FDV. The remaining `10,000 NARA`
+  LP allocation stays in custody
   until separately reviewed liquidity additions.
 
 ### Commitment-Weighted Yield

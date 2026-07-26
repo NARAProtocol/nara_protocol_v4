@@ -67,7 +67,7 @@ oracle only after the final excluded-address set and custody split are verified.
 **Approved allocation model:** the `40,000 NARA` treasury allocation and full
 `70,000 NARA` LP allocation are disclosed as circulating after the custody split,
 for planned genesis circulating supply of `110,000 NARA`. The controlled initial
-pool position contains `3,000 NARA + 300 USDC`; the remaining `67,000 NARA`
+pool position contains `60,000 NARA + 300 USDC`; the remaining `10,000 NARA`
 liquidity allocation is added only through separately reviewed transactions.
 The oracle must not be published before the addresses representing those
 allocations are finalized and verified.

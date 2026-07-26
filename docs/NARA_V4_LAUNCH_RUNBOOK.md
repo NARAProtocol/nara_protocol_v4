@@ -109,14 +109,14 @@ Checks hook/vault/pool/routing configuration against the fresh addresses. Must p
 
 ## Step 4 — Seed Liquidity
 
-Controlled initial position: `3,000 NARA + 300 USDC`, targeting `$0.10` per
+Controlled initial position: `60,000 NARA + 300 USDC`, targeting `$0.005` per
 NARA and approximately `$600` of two-sided pool value. This uses part of the
-locked `70,000 NARA` LP allocation; the remaining `67,000 NARA` stays in
+locked `70,000 NARA` LP allocation; the remaining `10,000 NARA` stays in
 custody for separately reviewed later liquidity additions. Do not open bonds
 until liquidity is established.
 
 ```powershell
-$env:V4_SEED_NARA = "3000"
+$env:V4_SEED_NARA = "60000"
 $env:V4_SEED_USDC = "300"
 $env:V4_SEED_SLIPPAGE_BPS = "200"
 npx tsx scripts/seedV4Liquidity.ts
@@ -124,7 +124,7 @@ npx tsx scripts/seedV4Liquidity.ts
 
 The script still contains a historical `30 NARA` default. Do not run it unless
 the three reviewed overrides above are present and its pre-transaction output
-shows `3,000 NARA` and `300 USDC`. This runbook does not itself authorize the
+shows `60,000 NARA` and `300 USDC`. This runbook does not itself authorize the
 production transaction.
 
 After seeding:
