@@ -337,6 +337,8 @@ This deployment is deliberately dormant:
 
 - PoolManager slot-zero price is zero; the pool is uninitialized.
 - No LP NFT or public liquidity exists.
+- The approved supply allocation and controlled initial-liquidity ratio are
+  documented in `SUPPLY_ALLOCATION.md`. No liquidity transaction has been sent.
 - The compounder is deployed and wired but not frozen. Position NFT,
   allocations, router/lenses, bonds, and composability are not deployed.
 - `apps/nara-baskets/` contains the fresh v4 launch configuration but remains

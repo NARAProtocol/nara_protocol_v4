@@ -294,13 +294,20 @@ TREASURY_PRIVATE_KEY=
 BASE_RPC_URL=
 ```
 
-Optional seed controls:
+Required reviewed seed overrides:
 
 ```bash
-V4_SEED_NARA=30
+V4_SEED_NARA=3000
 V4_SEED_USDC=300
 V4_SEED_SLIPPAGE_BPS=200
 ```
+
+These values target an opening price of `$0.10` per NARA and an implied
+`$100,000` FDV. They use `3,000` of the locked `70,000 NARA` LP allocation.
+The remaining `67,000 NARA` is reserved for separately reviewed later
+liquidity additions. The executable script still has a historical `30 NARA`
+default, so operators must set these overrides explicitly and verify the printed
+amounts before signing. Documentation approval does not authorize execution.
 
 Pass criteria:
 
@@ -377,12 +384,12 @@ V4_ADMIN_ADDRESS=
 V4_TREASURY_ADDRESS=
 ```
 
-Default allocation controls:
+Approved allocation overrides:
 
 ```bash
 V4_OPS_AMOUNT_NARA=0
-V4_BOND_AMOUNT_NARA=289970
-V4_MIN_TREASURY_FLOAT_NARA=10030
+V4_BOND_AMOUNT_NARA=200000
+V4_MIN_TREASURY_FLOAT_NARA=150000
 V4_BOND_ACTIVE=false
 ```
 

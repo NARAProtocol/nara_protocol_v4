@@ -1,6 +1,6 @@
 # NARA Circulating Supply — oracle + listing playbook
 
-Last updated: 2026-06-08.
+Last updated: 2026-07-27.
 
 How NARA reports **market circulating supply** to listing sites (CoinGecko, CoinMarketCap,
 DexScreener) and to its own UI, and how to deploy + submit it on launch day.
@@ -15,8 +15,8 @@ Tests: [`test/NARACirculatingSupplyV1.test.ts`](../test/NARACirculatingSupplyV1.
 NARA mints **all 1,000,000 at deploy** ([`NARAToken.sol`](../contracts/v4/NARAToken.sol) →
 `_mint(treasury, MAX_SUPPLY)`). So `totalSupply()` is `1,000,000` forever, and there is **no
 on-chain "circulating supply" function**. Left alone, every tracker shows
-`market cap = price × 1,000,000` (i.e. FDV), which is wrong: at launch only the LP seed (~70k)
-is in the market.
+`market cap = price × 1,000,000` (i.e. FDV), which is wrong when protocol-controlled
+allocations remain non-market.
 
 Circulating supply is therefore a **disclosure**, not something the chain emits. This contract
 makes that disclosure trustless and self-updating.
@@ -44,9 +44,11 @@ internal figure is an *emission-model free-float*: it also subtracts the engine'
 cap. Two numbers, two purposes. **Do not add the engine to the excluded set here** to "reconcile"
 them — that would erase user-locked supply from the public number.
 
-**Genesis result:** `1,000,000 − 650,000 reserve − 200,000 bonds − 40,000 vesting = 110,000`
-(LP seed 70k + treasury 40k). The number then **rises by itself** — no transaction to this
-contract is ever needed — as the reward reserve drips and the team vesting wallet releases.
+**Planned post-allocation disclosure:** `1,000,000 − 650,000 reserve − 200,000 bonds
+− 40,000 vesting = 110,000` (`70,000` LP allocation plus `40,000` treasury).
+This is not the current Stage A value: the allocation layer is deferred and the
+Stage A treasury still holds the unsplit balance. Deploy and configure this
+oracle only after the final excluded-address set and custody split are verified.
 
 ---
 
@@ -59,14 +61,16 @@ contract is ever needed — as the reward reserve drips and the team vesting wal
 | Team / owner | external OZ `VestingWallet` | ✅ |
 | Burn | `0x000000000000000000000000000000000000dEaD` | ✅ |
 | Treasury | treasury Safe | ❌ earmarked for game sponsorship → circulating |
-| LP seed | Uniswap v4 pool | ❌ pool liquidity is circulating |
+| LP allocation | Initial pool plus designated later-liquidity custody | ❌ disclosed as circulating under the approved 110k model |
 | Engine (user locks) | `NARAEngine` | ❌ user-locked is circulating |
 
-**Decided 2026-06-08:** the **treasury 40k is circulating** — it's earmarked for game
-sponsorship (productive public capital), so it is NOT excluded. Genesis circulating ≈ **110k**
-(70k LP + 40k treasury). Locking it into game sponsor pools keeps it circulating (locked =
-circulating). One-time call; do not flip it later without good reason — that reads as
-manipulation.
+**Approved allocation model:** the `40,000 NARA` treasury allocation and full
+`70,000 NARA` LP allocation are disclosed as circulating after the custody split,
+for planned genesis circulating supply of `110,000 NARA`. The controlled initial
+pool position contains `3,000 NARA + 300 USDC`; the remaining `67,000 NARA`
+liquidity allocation is added only through separately reviewed transactions.
+The oracle must not be published before the addresses representing those
+allocations are finalized and verified.
 
 ---
 

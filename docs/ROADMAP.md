@@ -175,13 +175,14 @@ npm run verify:v4:allocations
 Default allocation posture:
 
 - `V4_OPS_AMOUNT_NARA=0`
-- `V4_BOND_AMOUNT_NARA=289970`
-- `V4_MIN_TREASURY_FLOAT_NARA=10030`
+- `V4_BOND_AMOUNT_NARA=200000`
+- `V4_MIN_TREASURY_FLOAT_NARA=150000`
 - `V4_BOND_ACTIVE=false`
 
 Success criteria:
 
-- Treasury float remains at least `10,030 NARA`.
+- Treasury float preserves the approved `70,000 NARA` LP allocation,
+  `40,000 NARA` external vesting allocation, and `40,000 NARA` treasury allocation.
 - Engine `bondVault` points to the new `NARABondVaultV4`.
 - Public bond depository is `NARABondDepositoryV4NFT`.
 - Bond terms remain inactive.
@@ -356,7 +357,7 @@ If smoke test fails:
 - Do not proceed to allocations.
 - Investigate hook, vault, route, token approval, and liquidity path.
 
-If treasury float would fall below `10,030 NARA`:
+If treasury float cannot preserve the approved `150,000 NARA` post-reserve allocation:
 
 - Stop allocation deploy.
 - Fix allocation inputs before retrying.

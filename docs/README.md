@@ -8,7 +8,8 @@ Code and deployment scripts are the source of truth. If a doc disagrees with the
    per-contract status.
 2. **[V4_CONTRACT_INDEX.md](V4_CONTRACT_INDEX.md)** — every active contract → purpose → deploy step.
 3. **[CURRENT_STATE.md](CURRENT_STATE.md)** — canonical live state (source of truth).
-4. **[UNISWAP_V4_HOOK.md](UNISWAP_V4_HOOK.md)** — the Uniswap v4 hook deep-dive.
+4. **[SUPPLY_ALLOCATION.md](SUPPLY_ALLOCATION.md)** — approved supply allocation and controlled initial-liquidity math.
+5. **[UNISWAP_V4_HOOK.md](UNISWAP_V4_HOOK.md)** — the Uniswap v4 hook deep-dive.
 
 ## Technical references
 
@@ -40,6 +41,7 @@ Code and deployment scripts are the source of truth. If a doc disagrees with the
 | Doc | Purpose |
 |-----|---------|
 | [CURRENT_STATE.md](CURRENT_STATE.md) | Canonical live protocol state |
+| [SUPPLY_ALLOCATION.md](SUPPLY_ALLOCATION.md) | Canonical supply allocation and initial-liquidity reference |
 | [NARA_V4_PUBLIC_STATE.md](NARA_V4_PUBLIC_STATE.md) | Plain-language current state for users / integrators |
 | [ROADMAP.md](ROADMAP.md) | Product direction and phases |
 

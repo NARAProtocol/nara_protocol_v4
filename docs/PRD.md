@@ -250,8 +250,10 @@ Fresh v4 launch scope:
 
 - Holds v4 bond inventory.
 - Uses timelocked market and cap controls.
-- Default allocation script target is `V4_BOND_AMOUNT_NARA=289970`.
-- Allocation script enforces `V4_MIN_TREASURY_FLOAT_NARA=10030` by default.
+- Approved launch allocation target is `V4_BOND_AMOUNT_NARA=200000`.
+- Approved minimum treasury float is `V4_MIN_TREASURY_FLOAT_NARA=150000`.
+- These are approved operator overrides; current executable defaults must not be
+  treated as approval to use different values.
 
 ### `NARABondDepositoryV4NFT`
 
@@ -331,13 +333,13 @@ Fresh v4 launch scope:
 
 ### Emission Reserve
 
-- Deployment script default for v4 emission reserve funding is `V4_EMISSION_RESERVE_NARA=700000`.
+- The deployed v4 emission reserve was funded with `650,000 NARA`.
 - Funding enters `NARAEngine.depositRewards(uint256 amount)` and becomes tracked emission reserve.
 - If automatic funding is not possible, deployment can require it with `V4_REQUIRE_REWARD_DEPOSIT=1`.
 
 ### Bond Inventory
 
-- Allocation script default bond inventory is `V4_BOND_AMOUNT_NARA=289970`.
+- Approved bond inventory is `V4_BOND_AMOUNT_NARA=200000`.
 - The script rejects values above `290,000 NARA`.
 - Bond terms start inactive by default.
 - Bond capacity starts at `0`.
@@ -345,8 +347,12 @@ Fresh v4 launch scope:
 
 ### Treasury Float
 
-- Allocation script default minimum float is `V4_MIN_TREASURY_FLOAT_NARA=10030`.
-- The float is intended to preserve `30 NARA` LP seed plus `10,000 NARA` loose/ops reserve.
+- Approved minimum float is `V4_MIN_TREASURY_FLOAT_NARA=150000`.
+- It preserves the locked `70,000 NARA` LP allocation, `40,000 NARA` external
+  team vesting allocation, and `40,000 NARA` treasury allocation.
+- The controlled initial pool seed is `3,000 NARA + 300 USDC`, targeting
+  `$0.10` per NARA. The remaining `67,000 NARA` LP allocation stays in custody
+  until separately reviewed liquidity additions.
 
 ### Commitment-Weighted Yield
 

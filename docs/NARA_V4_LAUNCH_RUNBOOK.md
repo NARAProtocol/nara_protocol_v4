@@ -109,11 +109,23 @@ Checks hook/vault/pool/routing configuration against the fresh addresses. Must p
 
 ## Step 4 — Seed Liquidity
 
-Approximate: `$1,000` worth. Do not open bonds until liquidity is established.
+Controlled initial position: `3,000 NARA + 300 USDC`, targeting `$0.10` per
+NARA and approximately `$600` of two-sided pool value. This uses part of the
+locked `70,000 NARA` LP allocation; the remaining `67,000 NARA` stays in
+custody for separately reviewed later liquidity additions. Do not open bonds
+until liquidity is established.
 
-```bash
+```powershell
+$env:V4_SEED_NARA = "3000"
+$env:V4_SEED_USDC = "300"
+$env:V4_SEED_SLIPPAGE_BPS = "200"
 npx tsx scripts/seedV4Liquidity.ts
 ```
+
+The script still contains a historical `30 NARA` default. Do not run it unless
+the three reviewed overrides above are present and its pre-transaction output
+shows `3,000 NARA` and `300 USDC`. This runbook does not itself authorize the
+production transaction.
 
 After seeding:
 ```bash
@@ -198,11 +210,11 @@ npm run deploy:v4:allocations
 npm run verify:v4:allocations
 ```
 
-**Default allocation inputs (do not deviate without explicit review):**
+**Approved allocation overrides (set explicitly; do not rely on script defaults):**
 ```
 V4_OPS_AMOUNT_NARA=0
-V4_BOND_AMOUNT_NARA=289970
-V4_MIN_TREASURY_FLOAT_NARA=10030
+V4_BOND_AMOUNT_NARA=200000
+V4_MIN_TREASURY_FLOAT_NARA=150000
 V4_BOND_ACTIVE=false
 ```
 
@@ -221,7 +233,7 @@ V4_BOND_ACTIVE=false
 
 **Gate:**
 ```
-□ Treasury float >= 10,030 NARA
+□ Treasury float >= 150,000 NARA before the approved post-deploy allocation split
 □ Engine.bondVault == new NARABondVaultV4
 □ Bond depository is NARABondDepositoryV4NFT (not raw bond path)
 □ Bond terms inactive
@@ -363,7 +375,7 @@ Do NOT open bonds during launch day. See `NARA_V4_BOND_OPENING_CRITERIA.md` for 
 |---|---|
 | Preflight fails | Stop. Fix address/config mismatch. Do not seed. |
 | Smoke test fails | Stop. Do not proceed to allocations. Investigate hook/vault/routing. |
-| Treasury float < 10,030 NARA after allocation | Stop. Fix allocation inputs. |
+| Treasury float cannot satisfy the approved 70k LP + 40k vesting + 40k treasury split | Stop. Fix allocation inputs. |
 | Any role still owned by deployer at Step 9 | Block public promotion. Transfer first. |
 | epoch backlog > 8 during observation | Call `router.syncEpochs()`. Investigate if recurrent. |
 
