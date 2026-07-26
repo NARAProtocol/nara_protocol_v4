@@ -18,7 +18,7 @@ no public app or market is live yet.**
 
 | Surface | Status | Notes |
 |---|---|---|
-| v4 contracts (code) | Complete | 360 tests passing (2026-06-07), static analysis clean |
+| v4 contracts (code) | Complete | 453 tests passing (2026-07-26), static analysis reviewed |
 | v4 mainnet deploy | Stage A complete | Fresh core deployed; public activation pending |
 | v3 contracts | Retired 2026-05-27 | Archived, not operational |
 | NARA token | Deployed | Fixed supply minted; no public market yet |
@@ -162,7 +162,8 @@ Full retired list: `archive/legacy-v3/README.md`.
 
 **ETH reward pipe:** call `NARAEngine.notifyEthRewards{value: amount}()`. Permissionless.
 
-**ABIs:** available in `apps/nara-lockboard/src/shared/nara.ts` (`routerAbi`, `lensAbi`, `bribeRouterAbi`).
+**ABIs:** use generated artifacts from `nara-protocol-hardhat/artifacts/contracts/v4/`.
+The only launch frontend currently in scope is `apps/nara-baskets`.
 
 ---
 

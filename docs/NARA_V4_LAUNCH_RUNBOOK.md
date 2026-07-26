@@ -1,8 +1,27 @@
 # NARA v4 Launch Runbook
 
-Last updated: 2026-06-29.  
+Last updated: 2026-07-26.
 Source of truth: `CURRENT_STATE.md`, `ROADMAP.md`, deploy scripts.  
 This doc turns the roadmap phases into a concrete command-by-command operator sequence.
+
+---
+
+## Current Scope Override — Baskets-Only Launch
+
+The 2026-07-26 launch scope is `apps/nara-baskets` plus the standalone
+`nara-category-baskets-v1` contracts. The lockboard, position NFT allocation
+layer, bonds, router/lenses, and composability are deferred. Lotto and Arena
+remain retired.
+
+Stage A core is already deployed. Use
+`deployments/v4-base-usdc-latest.json` and
+`npm run verify:v4:preseed`; do not repeat the core deployment step. The
+applicable next steps are compounder deployment, pool initialization/liquidity,
+basket deployment and verification, baskets frontend configuration, basket
+monitoring, smoke tests, and observation.
+
+The full-protocol steps below are retained for later phases and do not gate the
+baskets-only launch unless explicitly identified as basket dependencies.
 
 ---
 
@@ -19,7 +38,7 @@ Complete every item before running anything on Base mainnet.
 □ V4_TREASURY_ADDRESS is a Safe or cold-wallet — NOT the deployer.
 □ Deployer wallet has at least 0.05 ETH on Base for gas.
 □ npm run build passes locally.
-□ npm run test passes locally (360/360 green as of 2026-06-07; run `npm test` for the live count — earlier "324"/"568" figures predate suite growth and the 2026-05-27 v4 reset, not test loss).
+□ npm run test passes locally (453/453 green as of 2026-07-26; run `npm test` for the live count).
 □ npm run size passes (all contract bytecodes under EVM limit).
 □ npm run slither:v4 passes.
 □ npm run aderyn:v4 passes.
@@ -315,20 +334,19 @@ Before any public promotion or bond opening:
 
 ---
 
-## Step 11 — Update Frontend
+## Step 11 — Update the Baskets Launch Surface
 
-Update all frontend apps with fresh v4 contract addresses and ABIs. The lockboard has the canonical ABI registry at `apps/nara-lockboard/src/shared/nara.ts`.
+The current launch scope is baskets only. Lockboard is deferred; Lotto and
+Arena are retired. Use generated active-v4 ABIs and the basket deployment
+manifests as the integration source of truth.
 
 ```
-□ NARA_TOKEN_ADDRESS updated to fresh NARAToken
-□ NARA_ENGINE_ADDRESS updated to fresh NARAEngine
-□ NARA_LOCK_NFT_ADDRESS updated to fresh NARAPositionNFTV4
-□ NARA_ROUTER_ADDRESS updated
-□ NARA_LENS_ADDRESS updated
-□ NARA_BRIBE_ROUTER_ADDRESS updated
-□ All retired v3 and incident-stack addresses removed from UI copy and trust links
-□ "Base mainnet live" copy updated to reflect the actual fresh v4 launch
-□ OWL P0 fixes applied: no retired addresses as trust anchors
+□ apps/nara-baskets uses the fresh NARA token address
+□ launch-baskets.json uses the fresh engine and hook addresses
+□ every basket remains preview until its manager and adapter manifests exist
+□ production status is set explicitly; missing status never defaults to live
+□ retired v3 and incident-stack addresses are absent from UI copy and trust links
+□ exact Base-mainnet fork preflight passes before any production transaction
 ```
 
 ---

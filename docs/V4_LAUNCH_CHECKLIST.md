@@ -1,8 +1,14 @@
 # V4 Launch Checklist
 
-Last updated: 2026-06-29.
+Last updated: 2026-07-26.
 
-This is the operator-safe checklist for the next fresh v4 launch. Code and deployment scripts are the source of truth.
+> **Historical full-stack checklist.** Stage A is already deployed. For the
+> current baskets-only launch, use [CURRENT_STATE.md](CURRENT_STATE.md) and
+> [NARA_V4_LAUNCH_RUNBOOK.md](NARA_V4_LAUNCH_RUNBOOK.md). Do not deploy
+> deferred lockboard/composability components or retired Lotto/Arena surfaces.
+
+The material below is the historical full-stack checklist and must not be
+executed as the current baskets-only plan.
 
 Use this file when starting cold.
 

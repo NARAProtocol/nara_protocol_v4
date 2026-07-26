@@ -224,7 +224,7 @@ npm run slither:v4                                                # static analy
 
 Last full run — **2026-07-04**:
 
-- Full Hardhat suite: **449 passing, 0 failing, 0 skipped**. Run `npx hardhat test` for the live number.
+- Full Hardhat suite: **453 passing, 0 failing, 0 skipped**. Run `npx hardhat test` for the live number.
 - Bytecode size gate: all deployable artifacts within EVM limits. `NARAEngine` 24,554 ·
   `NARAPositionNFTV4` 21,562 · `NARAPositionRendererV5` 4,960 · `NARAArtCorePlateV1` 11,437 ·
   `NARAArtSecurityPrintV1` 8,938 · `NARAArtGenesisPlateV1` 8,050 · `NARAArtMetadataV1` 4,701 · `NARAPositionDataLensV1` 7,017 ·
@@ -251,8 +251,9 @@ Last full run — **2026-07-04**:
     throwaway Linux box (or CI). Toolchain quirks hit on Ubuntu 26.04 / Python 3.14: npm needs
     `--legacy-peer-deps`; Aderyn needs solc 0.8.34 seeded into `~/.svm/`; crytic-compile 0.4.1 needs a
     one-line `default=str` patch to its `solc.py` JSON dump. See `scripts/run-gates-linux.sh`.
-- Baskets (separate Foundry package, `../../nara-category-baskets-v1/`): **136 passing, 1 skipped**
-  (the skip is the fork test needing `--fork-url`), 0 failing.
+- Baskets (separate Foundry package, `../../nara-category-baskets-v1/`):
+  **136 passing, 5 fork-dependent skipped, 0 failing** in the environment-free
+  full suite on 2026-07-26.
 
 > Historical note: pre-reset runs cited "568 passing" — that count predates the 2026-05-27 v4 reset
 > that archived the v3 stack and its tests. The active v4 suite is the 360 above.
@@ -261,7 +262,9 @@ Last full run — **2026-07-04**:
 
 ## v4 Deployment Order
 
-Strict order for next clean launch:
+The current public-launch scope is NARA Baskets only. Position NFTs, bonds,
+router/lenses, lockboard, and composability remain deferred. The historical
+full-protocol order below is retained for those later phases:
 
 1. Deploy fresh v4 core with `npm run deploy:v4:base:usdc`.
 2. Sync fresh launch config with `npm run v4:env:sync`, review `.env.v4.fresh`, then run `npm run v4:env:sync:write`.
@@ -383,7 +386,9 @@ Retired stack facts from prior notes:
 ## Active Workspace
 
 - Active contracts and ops repo: `nara-protocol-hardhat/`
-- Active frontend surfaces: `apps/nara-lockboard/`, `apps/nara-lotto/`, and `apps/nara-arena/` — **not yet functional end-to-end; must be rebuilt for v4 ABIs before use**
+- Active launch frontend: `apps/nara-baskets/`.
+- Deferred frontend: `apps/nara-lockboard/`.
+- Retired frontends: `apps/nara-lotto/` and `apps/nara-arena/`.
 - Active cron folder: `cron/` — cron targets v3 engine and must be retargeted for v4 before use
 - Historical only: `archive/legacy-field/` and `archive/checkpoints/`
 

@@ -1,6 +1,11 @@
 # NARA Protocol Roadmap
 
-Last updated: 2026-05-27.
+Last updated: 2026-07-26.
+
+> **Current-state override:** the fresh v4 Stage A core is deployed on Base
+> mainnet and remains dormant. The current product launch scope is NARA
+> Baskets only. Lockboard is deferred; Lotto and Arena are retired. This file
+> is product direction, not a deployment runbook. See [CURRENT_STATE.md](CURRENT_STATE.md).
 
 This roadmap is anchored to [CURRENT_STATE.md](CURRENT_STATE.md). Code and deployment scripts are the source of truth. If roadmap language conflicts with code, update the roadmap.
 
