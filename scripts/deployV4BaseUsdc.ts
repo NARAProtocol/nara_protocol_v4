@@ -352,9 +352,24 @@ async function main() {
 
   const cfg = buildEngineConfig(ethers);
 
-  console.log("Step 1: deploy launcher");
-  const launcher = await ethers.deployContract("contracts/v4/NARALauncher.sol:NARALauncher", [deployer.address], deployer);
-  await launcher.waitForDeployment();
+  const existingLauncher = optionalEnv("V4_EXISTING_LAUNCHER");
+  console.log(existingLauncher ? "Step 1: resume with existing launcher" : "Step 1: deploy launcher");
+  const launcher = existingLauncher
+    ? await ethers.getContractAt(
+        "contracts/v4/NARALauncher.sol:NARALauncher",
+        ethers.getAddress(existingLauncher),
+        deployer,
+      )
+    : await ethers.deployContract(
+        "contracts/v4/NARALauncher.sol:NARALauncher",
+        [deployer.address],
+        deployer,
+      );
+  if (!existingLauncher) {
+    await launcher.waitForDeployment();
+  } else if ((await ethers.provider.getCode(await launcher.getAddress())) === "0x") {
+    throw new Error(`V4_EXISTING_LAUNCHER has no code: ${existingLauncher}`);
+  }
   const launcherAddress = await launcher.getAddress();
   const launcherAdmin = await launcher.launcherAdmin();
   if (launcherAdmin.toLowerCase() !== deployer.address.toLowerCase()) {
