@@ -187,6 +187,7 @@ contract NARAFractionalPositionV4 is ReentrancyGuardTransient, IERC721Receiver {
             emit Transfer(msg.sender, to, amount);
             return true;
         }
+        if (bound && !unlocked) _harvestInternal();
         _accrueAll(msg.sender);
         _accrueAll(to);
         balanceOf[msg.sender] -= amount;
@@ -212,6 +213,7 @@ contract NARAFractionalPositionV4 is ReentrancyGuardTransient, IERC721Receiver {
             emit Transfer(from, to, amount);
             return true;
         }
+        if (bound && !unlocked) _harvestInternal();
         _accrueAll(from);
         _accrueAll(to);
         balanceOf[from] -= amount;

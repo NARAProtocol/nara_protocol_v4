@@ -185,6 +185,23 @@ describe("NARAFractionalPositionV4", () => {
     await frac.harvest();
   });
 
+  it("checkpoints underlying rewards before fraction ownership moves", async () => {
+    const f = await deployFixture();
+    const frac = await createAndBind(f);
+    const ownerAddr = await f.owner.getAddress();
+    const buyerAddr = await f.buyer1.getAddress();
+    const reward = 100n * ONE;
+
+    await f.nara.mint(await f.engine.getAddress(), reward);
+    await f.engine.setClaimable(f.positionId, reward, 0);
+    await frac.connect(f.owner).transfer(buyerAddr, 900n);
+
+    const [ownerPending] = await frac.pendingRewards(ownerAddr);
+    const [buyerPending] = await frac.pendingRewards(buyerAddr);
+    expect(ownerPending).to.equal(reward);
+    expect(buyerPending).to.equal(0n);
+  });
+
   it("self transfer and same-address transferFrom preserve pending rewards", async () => {
     const f = await deployFixture();
     const frac = await createAndBind(f);

@@ -115,6 +115,7 @@ contract NARAStakingPoolV4 is ERC20, ReentrancyGuardTransient, AccessControl, IE
     error NotAContract();
     error DepositsPausedErr();
     error EmergencyActive();
+    error TransfersDisabledDuringEmergency();
     error NotEmergency();
     error BelowMinInitialDeposit(uint256 got, uint256 min);
     error SlippageExceeded(uint256 got, uint256 min);
@@ -475,6 +476,12 @@ contract NARAStakingPoolV4 is ERC20, ReentrancyGuardTransient, AccessControl, IE
     // ── USDC index — debt reset AFTER balance change ───────────
 
     function _update(address from, address to, uint256 value) internal override {
+        // Crystallize underlying rewards before peer-to-peer ownership moves.
+        if (from != address(0) && to != address(0) && from != to) {
+            if (emergencyShutdown) revert TransfersDisabledDuringEmergency();
+            _harvestRange(0, underlyingTokenIds.length, address(0));
+        }
+
         if (from != address(0)) {
             _accrueRewards(from);
         }

@@ -203,12 +203,37 @@ describe("NARALiquidityGrowth v4 - pool fee", () => {
         await hook.connect(owner).registerPool(key);
 
         const amountIn = 35n * ONE / 10n;
-        const expectedFee = poolFee(amountIn, 2_000n);
+        const [, expectedFee] = await hook.quotePoolFee(true, amountIn);
 
         await manager.connect(alice).callBeforeSwap(hookAddr, key, exactInParams(baseAddr, amountIn), "0x");
 
         expect(await manager.taken(baseAddr, vaultAddr)).to.equal(expectedFee);
         expect(await vault.totalBaseFeeRecorded()).to.equal(expectedFee);
+    });
+
+    it("charges the same aggregate fee when threshold-crossing flow is split", async () => {
+        const single = await deployFixture();
+        await single.hook.connect(single.owner).setProtocolDepth(single.baseAddr, 10n * ONE);
+        await single.hook.connect(single.owner).registerPool(single.key);
+        const total = 3n * ONE;
+        await single.manager.connect(single.alice).callBeforeSwap(
+            single.hookAddr, single.key, single.exactInParams(single.baseAddr, total), "0x",
+        );
+        const singleFee = await single.manager.taken(single.baseAddr, single.vaultAddr);
+
+        const split = await deployFixture();
+        await split.hook.connect(split.owner).setProtocolDepth(split.baseAddr, 10n * ONE);
+        await split.hook.connect(split.owner).registerPool(split.key);
+        await split.manager.connect(split.alice).callBeforeSwap(
+            split.hookAddr, split.key, split.exactInParams(split.baseAddr, total - 1n), "0x",
+        );
+        await split.manager.connect(split.alice).callBeforeSwap(
+            split.hookAddr, split.key, split.exactInParams(split.baseAddr, 1n), "0x",
+        );
+        const splitFee = await split.manager.taken(split.baseAddr, split.vaultAddr);
+
+        const roundingDelta = splitFee > singleFee ? splitFee - singleFee : singleFee - splitFee;
+        expect(roundingDelta).to.be.lte(1n);
     });
 
     it("skims token-side sell pool fee and records it separately", async () => {
@@ -308,7 +333,7 @@ describe("NARALiquidityGrowth v4 - pool fee", () => {
         const quotedAmount = ONE / 10n;
         const [bps, quotedFee] = await hook.quotePoolFee(true, quotedAmount);
         expect(bps).to.equal(900n);
-        expect(quotedFee).to.equal(poolFee(quotedAmount, 900n));
+        expect(quotedFee).to.equal(poolFee(quotedAmount, 400n));
 
         await expect(
             hook.connect(owner).setFeeCurve(true, { ...curve, maxFeeBps: 5_001 }),
@@ -351,7 +376,7 @@ describe("NARALiquidityGrowth v4 - pool fee", () => {
         const quotedAmount = ONE / 5n;
         const [bps, quotedFee] = await hook.quotePoolFee(true, quotedAmount);
         expect(bps).to.equal(900n);
-        expect(quotedFee).to.equal(poolFee(quotedAmount, 900n));
+        expect(quotedFee).to.equal(poolFee(quotedAmount, 400n));
     });
 });
 
