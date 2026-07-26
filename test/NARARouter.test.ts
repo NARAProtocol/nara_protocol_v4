@@ -30,7 +30,7 @@ async function deployFixture() {
     const [deployer, alice, bob] = await ethers.getSigners();
 
     const Token = await ethers.getContractFactory("MockERC20Permit", deployer);
-    const nara: any = await Token.deploy("NARA Protocol", "NARA");
+    const nara: any = await Token.deploy("NARA Token", "NARA");
     await nara.waitForDeployment();
 
     const Engine = await ethers.getContractFactory("MockEngineForRouter", deployer);
@@ -73,7 +73,7 @@ async function signPermit(
     const nonce     = await token.nonces(ownerAddr);
     const chainId   = (await ethers.provider.getNetwork()).chainId;
     const domain = {
-        name:              "NARA Protocol",
+        name:              "NARA Token",
         version:           "1",
         chainId,
         verifyingContract: await token.getAddress(),

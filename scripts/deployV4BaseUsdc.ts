@@ -299,8 +299,10 @@ async function main() {
   const epochLengthSeconds = BigInt(envNumber("EPOCH_LENGTH_SECONDS", "900"));
   const configChangeDelaySeconds = BigInt(envNumber("CONFIG_CHANGE_DELAY_SECONDS", "86400"));
   const initialBaseEmission = envBigInt("INITIAL_BASE_EMISSION", "500000000000000000");
-  const tokenName = env("V4_TOKEN_NAME", "NARA Protocol");
-  const tokenSymbol = env("V4_TOKEN_SYMBOL", "NARA");
+  const canonicalTokenName = "NARA Token";
+  const canonicalTokenSymbol = "NARA";
+  const tokenName = env("V4_TOKEN_NAME", canonicalTokenName);
+  const tokenSymbol = env("V4_TOKEN_SYMBOL", canonicalTokenSymbol);
   const initialNaraAmount = ethers.parseUnits(env("V4_INITIAL_NARA_AMOUNT"), 18);
   const initialUsdcAmount = ethers.parseUnits(env("V4_INITIAL_USDC_AMOUNT"), 6);
   const emissionReserveAmount = ethers.parseUnits(env("V4_EMISSION_RESERVE_NARA", "650000"), 18);
@@ -319,13 +321,11 @@ async function main() {
   if (initialNaraAmount <= 0n || initialUsdcAmount <= 0n) {
     throw new Error("V4_INITIAL_NARA_AMOUNT and V4_INITIAL_USDC_AMOUNT must be positive");
   }
-  if (
-    chainId === BASE_CHAIN_ID &&
-    tokenName === "NARA" &&
-    tokenSymbol === "NARA" &&
-    !envFlag("V4_ALLOW_DUPLICATE_TOKEN_METADATA")
-  ) {
-    throw new Error("Refusing duplicate NARA/NARA metadata on Base. Set V4_TOKEN_NAME/V4_TOKEN_SYMBOL, or V4_ALLOW_DUPLICATE_TOKEN_METADATA=1.");
+  if (tokenName !== canonicalTokenName || tokenSymbol !== canonicalTokenSymbol) {
+    throw new Error(
+      `Token identity is frozen as ${canonicalTokenName} (${canonicalTokenSymbol}); ` +
+      "V4_TOKEN_NAME and V4_TOKEN_SYMBOL must match the canonical values.",
+    );
   }
 
   console.log("NARA v4 Base USDC deployment");

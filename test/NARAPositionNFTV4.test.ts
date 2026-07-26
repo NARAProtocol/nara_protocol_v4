@@ -180,7 +180,7 @@ describe("NARAPositionNFTV4", () => {
     const nara: any = await Token.deploy(
       await alice.getAddress(),
       await engine.getAddress(),
-      "NARA Protocol",
+      "NARA Token",
       "NARA",
     );
     await nara.waitForDeployment();
@@ -210,7 +210,7 @@ describe("NARAPositionNFTV4", () => {
     const nonce = await nara.nonces(await alice.getAddress());
     const signature = await alice.signTypedData(
       {
-        name: "NARA Protocol",
+        name: "NARA Token",
         version: "1",
         chainId: chain.chainId,
         verifyingContract: await nara.getAddress(),
@@ -261,7 +261,7 @@ describe("NARAPositionNFTV4", () => {
     const nara: any = await Token.deploy(
       await alice.getAddress(),
       await engine.getAddress(),
-      "NARA Protocol",
+      "NARA Token",
       "NARA",
     );
     await nara.waitForDeployment();
@@ -291,7 +291,7 @@ describe("NARAPositionNFTV4", () => {
     const nonce = await nara.nonces(await alice.getAddress());
     const signature = await alice.signTypedData(
       {
-        name: "NARA Protocol",
+        name: "NARA Token",
         version: "1",
         chainId: chain.chainId,
         verifyingContract: await nara.getAddress(),

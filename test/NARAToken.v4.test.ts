@@ -6,7 +6,7 @@ const ONE = 10n ** 18n;
 const MAX_SUPPLY = 1_000_000n * ONE;
 const MAX_FLASH_LOAN = 100_000n * ONE;
 const FLASH_FEE_BPS = 10n;
-const TOKEN_NAME = "NARA Protocol";
+const TOKEN_NAME = "NARA Token";
 const TOKEN_SYMBOL = "NARA";
 
 async function setup() {

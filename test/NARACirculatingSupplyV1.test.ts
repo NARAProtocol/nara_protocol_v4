@@ -26,7 +26,7 @@ async function deployFixture() {
     const [deployer, lp, user, team, engine, reserve, vesting, treasury] = signers;
 
     const Token = await ethers.getContractFactory("MockERC20Permit", deployer);
-    const nara: any = await Token.deploy("NARA Protocol", "NARA");
+    const nara: any = await Token.deploy("NARA Token", "NARA");
     await nara.waitForDeployment();
 
     // Bond vault is a contract that also self-reports off-balance market inventory.

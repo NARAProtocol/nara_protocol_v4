@@ -32,7 +32,7 @@ const RAY = 10n ** 27n;
 const EPOCH_SECONDS = 900n;       // 15 min
 const CONFIG_DELAY = 3600n;       // 1 hour
 const INITIAL_BASE = ONE / 2n;    // 0.5e18
-const TOKEN_NAME = "NARA Protocol";
+const TOKEN_NAME = "NARA Token";
 const TOKEN_SYMBOL = "NARA";
 // Storage slot for NARAEngine.totalPendingNaraRewards. Used only to model
 // the rare accounting-counter drift that can arise from per-position floors.

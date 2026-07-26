@@ -9,7 +9,7 @@ const EPOCH_SECONDS = 900n;
 const CONFIG_DELAY = 3600n;
 const INITIAL_BASE = ONE / 2n;
 const ACTION_DELAY = 86_400n;
-const TOKEN_NAME = "NARA Protocol";
+const TOKEN_NAME = "NARA Token";
 const TOKEN_SYMBOL = "NARA";
 
 const ENGINE_CONFIG_TYPE =
