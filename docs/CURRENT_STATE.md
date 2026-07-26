@@ -82,7 +82,7 @@ has been deployed; the remaining launch surfaces are still pending.
 | `NARABondDepositoryV4NFT` | `contracts/v4/NARABondDepositoryV4NFT.sol` | NFT bond depository; preferred launch path |
 | `NARALiquidityGrowthHook` | `contracts/v4/NARALiquidityGrowthHook.sol` | Uniswap v4 exact-input hook with dynamic fee curves |
 | `NARALiquidityGrowthVault` | `contracts/v4/NARALiquidityGrowthVault.sol` | Pool-fee vault for LP compounding, engine routing, and Genesis routing. LP compounding plugs in an external `ILiquidityCompounder` — production adapter is `NARALiquidityCompounderV4` (see "Liquidity Routing" below). |
-| `NARALiquidityCompounderV4` | `contracts/v4/NARALiquidityCompounderV4.sol` | Production POL compounder: adds the vault's NARA/USDC skim as a **full-range** Uniswap v4 position (PositionManager + Permit2). No-swap, exact-spend, remainder-banking. POL is owner-recoverable via a **7-day recovery timelock** (propose→wait→execute: migrate / sweep banked / wind-down), so holders get a ≥7-day exit window; renounce ownership later for permanent POL. Built, unit-tested (8 tests) + **Base fork-validated** against live PoolManager/PositionManager/Permit2; **not yet deployed/wired** (needs deploy + `setCompounder`). |
+| `NARALiquidityCompounderV4` | `contracts/v4/NARALiquidityCompounderV4.sol` | Deployed at `0xc327e50c14002a82c9F1477122204BB183f446Ab` and set on the Stage A vault. Full-range, no-swap, exact-spend POL adapter with remainder banking and a 7-day recovery timelock. `compounderFrozen` remains `false` until the initialized-pool smoke test succeeds. |
 | `NARAOpsVaultV4` | `contracts/v4/NARAOpsVaultV4.sol` | One-shot operations vesting vault capped at `10,000 NARA` |
 
 ---
@@ -164,15 +164,15 @@ Bond term controls:
 
 Launch expectation: begin in `Liquidity` mode to build depth (POL-first), then move to `Split`, `Engine`, or Genesis routing after liquidity and operations are ready. The skim is designed to **build protocol-owned liquidity first** and redirect to lockers later — it is not a "tax that funds lockers" by default.
 
-> **Flywheel status (2026-06-29): compounder built, awaiting deploy.** `Liquidity` mode compounds via
-> an **external `ILiquidityCompounder` adapter** (`vault.setCompounder`). The production adapter now
-> exists — **`NARALiquidityCompounderV4`** (full-range, no-swap, exact-spend, POL custody), unit-tested
-> through the real vault + a faithful PositionManager/Permit2 mock. **Remaining before it runs on
-> mainnet:** deploy via `scripts/deployLiquidityCompounderV4.ts`, then the Safe calls
-> `vault.setCompounder` + `freezeCompounder`, plus a Base fork test against the real PositionManager.
-> Until then the vault reverts compounding (no compounder set) and `Liquidity` mode is inert. The
-> harvest (hook) + routing (vault) were always built and self-sustaining; this closes the loop. See
-> `UNISWAP_V4_HOOK.md`.
+> **Flywheel status (2026-07-26): compounder deployed and wired, not frozen.** `Liquidity` mode compounds via
+> an **external `ILiquidityCompounder` adapter** (`vault.setCompounder`). The production adapter is
+> **`NARALiquidityCompounderV4`** (full-range, no-swap, exact-spend, POL custody), unit-tested
+> through the real vault plus a faithful PositionManager/Permit2 mock. The Stage A vault now points
+> to the deployed compounder. **Remaining before it is frozen:** initialize and seed the pool, execute a
+> small live compound with a reviewed `minLiquidityAdded`, verify the LP NFT/accounting, then call
+> `vault.freezeCompounder()`. Until the pool is initialized, compounding remains unavailable. The
+> adapter completes the implementation path, but the live flywheel remains dormant until that
+> initialization and validation sequence succeeds. See `UNISWAP_V4_HOOK.md`.
 
 ---
 
@@ -326,7 +326,7 @@ Deployed 2026-07-26 from RC3 commit
 | `NARAToken` | `0x65E247AA3aa9C0131b2984b894c3D24c41341D7A` | Deployed; 1,000,000 fixed supply |
 | `NARAEngine` | `0xbC2492BA73dE35d1114b5c18d7db633aca8963c9` | Deployed |
 | `NARARewardReserve` | `0x5F3FF409b74395b031e0C5D6abdD7D8895d2c7AD` | Sealed with 650,000 NARA |
-| `NARALiquidityGrowthVault` | `0xc0cf9bCf8879182368b1CdBDC81B6a143fFA2988` | Deployed; compounder unset |
+| `NARALiquidityGrowthVault` | `0xc0cf9bCf8879182368b1CdBDC81B6a143fFA2988` | Deployed; compounder set and not frozen |
 | `Create2HookDeployer` | `0xC045644303E43cbb1E3c3E3fC851246F5c590834` | Ownership transferred to final admin |
 | `NARALiquidityGrowthHook` | `0x9a01c2DcF713cDB12B8ef4Eb264D5c3203b06088` | Pool registered |
 
@@ -337,8 +337,8 @@ This deployment is deliberately dormant:
 
 - PoolManager slot-zero price is zero; the pool is uninitialized.
 - No LP NFT or public liquidity exists.
-- The compounder, position NFT, allocations, router/lenses, bonds, and
-  composability layer are not deployed.
+- The compounder is deployed and wired but not frozen. Position NFT,
+  allocations, router/lenses, bonds, and composability are not deployed.
 - `apps/nara-baskets/` contains the fresh v4 launch configuration but remains
   fail-closed in preview until verified manager/adapter manifests exist.
   Lockboard is deferred; Lotto and Arena remain retired.
@@ -347,6 +347,8 @@ This deployment is deliberately dormant:
 
 Canonical evidence:
 `deployments/v4-base-usdc-2026-07-26-controlled-stage-a.json`.
+Compounder evidence:
+`deployments/v4-liquidity-compounder-2026-07-26.json`.
 
 ## Retired v4 Incident Stack
 
