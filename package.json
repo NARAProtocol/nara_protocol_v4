@@ -47,7 +47,6 @@
     "@nomicfoundation/hardhat-verify": "3.0.13",
     "@openzeppelin/contracts": "5.6.1",
     "@typechain/ethers-v6": "0.5.1",
-    "@typechain/hardhat": "9.1.0",
     "@types/chai": "5.2.3",
     "@types/mocha": "10.0.10",
     "@types/node": "25.5.2",
@@ -56,15 +55,23 @@
     "chai": "6.2.2",
     "dotenv": "17.4.0",
     "hardhat": "3.3.0",
-    "mocha": "11.7.5",
+    "mocha": "11.7.6",
     "ts-node": "10.9.2",
-    "tsx": "4.21.0",
+    "tsx": "4.23.1",
     "typechain": "8.3.2",
     "typescript": "6.0.2"
   },
   "overrides": {
+    "hardhat": {
+      "adm-zip": "0.6.0"
+    },
+    "minimatch@3.1.5": {
+      "brace-expansion": "1.1.16"
+    },
+    "minimatch@9.0.9": {
+      "brace-expansion": "2.1.2"
+    },
     "mocha": {
-      "diff": "5.2.0",
       "serialize-javascript": "7.0.5"
     }
   }
