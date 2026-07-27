@@ -8,8 +8,11 @@
  *   BASE_RPC_URL
  *   LIQ_PRIVATE_KEY
  *
- * Optional env:
+ * Required env:
  *   SWAP_USDC_IN
+ *
+ * Optional env:
+ *   V4_SMOKE_SLIPPAGE_BPS (10-1000, default 500)
  *   V4_NARA_TOKEN
  *   V4_BASE_TOKEN
  *   V4_HOOK
@@ -21,7 +24,12 @@ import { ethers } from "ethers";
 import * as dotenv from "dotenv";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
-import { currentV4Config, requiredEnv } from "./lib/v4LiveConfig.js";
+import { currentV4Config, requiredBaseRpcUrl, requiredEnv } from "./lib/v4LiveConfig.js";
+import {
+  boundedSlippageBps,
+  calculateSpotMinimum,
+  readSqrtPriceX96,
+} from "./lib/v4SwapSafety.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -47,12 +55,20 @@ const UNIVERSAL_ROUTER_ABI = [
   "function execute(bytes calldata commands, bytes[] calldata inputs, uint256 deadline) external payable",
 ];
 
-async function main() {
+const HOOK_ABI = [
+  "function quotePoolFee(bool isBuy, uint256 amountIn) view returns (uint16 feeBps, uint256 feeAmount)",
+];
+
+export async function main() {
   const config = currentV4Config();
-  const provider = new ethers.JsonRpcProvider(requiredEnv("BASE_RPC_URL"));
+  const provider = new ethers.JsonRpcProvider(requiredBaseRpcUrl());
   const wallet = new ethers.Wallet(requiredEnv("LIQ_PRIVATE_KEY"), provider);
   const network = await provider.getNetwork();
-  const amountInHuman = process.env.SWAP_USDC_IN?.trim() || "40";
+  if (network.chainId !== 8453n) {
+    throw new Error(`Expected Base mainnet chainId 8453, got ${network.chainId}`);
+  }
+  const amountInHuman = requiredEnv("SWAP_USDC_IN");
+  const slippageBps = boundedSlippageBps(process.env.V4_SMOKE_SLIPPAGE_BPS);
 
   console.log("NARA v4 swap USDC -> NARA");
   console.log("Network: ", network.chainId.toString());
@@ -63,6 +79,7 @@ async function main() {
   const nara = new ethers.Contract(config.token, ERC20_ABI, wallet);
   const p2 = new ethers.Contract(config.permit2, PERMIT2_ABI, wallet);
   const ur = new ethers.Contract(config.universalRouter, UNIVERSAL_ROUTER_ABI, wallet);
+  const hook = new ethers.Contract(config.hook, HOOK_ABI, provider);
 
   const usdcBal = await usdc.balanceOf(wallet.address) as bigint;
   const naraBal = await nara.balanceOf(wallet.address) as bigint;
@@ -99,11 +116,23 @@ async function main() {
     ? [config.token, config.base]
     : [config.base, config.token];
   const zeroForOne = !naraIsCurrency0;
+  const sqrtPriceX96 = await readSqrtPriceX96(provider, config.poolManager, config.poolId);
+  const [, hookFeeAmount] = await hook.quotePoolFee(true, amountIn) as [bigint, bigint];
+  if (hookFeeAmount >= amountIn) {
+    throw new Error("Hook fee consumes the entire swap input");
+  }
+  const amountOutMinimum = calculateSpotMinimum({
+    amountInAfterHookFee: amountIn - hookFeeAmount,
+    sqrtPriceX96,
+    inputIsCurrency0: !naraIsCurrency0,
+    poolFeePips: config.fee,
+    slippageBps,
+  });
 
   const abi = ethers.AbiCoder.defaultAbiCoder();
   const swapParams = abi.encode(
     ["tuple(tuple(address,address,uint24,int24,address) poolKey,bool zeroForOne,uint128 amountIn,uint128 amountOutMinimum,bytes hookData)"],
-    [[[currency0, currency1, config.fee, config.tickSpacing, config.hook], zeroForOne, amountIn, 0n, "0x"]],
+    [[[currency0, currency1, config.fee, config.tickSpacing, config.hook], zeroForOne, amountIn, amountOutMinimum, "0x"]],
   );
   const settleParams = abi.encode(["address", "uint256"], [config.base, amountIn]);
   const takeParams = abi.encode(["address", "uint256"], [config.token, 0n]);
@@ -114,6 +143,7 @@ async function main() {
   const deadline = BigInt(Math.floor(Date.now() / 1000)) + 600n;
 
   console.log(`Swapping ${ethers.formatUnits(amountIn, 6)} USDC -> NARA...`);
+  console.log("Minimum NARA out:", ethers.formatUnits(amountOutMinimum, 18), `(${slippageBps} bps limit)`);
   const tx = await ur.execute(commands, [v4Input], deadline, { gasLimit: 600_000n });
   console.log("TX hash:", tx.hash);
 
@@ -123,9 +153,15 @@ async function main() {
   }
 
   const naraAfter = await nara.balanceOf(wallet.address) as bigint;
+  const naraReceived = naraAfter - naraBal;
+  if (naraReceived < amountOutMinimum) {
+    throw new Error(
+      `Received ${naraReceived} NARA units, below protected minimum ${amountOutMinimum}`,
+    );
+  }
   console.log("");
   console.log("Swap successful.");
-  console.log("NARA received:", ethers.formatUnits(naraAfter - naraBal, 18));
+  console.log("NARA received:", ethers.formatUnits(naraReceived, 18));
   console.log("NARA balance: ", ethers.formatUnits(naraAfter, 18));
 }
 
