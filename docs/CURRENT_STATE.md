@@ -339,6 +339,12 @@ This deployment is deliberately dormant:
 - No LP NFT or public liquidity exists.
 - The approved supply allocation and controlled initial-liquidity ratio are
   documented in `SUPPLY_ALLOCATION.md`. No liquidity transaction has been sent.
+- A timelocked NARA protocol-depth update from `30` to `60,000 NARA` was
+  proposed in transaction
+  `0x899a8b7ae2b22703741d2797d79f2895276b2830ede0521e193cb81758b6623d`.
+  It is executable no earlier than `2026-07-28T05:51:21Z`
+  (`2026-07-28 08:51:21` Kyiv). The active depth remains `30 NARA` until
+  `executeProtocolDepth(NARA)` succeeds. Do not initialize or seed before that.
 - The compounder is deployed and wired but not frozen. Position NFT,
   allocations, router/lenses, bonds, and composability are not deployed.
 - `apps/nara-baskets/` contains the fresh v4 launch configuration but remains
@@ -351,6 +357,8 @@ Canonical evidence:
 `deployments/v4-base-usdc-2026-07-26-controlled-stage-a.json`.
 Compounder evidence:
 `deployments/v4-liquidity-compounder-2026-07-26.json`.
+Pending NARA-depth update evidence:
+`deployments/v4-nara-depth-proposal-2026-07-27.json`.
 
 ## Retired v4 Incident Stack
 
