@@ -57,7 +57,9 @@ const PERMIT2_ABI = [
 ];
 
 const POSITION_MANAGER_ABI = [
+  "function initializePool((address,address,uint24,int24,address) key, uint160 sqrtPriceX96) external payable returns (int24)",
   "function modifyLiquidities(bytes calldata unlockData, uint256 deadline) external payable",
+  "function multicall(bytes[] calldata data) external payable returns (bytes[] memory results)",
   "function nextTokenId() external view returns (uint256)",
 ];
 
@@ -128,6 +130,9 @@ async function main() {
   const provider  = new ethers.JsonRpcProvider(rpcUrl);
   const treasury  = new ethers.Wallet(liqKey, provider);
   const network   = await provider.getNetwork();
+  if (network.chainId !== 8453n) {
+    throw new Error(`Expected Base mainnet chainId 8453, got ${network.chainId}`);
+  }
 
   console.log("NARA v4 — Seed LP");
   console.log("Network:      ", network.chainId.toString());
@@ -142,6 +147,7 @@ async function main() {
   const usdc  = new ethers.Contract(usdcAddr, ERC20_ABI, treasury);
   const p2    = new ethers.Contract(config.permit2, PERMIT2_ABI, treasury);
   const pm    = new ethers.Contract(config.positionManager, POSITION_MANAGER_ABI, treasury);
+  const poolManager = new ethers.Contract(config.poolManager, POOL_MANAGER_ABI, provider);
 
   // Sort currencies: lower address = currency0
   const [currency0, currency1] = BigInt(naraAddr) < BigInt(usdcAddr)
@@ -158,6 +164,23 @@ async function main() {
   console.log("currency1:    ", currency1);
   console.log("NARA is c0:   ", naraIsCurrency0);
   console.log("");
+
+  // Fail closed before approvals: this script is only for the first, atomic
+  // initialize+mint transaction. PoolManager stores pools at mapping slot 6.
+  const poolStateSlot = ethers.keccak256(
+    ethers.solidityPacked(
+      ["bytes32", "bytes32"],
+      [config.poolId, ethers.zeroPadValue("0x06", 32)],
+    ),
+  );
+  const rawSlot0 = await poolManager.extsload(poolStateSlot) as string;
+  const currentSqrtPriceX96 = BigInt(rawSlot0) & ((1n << 160n) - 1n);
+  if (currentSqrtPriceX96 !== 0n) {
+    throw new Error(
+      `Pool is already initialized at sqrtPriceX96=${currentSqrtPriceX96}. ` +
+      "Refusing to run the first-liquidity script.",
+    );
+  }
 
   // Balance checks
   const naraBal = await nara.balanceOf(treasury.address) as bigint;
@@ -241,14 +264,17 @@ async function main() {
   // Preview next token ID
   const nextId = await pm.nextTokenId() as bigint;
   console.log("Expected LP NFT token ID:", nextId.toString());
-  console.log("Submitting modifyLiquidities…");
+  console.log("Submitting atomic initializePool + modifyLiquidities...");
   console.log("  tickLower:", TICK_LOWER, "tickUpper:", TICK_UPPER);
   console.log("  liquidity:", liquidity.toString());
   console.log("  amount0Max:", ethers.formatUnits(amount0Max, naraIsCurrency0 ? 18 : 6));
   console.log("  amount1Max:", ethers.formatUnits(amount1Max, naraIsCurrency0 ? 6 : 18));
   console.log("");
 
-  const tx = await pm.modifyLiquidities(unlockData, deadline, { gasLimit: 2_000_000n });
+  const poolKey = [currency0, currency1, config.fee, config.tickSpacing, config.hook] as const;
+  const initializeCall = pm.interface.encodeFunctionData("initializePool", [poolKey, sqrtPriceX96]);
+  const mintCall = pm.interface.encodeFunctionData("modifyLiquidities", [unlockData, deadline]);
+  const tx = await pm.multicall([initializeCall, mintCall], { gasLimit: 2_000_000n });
   console.log("TX hash:", tx.hash);
   const receipt = await tx.wait();
   if (receipt?.status !== 1) throw new Error("Transaction reverted");

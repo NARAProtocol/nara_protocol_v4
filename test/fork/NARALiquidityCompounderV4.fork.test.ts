@@ -31,6 +31,17 @@ const BASE_PERMIT2 = "0x000000000022D473030F116dDEE9F6B43aC78BA3";
 const POOL_MANAGER_ABI = [
   "function initialize((address,address,uint24,int24,address) key, uint160 sqrtPriceX96) returns (int24)",
 ];
+const POSITION_MANAGER_ABI = [
+  "function initializePool((address,address,uint24,int24,address) key, uint160 sqrtPriceX96) payable returns (int24)",
+  "function modifyLiquidities(bytes unlockData, uint256 deadline) payable",
+  "function multicall(bytes[] data) payable returns (bytes[])",
+  "function nextTokenId() view returns (uint256)",
+  "function getPositionLiquidity(uint256 tokenId) view returns (uint128)",
+  "function ownerOf(uint256 tokenId) view returns (address)",
+];
+const PERMIT2_ABI = [
+  "function approve(address token, address spender, uint160 amount, uint48 expiration)",
+];
 const ERC721_ABI = ["function ownerOf(uint256) view returns (address)"];
 const ERC20_BAL_ABI = ["function balanceOf(address) view returns (uint256)"];
 
@@ -40,7 +51,89 @@ function sortAddresses(a: string, b: string): [string, string] {
   return BigInt(a) < BigInt(b) ? [a, b] : [b, a];
 }
 
+function isqrt(n: bigint): bigint {
+  if (n < 2n) return n;
+  let x = n;
+  let y = (x + 1n) >> 1n;
+  while (y < x) {
+    x = y;
+    y = (x + n / x) >> 1n;
+  }
+  return x;
+}
+
+function sqrtPriceX96FromAmounts(amount0: bigint, amount1: bigint): bigint {
+  return isqrt((amount1 * (1n << 192n)) / amount0);
+}
+
 (hasRpc ? describe : describe.skip)("NARALiquidityCompounderV4 — Base fork", () => {
+  it("atomically initializes a fresh pool and mints its first full-range position", async function () {
+    this.timeout(180000);
+    const { ethers } = await hre.network.connect("baseFork");
+    const [deployer] = await ethers.getSigners();
+
+    const nara = await ethers.deployContract("MockERC20", ["NARA", "NARA", 18], deployer);
+    await nara.waitForDeployment();
+    const usdc = await ethers.deployContract("MockERC20", ["USD Coin", "USDC", 6], deployer);
+    await usdc.waitForDeployment();
+    const naraAddr = await nara.getAddress();
+    const usdcAddr = await usdc.getAddress();
+    const [currency0, currency1] = sortAddresses(naraAddr, usdcAddr);
+    const naraIsCurrency0 = currency0 === naraAddr;
+    const key = [currency0, currency1, POOL_FEE, TICK_SPACING, ethers.ZeroAddress] as const;
+
+    const naraAmount = 60_000n * ONE;
+    const usdcAmount = 300n * USDC;
+    const amount0 = naraIsCurrency0 ? naraAmount : usdcAmount;
+    const amount1 = naraIsCurrency0 ? usdcAmount : naraAmount;
+    const sqrtPriceX96 = sqrtPriceX96FromAmounts(amount0, amount1);
+    const q96 = 1n << 96n;
+    const liquidity0 = (amount0 * sqrtPriceX96) / q96;
+    const liquidity1 = (amount1 * q96) / sqrtPriceX96;
+    const liquidity = liquidity0 < liquidity1 ? liquidity0 : liquidity1;
+
+    await nara.mint(deployer.address, naraAmount);
+    await usdc.mint(deployer.address, usdcAmount);
+    await nara.approve(BASE_PERMIT2, ethers.MaxUint256);
+    await usdc.approve(BASE_PERMIT2, ethers.MaxUint256);
+    const permit2 = new ethers.Contract(BASE_PERMIT2, PERMIT2_ABI, deployer);
+    const maxUint160 = (1n << 160n) - 1n;
+    const maxUint48 = (1n << 48n) - 1n;
+    await permit2.approve(naraAddr, BASE_POSITION_MANAGER, maxUint160, maxUint48);
+    await permit2.approve(usdcAddr, BASE_POSITION_MANAGER, maxUint160, maxUint48);
+
+    const pm = new ethers.Contract(BASE_POSITION_MANAGER, POSITION_MANAGER_ABI, deployer);
+    const nextId = await pm.nextTokenId() as bigint;
+    const abi = ethers.AbiCoder.defaultAbiCoder();
+    const mintParams = abi.encode(
+      [
+        "tuple(address,address,uint24,int24,address)",
+        "int24",
+        "int24",
+        "uint256",
+        "uint128",
+        "uint128",
+        "address",
+        "bytes",
+      ],
+      [key, -887220, 887220, liquidity, amount0, amount1, deployer.address, "0x"],
+    );
+    const settleParams = abi.encode(["address", "address"], [currency0, currency1]);
+    const actions = ethers.hexlify(new Uint8Array([0x02, 0x0d]));
+    const unlockData = abi.encode(["bytes", "bytes[]"], [actions, [mintParams, settleParams]]);
+    const deadline = BigInt(Math.floor(Date.now() / 1000)) + 600n;
+
+    const initializeCall = pm.interface.encodeFunctionData("initializePool", [key, sqrtPriceX96]);
+    const mintCall = pm.interface.encodeFunctionData("modifyLiquidities", [unlockData, deadline]);
+    await (await pm.multicall([initializeCall, mintCall])).wait();
+
+    expect(await pm.ownerOf(nextId)).to.equal(deployer.address);
+    expect(await pm.getPositionLiquidity(nextId)).to.be.greaterThan(0n);
+
+    const poolManager = new ethers.Contract(BASE_POOL_MANAGER, POOL_MANAGER_ABI, deployer);
+    await expect(poolManager.initialize(key, sqrtPriceX96)).to.be.revert(ethers);
+  });
+
   it("adds real full-range liquidity via the live PositionManager (mint, exact-spend, bank)", async function () {
     this.timeout(180000);
     const { ethers } = await hre.network.connect("baseFork");
