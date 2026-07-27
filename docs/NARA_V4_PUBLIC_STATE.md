@@ -1,6 +1,6 @@
 # NARA v4 — Public State
 
-Last updated: 2026-07-26.
+Last updated: 2026-07-27.
 Audience: users, analysts, external protocols, integrators.  
 Maintained by: protocol operator. Update every time deployment state changes.
 
@@ -23,6 +23,9 @@ no public app or market is live yet.**
 | v3 contracts | Retired 2026-05-27 | Archived, not operational |
 | NARA token | Deployed | Fixed supply minted; no public market yet |
 | NARA/USDC pool | Registered only | Uninitialized, zero liquidity |
+| Liquidity compounder | Deployed, wired, source verified | Not frozen until post-seed validation |
+| NARA protocol depth | Update pending | 30 NARA remains active; 60,000 NARA proposed and timelocked |
+| Public launch surface | Preview only | Baskets only; Lockboard deferred; Lotto and Arena retired |
 | Locking | Contract deployed | No approved public frontend yet |
 | Bonds | Closed at launch | Opens separately after verification |
 | stNARA / staking pool | Pending | Deploys in composability phase |
@@ -42,9 +45,21 @@ The following contracts are deployed:
 4. **NARALiquidityGrowthHook** — registered for the intended NARA/USDC pool.
 5. **NARALiquidityGrowthVault** — deployed and bound to the hook and engine.
 
-The pool is not initialized, the compounder is not deployed, and no LP
-position exists. Position NFT, router, lenses, bonds, and composability
-contracts are not part of Stage A.
+The pool is not initialized and no LP position exists. The production
+`NARALiquidityCompounderV4` was subsequently deployed at
+`0xc327e50c14002a82c9F1477122204BB183f446Ab` and wired to the vault. It is not
+frozen. Its source is verified on Basescan, Blockscout, and Sourcify. Position NFT,
+router, lenses, bonds, and composability contracts are not part of Stage A.
+
+The reviewed initial position is `60,000 NARA + 300 USDC`, which represents an
+opening ratio of `$0.005` per NARA and an implied FDV of approximately `$5,000`
+on the fixed 1,000,000 NARA supply. This is a configuration target, not a live
+market price: the pool remains uninitialized and unseeded.
+
+A protocol-depth change from `30 NARA` to `60,000 NARA` was proposed on
+2026-07-27. The active value remains `30 NARA` until the timelocked execution
+transaction succeeds and is verified. Liquidity must not be initialized before
+that verification.
 
 ---
 
@@ -58,7 +73,7 @@ contracts are not part of Stage A.
 | fracNARA marketplace | After composability phase |
 | stNARA oracle | After stNARA is deployed and has history |
 | NARA/stNARA AMM | After stNARA is deployed |
-| External bribe integrations | BribeRouterV4 is deployed, but needs external protocols to adopt it |
+| External bribe integrations | BribeRouterV4 is not deployed in the baskets-only launch scope |
 
 ---
 
@@ -126,6 +141,7 @@ Stage A addresses are populated below. Pending entries have not been deployed.
 | NARABondDepositoryV4NFT | `— pending —` |
 | NARALiquidityGrowthHook | `0x9a01c2DcF713cDB12B8ef4Eb264D5c3203b06088` |
 | NARALiquidityGrowthVault | `0xc0cf9bCf8879182368b1CdBDC81B6a143fFA2988` |
+| NARALiquidityCompounderV4 | `0xc327e50c14002a82c9F1477122204BB183f446Ab` (wired and source verified; not frozen) |
 | CREATE2 Hook Deployer | `0xC045644303E43cbb1E3c3E3fC851246F5c590834` |
 | NARARouter | `— pending —` |
 | NARADashboardLens | `— pending —` |
@@ -153,17 +169,24 @@ Full retired list: `archive/legacy-v3/README.md`.
 
 ## For Integrators
 
-**Read position data:** one call — `NARADashboardLens.getUserState(user, positionIds[], nftTokenIds[])`.
+The router, dashboard lens, position NFT, and BribeRouter are not deployed in
+the baskets-only launch scope. Do not integrate against their planned addresses
+or advertise those paths as live.
 
-**Bribe all NARA lockers with your token:**
+**Planned position read after the router/lens phase:** one call —
+`NARADashboardLens.getUserState(user, positionIds[], nftTokenIds[])`.
+
+**Planned bribe flow after BribeRouter deployment and role verification:**
 1. Approve `BribeRouterV4` for your token amount.
 2. Call `BribeRouterV4.notify(yourToken, amount)`.
-3. Done. All active weight holders receive your token pro-rata on next claim.
+3. Active weight holders receive the token pro-rata on the next claim.
 
 **ETH reward pipe:** call `NARAEngine.notifyEthRewards{value: amount}()`. Permissionless.
 
-**ABIs:** use generated artifacts from `nara-protocol-hardhat/artifacts/contracts/v4/`.
-The only launch frontend currently in scope is `apps/nara-baskets`.
+**ABIs:** use generated artifacts from `nara-protocol-hardhat/artifacts/contracts/v4/`,
+but only pair them with addresses recorded as deployed in `CURRENT_STATE.md`.
+The only launch frontend currently in scope is `apps/nara-baskets`, and it
+remains preview-only pending verified basket deployment manifests.
 
 ---
 

@@ -164,7 +164,7 @@ Bond term controls:
 
 Launch expectation: begin in `Liquidity` mode to build depth (POL-first), then move to `Split`, `Engine`, or Genesis routing after liquidity and operations are ready. The skim is designed to **build protocol-owned liquidity first** and redirect to lockers later — it is not a "tax that funds lockers" by default.
 
-> **Flywheel status (2026-07-26): compounder deployed and wired, not frozen.** `Liquidity` mode compounds via
+> **Flywheel status (2026-07-27): compounder deployed, wired, and source verified; not frozen.** `Liquidity` mode compounds via
 > an **external `ILiquidityCompounder` adapter** (`vault.setCompounder`). The production adapter is
 > **`NARALiquidityCompounderV4`** (full-range, no-swap, exact-spend, POL custody), unit-tested
 > through the real vault plus a faithful PositionManager/Permit2 mock. The Stage A vault now points
@@ -172,7 +172,9 @@ Launch expectation: begin in `Liquidity` mode to build depth (POL-first), then m
 > small live compound with a reviewed `minLiquidityAdded`, verify the LP NFT/accounting, then call
 > `vault.freezeCompounder()`. Until the pool is initialized, compounding remains unavailable. The
 > adapter completes the implementation path, but the live flywheel remains dormant until that
-> initialization and validation sequence succeeds. See `UNISWAP_V4_HOOK.md`.
+> initialization and validation sequence succeeds. Source verification evidence
+> for Basescan, Blockscout, and Sourcify is recorded in
+> `deployments/v4-liquidity-compounder-2026-07-26.json`. See `UNISWAP_V4_HOOK.md`.
 
 ---
 
@@ -345,7 +347,7 @@ This deployment is deliberately dormant:
   It is executable no earlier than `2026-07-28T05:51:21Z`
   (`2026-07-28 08:51:21` Kyiv). The active depth remains `30 NARA` until
   `executeProtocolDepth(NARA)` succeeds. Do not initialize or seed before that.
-- The compounder is deployed and wired but not frozen. Position NFT,
+- The compounder is deployed, wired, and source verified but not frozen. Position NFT,
   allocations, router/lenses, bonds, and composability are not deployed.
 - `apps/nara-baskets/` contains the fresh v4 launch configuration but remains
   fail-closed in preview until verified manager/adapter manifests exist.

@@ -29,8 +29,9 @@ makes that disclosure trustless and self-updating.
 circulating = cappedTotalSupply − Σ( balanceOf(excluded) + excludedMarketBalance(excluded) )
 ```
 
-Excluded = the **non-market** wallets: reward reserve, bond vault, team vesting wallet,
-treasury, and the burn sink (`0x…dead`). Everything else is circulating — **including NARA that
+Excluded = the **non-market** wallets: reward reserve, bond vault, team vesting
+wallet, and the burn sink (`0x…dead`). The approved model does not exclude the
+treasury. Everything else is circulating — **including NARA that
 users have locked in the engine.**
 
 **Why user-locked counts as circulating.** This is the market definition listing sites use:
@@ -46,9 +47,12 @@ them — that would erase user-locked supply from the public number.
 
 **Planned post-allocation disclosure:** `1,000,000 − 650,000 reserve − 200,000 bonds
 − 40,000 vesting = 110,000` (`70,000` LP allocation plus `40,000` treasury).
-This is not the current Stage A value: the allocation layer is deferred and the
-Stage A treasury still holds the unsplit balance. Deploy and configure this
-oracle only after the final excluded-address set and custody split are verified.
+This is not a claim that `110,000 NARA` is already the live reported value.
+Stage A originally placed the `350,000 NARA` post-reserve balance in the
+treasury; subsequent transfers must be established from current on-chain
+balances rather than that historical snapshot. Deploy and configure this oracle
+only after the final excluded-address set, custody split, and current balances
+are verified.
 
 ---
 
@@ -60,7 +64,7 @@ oracle only after the final excluded-address set and custody split are verified.
 | Bonds | `NARABondVaultV4` (also self-reports `excludedMarketBalance()`) | ✅ |
 | Team / owner | external OZ `VestingWallet` | ✅ |
 | Burn | `0x000000000000000000000000000000000000dEaD` | ✅ |
-| Treasury | treasury Safe | ❌ earmarked for game sponsorship → circulating |
+| Treasury | treasury custody address | ❌ approved treasury allocation counts as circulating |
 | LP allocation | Initial pool plus designated later-liquidity custody | ❌ disclosed as circulating under the approved 110k model |
 | Engine (user locks) | `NARAEngine` | ❌ user-locked is circulating |
 

@@ -1,6 +1,6 @@
 # NARA v4 — Whole-Project Scope (Cold-AI Start Here)
 
-Last updated: 2026-06-07. Produced by a full scope-coherence audit.
+Last updated: 2026-07-27. Produced by a full scope-coherence audit.
 
 **Audience:** any AI (Claude, GPT, Gemini, Cursor, Codex, …) or human starting cold on this workspace.
 Read this first. It is the single end-to-end map: what exists, what state it's in, what's genuinely
@@ -18,8 +18,12 @@ NARA v4 is a fixed-supply (1,000,000) time-preference yield protocol on Base. Yo
 weight → earn NARA + ETH + ERC-20 rewards per 15-min epoch. **A lock *is* an NFT** (`NARAPositionNFTV4`).
 Fees from everything route back to lockers via the engine. The **five pillars** are: **Token, Engine,
 Liquidity (the taxed Uniswap v4 pool), the NFT lock layer, and Baskets** (the brand front door).
-**Nothing is deployed to mainnet yet** — the only on-chain NARA contracts are *retired* (the v3 stack
-and a 2026-04-23 v4 incident stack). The next step is a clean v4 deploy from `contracts/v4/`.
+Controlled Stage A is deployed on Base: token, engine, reward reserve, hook,
+vault, launcher, and CREATE2 hook deployer. The production liquidity compounder
+was deployed afterward, wired to the vault, and source verified. It is not
+frozen. The registered NARA/USDC pool remains
+uninitialized with zero liquidity. The launch surface is Baskets only and
+remains in preview; Lockboard is deferred, while Lotto and Arena are retired.
 
 ---
 
@@ -61,9 +65,12 @@ happen, baskets can't route. It is the foundation everything sits on.
 
 ## 3. Complete contract inventory + status
 
-**Deployment status is uniform: nothing below is on mainnet.** The only deployed NARA contracts are
-RETIRED — see `CURRENT_STATE.md` (retired v3 table + retired 2026-04-23 v4 incident stack). So the
-columns that matter are **test coverage** and the **non-code prerequisite** to deploy each piece.
+Deployment status is not uniform. Controlled Stage A core contracts and
+`NARALiquidityCompounderV4` are deployed; allocation, router/lens,
+composability, and basket contracts are not deployed. See `CURRENT_STATE.md`
+and the deployment manifests for the exact live state. The inventory below
+describes implementation coverage and dependency order, not a claim that every
+listed contract is deployed.
 
 ### Protocol (`nara-protocol-hardhat/contracts/v4/`)
 
@@ -111,9 +118,10 @@ writing contracts**:
 
 | Item | Type | Why it's not a code task |
 |---|---|---|
-| Fresh v4 mainnet deploy | **deploy** | Run the deploy scripts in order; nothing on mainnet yet |
-| Seed NARA/USDC liquidity (~$400 of a ~$500 budget) | **ops/capital** | Liquidity, not a contract |
-| Lock UI rebuilt for v4 | **frontend** | Apps are wired to v3 (broken until rebuilt) |
+| Execute pending NARA-depth update | **ops/timelock** | Verify the active depth changes from 30 to 60,000 NARA after the one-day delay |
+| Initialize and seed NARA/USDC | **ops/capital** | Atomic initial position is 60,000 NARA + 300 USDC; approximately $5,000 implied FDV |
+| Validate and freeze compounder | **ops** | Source is verified; run the live compound smoke and accounting checks, then the one-way freeze |
+| Lock UI rebuilt for v4 | **deferred frontend** | Lockboard is not part of the baskets-only launch |
 | Baskets buy/sell UI | **frontend** | The public front door app |
 | **stNARA AMM pool** for instant exit | **ops/liquidity** | A pool you seed, not a contract. Without it, exit is via the redemption queue (which IS built) |
 | **Pendle PT/YT market** | **external** | Pendle deploys it on top of the already-built SY adapter (`NARAStakingPoolSYV4`) |
@@ -160,10 +168,12 @@ lockers exist.
 
 ## 7. Satellite apps (`apps/`)
 
-All wired to **v3 ABIs → broken until rebuilt for v4**: `nara-lockboard` (primary lock UI / 100-slot
-grid), `nara-baskets` (front-door buy/sell — has its own design system, see `apps/nara-baskets/CLAUDE.md`),
-`nara-simple-ui`, `nara-lotto`, `nara-arena`, `nara-protocol-ui` (homepage), `nara-analytics`.
-New wallet apps scaffold from `templates/wallet-game-app` via `scripts/scaffold-game-app.mjs`.
+`apps/nara-baskets` is the only current launch frontend. It contains the fresh
+v4 launch configuration but remains fail-closed in preview until verified
+basket manager and adapter manifests exist. `nara-lockboard` is deferred.
+`nara-lotto` and `nara-arena` are retired. Other historical or experimental
+apps are not part of the launch scope and must not be presented as active v4
+surfaces.
 
 ---
 

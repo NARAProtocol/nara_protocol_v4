@@ -1,5 +1,7 @@
 {
-  "generatedAt": "2026-07-26T20:27:47.4641798+03:00",
+  "generatedAt": "2026-07-27T00:00:00+03:00",
+  "statusAsOf": "2026-07-27",
+  "snapshotSemantics": "Stage A transaction evidence is preserved in v4-base-usdc-2026-07-26-controlled-stage-a.json. Fields below add later verified deployment events without rewriting that original evidence.",
   "network": "base",
   "chainId": "8453",
   "releaseCommit": "3215b69a1154b9c30957cd8d875b636dedc9d0ca",
@@ -29,10 +31,32 @@
   "protocolDepthNara": "30000000000000000000",
   "protocolDepthUsdc": "300000000",
   "emissionReserveAmount": "650000000000000000000000",
-  "treasuryTokenBalance": "350000000000000000000000",
+  "treasuryTokenBalanceAtStageA": "350000000000000000000000",
   "lpTokenId": "0",
   "poolRegistered": true,
   "poolInitialized": false,
   "liquiditySeeded": false,
-  "compounderDeployed": false
+  "compounderDeployed": true,
+  "compounder": "0xc327e50c14002a82c9F1477122204BB183f446Ab",
+  "compounderWired": true,
+  "compounderFrozen": false,
+  "compounderSourceVerification": "verified",
+  "compounderEvidence": "v4-liquidity-compounder-2026-07-26.json",
+  "protocolDepthNaraActive": "30000000000000000000",
+  "protocolDepthNaraPending": "60000000000000000000000",
+  "protocolDepthNaraProposalExecuted": false,
+  "protocolDepthProposalEvidence": "v4-nara-depth-proposal-2026-07-27.json",
+  "approvedInitialLiquidity": {
+    "nara": "60000000000000000000000",
+    "usdc": "300000000",
+    "openingPriceUsdPerNara": "0.005",
+    "impliedFdvUsd": "5000"
+  },
+  "activationState": "blocked-pending-depth-execution-and-verification",
+  "launchFrontendScope": {
+    "active": "apps/nara-baskets",
+    "activeStatus": "preview",
+    "deferred": ["apps/nara-lockboard"],
+    "retired": ["apps/nara-lotto", "apps/nara-arena"]
+  }
 }

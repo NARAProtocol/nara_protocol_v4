@@ -1,6 +1,6 @@
 # NARA v4 Launch Runbook
 
-Last updated: 2026-07-26.
+Last updated: 2026-07-27.
 Source of truth: `CURRENT_STATE.md`, `ROADMAP.md`, deploy scripts.  
 This doc turns the roadmap phases into a concrete command-by-command operator sequence.
 
@@ -16,9 +16,15 @@ remain retired.
 Stage A core is already deployed. Use
 `deployments/v4-base-usdc-latest.json` and
 `npm run verify:v4:preseed`; do not repeat the core deployment step. The
-applicable next steps are compounder deployment, pool initialization/liquidity,
+applicable next steps are the pending protocol-depth execution, pool initialization/liquidity,
 basket deployment and verification, baskets frontend configuration, basket
 monitoring, smoke tests, and observation.
+
+The production compounder is already deployed at
+`0xc327e50c14002a82c9F1477122204BB183f446Ab` and wired to the Stage A vault. Do
+not redeploy or rewire it. Source is verified on Basescan, Blockscout, and
+Sourcify. `compounderFrozen` remains `false` until the post-seed compound smoke
+and accounting checks pass.
 
 The full-protocol steps below are retained for later phases and do not gate the
 baskets-only launch unless explicitly identified as basket dependencies.
@@ -65,7 +71,7 @@ V4_SKIP_COMPOUNDER=1 npm run deploy:v4:base:usdc
 - `NARARewardReserve`
 - `NARALiquidityGrowthVault` (compounder left unset — wired in Step 4b)
 - `Create2HookDeployer` → `NARALiquidityGrowthHook` (hook address low bits must be `0x2088`)
-- Registers and seeds NARA/USDC pool on Uniswap v4
+- Registers the NARA/USDC pool on Uniswap v4; initialization and seeding are separate
 
 **Output:** `deployments/v4-base-usdc-latest.json`
 
@@ -97,13 +103,21 @@ npm run v4:env:sync:write    # merges fresh addresses into .env
 
 ---
 
-## Step 3 — Preflight Verification
+## Step 3 — Preseed Verification And Pending Depth Execution
+
+Run the dormant-state verifier first:
 
 ```bash
-npm run verify:v4:preflight
+npm run verify:v4:preseed
 ```
 
-Checks hook/vault/pool/routing configuration against the fresh addresses. Must produce no errors.
+The NARA protocol-depth update was proposed in transaction
+`0x899a8b7ae2b22703741d2797d79f2895276b2830ede0521e193cb81758b6623d`.
+Its earliest execution time is `2026-07-28T05:51:21Z`. The active depth remains
+`30 NARA` until `executeProtocolDepth(NARA)` confirms. Execute that separately
+after the timelock, verify the active value is exactly `60,000 NARA`, and rerun
+`npm run verify:v4:preseed`. Do not initialize or seed while the active value is
+still `30 NARA`.
 
 ---
 
@@ -122,10 +136,11 @@ $env:V4_SEED_SLIPPAGE_BPS = "200"
 npx tsx scripts/seedV4Liquidity.ts
 ```
 
-The script still contains a historical `30 NARA` default. Do not run it unless
-the three reviewed overrides above are present and its pre-transaction output
-shows `60,000 NARA` and `300 USDC`. This runbook does not itself authorize the
-production transaction.
+The amounts must be explicit. Do not run unless the three reviewed overrides
+above are present and the pre-transaction output shows `60,000 NARA` and
+`300 USDC`. Abort if the active hook depth is not `60,000 NARA`, the pool is
+already initialized, or the calculated opening ratio is not `$0.005` per NARA.
+This runbook does not itself authorize the production transaction.
 
 After seeding:
 ```bash
@@ -134,24 +149,18 @@ npm run v4:env:sync:write    # captures LP NFT token ID from liquidity seed log
 
 ---
 
-## Step 4b — Deploy Liquidity Compounder (close the POL flywheel)
+## Step 4b — Validate The Deployed Liquidity Compounder
 
-The vault's default `Liquidity` route mode compounds the skim back into protocol-owned liquidity, but
-it is **inert until a compounder is wired** (`vault._compoundUnchecked` reverts with none set). Deploy
-the production compounder now that the vault + pool exist, then wire it.
+The production compounder is already deployed and wired. The deployment and
+wiring transactions are recorded in
+`deployments/v4-liquidity-compounder-2026-07-26.json`. Do not repeat them.
 
-```bash
-NODE_OPTIONS="--require ./polyfill.cjs" \
-  NARA_TOKEN_V4=<addr> USDC_ADDRESS=<usdc> ADMIN_ADDRESS=<safe> \
-  LIQUIDITY_VAULT_V4=<vault_from_step1> \
-  V4_POOL_MANAGER=<pm> V4_POSITION_MANAGER=<posm> V4_PERMIT2=<permit2> V4_HOOK=<hook_from_step1> \
-  V4_POOL_FEE=3000 V4_TICK_SPACING=60 \
-  npx hardhat run scripts/deployLiquidityCompounderV4.ts --network base
-```
+Canonical deployed address:
+`0xc327e50c14002a82c9F1477122204BB183f446Ab`.
 
-**Deploys:** `NARALiquidityCompounderV4` — full-range, no-swap, exact-spend POL adder. Owner is set to
-the Safe (`ADMIN_ADDRESS`) at construction; POL is owner-recoverable via a **7-day recovery timelock**
-(`proposeRecovery` → wait `RECOVERY_DELAY` → `executeRecovery`: migrate / sweep / wind-down).
+`NARALiquidityCompounderV4` is a full-range, no-swap, exact-spend POL adder.
+POL is owner-recoverable via a **7-day recovery timelock** (`proposeRecovery`
+→ wait `RECOVERY_DELAY` → `executeRecovery`: migrate / sweep / wind-down).
 
 **Wire it (vault owner = deployer until Step 9):**
 ```bash
@@ -162,9 +171,10 @@ the Safe (`ADMIN_ADDRESS`) at construction; POL is owner-recoverable via a **7-d
 
 **Gate:**
 ```
-□ NARALiquidityCompounderV4 deployed; owner == Safe
+□ NARALiquidityCompounderV4 address and constructor inputs match deployment evidence
 □ vault.setCompounder(compounder) done; vault.compounder() == compounder
 □ Route mode is Liquidity (default)
+□ Explorer source verification completed on Basescan, Blockscout, and Sourcify
 □ A validation compound minted a real full-range position (compounder.positionTokenId() != 0)
 □ vault.freezeCompounder() executed once satisfied (or explicitly deferred + tracked)
 □ Compounder address recorded into .env (V4_COMPOUNDER_ADDRESS) and CURRENT_STATE.md from the

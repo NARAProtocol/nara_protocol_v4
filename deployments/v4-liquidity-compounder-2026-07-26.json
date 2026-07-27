@@ -48,7 +48,13 @@
     }
   },
   "sourceVerification": {
-    "status": "pending",
-    "note": "Hardhat verification request timed out; retry without redeploying."
+    "status": "verified",
+    "verifiedAt": "2026-07-27",
+    "explorers": {
+      "basescan": "https://basescan.org/address/0xc327e50c14002a82c9F1477122204BB183f446Ab#code",
+      "blockscout": "https://base.blockscout.com/address/0xc327e50c14002a82c9F1477122204BB183f446Ab?tab=contract",
+      "sourcify": "https://repo.sourcify.dev/contracts/full_match/8453/0xc327e50c14002a82c9F1477122204BB183f446Ab/"
+    },
+    "note": "Verification retry reported the contract already verified on Basescan, Blockscout, and Sourcify. No redeployment occurred."
   }
 }
