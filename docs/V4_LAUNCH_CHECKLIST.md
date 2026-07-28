@@ -32,9 +32,8 @@ Use this file when starting cold.
 3. [V4_NEXT_SESSION_HANDOFF.md](V4_NEXT_SESSION_HANDOFF.md)
 4. [V4_REDEPLOY_NO_SURPRISE_PLAN.md](V4_REDEPLOY_NO_SURPRISE_PLAN.md)
 
-Historical context only:
-
-- [V4_INCIDENT_REDEPLOY_2026-04-23.md](V4_INCIDENT_REDEPLOY_2026-04-23.md)
+Historical incident context remains in Git history and is not an executable
+launch instruction.
 
 ---
 
@@ -162,11 +161,8 @@ Pass criteria:
 - Full suite passes.
 - Bytecode size check passes.
 
-Latest known local targeted result (post v3 retirement and May 2026 audit remediation):
-
-- Full Hardhat suite (`npm test`): 360 passing as of 2026-06-07 (run `npm test` for the live count; the older "568" predates the 2026-05-27 v4 reset that archived the v3 tests).
-- Slither v4 scoped run: 27 targets passed.
-- Echidna v4 engine harness: 10,022 calls, all 3 properties passing.
+Use the dated verification stamp in `CURRENT_STATE.md` and rerun the commands.
+Historical test totals are intentionally not duplicated here.
 - `npm run size`: all deployable artifacts below EVM bytecode limits.
 - `NARAEngine` deployed bytecode: 24541 bytes.
 - `NARAStakingPoolSYV4` deployed bytecode: 8482 bytes.

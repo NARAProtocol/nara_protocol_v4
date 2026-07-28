@@ -36,12 +36,9 @@ fi
 log "node $(node -v)  npm $(npm -v)"
 
 # 4) npm deps (needed for @openzeppelin / @uniswap import resolution)
-# NOTE: --legacy-peer-deps is REQUIRED. @typechain/hardhat@9.1.0 declares a peer of
-# hardhat@^2.9.9 while the project uses hardhat@3.x, so a strict install fails ERESOLVE.
-log "npm ci --legacy-peer-deps (this pulls OZ/uniswap for import resolution)"
-npm ci --legacy-peer-deps --no-audit --no-fund >/tmp/npmci.log 2>&1 \
-  || { log "npm ci failed, retrying with npm install --legacy-peer-deps"; npm install --legacy-peer-deps --no-audit --no-fund >>/tmp/npmci.log 2>&1; } \
-  || { log "retry npm install --legacy-peer-deps once more"; npm install --legacy-peer-deps --no-audit --no-fund >>/tmp/npmci.log 2>&1; }
+log "npm ci (this pulls OpenZeppelin and Uniswap for import resolution)"
+npm ci --no-audit --no-fund >/tmp/npmci.log 2>&1 \
+  || { log "FATAL: npm ci failed"; tail -40 /tmp/npmci.log; exit 1; }
 # Hard guard: the analyzers MUST have dependencies, otherwise they silently produce
 # invalid output (echidna/slither fail to compile; aderyn reports false positives like
 # "contract locks Ether" because it can't see the OZ base contracts). Fail loud instead.

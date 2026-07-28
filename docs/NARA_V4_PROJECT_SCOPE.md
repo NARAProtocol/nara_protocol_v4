@@ -212,9 +212,10 @@ npm run slither:v4                                           # static analysis
 ~/.foundry/bin/forge test --root nara-category-baskets-v1 --no-match-path "test/AerodromeBasketAdapterV1.t.sol"
 ```
 
-**Last full run — 2026-06-07:** Hardhat **360 passing / 0 failing / 0 skipped**; Baskets **136 passing /
-1 skipped** (fork test) **/ 0 failing**; size gate green; Slither exit 0. **Aderyn + Echidna re-run
-2026-06-08 on a Linux box, both green** against current code — Echidna invariant suite expanded 3 → 13,
+The dated verification stamp and current commands live in
+[`CURRENT_STATE.md`](CURRENT_STATE.md). Do not copy test totals into this scope
+map because they change as coverage grows. Aderyn and Echidna were re-run on
+2026-06-08 against that release line; the Echidna invariant suite expanded 3 → 13,
 all passing (10,004 calls); Aderyn 4 High / 18 Low (heuristic; Highs in bond/router/fractional, not the
 core; triage H-4 before bonds open). Linux-only — run on a Linux box or CI, not the dev PC. See `scripts/run-gates-linux.sh`.
 

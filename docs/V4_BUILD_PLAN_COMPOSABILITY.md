@@ -15,7 +15,9 @@ Canonical references:
 
 ## Status
 
-The composability layer is implemented in the repo and is waiting for a fresh v4 core deployment before mainnet deployment.
+The composability layer is implemented in the repository. The fresh Stage A v4
+core now exists, but these modules remain deliberately undeployed until the core
+market, position-NFT layer, oracle assumptions, and operational gates are ready.
 
 Implemented contracts:
 

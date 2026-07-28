@@ -1,61 +1,122 @@
-# Security Policy
+# Security policy
 
-## Status
+## Current security posture
 
-**Pre-launch — no v4 contracts are deployed to mainnet.** The retired v3 stack and the retired
-2026-04-23 v4 incident stack are historical only; never integrate against them. Canonical live state:
+NARA v4 has a controlled Stage A deployment on Base. The token, engine, reward
+reserve, liquidity hook, liquidity vault, and compounder are deployed. The
+registered NARA/USDC pool remains uninitialized, official liquidity has not been
+added, and public locking and reward use have not been activated.
+
+Deployment does not imply activation, audit completion, economic safety, or a
+recommendation to transact. Canonical state and addresses are maintained in
 [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md).
-
-## Security model
-
-- **Sealed reserves.** The reward reserve and bond inventory are sealed — the admin cannot sweep them;
-  only the engine can pull from the reserve.
-- **Fixed supply.** `NARAToken` mints exactly 1,000,000 once and never again.
-- **Bounded admin.** Every `onlyOwner` setter has a hard-coded min/max cap, so even a compromised owner
-  key cannot move parameters outside safe bounds.
-- **Liveness with explicit failure.** JIT epoch advance is capped (`MAX_JIT_ADVANCE = 8`); beyond that,
-  user writes revert `EpochStale` rather than silently mis-settling.
-- **Role-gated reward rails.** Only `REWARD_NOTIFIER_ROLE` can route ERC-20 rewards; direct ETH
-  transfers to the engine are rejected (`DirectEthTransferForbidden`).
-- **Custody isolation.** Each position NFT is backed by its own minimal-clone account; the fee/vault
-  paths can route value but cannot touch user principal.
-
-## Verification performed (last verified 2026-06-08)
-
-| Gate | Result |
-|------|--------|
-| Hardhat test suite | **360 passing**, 0 failing, 0 skipped |
-| Echidna invariants | **13/13 passing**, 10,004 calls |
-| Slither | clean of new issues |
-| Aderyn | 4 High / 18 Low (heuristic; Highs in bond/router/fractional, none in core) |
-| Bytecode size | all deployable artifacts within EVM limits |
-
-Run them yourself — see the README "Build & test" and "Security" sections. Test counts drift; the live
-number is `npx hardhat test`.
-
-A multi-lens internal audit (architecture / economics / UX) rated the system **~8.4–8.5/10** with **no
-catastrophic design flaw**; the dominant risk is operational ("correct code, misoperated system"), not
-contract logic. **Automated analysis is necessary but not sufficient** — an independent human /
-competitive review is planned before mainnet value, and a bug-bounty program will be announced ahead of
-launch.
 
 ## Reporting a vulnerability
 
-Report security issues **privately** — do not open a public issue for an exploitable bug.
+Do not open a public issue, pull request, discussion, or social-media post for a
+suspected exploitable vulnerability.
 
-- Email: **security@naraprotocol.pro**
-- Include: affected contract + line, description, and a reproducing transaction sequence if possible.
+Email: **security@naraprotocol.pro**
 
-We aim to acknowledge within 72 hours.
+Include, when possible:
 
-## Links
+- affected contract, function, and source line;
+- affected network and contract address;
+- concrete preconditions;
+- attacker transaction or call sequence;
+- expected and observed behavior;
+- impact and reproducible test;
+- suggested mitigation.
 
-- Website: **https://naraprotocol.pro**
-- Farcaster: **@naraprotocol**
-- X / Twitter: **[@NARA_protocol](https://x.com/NARA_protocol)**
-- Security contact: **security@naraprotocol.pro**
+Do not include private keys, seed phrases, credentials, personal data, or funds.
+Do not test against production contracts in a way that changes state or affects
+other users.
 
 ## Scope
 
-In scope: all contracts under [`contracts/v4/`](contracts/v4/). Out of scope: anything under
-`archive/` (retired v3 — not deployed) and the frontends (separate repos).
+In scope:
+
+- Solidity under `contracts/v4/`;
+- v4 deployment and verification scripts;
+- privilege, accounting, solvency, liveness, and integration failures;
+- discrepancies between documented and deployed v4 bytecode;
+- vulnerabilities in active v4 configuration that can cause unauthorized loss
+  or control.
+
+Out of scope:
+
+- archived v3 implementations and retired addresses;
+- token-price movement, market speculation, or unavailable liquidity by itself;
+- attacks requiring a reporter to use stolen credentials;
+- automated scanner output without a source location and reproducible attack
+  path;
+- denial-of-service against local developer tooling with no protocol impact.
+
+The project does not promise a bounty, payment, safe harbor, response time, or
+remediation deadline. Any such program requires separately published terms.
+
+## Design controls
+
+Important controls observable in the source include:
+
+- fixed permanent token issuance, with only bounded same-transaction flash
+  minting;
+- an engine separated from token-transfer policy;
+- sealed reward-reserve behavior;
+- bounded epoch advancement and explicit stale-epoch failure;
+- reentrancy guards on value-moving external entry points;
+- role-gated ERC-20 reward notification;
+- direct ETH rejection except through defined payable paths;
+- bounded batch sizes and configurable-parameter caps;
+- explicit deployment-state verification and bytecode-size gates.
+
+These controls reduce specific risks; they do not prove the protocol is safe.
+
+## Verification evidence
+
+The repository includes:
+
+- a full Hardhat unit and regression suite;
+- deployment-coverage tests;
+- engine accounting regression invariants;
+- an Echidna engine property harness;
+- Slither and Aderyn runners;
+- deployable-bytecode and initcode size enforcement;
+- optional Base-fork tests for Uniswap v4 integration;
+- sanitized Stage A deployment manifests.
+
+At the latest publication preparation pass:
+
+- `npm run build` passed;
+- `npm test` passed;
+- `npm run size` passed for every deployable artifact;
+- `npm audit --audit-level=high` passed;
+- npm reported eight Low transitive advisories in the Hardhat explorer
+  verification dependency chain, with no upstream fix available.
+
+Automated analysis can produce false positives and false negatives. Internal
+review and passing tests are not equivalent to an independent security audit,
+formal verification, or a warranty.
+
+## Operational limitations
+
+The current Stage A administrator and treasury custody must be evaluated
+separately from contract correctness. Current limitations, including dormant
+pool state and custody requirements, are documented in
+[`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md).
+
+Never:
+
+- commit `.env` files or wallet material;
+- paste a private RPC URL into an issue or CI log;
+- use a production key for local tests;
+- run deployment, seeding, role-transfer, or liquidity scripts without explicit
+  authorization and an independently reviewed target configuration;
+- assume an address is current because it appears in Git history or an archived
+  document.
+
+## Supported versions
+
+Only the active v4 source on the default branch is eligible for security
+maintenance. Historical v3 and incident-stack contracts remain onchain but are
+not supported.

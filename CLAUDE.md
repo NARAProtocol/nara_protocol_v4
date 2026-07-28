@@ -137,8 +137,10 @@ Use `docs/CURRENT_STATE.md` as the canonical current-state source.
 - Do not project retired v3 wrapper, lotto, arena, or lockboard assumptions onto
   v4 unless that satellite has been explicitly ported and recorded in
   `docs/CURRENT_STATE.md`.
-- The engine is not permit-aware today, so locking remains `approve` plus the
-  relevant lock/mint call when allowance is missing.
+- The engine supports `lockWithPermit`, and the position NFT and router provide
+  permit-aware composition paths. Use generated v4 ABIs and verify the exact
+  deployed periphery address before integrating; source-only router/NFT modules
+  are not part of Stage A.
 
 ## Environment Notes
 

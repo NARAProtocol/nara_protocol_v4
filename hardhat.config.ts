@@ -2,7 +2,6 @@ import { defineConfig } from "hardhat/config";
 import hardhatMocha from "@nomicfoundation/hardhat-mocha";
 import hardhatEthers from "@nomicfoundation/hardhat-ethers";
 import hardhatEthersChaiMatchers from "@nomicfoundation/hardhat-ethers-chai-matchers";
-import hardhatTypechain from "@nomicfoundation/hardhat-typechain";
 import hardhatVerify from "@nomicfoundation/hardhat-verify";
 import "dotenv/config";
 
@@ -70,7 +69,6 @@ export default defineConfig({
     hardhatMocha,
     hardhatEthers,
     hardhatEthersChaiMatchers,
-    hardhatTypechain,
     hardhatVerify,
   ],
   solidity: {

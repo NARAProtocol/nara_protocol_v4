@@ -21,6 +21,11 @@ On **2026-05-27** the project committed to a clean fresh start on the v4 stack.
 
 ## Rules of engagement
 
+Before making any repository change, follow
+[`docs/REPOSITORY_MAINTENANCE.md`](docs/REPOSITORY_MAINTENANCE.md). It defines
+evidence priority, synchronization, verification gates, precise state language,
+and handoff requirements.
+
 1. When the user asks about NARA (token, engine, bond, NFT position, lock, claim, reward), default to the **v4** answer. v4 contracts live in `contracts/v4/`.
 2. Do not import anything from `archive/legacy-v3/` into active code paths.
 3. Do not modify files in `archive/legacy-v3/` without explicit user direction.
@@ -44,6 +49,9 @@ On **2026-05-27** the project committed to a clean fresh start on the v4 stack.
   approval.
 - Do not deploy contracts without explicit human approval.
 - Use generated active v4 Hardhat artifacts as the ABI source of truth.
+- Treat implemented, tested, deployed, configured, activated, and available as
+  separate states. Never call a surface live without evidence for the intended
+  meaning.
 
 ## UI/UX rule for financial surfaces
 

@@ -24,7 +24,7 @@ Active sources live **only** in `contracts/v4/`. Everything else is archived/ret
 | `NARARewardReserve.sol` | Sealed NARA reward reserve; admin cannot sweep, only the engine pulls. | `EMISSION_MECHANICS.md` |
 | `NARALiquidityGrowthHook.sol` | Taxed Uniswap v4 hook (default 5%/5%, cap 25%/20%). Hook address low bits must be `0x2088`. | `research/V4_1K_LIQUIDITY_LAUNCH_PLAN_2026-05-05.md` |
 | `NARALiquidityGrowthVault.sol` | Receives hook tax. `routeMode`: Liquidity (default, compounds LP) / Engine / Split / Genesis / GenesisSplit. POL-first by design. | `UNISWAP_V4_HOOK.md`, `research/V4_1K_LIQUIDITY_LAUNCH_PLAN_2026-05-05.md` |
-| `NARALiquidityCompounderV4.sol` | Production `ILiquidityCompounder` — closes the POL flywheel. Adds the vault's NARA/USDC skim as a permanent **full-range** Uniswap v4 position (PositionManager + Permit2). No-swap, exact-spend, remainder-banking, POL custody. Built + unit-tested; deploy via `scripts/deployLiquidityCompounderV4.ts` then `vault.setCompounder`. | `UNISWAP_V4_HOOK.md`, `V4_OPPORTUNITY_GAPS.md` |
+| `NARALiquidityCompounderV4.sol` | Production `ILiquidityCompounder`. Adds the vault's NARA/USDC balances to a full-range Uniswap v4 position through PositionManager and Permit2. No-swap, exact-spend, remainder-banking, POL custody. Deployed and wired in Stage A; not frozen while the pool remains uninitialized. | `CURRENT_STATE.md`, `UNISWAP_V4_HOOK.md` |
 | `utils/Create2HookDeployer.sol` | Mines + deploys the hook at the required `0x2088` address. | `NARA_V4_LAUNCH_RUNBOOK.md` |
 
 ## Engine internals

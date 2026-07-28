@@ -50,11 +50,9 @@ As of 2026-07-26:
 - Current composability code is implemented locally but not deployed.
 
 Latest verification — see [CURRENT_STATE.md](CURRENT_STATE.md#verification-status) for the live
-commands and dated stamp (test counts drift; do not hard-code them here). As of 2026-06-07:
-
-- Full Hardhat suite: 360 passing, 0 failing, 0 skipped. (The older "568 passing" predates the
-  2026-05-27 v4 reset that archived the v3 stack and its tests.)
-- Baskets Foundry suite: 136 passing, 1 skipped (fork test), 0 failing.
+commands and dated stamp. Test totals drift as coverage grows and are not
+duplicated in this roadmap. Use `npm test` for the current protocol result and
+the separate Foundry package for basket verification.
 - `npm run size`: passed, all artifacts within EVM limits.
 - Slither v4: passed (exit 0). Aderyn binary currently unavailable; Echidna rerun before launch.
 

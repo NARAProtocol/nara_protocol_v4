@@ -19,7 +19,9 @@ On **2026-05-27** the project committed to a clean fresh start on v4. The entire
 - The fresh NARA token deployed from `contracts/v4/NARAToken.sol` at
   `0x65E247AA3aa9C0131b2984b894c3D24c41341D7A`. The v3 token
   `0xE444de61752bD13D1D37Ee59c31ef4e489bd727C` remains permanently retired.
-- All v3 mainnet contracts are archived at `archive/legacy-v3/`. See [archive/legacy-v3/README.md](../archive/legacy-v3/README.md) for the full retired-address table.
+- v3 source remains available through repository history. The retired-address
+  table is reproduced near the end of this document so public readers do not
+  need the private local archive.
 - The only current code path is `contracts/v4/`.
 - `apps/nara-baskets/` is the only current launch frontend. It must remain in
   preview until verified basket deployment manifests exist. Lockboard is
@@ -269,8 +271,8 @@ Last full run — **2026-07-04**:
 
 The Stage A core already exists. Do not redeploy it.
 
-1. Deploy and wire `NARALiquidityCompounderV4`; complete the required ownership
-   and recovery-policy review.
+1. Re-verify the deployed and wired `NARALiquidityCompounderV4`, then complete
+   the required ownership and recovery-policy review.
 2. Run `npm run verify:v4:preseed`.
 3. Initialize and seed the registered NARA/USDC pool with the approved,
    explicitly reviewed transaction.
@@ -439,7 +441,8 @@ All v3 Base mainnet contracts are **retired as of 2026-05-27**. These are archiv
 | NaraLockRenderer | `0x7FDbA2DB4C46d69216f2166aA7f2CED403d97885` |
 | Owner signer wallet | `0xC019Dc79412c4b20103ac4ce97B2615FF45D490d` |
 
-Full archive: [archive/legacy-v3/README.md](../archive/legacy-v3/README.md)
+The frozen v3 source is historical material available through Git history; it
+is not part of the active public source tree.
 
 ---
 

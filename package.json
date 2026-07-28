@@ -2,12 +2,15 @@
   "name": "nara-protocol-hardhat",
   "private": true,
   "version": "0.2.0",
-  "description": "NARA protocol v4 contracts and operations workspace. v3 stack archived under archive/legacy-v3/.",
+  "description": "Experimental NARA v4 position, accounting, liquidity, and integration contracts for Base.",
   "type": "module",
   "scripts": {
     "build": "hardhat compile",
     "clean": "hardhat clean",
     "test": "hardhat test",
+    "check": "npm run verify:public && npm run build && npm test && npm run size && npm audit --audit-level=high",
+    "verify:public": "node scripts/checkPublicRepo.mjs",
+    "audit:deps": "npm audit --audit-level=high",
     "test:token:v4": "hardhat test test/NARAToken.v4.test.ts",
     "test:engine:v4": "hardhat test test/NARAEngine.v4.test.ts",
     "test:liquidity:v4": "hardhat test test/NARALiquidityGrowth.v4.test.ts",
@@ -39,16 +42,37 @@
     "v4:env:sync:write": "tsx scripts/syncV4FreshEnv.ts --write-dotenv",
     "fund:v4:reserve": "hardhat run scripts/fundEmissionReserveV4.ts --network base"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NARAProtocol/nara_protocol_v4.git"
+  },
+  "bugs": {
+    "url": "https://github.com/NARAProtocol/nara_protocol_v4/issues"
+  },
+  "homepage": "https://github.com/NARAProtocol/nara_protocol_v4#readme",
+  "keywords": [
+    "solidity",
+    "base",
+    "hardhat",
+    "uniswap-v4",
+    "erc-20",
+    "erc-721",
+    "erc-2612",
+    "erc-3156",
+    "erc-1363"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
   "devDependencies": {
     "@nomicfoundation/hardhat-ethers": "4.0.7",
     "@nomicfoundation/hardhat-ethers-chai-matchers": "3.0.4",
     "@nomicfoundation/hardhat-keystore": "3.0.5",
     "@nomicfoundation/hardhat-mocha": "3.0.15",
     "@nomicfoundation/hardhat-network-helpers": "3.0.4",
-    "@nomicfoundation/hardhat-typechain": "3.0.5",
     "@nomicfoundation/hardhat-verify": "3.0.13",
     "@openzeppelin/contracts": "5.6.1",
-    "@typechain/ethers-v6": "0.5.1",
     "@types/chai": "5.2.3",
     "@types/mocha": "10.0.10",
     "@types/node": "25.5.2",
@@ -60,19 +84,15 @@
     "mocha": "11.7.6",
     "ts-node": "10.9.2",
     "tsx": "4.23.1",
-    "typechain": "8.3.2",
     "typescript": "6.0.2"
   },
   "overrides": {
     "hardhat": {
       "adm-zip": "0.6.0"
     },
-    "minimatch@3.1.5": {
-      "brace-expansion": "1.1.16"
-    },
-    "minimatch@9.0.9": {
-      "brace-expansion": "2.1.2"
-    },
+    "minimatch": "10.2.6",
+    "brace-expansion": "5.0.8",
+    "diff": "9.0.0",
     "mocha": {
       "serialize-javascript": "7.0.5"
     }
