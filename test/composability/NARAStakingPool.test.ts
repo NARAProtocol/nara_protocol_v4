@@ -1,5 +1,6 @@
 import hre from "hardhat";
 import { expect } from "chai";
+import { deployRenderer } from "../helpers/art";
 
 const ONE = 10n ** 18n;
 const USDC = 10n ** 6n;
@@ -26,9 +27,7 @@ async function deployFixture() {
   const accountImpl: any = await Account.deploy();
   await accountImpl.waitForDeployment();
 
-  const Renderer = await ethers.getContractFactory("NARAPositionRendererV4", admin);
-  const renderer: any = await Renderer.deploy();
-  await renderer.waitForDeployment();
+  const renderer: any = await deployRenderer(ethers, admin);
 
   const NFT = await ethers.getContractFactory("NARAPositionNFTV4", admin);
   const nft: any = await NFT.deploy(
@@ -107,6 +106,23 @@ describe("NARAStakingPoolV4", () => {
     await f.pool.connect(f.user).claimUsdc(userAddr);
     const after = await f.usdc.balanceOf(userAddr);
     expect(after - before).to.equal(claimable);
+  });
+
+  it("checkpoints underlying rewards before stNARA ownership moves", async () => {
+    const f = await deployFixture();
+    const { positionId } = await openPoolPosition(f);
+    const reward = 1_000n * USDC;
+    const userAddr = await f.user.getAddress();
+    const otherAddr = await f.other.getAddress();
+
+    await f.usdc.mint(await f.engine.getAddress(), reward);
+    await f.engine.setTokenClaimable(positionId, await f.usdc.getAddress(), reward);
+
+    const userShares = await f.pool.balanceOf(userAddr);
+    await f.pool.connect(f.user).transfer(otherAddr, userShares * 9n / 10n);
+
+    expect(await f.pool.claimableUsdc(otherAddr)).to.equal(0n);
+    expect(await f.pool.claimableUsdc(userAddr)).to.be.gt(0n);
   });
 
   it("harvests stale NARA rewards before pricing new deposits", async () => {
@@ -313,6 +329,35 @@ describe("NARAStakingPoolV4", () => {
     expect(await f.ethers.provider.getBalance(poolAddr)).to.equal(ethAmount);
   });
 
+  it("M-08: holders can still exit (queue + claim) during emergencyShutdown", async () => {
+    const f = await deployFixture();
+    const userAddr = await f.user.getAddress();
+    const { tokenId, positionId, amount } = await openPoolPosition(f); // deposit + lockLiquid
+
+    await f.pool.connect(f.admin).setEmergencyShutdown(true);
+
+    // Inflows are frozen...
+    await f.nara.connect(f.user).approve(await f.pool.getAddress(), ONE);
+    await expect(f.pool.connect(f.user).deposit(ONE, 0))
+      .to.be.revertedWithCustomError(f.pool, "EmergencyActive");
+
+    // ...but holders are NOT trapped: queueRedeem works during shutdown (previously reverted
+    // EmergencyActive via the auto-harvest path).
+    const shares = await f.pool.balanceOf(userAddr);
+    await f.pool.connect(f.user).queueRedeem(shares);
+
+    // Mature the underlying position, convert to liquid, and claim the redemption.
+    const position = await f.engine.positionOf(positionId);
+    await f.engine.setCurrentEpoch(position.unlockEpoch);
+    await f.pool.connect(f.keeper).unlockMatured(tokenId);
+
+    const before = await f.nara.balanceOf(userAddr);
+    await f.pool.connect(f.user).claimRedemption(0);
+    const recovered = (await f.nara.balanceOf(userAddr)) - before;
+    expect(recovered).to.be.gt(0n);
+    expect(recovered).to.equal(amount - (await f.pool.DEAD_SHARES()));
+  });
+
   it("SY claims pool USDC through Pendle rewards and native ETH through a separate path", async () => {
     const f = await deployFixture();
     const SY = await f.ethers.getContractFactory("NARAStakingPoolSYV4", f.admin);
@@ -369,6 +414,38 @@ describe("NARAStakingPoolV4", () => {
     expect(ethAfter - ethBefore).to.equal(ethClaimable);
     await expect(sy.connect(f.user).claimNativeEth(await sy.getAddress()))
       .to.be.revertedWithCustomError(sy, "ZeroAddress");
+  });
+
+  it("checkpoints pool rewards before SY ownership moves", async () => {
+    const f = await deployFixture();
+    const SY = await f.ethers.getContractFactory("NARAStakingPoolSYV4", f.admin);
+    const sy: any = await SY.deploy(
+      await f.nara.getAddress(),
+      await f.usdc.getAddress(),
+      await f.pool.getAddress(),
+      await f.pool.getAddress(),
+    );
+    await sy.waitForDeployment();
+
+    const amount = 1_000n * ONE;
+    const userAddr = await f.user.getAddress();
+    const otherAddr = await f.other.getAddress();
+    await f.nara.connect(f.user).approve(await sy.getAddress(), amount);
+    await sy.connect(f.user).deposit(userAddr, await f.nara.getAddress(), amount, 0);
+    await f.pool.connect(f.keeper).lockLiquid(amount, 0);
+
+    const tokenId = await f.pool.underlyingTokenIds(0);
+    const positionId = await f.nft.positionIdOf(tokenId);
+    const reward = 1_000n * USDC;
+    await f.usdc.mint(await f.engine.getAddress(), reward);
+    await f.engine.setTokenClaimable(positionId, await f.usdc.getAddress(), reward);
+    await f.pool.connect(f.keeper).harvest();
+
+    const userShares = await sy.balanceOf(userAddr);
+    await sy.connect(f.user).transfer(otherAddr, userShares * 9n / 10n);
+
+    expect(await sy.claimableUsdc(otherAddr)).to.equal(0n);
+    expect(await sy.claimableUsdc(userAddr)).to.be.gt(0n);
   });
 
   it("SY disables public internal-balance redeem", async () => {

@@ -32,8 +32,11 @@ const RAY = 10n ** 27n;
 const EPOCH_SECONDS = 900n;       // 15 min
 const CONFIG_DELAY = 3600n;       // 1 hour
 const INITIAL_BASE = ONE / 2n;    // 0.5e18
-const TOKEN_NAME = "NARA Protocol";
+const TOKEN_NAME = "NARA Token";
 const TOKEN_SYMBOL = "NARA";
+// Storage slot for NARAEngine.totalPendingNaraRewards. Used only to model
+// the rare accounting-counter drift that can arise from per-position floors.
+const TOTAL_PENDING_NARA_REWARDS_SLOT = 42n;
 
 // EngineConfig shape (must match Solidity struct order)
 const ENGINE_CONFIG_TYPE =
@@ -93,11 +96,38 @@ async function mineTime(ethers: any, seconds: bigint) {
     await ethers.provider.send("evm_mine", []);
 }
 
-async function launchSystem(ethers: any, deployer: Signer, treasury: Signer) {
+function mulDivDown(x: bigint, y: bigint, denominator: bigint) {
+    return (x * y) / denominator;
+}
+
+function computeWeight(amount: bigint, durationEpochs: bigint, cfg: ReturnType<typeof defaultEngineConfig>) {
+    const r = mulDivDown(durationEpochs, ONE, cfg.maxLockEpochs);
+    const r2 = mulDivDown(r, r, ONE);
+    const multiplier = ONE
+        + mulDivDown(cfg.durationLinearWad, r, ONE)
+        + mulDivDown(cfg.durationQuadraticWad, r2, ONE);
+    return mulDivDown(amount, multiplier, ONE);
+}
+
+async function setTotalPendingNaraRewardsForTest(ethers: any, engine: any, value: bigint) {
+    await ethers.provider.send("hardhat_setStorageAt", [
+        await engine.getAddress(),
+        ethers.toBeHex(TOTAL_PENDING_NARA_REWARDS_SLOT),
+        ethers.toBeHex(value, 32),
+    ]);
+    expect(await engine.totalPendingNaraRewards()).to.equal(value);
+}
+
+async function launchSystem(
+    ethers: any,
+    deployer: Signer,
+    treasury: Signer,
+    rewardDeposit: bigint = 100_000n * ONE,
+) {
     const deployerAddr = await deployer.getAddress();
     const treasuryAddr = await treasury.getAddress();
 
-    const launcher = await ethers.deployContract("NARALauncher", [], deployer);
+    const launcher = await ethers.deployContract("NARALauncher", [deployerAddr], deployer);
     await launcher.waitForDeployment();
 
     const cfg = defaultEngineConfig(ethers);
@@ -125,9 +155,11 @@ async function launchSystem(ethers: any, deployer: Signer, treasury: Signer) {
     // Wire treasury so lock fees can be paid; no reward reserve in this minimal rig.
     await engine.connect(deployer).setTreasury(treasuryAddr);
 
-    // Fund engine with NARA emission reserve so _advanceOneEpoch can drip.
-    await token.connect(treasury).approve(engineAddr, MAX_SUPPLY);
-    await engine.connect(treasury).depositRewards(100_000n * ONE);
+    if (rewardDeposit != 0n) {
+        // Fund engine with NARA emission reserve so _advanceOneEpoch can drip.
+        await token.connect(treasury).approve(engineAddr, rewardDeposit);
+        await engine.connect(treasury).depositRewards(rewardDeposit);
+    }
 
     return { launcher, token, engine, tokenAddr, engineAddr, cfg };
 }
@@ -195,14 +227,14 @@ describe("NARAEngine v4 — lock paths", () => {
     });
 
     it("lock() with approve-then-lock creates a position with correct weight", async () => {
-        const { token, engine, engineAddr } = await launchSystem(ethers, deployer, treasury);
+        const { token, engine, engineAddr, cfg } = await launchSystem(ethers, deployer, treasury);
         const amt = 1_000n * ONE;
 
         await token.connect(treasury).transfer(await alice.getAddress(), amt);
         await token.connect(alice).approve(engineAddr, amt);
 
         const duration = 100n;
-        const expectedWeight = await engine.previewWeight(amt, duration);
+        const expectedWeight = computeWeight(amt, duration, cfg);
         const posId = await engine.connect(alice).lock.staticCall(amt, duration, 0n);
         await engine.connect(alice).lock(amt, duration, 0n);
 
@@ -251,7 +283,7 @@ describe("NARAEngine v4 — lock paths", () => {
         expect(bobPosition.owner).to.equal(bobAddr);
     });
 
-    it("third-party lockFor() consumes the recipient cap", async () => {
+    it("third-party lockFor() does not consume the recipient cap", async () => {
         const { token, engine, engineAddr } = await launchSystem(ethers, deployer, treasury);
         const donatedAmt = ONE;
         const ownAmt = 10n * ONE;
@@ -267,8 +299,59 @@ describe("NARAEngine v4 — lock paths", () => {
             await engine.connect(alice).lockFor(bobAddr, donatedAmt, 50n, 0n);
         }
 
+        await engine.connect(bob).lock(ownAmt, 50n, 0n);
+
+        const donatedPosition = await engine.positionOf(1n);
+        const bobPosition = await engine.positionOf(65n);
+        expect(donatedPosition.flags).to.equal(0n);
+        expect(bobPosition.owner).to.equal(bobAddr);
+        expect(bobPosition.flags).to.equal(1n);
+    });
+
+    it("third-party ERC-1363 posOwner does not consume the recipient cap", async () => {
+        const { token, engine, engineAddr } = await launchSystem(ethers, deployer, treasury);
+        const donatedAmt = ONE;
+        const ownAmt = 10n * ONE;
+        const aliceAddr = await alice.getAddress();
+        const bobAddr = await bob.getAddress();
+        const data = ethers.AbiCoder.defaultAbiCoder().encode(
+            ["uint64", "uint256", "address"],
+            [50n, 0n, bobAddr],
+        );
+
+        await token.connect(treasury).transfer(aliceAddr, 64n * donatedAmt);
+        await token.connect(treasury).transfer(bobAddr, ownAmt);
+        await token.connect(bob).approve(engineAddr, ownAmt);
+
+        for (let i = 0; i < 64; i++) {
+            await (token.connect(alice) as any)["transferAndCall(address,uint256,bytes)"](
+                engineAddr, donatedAmt, data,
+            );
+        }
+
+        await engine.connect(bob).lock(ownAmt, 50n, 0n);
+
+        const donatedPosition = await engine.positionOf(1n);
+        const bobPosition = await engine.positionOf(65n);
+        expect(donatedPosition.owner).to.equal(bobAddr);
+        expect(donatedPosition.flags).to.equal(0n);
+        expect(bobPosition.flags).to.equal(1n);
+    });
+
+    it("self-created locks still enforce the per-owner cap", async () => {
+        const { token, engine, engineAddr } = await launchSystem(ethers, deployer, treasury);
+        const amt = ONE;
+        const bobAddr = await bob.getAddress();
+
+        await token.connect(treasury).transfer(bobAddr, 65n * amt);
+        await token.connect(bob).approve(engineAddr, 65n * amt);
+
+        for (let i = 0; i < 64; i++) {
+            await engine.connect(bob).lock(amt, 50n, 0n);
+        }
+
         await expect(
-            engine.connect(bob).lock(ownAmt, 50n, 0n),
+            engine.connect(bob).lock(amt, 50n, 0n),
         ).to.be.revertedWithCustomError(engine, "TooManyPositions");
     });
 
@@ -291,6 +374,32 @@ describe("NARAEngine v4 — lock paths", () => {
         const pos = await engine.positionOf(1n);
         expect(pos.amount).to.equal(amt);
         expect(pos.owner).to.equal(aliceAddr);
+    });
+
+    it("ERC-1363 transferFromAndCall lets an approved operator choose the position owner", async () => {
+        const { token, engine, engineAddr } = await launchSystem(ethers, deployer, treasury);
+        const amt = 400n * ONE;
+        const aliceAddr = await alice.getAddress();
+        const bobAddr = await bob.getAddress();
+        await token.connect(treasury).transfer(aliceAddr, amt);
+        await token.connect(alice).approve(bobAddr, amt);
+
+        const data = ethers.AbiCoder.defaultAbiCoder().encode(
+            ["uint64", "uint256", "address"],
+            [60n, 0n, bobAddr],
+        );
+
+        await (token.connect(bob) as any)["transferFromAndCall(address,address,uint256,bytes)"](
+            aliceAddr,
+            engineAddr,
+            amt,
+            data,
+        );
+
+        const pos = await engine.positionOf(1n);
+        expect(pos.amount).to.equal(amt);
+        expect(pos.owner).to.equal(bobAddr);
+        expect(await token.allowance(aliceAddr, bobAddr)).to.equal(0n);
     });
 
     it("onTransferReceived reverts when flat lock ETH fee is enabled", async () => {
@@ -391,11 +500,11 @@ describe("NARAEngine v4 — lock paths", () => {
 // ────────────────────────────────────────────────────────────────────────────
 describe("NARAEngine v4 — advance, claim, unlock", () => {
     let ethers: any;
-    let deployer: Signer, treasury: Signer, alice: Signer;
+    let deployer: Signer, treasury: Signer, alice: Signer, bob: Signer, sponsor: Signer;
 
     before(async () => {
         ({ ethers } = await hre.network.connect());
-        [deployer, treasury, alice] = await ethers.getSigners();
+        [deployer, treasury, alice, bob, sponsor] = await ethers.getSigners();
     });
 
     it("advances epochs via JIT on interaction; poke() works permissionlessly", async () => {
@@ -481,6 +590,83 @@ describe("NARAEngine v4 — advance, claim, unlock", () => {
         // Position cleared
         expect((await engine.positionOf(1n)).amount).to.equal(0n);
         expect(await engine.totalLocked()).to.equal(0n);
+    });
+
+    it("unlocks when pending NARA reward telemetry is one wei below owed rewards", async () => {
+        const { token, engine, engineAddr } = await launchSystem(ethers, deployer, treasury);
+        const amt = 10_000n * ONE;
+        const aliceAddr = await alice.getAddress();
+
+        await token.connect(treasury).transfer(aliceAddr, amt);
+        await token.connect(alice).approve(engineAddr, amt);
+        await engine.connect(alice).lock(amt, 10n, 0n);
+
+        await mineTime(ethers, EPOCH_SECONDS * 20n);
+        await engine.connect(alice).advanceEpochs(64);
+
+        const [naraOwed] = await engine.claimableRewards(1n);
+        expect(naraOwed).to.be.gt(1n);
+        expect(await engine.totalPendingNaraRewards()).to.be.gte(naraOwed);
+
+        await setTotalPendingNaraRewardsForTest(ethers, engine, naraOwed - 1n);
+
+        const preUnlock = await token.balanceOf(aliceAddr);
+        await engine.connect(alice).unlock(1n);
+        const postUnlock = await token.balanceOf(aliceAddr);
+
+        expect(postUnlock - preUnlock).to.equal(amt + naraOwed);
+        expect(await engine.totalPendingNaraRewards()).to.equal(0n);
+        expect((await engine.positionOf(1n)).amount).to.equal(0n);
+    });
+
+    it("M-04 boundary: maturing positions exclude rewards indexed at unlockEpoch", async () => {
+        const { token, engine, engineAddr } = await launchSystem(ethers, deployer, treasury);
+        const amt = 1_000n * ONE;
+        const aliceAddr = await alice.getAddress();
+        const bobAddr = await bob.getAddress();
+
+        await token.connect(treasury).transfer(aliceAddr, amt);
+        await token.connect(treasury).transfer(bobAddr, amt);
+        await token.connect(alice).approve(engineAddr, amt);
+        await token.connect(bob).approve(engineAddr, amt);
+
+        await engine.connect(alice).lock(amt, 5n, 0n);  // activation=4, unlock=6
+        await engine.connect(bob).lock(amt, 100n, 0n);  // remains active at epoch 6
+        const alicePosition = await engine.positionOf(1n);
+        expect(alicePosition.activationEpoch).to.equal(4n);
+        expect(alicePosition.unlockEpoch).to.equal(6n);
+
+        await mineTime(ethers, EPOCH_SECONDS * 4n);
+        await engine.connect(alice).poke();
+
+        await engine.connect(sponsor).notifyEthRewards({ value: ONE });
+        await mineTime(ethers, EPOCH_SECONDS);
+        await engine.connect(alice).advanceEpochs(1); // epoch 5: Alice and Bob active
+
+        await engine.connect(sponsor).notifyEthRewards({ value: ONE });
+        await mineTime(ethers, EPOCH_SECONDS);
+        await engine.connect(alice).advanceEpochs(1); // epoch 6: Alice deactivates first
+
+        const naraStart = await engine.naraIndexAtEpoch(alicePosition.activationEpoch - 1n);
+        const naraAtLastActive = await engine.naraIndexAtEpoch(alicePosition.unlockEpoch - 1n);
+        const naraAtUnlock = await engine.naraIndexAtEpoch(alicePosition.unlockEpoch);
+        const ethStart = await engine.ethIndexAtEpoch(alicePosition.activationEpoch - 1n);
+        const ethAtLastActive = await engine.ethIndexAtEpoch(alicePosition.unlockEpoch - 1n);
+        const ethAtUnlock = await engine.ethIndexAtEpoch(alicePosition.unlockEpoch);
+
+        expect(naraAtUnlock).to.be.gt(naraAtLastActive);
+        expect(ethAtUnlock).to.be.gt(ethAtLastActive);
+
+        const expectedNara = mulDivDown(alicePosition.weight, naraAtLastActive - naraStart, RAY);
+        const expectedEth = mulDivDown(alicePosition.weight, ethAtLastActive - ethStart, RAY);
+        const overclaimNara = mulDivDown(alicePosition.weight, naraAtUnlock - naraStart, RAY);
+        const overclaimEth = mulDivDown(alicePosition.weight, ethAtUnlock - ethStart, RAY);
+
+        const [claimableNara, claimableEth] = await engine.claimableRewards(1n);
+        expect(claimableNara).to.equal(expectedNara);
+        expect(claimableEth).to.equal(expectedEth);
+        expect(overclaimNara).to.be.gt(expectedNara);
+        expect(overclaimEth).to.be.gt(expectedEth);
     });
 
     it("unlock reverts PositionNotMatured before unlockEpoch", async () => {
@@ -817,7 +1003,7 @@ describe("NARAEngine v4 — multi-token bribes", () => {
         await mineTime(ethers, EPOCH_SECONDS * 6n);
         await engine.connect(bob).poke();
         const alicePosition = await engine.positionOf(1n);
-        expect((await engine.epochStateView()).epoch).to.be.gte(alicePosition.unlockEpoch);
+        expect((await engine.epochState()).epoch).to.be.gte(alicePosition.unlockEpoch);
 
         await engine.connect(briber).notifyTokenRewards(bribeAddr, 1_000n * ONE);
 
@@ -888,6 +1074,103 @@ describe("NARAEngine v4 — multi-token bribes", () => {
         await expect(engine.connect(alice).extend(1n, 10n))
             .to.emit(engine, "Extended");
     });
+
+    // M-05 (audit 2026-06-10): in production BribeRouterV4 (permissionless notify) and the
+    // growth vault HOLD REWARD_NOTIFIER_ROLE, so a *legitimate* token-reward notify used to set a
+    // global latch that permanently disabled extend() for every active position. The fix freezes
+    // a position's token-reward weight (`tokenWeight`) once token rewards are live, so extend()
+    // works again while still preventing the larger post-extend weight from over-crediting token
+    // rewards. The test above only proves an UNAUTHORIZED caller can't notify; these prove the
+    // real-world authorized path now behaves correctly.
+    it("M-05 fix: extend() succeeds for active positions even after an authorized token-reward notify", async () => {
+        const { token, engine, engineAddr } = await launchSystem(ethers, deployer, treasury);
+        const aliceAddr = await alice.getAddress();
+
+        await token.connect(treasury).transfer(aliceAddr, 1_000n * ONE);
+        await token.connect(alice).approve(engineAddr, 1_000n * ONE);
+        await engine.connect(alice).lock(1_000n * ONE, 100n, 0n);
+        await mineTime(ethers, EPOCH_SECONDS * 5n);
+        await engine.connect(alice).poke(); // position now active, not matured
+
+        const bribe = await deployErc20(ethers, briber, await briber.getAddress());
+        await grantRewardNotifier(ethers, engine, deployer, briber);
+        await bribe.connect(briber).approve(engineAddr, 1_000n * ONE);
+        await engine.connect(briber).notifyTokenRewards(await bribe.getAddress(), 1_000n * ONE);
+
+        // Fixed: extend() is no longer disabled by a live token-reward stream.
+        await expect(engine.connect(alice).extend(1n, 10n)).to.emit(engine, "Extended");
+    });
+
+    it("M-05 fix: extending does NOT over-credit token rewards (token weight frozen, no insolvency)", async () => {
+        const { token, engine, engineAddr } = await launchSystem(ethers, deployer, treasury);
+        const aliceAddr = await alice.getAddress();
+        const bob = (await ethers.getSigners())[4];
+        const bobAddr = await bob.getAddress();
+
+        // Two equal active lockers.
+        await token.connect(treasury).transfer(aliceAddr, 1_000n * ONE);
+        await token.connect(treasury).transfer(bobAddr, 1_000n * ONE);
+        await token.connect(alice).approve(engineAddr, 1_000n * ONE);
+        await token.connect(bob).approve(engineAddr, 1_000n * ONE);
+        await engine.connect(alice).lock(1_000n * ONE, 100n, 0n);
+        const bobId = await engine.connect(bob).lock.staticCall(1_000n * ONE, 100n, 0n);
+        await engine.connect(bob).lock(1_000n * ONE, 100n, 0n);
+        await mineTime(ethers, EPOCH_SECONDS * 5n);
+        await engine.connect(alice).poke();
+
+        const bribe = await deployErc20(ethers, briber, await briber.getAddress());
+        const bribeAddr = await bribe.getAddress();
+        await grantRewardNotifier(ethers, engine, deployer, briber);
+        await bribe.connect(briber).approve(engineAddr, 4_000n * ONE);
+
+        // Bribe #1 while weights are equal.
+        await engine.connect(briber).notifyTokenRewards(bribeAddr, 1_000n * ONE);
+
+        // Alice extends (live weight grows). Token weight must stay frozen at the original.
+        await engine.connect(alice).extend(1n, 50n);
+
+        // Bribe #2 after the extend.
+        await engine.connect(briber).notifyTokenRewards(bribeAddr, 1_000n * ONE);
+
+        await engine.connect(alice).claimTokenRewards(1n, bribeAddr, aliceAddr);
+        await engine.connect(bob).claimTokenRewards(bobId, bribeAddr, bobAddr);
+        const aliceGot = await bribe.balanceOf(aliceAddr);
+        const bobGot = await bribe.balanceOf(bobAddr);
+
+        // Equal frozen token weight => equal token-reward claims (extend gave Alice no token-share boost).
+        const diff = aliceGot > bobGot ? aliceGot - bobGot : bobGot - aliceGot;
+        expect(diff).to.be.lte(10n); // rounding dust only
+        // Solvency: total claimed never exceeds total notified.
+        expect(aliceGot + bobGot).to.be.lte(2_000n * ONE);
+    });
+
+    it("M-03 regression: config-decrease extend cannot drop live weight below frozen token weight", async () => {
+        const { token, engine, engineAddr } = await launchSystem(ethers, deployer, treasury);
+        const aliceAddr = await alice.getAddress();
+
+        await token.connect(treasury).transfer(aliceAddr, 1_000n * ONE);
+        await token.connect(alice).approve(engineAddr, 1_000n * ONE);
+        await engine.connect(alice).lock(1_000n * ONE, 100n, 0n);
+        await mineTime(ethers, EPOCH_SECONDS * 5n);
+        await engine.connect(alice).poke();
+
+        const bribe = await deployErc20(ethers, briber, await briber.getAddress());
+        await grantRewardNotifier(ethers, engine, deployer, briber);
+        await bribe.connect(briber).approve(engineAddr, 1_000n * ONE);
+        await engine.connect(briber).notifyTokenRewards(await bribe.getAddress(), 1_000n * ONE);
+
+        const cfg2 = defaultEngineConfig(ethers);
+        cfg2.durationLinearWad = ethers.parseUnits("0.1", 18);
+        cfg2.durationQuadraticWad = 0n;
+        await engine.connect(deployer).proposeConfig(cfg2);
+        await mineTime(ethers, CONFIG_DELAY + 1n);
+        await engine.connect(deployer).executeConfig();
+        await mineTime(ethers, EPOCH_SECONDS);
+        await engine.connect(deployer).poke();
+
+        await expect(engine.connect(alice).extend(1n, 1n))
+            .to.be.revertedWithCustomError(engine, "InvalidExtension");
+    });
 });
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -946,7 +1229,7 @@ describe("NARAEngine v4 â€” NARA reward top-ups", () => {
 
         await borrower.flashBorrowAndAdvance(await token.getAddress(), loan, 1);
 
-        const snapshot = await engine.epochStateView();
+        const snapshot = await engine.epochState();
         expect(snapshot.circulatingSupply).to.equal(MAX_SUPPLY - 100_000n * ONE);
         expect(await token.balanceOf(engineAddr)).to.equal(100_000n * ONE + fee);
     });
@@ -1087,6 +1370,14 @@ describe("NARAEngine v4 — admin controls", () => {
         const reserve = await ethers.deployContract("NARARewardReserve", [await deployer.getAddress(), 100_000n * ONE], deployer);
         await reserve.waitForDeployment();
         await reserve.connect(deployer).setNara(tokenAddr);
+
+        const notEngine = await ethers.deployContract("NARABondVaultV4", [await deployer.getAddress(), 86_400, 10_000n * ONE], deployer);
+        await notEngine.waitForDeployment();
+        await notEngine.connect(deployer).setNara(tokenAddr);
+        await expect(
+            reserve.connect(deployer).setEngine(await notEngine.getAddress()),
+        ).to.be.revertedWithCustomError(reserve, "InvalidEngine");
+
         await reserve.connect(deployer).setEngine(engineAddr);
         await token.connect(treasury).transfer(await reserve.getAddress(), 1_000n * ONE);
 
@@ -1179,5 +1470,84 @@ describe("NARAEngine v4 — admin controls", () => {
         await expect(
             engine.connect(deployer).setLockEthFee(BigInt(2e16)),
         ).to.be.revertedWithCustomError(engine, "InvalidConfig");
+    });
+
+    it("M-01: successful reserve under-delivery is measured and cannot mint phantom rewards", async () => {
+        const { token, engine, tokenAddr, engineAddr } = await launchSystem(ethers, deployer, treasury, 0n);
+        const aliceAddr = await alice.getAddress();
+        const amt = 1_000n * ONE;
+
+        await token.connect(treasury).transfer(aliceAddr, amt);
+        await token.connect(alice).approve(engineAddr, amt);
+        await engine.connect(alice).lock(amt, 100n, 0n);
+
+        await mineTime(ethers, EPOCH_SECONDS * 5n);
+        await engine.connect(alice).poke();
+        expect(await engine.emissionReserve()).to.equal(0n);
+
+        const badReserve = await ethers.deployContract(
+            "contracts/v4/mocks/MockMaliciousRewardReserve.sol:MockMaliciousRewardReserve",
+            [],
+            deployer,
+        );
+        await badReserve.waitForDeployment();
+        const badReserveAddr = await badReserve.getAddress();
+        await badReserve.configure(tokenAddr, engineAddr);
+        await token.connect(treasury).transfer(badReserveAddr, 1_000n * ONE);
+        await badReserve.setAvailable(1_000n * ONE);
+        await badReserve.setReleaseAmount(1n);
+        await engine.connect(deployer).setRewardReserve(badReserveAddr);
+
+        await mineTime(ethers, EPOCH_SECONDS);
+        await engine.connect(alice).advanceEpochs(1);
+        const snap = await engine.epochState();
+        expect(snap.distributedNara).to.equal(1n);
+        expect(await engine.totalPendingNaraRewards()).to.equal(1n);
+        expect(await engine.trackedEmissionReserve()).to.equal(0n);
+
+        const balance = await token.balanceOf(engineAddr);
+        const requiredBacking = await engine.totalLocked() + await engine.totalPendingNaraRewards();
+        expect(balance).to.be.gte(requiredBacking);
+    });
+
+    // M-04 (audit 2026-06-10): rewardReserve.availableRewards()/releaseToEngine() are consulted
+    // inside _advanceOneEpoch. A reserve that reverts there used to freeze every user mutation
+    // (all go through _jitAdvanceFresh). The fix wraps both calls in try/catch and falls back to
+    // locally-held emission funds, so a misbehaving reserve can never brick the engine.
+    it("M-04: a reverting reward reserve does not freeze epoch advancement (fails open)", async () => {
+        const { token, engine, tokenAddr, engineAddr } = await launchSystem(ethers, deployer, treasury);
+        const aliceAddr = await alice.getAddress();
+
+        // Active locker so epoch advances distribute NARA (distributedNara > 0 -> reserve consulted).
+        await token.connect(treasury).transfer(aliceAddr, 1_000n * ONE);
+        await token.connect(alice).approve(engineAddr, 1_000n * ONE);
+        await engine.connect(alice).lock(1_000n * ONE, 100n, 0n);
+        await mineTime(ethers, EPOCH_SECONDS * 5n);
+        await engine.connect(alice).poke();
+
+        // Wire a reserve that passes setRewardReserve validation but can be flipped hostile.
+        const badReserve = await ethers.deployContract(
+            "contracts/v4/mocks/MockMaliciousRewardReserve.sol:MockMaliciousRewardReserve",
+            [],
+            deployer,
+        );
+        await badReserve.waitForDeployment();
+        await badReserve.configure(tokenAddr, engineAddr);
+        await engine.connect(deployer).setRewardReserve(await badReserve.getAddress());
+
+        // Flip it hostile: availableRewards()/releaseToEngine() now revert.
+        await badReserve.setBoom(true);
+
+        // Epoch advance must still succeed and actually distribute (reserve revert is caught).
+        await mineTime(ethers, EPOCH_SECONDS);
+        const before = (await engine.epochState()).epoch;
+        await expect(engine.connect(alice).advanceEpochs(1)).to.emit(engine, "EpochAdvanced");
+        const snap = await engine.epochState();
+        expect(snap.epoch).to.be.gt(before);
+        expect(snap.distributedNara).to.be.gt(0n); // confirms the reserve path was exercised
+
+        // And ordinary user flows are not bricked either.
+        await mineTime(ethers, EPOCH_SECONDS);
+        await engine.connect(alice).poke(); // reverts here would fail the test
     });
 });

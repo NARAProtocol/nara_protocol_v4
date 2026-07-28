@@ -1,10 +1,13 @@
 # NARA v4 Composability Layer - Audit Checklist
 
-Last updated: 2026-05-27.
+Last updated: 2026-07-26.
 
 Code is the source of truth. This checklist is synchronized to the current v4 implementation under `contracts/v4/composability/`.
 
-**Status:** internal v4 review complete for the current implementation. External review is still required before mainnet TVL.
+**Status:** code exists but composability is deferred and not deployed. Internal
+review evidence exists; no independent audit is claimed. Before any future
+mainnet activation, rerun this checklist against the exact deployment candidate
+and record the operator's explicit review decision.
 
 ---
 
@@ -326,10 +329,12 @@ All of these must be true before deploying the composability layer to Base mainn
 - [ ] `npm test` passes.
 - [ ] `npm run size` passes and all deployable artifacts remain under EVM bytecode limits.
 - [ ] Slither or equivalent static analysis is run on `contracts/v4/composability/`.
-- [ ] External audit is complete or explicitly waived by governance.
+- [ ] Independent review status is stated accurately; no third-party audit is
+  claimed unless evidence exists.
 - [ ] All critical and high findings are resolved.
 - [ ] Medium findings are resolved or explicitly accepted.
-- [ ] `scripts/deployComposabilityV4.ts` dry-run succeeds on Base Sepolia or a fork with production addresses.
+- [ ] `scripts/deployComposabilityV4.ts` dry-run succeeds on an exact
+  Base-mainnet fork using the intended production addresses.
 - [ ] Constructor addresses are verified: `NARA_TOKEN_V4`, `USDC_ADDRESS`, `ENGINE_V4`, `POSITION_NFT_V4`, `ADMIN_ADDRESS`.
 - [ ] `CONFIG_ROLE` and `EMERGENCY_ROLE` on `NARAStakingPoolV4` are assigned to the intended Safe or timelock before public deposits.
 - [ ] First mainnet deposit is at least `100 NARA`, because `MIN_INITIAL_DEPOSIT = 100e18`.

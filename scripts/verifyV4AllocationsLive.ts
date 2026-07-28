@@ -53,8 +53,8 @@ async function main() {
   const treasury = ethers.getAddress(env("V4_TREASURY_ADDRESS"));
   const deployer = ethers.getAddress(env("DEPLOYER_ADDRESS"));
   const expectedOpsAmount = ethers.parseUnits(env("V4_EXPECTED_OPS_AMOUNT_NARA", "0"), 18);
-  const expectedBondAmount = ethers.parseUnits(env("V4_EXPECTED_BOND_AMOUNT_NARA", "289970"), 18);
-  const expectedTreasuryFloat = ethers.parseUnits(env("V4_EXPECTED_TREASURY_FLOAT_NARA", "0"), 18);
+  const expectedBondAmount = ethers.parseUnits(env("V4_EXPECTED_BOND_AMOUNT_NARA", "200000"), 18);
+  const expectedTreasuryFloat = ethers.parseUnits(env("V4_EXPECTED_TREASURY_FLOAT_NARA", "150000"), 18);
   const expectedOpsFunded = envFlag("V4_EXPECTED_OPS_FUNDED", false);
   const expectedRoyaltyBps = BigInt(env("V4_POSITION_NFT_ROYALTY_BPS", "0"));
   const expectedRoyaltyReceiver = expectedRoyaltyBps === 0n
@@ -82,8 +82,28 @@ async function main() {
   );
   const positionRendererAddress = await positionNft.renderer();
   const positionRenderer = await ethers.getContractAt(
-    "contracts/v4/NARAPositionRendererV4.sol:NARAPositionRendererV4",
+    "contracts/v4/NARAPositionRendererV5.sol:NARAPositionRendererV5",
     positionRendererAddress,
+  );
+  const positionArtMetadataAddress = await positionRenderer.METADATA();
+  const positionArtCorePlateAddress = await positionRenderer.CORE_PLATE();
+  const positionArtGenesisPlateAddress = await positionRenderer.GENESIS_PLATE();
+  const positionArtCollectionAddress = await positionRenderer.COLLECTION_ART();
+  const positionArtMetadata = await ethers.getContractAt(
+    "contracts/v4/NARAArtMetadataV1.sol:NARAArtMetadataV1",
+    positionArtMetadataAddress,
+  );
+  const positionArtCorePlate = await ethers.getContractAt(
+    "contracts/v4/NARAArtCorePlateV1.sol:NARAArtCorePlateV1",
+    positionArtCorePlateAddress,
+  );
+  const positionArtGenesisPlate = await ethers.getContractAt(
+    "contracts/v4/NARAArtGenesisPlateV1.sol:NARAArtGenesisPlateV1",
+    positionArtGenesisPlateAddress,
+  );
+  const positionArtCollection = await ethers.getContractAt(
+    "contracts/v4/NARAArtSecurityPrintV1.sol:NARAArtSecurityPrintV1",
+    positionArtCollectionAddress,
   );
 
   assertEq("ops balance", opsBalance, expectedOpsAmount);
@@ -110,9 +130,24 @@ async function main() {
   assertEq("position NFT nara", await positionNft.nara(), tokenAddress);
   assertTrue("position NFT renderer set", positionRendererAddress !== ethers.ZeroAddress);
   assertTrue("position NFT renderer has code", (await ethers.provider.getCode(positionRendererAddress)) !== "0x");
-  assertEq("position renderer artwork count", await positionRenderer.ARTWORK_COUNT(), 8n);
-  assertEq("position renderer version", await positionRenderer.RENDERER_VERSION(), 1n);
+  assertEq("position renderer version", await positionRenderer.RENDERER_VERSION(), 5n);
+  assertTrue("position art metadata has code", (await ethers.provider.getCode(positionArtMetadataAddress)) !== "0x");
+  assertTrue("position art core plate has code", (await ethers.provider.getCode(positionArtCorePlateAddress)) !== "0x");
+  assertTrue("position art genesis plate has code", (await ethers.provider.getCode(positionArtGenesisPlateAddress)) !== "0x");
+  assertTrue("position art collection module has code", (await ethers.provider.getCode(positionArtCollectionAddress)) !== "0x");
+  assertEq("position art metadata version", await positionArtMetadata.METADATA_VERSION(), 1n);
+  assertEq("position art core plate version", await positionArtCorePlate.CORE_PLATE_VERSION(), 1n);
+  assertEq("position art genesis plate version", await positionArtGenesisPlate.GENESIS_PLATE_VERSION(), 1n);
+  assertEq("position art security print version", await positionArtCollection.SECURITY_PRINT_VERSION(), 1n);
+  assertEq("position art core security print", await positionArtCorePlate.SECURITY_PRINT(), positionArtCollectionAddress);
   assertEq("position NFT royalty freeze", await positionNft.royaltyFrozen(), envFlag("V4_EXPECTED_ROYALTIES_FROZEN", true));
+  const expectedClaimFeeRecipient = env("V4_EXPECTED_CLAIM_FEE_RECIPIENT", ethers.ZeroAddress);
+  const expectedNaraClaimFee = BigInt(env("V4_EXPECTED_NARA_CLAIM_FEE_BPS", "0"));
+  const expectedTokenClaimFee = BigInt(env("V4_EXPECTED_TOKEN_CLAIM_FEE_BPS", "0"));
+  assertEq("position NFT claim fee recipient", await positionNft.claimFeeRecipient(), expectedClaimFeeRecipient);
+  assertEq("position NFT NARA claim fee", await positionNft.naraClaimFeeBps(), expectedNaraClaimFee);
+  assertEq("position NFT token claim fee", await positionNft.tokenClaimFeeBps(), expectedTokenClaimFee);
+  assertEq("position NFT claim fee freeze", await positionNft.claimFeesFrozen(), envFlag("V4_EXPECTED_CLAIM_FEES_FROZEN", false));
   assertTrue("position NFT Genesis minters frozen", await positionNft.genesisMintersFrozen());
   assertEq("position NFT owner", await positionNft.owner(), positionNftOwner);
   assertEq("position NFT pending owner", await positionNft.pendingOwner(), ethers.ZeroAddress);

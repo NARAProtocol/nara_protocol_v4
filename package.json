@@ -2,12 +2,15 @@
   "name": "nara-protocol-hardhat",
   "private": true,
   "version": "0.2.0",
-  "description": "NARA protocol v4 contracts and operations workspace. v3 stack archived under archive/legacy-v3/.",
+  "description": "Experimental NARA v4 position, accounting, liquidity, and integration contracts for Base.",
   "type": "module",
   "scripts": {
     "build": "hardhat compile",
     "clean": "hardhat clean",
     "test": "hardhat test",
+    "check": "npm run verify:public && npm run build && npm test && npm run size && npm audit --audit-level=high",
+    "verify:public": "node scripts/checkPublicRepo.mjs",
+    "audit:deps": "npm audit --audit-level=high",
     "test:token:v4": "hardhat test test/NARAToken.v4.test.ts",
     "test:engine:v4": "hardhat test test/NARAEngine.v4.test.ts",
     "test:liquidity:v4": "hardhat test test/NARALiquidityGrowth.v4.test.ts",
@@ -24,16 +27,43 @@
     "echidna:v4": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/runEchidnaV4.ps1",
     "echidna:v4:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/runEchidnaV4.ps1 -TestLimit 1000 -SeqLen 32",
     "launch:gates": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/runMainnetLaunchGates.ps1",
+    "gates:package": "node scripts/packageGatesTarball.mjs",
     "deploy:v4:base:usdc": "hardhat run scripts/deployV4BaseUsdc.ts --network base",
     "deploy:v4:allocations": "hardhat run scripts/deployV4Allocations.ts --network base",
     "deploy:v4:router:lens": "hardhat run scripts/deployRouterLens.ts --network base",
     "deploy:v4:pool:only": "hardhat run scripts/redeployPoolOnly.ts --network base",
     "verify:v4:allocations": "hardhat run scripts/verifyV4AllocationsLive.ts --network base",
     "verify:v4:preflight": "tsx scripts/verifyV4Preflight.ts",
+    "verify:v4:preseed": "tsx scripts/verifyV4Preflight.ts --pre-seed",
+    "execute:v4:nara-depth": "tsx scripts/executeV4NaraDepth.ts",
+    "verify:v4:launch-gates": "tsx scripts/verifyV4LaunchGates.ts",
     "smoke:v4": "tsx scripts/smokeTestV4Deployment.ts",
     "v4:env:sync": "tsx scripts/syncV4FreshEnv.ts",
     "v4:env:sync:write": "tsx scripts/syncV4FreshEnv.ts --write-dotenv",
     "fund:v4:reserve": "hardhat run scripts/fundEmissionReserveV4.ts --network base"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NARAProtocol/nara_protocol_v4.git"
+  },
+  "bugs": {
+    "url": "https://github.com/NARAProtocol/nara_protocol_v4/issues"
+  },
+  "homepage": "https://github.com/NARAProtocol/nara_protocol_v4#readme",
+  "keywords": [
+    "solidity",
+    "base",
+    "hardhat",
+    "uniswap-v4",
+    "erc-20",
+    "erc-721",
+    "erc-2612",
+    "erc-3156",
+    "erc-1363"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-ethers": "4.0.7",
@@ -41,11 +71,8 @@
     "@nomicfoundation/hardhat-keystore": "3.0.5",
     "@nomicfoundation/hardhat-mocha": "3.0.15",
     "@nomicfoundation/hardhat-network-helpers": "3.0.4",
-    "@nomicfoundation/hardhat-typechain": "3.0.5",
     "@nomicfoundation/hardhat-verify": "3.0.13",
     "@openzeppelin/contracts": "5.6.1",
-    "@typechain/ethers-v6": "0.5.1",
-    "@typechain/hardhat": "9.1.0",
     "@types/chai": "5.2.3",
     "@types/mocha": "10.0.10",
     "@types/node": "25.5.2",
@@ -54,15 +81,19 @@
     "chai": "6.2.2",
     "dotenv": "17.4.0",
     "hardhat": "3.3.0",
-    "mocha": "11.7.5",
+    "mocha": "11.7.6",
     "ts-node": "10.9.2",
-    "tsx": "4.21.0",
-    "typechain": "8.3.2",
+    "tsx": "4.23.1",
     "typescript": "6.0.2"
   },
   "overrides": {
+    "hardhat": {
+      "adm-zip": "0.6.0"
+    },
+    "minimatch": "10.2.6",
+    "brace-expansion": "5.0.8",
+    "diff": "9.0.0",
     "mocha": {
-      "diff": "5.2.0",
       "serialize-javascript": "7.0.5"
     }
   }

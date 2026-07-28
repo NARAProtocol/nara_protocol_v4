@@ -54,6 +54,8 @@ error NARAPositionNFTV4__PositionNotMatured();
 error NARAPositionNFTV4__NativeTransferFailed();
 error NARAPositionNFTV4__RoyaltiesFrozen();
 error NARAPositionNFTV4__GenesisMintersFrozen();
+error NARAPositionNFTV4__ClaimFeeTooHigh(uint16 max, uint16 provided);
+error NARAPositionNFTV4__ClaimFeesFrozen();
 
 /// @title NARAPositionNFTV4
 /// @notice ERC-721 wrapper for tradable NARA v4 engine positions.
@@ -65,6 +67,8 @@ contract NARAPositionNFTV4 is ERC721, ERC2981, IERC4906, ReentrancyGuard, Ownabl
     uint256 public constant BPS = 10_000;
     uint96 public constant MAX_ROYALTY_BPS = 1_000;
     uint32 public constant MAX_GENESIS_REWARD_MULTIPLIER_BPS = 50_000;
+    /// @notice Hard cap (10%) on the wrapper-level claim fees. Bytecode-enforced ceiling.
+    uint16 public constant MAX_CLAIM_FEE_BPS = 1_000;
 
     struct GenesisMetadata {
         bool isGenesis;
@@ -83,6 +87,27 @@ contract NARAPositionNFTV4 is ERC721, ERC2981, IERC4906, ReentrancyGuard, Ownabl
     address public genesisRewardDistributor;
     bool public royaltyFrozen;
     bool public genesisMintersFrozen;
+
+    // Wrapper-level claim fees. The engine is immutable and at its size limit, so
+    // these live here instead. They tax reward claims that flow through the NFT
+    // wrapper only — positions held directly as EOAs via engine.lock() bypass them.
+    // Both default to 0 (full pass-through) and are inert while claimFeeRecipient
+    // is unset. naraClaimFeeBps taxes NARA emission claims; tokenClaimFeeBps taxes
+    // bribed/external ERC20 reward claims. ETH claims are already taxed by the engine.
+    uint16 public naraClaimFeeBps;
+    uint16 public tokenClaimFeeBps;
+    address public claimFeeRecipient;
+    bool public claimFeesFrozen;
+
+    // Per-position lifetime rewards delivered to holders through the wrapper. These
+    // are realized, historical facts (not projections) and only change on a token-
+    // specific claim tx, which makes them safe to surface in cached NFT metadata.
+    // ETH reflects amounts net of the engine claim fee; NARA reflects amounts net
+    // of any wrapper NARA claim fee — i.e. exactly what the holder received.
+    mapping(uint256 => uint256) public lifetimeNaraClaimed;
+    mapping(uint256 => uint256) public lifetimeEthClaimed;
+    mapping(uint256 => uint32) public lifetimeClaimCount;
+    mapping(uint256 => uint32) public lifetimeExtendCount;
 
     uint256 private _nextTokenId = 1;
 
@@ -108,6 +133,9 @@ contract NARAPositionNFTV4 is ERC721, ERC2981, IERC4906, ReentrancyGuard, Ownabl
         uint64 durationEpochs
     );
     event PositionExtended(uint256 indexed tokenId, uint256 indexed positionId, uint64 additionalEpochs);
+    event ClaimFeesSet(uint16 naraClaimFeeBps, uint16 tokenClaimFeeBps);
+    event ClaimFeeRecipientSet(address indexed recipient);
+    event ClaimFeesFrozen();
     event PositionRewardsClaimed(uint256 indexed tokenId, uint256 indexed positionId, address indexed to, uint256 naraAmount, uint256 ethAmount);
     event PositionTokenRewardsClaimed(uint256 indexed tokenId, uint256 indexed positionId, address indexed token, address to, uint256 amount);
     event ClosedPositionTokenRewardsClaimed(uint256 indexed positionId, address indexed token, address indexed to, uint256 amount);
@@ -126,6 +154,7 @@ contract NARAPositionNFTV4 is ERC721, ERC2981, IERC4906, ReentrancyGuard, Ownabl
     event GenesisRewardDistributorSet(address indexed distributor);
     event GenesisEthClaimed(uint256 indexed tokenId, address indexed to, uint256 amount);
     event GenesisTokenClaimed(uint256 indexed tokenId, address indexed to, uint256 amount);
+    event GenesisCloseNotifyFailed(uint256 indexed tokenId);
     event NativeSwept(address indexed to, uint256 amount);
     event RoyaltiesFrozen();
     event GenesisMintersFrozen();
@@ -196,6 +225,43 @@ contract NARAPositionNFTV4 is ERC721, ERC2981, IERC4906, ReentrancyGuard, Ownabl
         royaltyFrozen = true;
         emit RoyaltiesFrozen();
     }
+
+    /// @notice Set the wrapper-level NARA and bribe-token claim fees (bps, ≤10%).
+    /// @dev Inert until claimFeeRecipient is set. Disabled once claim fees are frozen.
+    function setClaimFees(uint16 naraClaimFeeBps_, uint16 tokenClaimFeeBps_) external onlyOwner {
+        if (claimFeesFrozen) revert NARAPositionNFTV4__ClaimFeesFrozen();
+        if (naraClaimFeeBps_ > MAX_CLAIM_FEE_BPS) {
+            revert NARAPositionNFTV4__ClaimFeeTooHigh(MAX_CLAIM_FEE_BPS, naraClaimFeeBps_);
+        }
+        if (tokenClaimFeeBps_ > MAX_CLAIM_FEE_BPS) {
+            revert NARAPositionNFTV4__ClaimFeeTooHigh(MAX_CLAIM_FEE_BPS, tokenClaimFeeBps_);
+        }
+        naraClaimFeeBps = naraClaimFeeBps_;
+        tokenClaimFeeBps = tokenClaimFeeBps_;
+        emit ClaimFeesSet(naraClaimFeeBps_, tokenClaimFeeBps_);
+    }
+
+    /// @notice Set the destination for collected claim fees. Zero address disables fees.
+    function setClaimFeeRecipient(address recipient) external onlyOwner {
+        if (claimFeesFrozen) revert NARAPositionNFTV4__ClaimFeesFrozen();
+        if (recipient == address(this)) revert NARAPositionNFTV4__InvalidReceiver();
+        claimFeeRecipient = recipient;
+        emit ClaimFeeRecipientSet(recipient);
+    }
+
+    /// @notice Permanently lock claim-fee parameters (rates + recipient). One-way.
+    function freezeClaimFees() external onlyOwner {
+        if (claimFeeRecipient == address(0) && (naraClaimFeeBps != 0 || tokenClaimFeeBps != 0)) {
+            revert NARAPositionNFTV4__InvalidReceiver();
+        }
+        claimFeesFrozen = true;
+        emit ClaimFeesFrozen();
+    }
+
+    /// @dev Accepts ETH so reward claims can be routed through the wrapper for fee
+    ///      skimming before forwarding to the claimer. Stray ETH is recoverable via
+    ///      sweepNative (owner-only).
+    receive() external payable {}
 
     function sweepNative(address payable to, uint256 amount) external onlyOwner nonReentrant {
         if (to == address(0)) revert NARAPositionNFTV4__ZeroAddress();
@@ -303,8 +369,35 @@ contract NARAPositionNFTV4 is ERC721, ERC2981, IERC4906, ReentrancyGuard, Ownabl
         _requireTokenOwner(tokenId);
         _validateReceiver(to);
         uint256 positionId = positionIdOf[tokenId];
-        (naraAmount, ethAmount) = NARAPositionAccountV4(payable(accountOf[tokenId])).claimRewards(to);
+        address account = accountOf[tokenId];
+
+        uint16 feeBps = naraClaimFeeBps;
+        address recipient = claimFeeRecipient;
+        if (feeBps == 0 || recipient == address(0)) {
+            // Default path: account delivers NARA + ETH straight to the claimer.
+            (naraAmount, ethAmount) = NARAPositionAccountV4(payable(account)).claimRewards(to);
+        } else {
+            // Fee path: route the claim through the wrapper, skim NARA, forward the
+            // rest. ETH is forwarded untouched (the engine already took its ETH fee).
+            (naraAmount, ethAmount) = NARAPositionAccountV4(payable(account)).claimRewards(address(this));
+            uint256 fee = (naraAmount * feeBps) / BPS;
+            if (fee != 0) {
+                naraAmount -= fee;
+                IERC20(nara).safeTransfer(recipient, fee);
+            }
+            if (naraAmount != 0) IERC20(nara).safeTransfer(to, naraAmount);
+            if (ethAmount != 0) {
+                (bool ok, ) = payable(to).call{value: ethAmount}("");
+                if (!ok) revert NARAPositionNFTV4__NativeTransferFailed();
+            }
+        }
+        if (naraAmount != 0) lifetimeNaraClaimed[tokenId] += naraAmount;
+        if (ethAmount != 0) lifetimeEthClaimed[tokenId] += ethAmount;
+        if (naraAmount != 0 || ethAmount != 0) {
+            unchecked { lifetimeClaimCount[tokenId] += 1; }
+        }
         emit PositionRewardsClaimed(tokenId, positionId, to, naraAmount, ethAmount);
+        emit MetadataUpdate(tokenId);
     }
 
     function claimTokenRewards(uint256 tokenId, address token, address to)
@@ -318,7 +411,7 @@ contract NARAPositionNFTV4 is ERC721, ERC2981, IERC4906, ReentrancyGuard, Ownabl
         address account = accountOf[tokenId];
         if (to == account) revert NARAPositionNFTV4__InvalidReceiver();
         uint256 positionId = positionIdOf[tokenId];
-        amount = NARAPositionAccountV4(payable(account)).claimTokenRewards(token, to);
+        amount = _claimTokenWithFee(account, token, to);
         emit PositionTokenRewardsClaimed(tokenId, positionId, token, to, amount);
     }
 
@@ -336,8 +429,56 @@ contract NARAPositionNFTV4 is ERC721, ERC2981, IERC4906, ReentrancyGuard, Ownabl
         address account = closedAccountOfPosition[positionId];
         if (to == account) revert NARAPositionNFTV4__InvalidReceiver();
 
-        amount = NARAPositionAccountV4(payable(account)).claimTokenRewards(token, to);
+        amount = _claimTokenWithFee(account, token, to);
         emit ClosedPositionTokenRewardsClaimed(positionId, token, to, amount);
+    }
+
+    /// @dev Claims token rewards from `account`. When a token claim fee is active,
+    ///      routes through the wrapper, skims the fee to claimFeeRecipient, and
+    ///      forwards the remainder to `to`. Otherwise the account delivers directly.
+    function _claimTokenWithFee(address account, address token, address to)
+        internal
+        returns (uint256 amount)
+    {
+        uint16 feeBps = tokenClaimFeeBps;
+        address recipient = claimFeeRecipient;
+        if (feeBps == 0 || recipient == address(0)) {
+            amount = NARAPositionAccountV4(payable(account)).claimTokenRewards(token, to);
+        } else {
+            amount = NARAPositionAccountV4(payable(account)).claimTokenRewards(token, address(this));
+            uint256 fee = (amount * feeBps) / BPS;
+            if (fee != 0) {
+                amount -= fee;
+                IERC20(token).safeTransfer(recipient, fee);
+            }
+            if (amount != 0) IERC20(token).safeTransfer(to, amount);
+        }
+    }
+
+    function _extendAccountWithRewardRouting(uint256 tokenId, uint64 additionalEpochs, address owner)
+        internal
+        returns (uint256 naraAmount, uint256 ethAmount)
+    {
+        uint16 feeBps = naraClaimFeeBps;
+        address recipient = claimFeeRecipient;
+        bool feeActive = feeBps != 0 && recipient != address(0);
+        address rewardRecipient = feeActive ? address(this) : owner;
+
+        (naraAmount, ethAmount) =
+            NARAPositionAccountV4(payable(accountOf[tokenId])).extend(additionalEpochs, rewardRecipient);
+
+        if (!feeActive) return (naraAmount, ethAmount);
+
+        uint256 fee = (naraAmount * feeBps) / BPS;
+        if (fee != 0) {
+            naraAmount -= fee;
+            IERC20(nara).safeTransfer(recipient, fee);
+        }
+        if (naraAmount != 0) IERC20(nara).safeTransfer(owner, naraAmount);
+        if (ethAmount != 0) {
+            (bool ok, ) = payable(owner).call{value: ethAmount}("");
+            if (!ok) revert NARAPositionNFTV4__NativeTransferFailed();
+        }
     }
 
     function claimGenesisEth(uint256 tokenId, address to)
@@ -377,8 +518,12 @@ contract NARAPositionNFTV4 is ERC721, ERC2981, IERC4906, ReentrancyGuard, Ownabl
     function extendLock(uint256 tokenId, uint64 additionalEpochs) external nonReentrant {
         address owner = _requireTokenOwner(tokenId);
         uint256 positionId = positionIdOf[tokenId];
-        NARAPositionAccountV4(payable(accountOf[tokenId])).extend(additionalEpochs, owner);
+        (uint256 naraAmount, uint256 ethAmount) = _extendAccountWithRewardRouting(tokenId, additionalEpochs, owner);
+        if (naraAmount != 0) lifetimeNaraClaimed[tokenId] += naraAmount;
+        if (ethAmount != 0) lifetimeEthClaimed[tokenId] += ethAmount;
+        unchecked { lifetimeExtendCount[tokenId] += 1; }
         emit PositionExtended(tokenId, positionId, additionalEpochs);
+        emit MetadataUpdate(tokenId);
     }
 
     function unlock(uint256 tokenId) external payable nonReentrant {
@@ -526,7 +671,9 @@ contract NARAPositionNFTV4 is ERC721, ERC2981, IERC4906, ReentrancyGuard, Ownabl
         if (unlocking[tokenId] && to != address(0)) {
             revert NARAPositionNFTV4__UnlockInProgress();
         }
-        if (to != address(0) && to == accountOf[tokenId]) revert NARAPositionNFTV4__InvalidReceiver();
+        if (to != address(0) && (to == address(this) || to == accountOf[tokenId] || tokenOfAccount[to] != 0)) {
+            revert NARAPositionNFTV4__InvalidReceiver();
+        }
         return super._update(to, tokenId, auth);
     }
 
@@ -628,7 +775,10 @@ contract NARAPositionNFTV4 is ERC721, ERC2981, IERC4906, ReentrancyGuard, Ownabl
         GenesisMetadata memory meta = genesisMetadataOf[tokenId];
         if (!meta.isGenesis) return;
         totalGenesisRewardWeight -= meta.rewardWeight;
-        INARAGenesisRewardDistributorV4NFT(genesisRewardDistributor).onGenesisPositionClosed(tokenId, rewardOwner);
+        try INARAGenesisRewardDistributorV4NFT(genesisRewardDistributor).onGenesisPositionClosed(tokenId, rewardOwner) {}
+        catch {
+            emit GenesisCloseNotifyFailed(tokenId);
+        }
         delete genesisMetadataOf[tokenId];
     }
 

@@ -1,6 +1,7 @@
 import hre from "hardhat";
 import { expect } from "chai";
 import type { Signer } from "ethers";
+import { deployRenderer } from "./helpers/art";
 
 const ONE = 10n ** 18n;
 const MAX_SUPPLY = 1_000_000n * ONE;
@@ -8,7 +9,7 @@ const EPOCH_SECONDS = 900n;
 const CONFIG_DELAY = 3600n;
 const INITIAL_BASE = ONE / 2n;
 const ACTION_DELAY = 86_400n;
-const TOKEN_NAME = "NARA Protocol";
+const TOKEN_NAME = "NARA Token";
 const TOKEN_SYMBOL = "NARA";
 
 const ENGINE_CONFIG_TYPE =
@@ -153,7 +154,7 @@ async function mineTime(ethers: any, seconds: bigint) {
 async function advanceToLive(ethers: any, engine: any) {
   for (let i = 0; i < 16; i++) {
     const live = await engine.currentEpoch();
-    const state = await engine.epochStateView();
+    const state = await engine.epochState();
     if (state.epoch >= live) return;
     await engine.advanceEpochs(64);
   }
@@ -164,7 +165,7 @@ async function launchSystem(ethers: any, deployer: Signer, treasury: Signer) {
   const deployerAddr = await deployer.getAddress();
   const treasuryAddr = await treasury.getAddress();
 
-  const launcher = await ethers.deployContract("NARALauncher", [], deployer);
+  const launcher = await ethers.deployContract("NARALauncher", [deployerAddr], deployer);
   await launcher.waitForDeployment();
 
   const cfg = defaultEngineConfig(ethers);
@@ -205,9 +206,7 @@ async function deployNftBondStack(ethers: any, deployer: Signer, treasury: Signe
   const accountImpl = await Account.deploy();
   await accountImpl.waitForDeployment();
 
-  const Renderer = await ethers.getContractFactory("NARAPositionRendererV4", deployer);
-  const renderer = await Renderer.deploy();
-  await renderer.waitForDeployment();
+  const renderer = await deployRenderer(ethers, deployer);
 
   const NFT = await ethers.getContractFactory("NARAPositionNFTV4", deployer);
   const positionNft = await NFT.deploy(
@@ -266,7 +265,7 @@ async function deployNftBondStack(ethers: any, deployer: Signer, treasury: Signe
 }
 
 async function expectEngineAccounting(engine: any, token: any, positionIds: bigint[]) {
-  const state = await engine.epochStateView();
+  const state = await engine.epochState();
   let totalLocked = 0n;
   let activeWeight = 0n;
 
@@ -338,9 +337,11 @@ describe("NARA v4 invariant regression suite", () => {
     const [claimableNara, claimableEth] = await engine.claimableRewards(alicePosition);
     expect(claimableNara + claimableEth).to.be.gt(0n);
     await engine.connect(alice).claimRewards(alicePosition, aliceAddr);
+    // M-05 fix: extend() is no longer disabled once token rewards are live (token-reward weight
+    // is frozen instead), so this now succeeds and core accounting must still hold.
     await expect(
       engine.connect(alice).extend(alicePosition, 10n),
-    ).to.be.revertedWithCustomError(engine, "InvalidExtension");
+    ).to.emit(engine, "Extended");
     await expectEngineAccounting(engine, token, knownPositions);
 
     const { vault, positionNft, dep, vaultAlloc } = await deployNftBondStack(
@@ -468,10 +469,10 @@ describe("NARA v4 invariant regression suite", () => {
       bondValue,
       undefined,
       undefined,
-      ACTION_DELAY + 1_000n,
+      2n * ACTION_DELAY + 1_000n,
     );
 
-    await mineTime(ethers, ACTION_DELAY + 1n);
+    await mineTime(ethers, 2n * ACTION_DELAY + 1n);
     await advanceToLive(ethers, engine);
 
     expect(await dep.quoteBond(bondValue)).to.equal(0n);

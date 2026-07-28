@@ -1,8 +1,14 @@
 # V4 Launch Checklist
 
-Last updated: 2026-05-27.
+Last updated: 2026-07-26.
 
-This is the operator-safe checklist for the next fresh v4 launch. Code and deployment scripts are the source of truth.
+> **Historical full-stack checklist.** Stage A is already deployed. For the
+> current baskets-only launch, use [CURRENT_STATE.md](CURRENT_STATE.md) and
+> [NARA_V4_LAUNCH_RUNBOOK.md](NARA_V4_LAUNCH_RUNBOOK.md). Do not deploy
+> deferred lockboard/composability components or retired Lotto/Arena surfaces.
+
+The material below is the historical full-stack checklist and must not be
+executed as the current baskets-only plan.
 
 Use this file when starting cold.
 
@@ -26,37 +32,60 @@ Use this file when starting cold.
 3. [V4_NEXT_SESSION_HANDOFF.md](V4_NEXT_SESSION_HANDOFF.md)
 4. [V4_REDEPLOY_NO_SURPRISE_PLAN.md](V4_REDEPLOY_NO_SURPRISE_PLAN.md)
 
-Historical context only:
-
-- [V4_INCIDENT_REDEPLOY_2026-04-23.md](V4_INCIDENT_REDEPLOY_2026-04-23.md)
+Historical incident context remains in Git history and is not an executable
+launch instruction.
 
 ---
 
 ## Required Current Contracts
 
-Fresh core deploy must use:
+Fresh core deploy (`deploy:v4:base:usdc`) must use:
 
 - `NARALauncher`
 - `NARAToken`
 - `NARAEngine`
+- `NARARewardReserve`
 - `NARALiquidityGrowthVault`
 - `NARALiquidityGrowthHook`
 - `Create2HookDeployer`
+
+Liquidity compounder deploy (`scripts/deployLiquidityCompounderV4.ts`, after the vault exists — closes the POL flywheel):
+
+- `NARALiquidityCompounderV4`  ← then `vault.setCompounder(...)`, then `vault.freezeCompounder()` once validated. **Without this, `Liquidity` route mode is inert and the skim never compounds.**
 
 Allocation deploy must use, if bonds or NFT positions are in launch scope:
 
 - `NARAOpsVaultV4`
 - `NARABondVaultV4`
 - `NARAPositionAccountV4`
+- `NARAPositionRendererV5` (uses modular `NARAArt*V1` contracts)
 - `NARAPositionNFTV4`
 - `NARAGenesisRewardDistributorV4`
 - `NARABondDepositoryV4NFT`
+
+Router / lens / bribe deploy (`deploy:v4:router:lens`) must use:
+
+- `NARARouter`
+- `NARADashboardLens`
+- `NARAPositionDataLensV1`
+- `NARAProtocolStatsLensV1`
+- `NARACirculatingSupplyV1`
+- `BribeRouterV4`  ← then grant `REWARD_NOTIFIER_ROLE` to it on the engine
 
 Optional composability deploy must use:
 
 - `NARAStakingPoolV4`
 - `NARAStakingPoolSYV4`
 - `NARAFractionalPositionFactoryV4`
+
+> Intentionally NOT deployed: `NARABondDepositoryV4` (raw-position bond path — superseded by the NFT
+> path) and `NARAFractionalPositionV4` (deployed per-position by the factory at runtime, not at launch).
+> Everything else under `contracts/v4/` (excluding `mocks/`, `interfaces/`, `libraries/`) is covered above.
+>
+> **Automated guard:** `test/deployCoverage.test.ts` (runs in `npm test`) fails if any deployable v4
+> contract is not referenced by a `scripts/deploy*.ts` script. When you add a new contract, either wire
+> it into a deploy script or add it to that test's `INTENTIONALLY_NOT_DEPLOYED` map with a reason —
+> otherwise the suite goes red. This is what makes "we forgot to deploy X" impossible to ship silently.
 
 ---
 
@@ -75,7 +104,8 @@ PRIVATE_KEY=
 BASE_RPC_URL=
 V4_ADMIN_ADDRESS=
 V4_TREASURY_ADDRESS=
-V4_TOKEN_NAME=NARA Protocol
+V4_TOKEN_NAME=NARA Token
+V4_TOKEN_SYMBOL=NARA
 V4_TOKEN_SYMBOL=NARA
 V4_INITIAL_NARA_AMOUNT=
 V4_INITIAL_USDC_AMOUNT=
@@ -131,11 +161,8 @@ Pass criteria:
 - Full suite passes.
 - Bytecode size check passes.
 
-Latest known local targeted result (post v3 retirement and May 2026 audit remediation):
-
-- Full Hardhat suite (`npm test`): 360 passing as of 2026-06-07 (run `npm test` for the live count; the older "568" predates the 2026-05-27 v4 reset that archived the v3 tests).
-- Slither v4 scoped run: 27 targets passed.
-- Echidna v4 engine harness: 10,022 calls, all 3 properties passing.
+Use the dated verification stamp in `CURRENT_STATE.md` and rerun the commands.
+Historical test totals are intentionally not duplicated here.
 - `npm run size`: all deployable artifacts below EVM bytecode limits.
 - `NARAEngine` deployed bytecode: 24541 bytes.
 - `NARAStakingPoolSYV4` deployed bytecode: 8482 bytes.
@@ -263,13 +290,20 @@ TREASURY_PRIVATE_KEY=
 BASE_RPC_URL=
 ```
 
-Optional seed controls:
+Required reviewed seed overrides:
 
 ```bash
-V4_SEED_NARA=30
+V4_SEED_NARA=60000
 V4_SEED_USDC=300
 V4_SEED_SLIPPAGE_BPS=200
 ```
+
+These values target an opening price of `$0.005` per NARA and an implied
+`$5,000` FDV. They use `60,000` of the locked `70,000 NARA` LP allocation.
+The remaining `10,000 NARA` is reserved for separately reviewed later
+liquidity additions. The executable script still has a historical `30 NARA`
+default, so operators must set these overrides explicitly and verify the printed
+amounts before signing. Documentation approval does not authorize execution.
 
 Pass criteria:
 
@@ -346,12 +380,12 @@ V4_ADMIN_ADDRESS=
 V4_TREASURY_ADDRESS=
 ```
 
-Default allocation controls:
+Approved allocation overrides:
 
 ```bash
 V4_OPS_AMOUNT_NARA=0
-V4_BOND_AMOUNT_NARA=289970
-V4_MIN_TREASURY_FLOAT_NARA=10030
+V4_BOND_AMOUNT_NARA=200000
+V4_MIN_TREASURY_FLOAT_NARA=150000
 V4_BOND_ACTIVE=false
 ```
 
@@ -519,12 +553,15 @@ npm run test:invariants:v4
 npm run test:composability:v4
 npm test
 npm run size
-npm run deploy:v4:base:usdc
+V4_SKIP_COMPOUNDER=1 npm run deploy:v4:base:usdc   # compounder wired separately below
 npm run v4:env:sync
 npm run v4:env:sync:write
 npm run verify:v4:preflight
 npx tsx scripts/seedV4Liquidity.ts
 npm run v4:env:sync:write
+# Step 4b — close the POL flywheel (needs the vault from core deploy):
+NODE_OPTIONS="--require ./polyfill.cjs" npx hardhat run scripts/deployLiquidityCompounderV4.ts --network base
+# then (vault owner): vault.setCompounder(<compounder>) -> validate one compound -> vault.freezeCompounder()
 npm run smoke:v4
 ```
 
@@ -537,6 +574,11 @@ Remove-Item Env:V4_ALLOC_DRY_RUN
 ```bash
 npm run deploy:v4:allocations
 npm run verify:v4:allocations
+# Router / lens / bribe layer (deploys Router, DashboardLens, PositionDataLens, ProtocolStatsLens, CirculatingSupply, BribeRouter):
+ENGINE_V4=<engine> POSITION_NFT_V4=<nft> npm run deploy:v4:router:lens
+# then grant REWARD_NOTIFIER_ROLE to BribeRouterV4 on the engine (see runbook Step 7)
+# Optional composability:
+NODE_OPTIONS="--require ./polyfill.cjs" npx hardhat run scripts/deployComposabilityV4.ts --network base
 ```
 
 Only after the relevant commands pass should the stack be treated as launch-ready.

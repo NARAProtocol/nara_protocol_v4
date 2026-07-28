@@ -198,8 +198,9 @@ contract NARALiquidityGrowthHook is BaseHook, Ownable {
     function quotePoolFee(bool isBuy, uint256 amountIn) external view returns (uint16 feeBps, uint256 feeAmount) {
         address inputCurrency = isBuy ? base : token;
         uint256 depth = _currentDepth(inputCurrency);
-        feeBps = _feeBps(isBuy ? buyCurve : sellCurve, amountIn, depth);
-        feeAmount = Math.mulDiv(amountIn, feeBps, BPS);
+        FeeCurve memory curve = isBuy ? buyCurve : sellCurve;
+        feeBps = _feeBps(curve, amountIn, depth);
+        feeAmount = _cumulativeFee(curve, amountIn, depth);
     }
 
     function _beforeInitialize(address, PoolKey calldata key, uint160) internal view override returns (bytes4) {
@@ -233,10 +234,8 @@ contract NARALiquidityGrowthHook is BaseHook, Ownable {
         (uint256 pressureAmountIn, uint256 previousFeeCharged) = _recordBlockFlow(inputCurrency, amountIn);
         FeeCurve memory curve = isBuy ? buyCurve : sellCurve;
         uint16 feeBps = _feeBps(curve, pressureAmountIn, depth);
-        uint256 totalFeeDue = Math.mulDiv(pressureAmountIn, feeBps, BPS);
+        uint256 totalFeeDue = _cumulativeFee(curve, pressureAmountIn, depth);
         uint256 feeAmount = totalFeeDue > previousFeeCharged ? totalFeeDue - previousFeeCharged : 0;
-        uint256 maxFeeAmount = Math.mulDiv(amountIn, curve.maxFeeBps, BPS);
-        if (feeAmount > maxFeeAmount) feeAmount = maxFeeAmount;
         flowFeeChargedInBlock[inputCurrency] = previousFeeCharged + feeAmount;
         if (feeAmount == 0) return (IHooks.beforeSwap.selector, toBeforeSwapDelta(0, 0), 0);
         if (feeAmount > uint256(uint128(type(int128).max))) revert AmountTooLarge();
@@ -338,6 +337,39 @@ contract NARALiquidityGrowthHook is BaseHook, Ownable {
         }
 
         return bps > curve.maxFeeBps ? curve.maxFeeBps : bps;
+    }
+
+    /// @dev Piecewise cumulative fee integral. Taking the delta between two
+    /// cumulative-flow points makes the result invariant to same-block splitting.
+    function _cumulativeFee(FeeCurve memory curve, uint256 amountIn, uint256 depth)
+        internal
+        pure
+        returns (uint256 fee)
+    {
+        if (amountIn == 0) return 0;
+        if (depth == 0) return Math.mulDiv(amountIn, _feeBps(curve, amountIn, 0), BPS);
+
+        uint256 mediumAt = _ceilDiv(uint256(curve.mediumPressureBps) * depth, BPS);
+        uint256 highAt = _ceilDiv(uint256(curve.highPressureBps) * depth, BPS);
+        uint256 extremeAt = _ceilDiv(uint256(curve.extremePressureBps) * depth, BPS);
+
+        uint256 end = amountIn < mediumAt ? amountIn : mediumAt;
+        fee = Math.mulDiv(end, curve.baseFeeBps, BPS);
+        if (amountIn <= mediumAt) return fee;
+
+        end = amountIn < highAt ? amountIn : highAt;
+        fee += Math.mulDiv(end - mediumAt, curve.mediumFeeBps, BPS);
+        if (amountIn <= highAt) return fee;
+
+        end = amountIn < extremeAt ? amountIn : extremeAt;
+        fee += Math.mulDiv(end - highAt, curve.highFeeBps, BPS);
+        if (amountIn <= extremeAt) return fee;
+
+        fee += Math.mulDiv(amountIn - extremeAt, curve.extremeFeeBps, BPS);
+    }
+
+    function _ceilDiv(uint256 x, uint256 y) internal pure returns (uint256) {
+        return x == 0 ? 0 : ((x - 1) / y) + 1;
     }
 
     function _validateCurve(FeeCurve memory curve) internal pure {

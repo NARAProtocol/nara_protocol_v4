@@ -69,6 +69,7 @@ contract NARAEngine is
 
     /// @notice Max open positions per owner address (owners are typically NFT wrapper clones).
     uint256 internal constant MAX_LOCK_POSITIONS_PER_ACCOUNT = 64;
+    uint32 internal constant POSITION_FLAG_COUNTS_OWNER_CAP = 1;
     /// @notice Max positions in a single batch call.
     uint256 internal constant MAX_BATCH_POSITIONS = 64;
     /// @notice Max fee bps for lock/claim fee setters (hard cap — 10%).
@@ -229,10 +230,6 @@ contract NARAEngine is
         return _positions[positionId];
     }
 
-    function previewWeight(uint256 amount, uint64 durationEpochs) external view returns (uint256) {
-        return NARAEngineModelLib.computeWeight(config, amount, durationEpochs);
-    }
-
     function emissionReserve() public view returns (uint256) {
         uint256 bal = NARA_TOKEN.balanceOf(address(this));
         uint256 ded = totalLocked + totalPendingNaraRewards;
@@ -241,7 +238,13 @@ contract NARAEngine is
     }
 
     function rewardReserveAvailable() public view returns (uint256) {
-        return address(rewardReserve) == address(0) ? 0 : rewardReserve.availableRewards();
+        if (address(rewardReserve) == address(0)) return 0;
+        // Fail-open: a misbehaving reserve must not be able to brick epoch advancement (M-04).
+        try rewardReserve.availableRewards() returns (uint256 a) {
+            return a;
+        } catch {
+            return 0;
+        }
     }
 
     function claimableRewards(uint256 positionId) external view returns (uint256 naraAmount, uint256 ethAmount) {
@@ -260,7 +263,7 @@ contract NARAEngine is
         return NARAEngineAccountingLib.previewTokenAccrual(
             _positionTokenDebtRay[token],
             positionId,
-            uint256(p.weight),
+            uint256(p.tokenWeight),
             _tokenRewardEndIndex(p, token),
             _tokenIndexAtOrBefore(token, p.activationEpoch - 1)
         );
@@ -445,10 +448,14 @@ contract NARAEngine is
     ) internal returns (uint256 positionId) {
         if (amount == 0) revert ZeroValue();
         EngineConfig memory c = config;
-        if (durationEpochs == 0 || durationEpochs <= c.activationDelayEpochs) revert LockTooShort();
+        if (durationEpochs <= c.activationDelayEpochs) revert LockTooShort();
         if (durationEpochs > c.maxLockEpochs) revert LockTooLong();
-        if (_ownerPositionCount[posOwner] >= MAX_LOCK_POSITIONS_PER_ACCOUNT) {
-            revert TooManyPositions();
+        uint32 positionFlags;
+        if (payer == posOwner) {
+            if (_ownerPositionCount[posOwner] >= MAX_LOCK_POSITIONS_PER_ACCOUNT) {
+                revert TooManyPositions();
+            }
+            positionFlags = POSITION_FLAG_COUNTS_OWNER_CAP;
         }
 
         uint256 feeAmount = (amount * lockFeeBps) / 10_000;
@@ -467,16 +474,18 @@ contract NARAEngine is
         _positions[positionId] = Position({
             owner: posOwner,
             createdEpoch: ep,
-            flags: 0,
+            flags: positionFlags,
             amount: _toUint128(netAmount),
             weight: _toUint128(weight),
             activationEpoch: activationEpoch,
             unlockEpoch: unlockEpoch,
-            _reserved0: 0,
+            tokenWeight: _toUint128(weight),
             naraDebtRay: DEBT_UNINITIALISED,
             ethDebtRay: DEBT_UNINITIALISED
         });
-        unchecked { _ownerPositionCount[posOwner] += 1; }
+        if (positionFlags != 0) {
+            unchecked { _ownerPositionCount[posOwner] += 1; }
+        }
 
         totalLocked += netAmount;
         scheduledActivationWeight[activationEpoch] += weight;
@@ -501,7 +510,6 @@ contract NARAEngine is
     // Extend
     // ============================================================
     function extend(uint256 positionId, uint64 additionalEpochs) external nonReentrant {
-        if (additionalEpochs == 0) revert InvalidExtension();
         Position storage p = _positions[positionId];
         if (p.amount == 0) revert PositionNotFound();
         if (p.owner != msg.sender) revert NotPositionOwner();
@@ -512,7 +520,6 @@ contract NARAEngine is
 
         EngineConfig memory c = config;
         bool inactive = ep < p.activationEpoch;
-        if (!inactive && _tokenRewardsNotified) revert InvalidExtension();
         uint256 oldWeight = uint256(p.weight);
 
         if (!inactive) {
@@ -541,25 +548,29 @@ contract NARAEngine is
         uint256 newWeight = NARAEngineModelLib.computeWeight(c, uint256(p.amount), newDurationEpochs);
         if (newWeight <= refOldWeight) revert InvalidExtension();
 
-        uint256 storedOldWeight = oldWeight;
         if (inactive) {
-            if (newWeight >= storedOldWeight) {
-                scheduledActivationWeight[p.activationEpoch] += newWeight - storedOldWeight;
+            if (newWeight >= oldWeight) {
+                scheduledActivationWeight[p.activationEpoch] += newWeight - oldWeight;
             } else {
-                _saturatingSub(scheduledActivationWeight, p.activationEpoch, storedOldWeight - newWeight);
+                _saturatingSub(scheduledActivationWeight, p.activationEpoch, oldWeight - newWeight);
             }
+            // Not yet accruing token rewards (accrual starts at activationEpoch): safe to track new weight.
+            p.tokenWeight = _toUint128(newWeight);
         } else {
-            if (newWeight >= storedOldWeight) {
-                activeTotalWeight += newWeight - storedOldWeight;
+            if (newWeight >= oldWeight) {
+                activeTotalWeight += newWeight - oldWeight;
             } else {
-                uint256 delta = storedOldWeight - newWeight;
-                activeTotalWeight = activeTotalWeight >= delta ? activeTotalWeight - delta : 0;
+                if (_tokenRewardsNotified) revert InvalidExtension();
+                activeTotalWeight -= oldWeight - newWeight;
             }
             p.naraDebtRay = Math.mulDiv(newWeight, naraIndexRay, RAY);
             p.ethDebtRay = Math.mulDiv(newWeight, ethIndexRay, RAY);
+            // Token-reward weight is frozen once any token reward is live, so the larger
+            // post-extend weight cannot retroactively over-credit instant-distribution rewards.
+            if (!_tokenRewardsNotified) p.tokenWeight = _toUint128(newWeight);
         }
 
-        _saturatingSub(scheduledDeactivationWeight, oldUnlockEpoch, storedOldWeight);
+        _saturatingSub(scheduledDeactivationWeight, oldUnlockEpoch, oldWeight);
         scheduledDeactivationWeight[newUnlockEpoch] += newWeight;
 
         p.weight = _toUint128(newWeight);
@@ -570,7 +581,7 @@ contract NARAEngine is
             p.ethDebtRay = DEBT_UNINITIALISED;
         }
 
-        emit Extended(positionId, oldUnlockEpoch, newUnlockEpoch, storedOldWeight, newWeight);
+        emit Extended(positionId, oldUnlockEpoch, newUnlockEpoch, oldWeight, newWeight);
     }
 
     // ============================================================
@@ -615,7 +626,9 @@ contract NARAEngine is
         address posOwner = p.owner;
 
         totalLocked -= amount;
-        unchecked { _ownerPositionCount[posOwner] -= 1; }
+        if ((p.flags & POSITION_FLAG_COUNTS_OWNER_CAP) != 0) {
+            unchecked { _ownerPositionCount[posOwner] -= 1; }
+        }
         p.amount = 0;
 
         if (n != 0) _deliverNara(to, n);
@@ -673,9 +686,7 @@ contract NARAEngine is
 
         if (n > 0) {
             naraAmount = n;
-            totalPendingNaraRewards -= n;
-            totalNaraDripClaimed += n;
-            NARA_TOKEN.safeTransfer(to, n);
+            _deliverNara(to, n);
         }
         if (e > 0) {
             ethAmount = _deliverEth(to, e, true);
@@ -699,7 +710,7 @@ contract NARAEngine is
         amount = NARAEngineAccountingLib.tokenAccrual(
             _positionTokenDebtRay[token],
             positionId,
-            uint256(p.weight),
+            uint256(p.tokenWeight),
             _tokenRewardEndIndex(p, token),
             _tokenIndexAtOrBefore(token, p.activationEpoch - 1)
         );
@@ -748,12 +759,6 @@ contract NARAEngine is
     // ============================================================
     // Epoch advance
     // ============================================================
-    function epochStateView() external view returns (EpochSnapshot memory) { return epochState; }
-
-    function advanceEpoch() external nonReentrant returns (EpochSnapshot memory) {
-        return _advanceOneEpoch();
-    }
-
     function advanceEpochs(uint256 maxSteps)
         external
         nonReentrant
@@ -821,8 +826,17 @@ contract NARAEngine is
             }
             if (nextSnapshot.distributedNara > local) {
                 uint256 shortfall = nextSnapshot.distributedNara - local;
-                rewardReserve.releaseToEngine(shortfall);
-                trackedEmissionReserve += shortfall;
+                // Fail-open: if the reserve reverts, distribute only locally-held funds this
+                // epoch rather than letting a bad reserve freeze the whole engine (M-04).
+                try rewardReserve.releaseToEngine(shortfall) {
+                    uint256 received =
+                        NARA_TOKEN.balanceOf(address(this)) - totalLocked - totalPendingNaraRewards - local;
+                    if (received > shortfall) received = shortfall;
+                    trackedEmissionReserve += received;
+                    nextSnapshot.distributedNara = local + received;
+                } catch {
+                    nextSnapshot.distributedNara = local;
+                }
             }
             trackedEmissionReserve -= nextSnapshot.distributedNara;
         }
@@ -885,7 +899,8 @@ contract NARAEngine is
     }
 
     function _deliverNara(address to, uint256 amount) internal {
-        totalPendingNaraRewards -= amount;
+        uint256 pending = totalPendingNaraRewards;
+        totalPendingNaraRewards = pending >= amount ? pending - amount : 0;
         totalNaraDripClaimed += amount;
         NARA_TOKEN.safeTransfer(to, amount);
     }

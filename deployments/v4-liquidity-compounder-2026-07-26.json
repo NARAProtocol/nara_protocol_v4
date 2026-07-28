@@ -1,0 +1,60 @@
+{
+  "network": "base",
+  "chainId": 8453,
+  "contract": "NARALiquidityCompounderV4",
+  "address": "0xc327e50c14002a82c9F1477122204BB183f446Ab",
+  "owner": "0xC019Dc79412c4b20103ac4ce97B2615FF45D490d",
+  "vault": "0xc0cf9bCf8879182368b1CdBDC81B6a143fFA2988",
+  "poolManager": "0x498581fF718922c3f8e6A244956aF099B2652b2b",
+  "positionManager": "0x7C5f5A4bBd8fD63184577525326123B519429bDc",
+  "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+  "nara": "0x65E247AA3aa9C0131b2984b894c3D24c41341D7A",
+  "usdc": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+  "hook": "0x9a01c2DcF713cDB12B8ef4Eb264D5c3203b06088",
+  "poolFee": 3000,
+  "tickSpacing": 60,
+  "naraIsCurrency0": true,
+  "codeBytes": 10843,
+  "deployment": {
+    "transactionHash": "0x918d77fa343a713f4ce85f2eb89f8f485e73b602e162baabba562a2a51f99b93",
+    "blockNumber": 49153244,
+    "timestamp": "2026-07-26T19:57:15.000Z",
+    "gasUsed": "2594801",
+    "status": 1
+  },
+  "vaultWiring": {
+    "transactionHash": "0xa1bc6f452ba67d6212c3a71953ac474dbf490b2615ed1a859c279c14ee309f7d",
+    "blockNumber": 49153330,
+    "timestamp": "2026-07-26T20:00:07.000Z",
+    "gasUsed": "50596",
+    "status": 1,
+    "compounderFrozen": false
+  },
+  "postDeploymentChecks": {
+    "vaultCompounder": "0xc327e50c14002a82c9F1477122204BB183f446Ab",
+    "routeMode": 0,
+    "positionTokenId": "0",
+    "tickLower": -887220,
+    "tickUpper": 887220,
+    "totalLiquidityAdded": "0",
+    "totalNaraAdded": "0",
+    "totalUsdcAdded": "0",
+    "poolKey": {
+      "currency0": "0x65E247AA3aa9C0131b2984b894c3D24c41341D7A",
+      "currency1": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "fee": 3000,
+      "tickSpacing": 60,
+      "hooks": "0x9a01c2DcF713cDB12B8ef4Eb264D5c3203b06088"
+    }
+  },
+  "sourceVerification": {
+    "status": "verified",
+    "verifiedAt": "2026-07-27",
+    "explorers": {
+      "basescan": "https://basescan.org/address/0xc327e50c14002a82c9F1477122204BB183f446Ab#code",
+      "blockscout": "https://base.blockscout.com/address/0xc327e50c14002a82c9F1477122204BB183f446Ab?tab=contract",
+      "sourcify": "https://repo.sourcify.dev/contracts/full_match/8453/0xc327e50c14002a82c9F1477122204BB183f446Ab/"
+    },
+    "note": "Verification retry reported the contract already verified on Basescan, Blockscout, and Sourcify. No redeployment occurred."
+  }
+}

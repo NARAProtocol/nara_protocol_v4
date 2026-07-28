@@ -36,9 +36,19 @@ fi
 log "node $(node -v)  npm $(npm -v)"
 
 # 4) npm deps (needed for @openzeppelin / @uniswap import resolution)
-log "npm ci (this pulls OZ/uniswap for import resolution)"
-npm ci --no-audit --no-fund >/tmp/npmci.log 2>&1 || npm install --no-audit --no-fund >/tmp/npmci.log 2>&1
-log "npm deps installed"
+log "npm ci (this pulls OpenZeppelin and Uniswap for import resolution)"
+npm ci --no-audit --no-fund >/tmp/npmci.log 2>&1 \
+  || { log "FATAL: npm ci failed"; tail -40 /tmp/npmci.log; exit 1; }
+# Hard guard: the analyzers MUST have dependencies, otherwise they silently produce
+# invalid output (echidna/slither fail to compile; aderyn reports false positives like
+# "contract locks Ether" because it can't see the OZ base contracts). Fail loud instead.
+if [ ! -f node_modules/@openzeppelin/contracts/utils/math/Math.sol ]; then
+  log "FATAL: npm dependencies missing (node_modules/@openzeppelin not found)."
+  log "Analyzer results would be INVALID without dependencies. Aborting. Last npm log:"
+  tail -40 /tmp/npmci.log
+  exit 1
+fi
+log "npm deps installed ($(ls node_modules | wc -l) packages)"
 
 # 5) solc 0.8.34 + crytic-compile
 log "installing solc-select + crytic-compile"

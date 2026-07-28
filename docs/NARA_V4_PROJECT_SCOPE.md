@@ -1,6 +1,6 @@
 # NARA v4 — Whole-Project Scope (Cold-AI Start Here)
 
-Last updated: 2026-06-07. Produced by a full scope-coherence audit.
+Last updated: 2026-07-27. Produced by a full scope-coherence audit.
 
 **Audience:** any AI (Claude, GPT, Gemini, Cursor, Codex, …) or human starting cold on this workspace.
 Read this first. It is the single end-to-end map: what exists, what state it's in, what's genuinely
@@ -18,8 +18,12 @@ NARA v4 is a fixed-supply (1,000,000) time-preference yield protocol on Base. Yo
 weight → earn NARA + ETH + ERC-20 rewards per 15-min epoch. **A lock *is* an NFT** (`NARAPositionNFTV4`).
 Fees from everything route back to lockers via the engine. The **five pillars** are: **Token, Engine,
 Liquidity (the taxed Uniswap v4 pool), the NFT lock layer, and Baskets** (the brand front door).
-**Nothing is deployed to mainnet yet** — the only on-chain NARA contracts are *retired* (the v3 stack
-and a 2026-04-23 v4 incident stack). The next step is a clean v4 deploy from `contracts/v4/`.
+Controlled Stage A is deployed on Base: token, engine, reward reserve, hook,
+vault, launcher, and CREATE2 hook deployer. The production liquidity compounder
+was deployed afterward, wired to the vault, and source verified. It is not
+frozen. The registered NARA/USDC pool remains
+uninitialized with zero liquidity. The launch surface is Baskets only and
+remains in preview; Lockboard is deferred, while Lotto and Arena are retired.
 
 ---
 
@@ -53,7 +57,7 @@ happen, baskets can't route. It is the foundation everything sits on.
 | **Core** | `deploy:v4:base:usdc` (`deployV4BaseUsdc.ts`) | Token, Engine, RewardReserve, LiquidityGrowthHook, LiquidityGrowthVault, Launcher, Create2HookDeployer |
 | **Liquidity** | `seedV4Liquidity.ts` + `smoke:v4` | (no new contract — seeds the NARA/USDC v4 pool) |
 | **Allocation** | `deploy:v4:allocations` (`deployV4Allocations.ts`) | PositionNFT, PositionAccount, **PositionRenderer**, GenesisRewardDistributor, BondVault, BondDepository(NFT + raw), OpsVault |
-| **Router / Lens** | `deploy:v4:router:lens` (`deployRouterLens.ts`) | Router, DashboardLens, **PositionDataLensV1**, BribeRouter |
+| **Router / Lens** | `deploy:v4:router:lens` (`deployRouterLens.ts`) | Router, DashboardLens, **PositionDataLensV1**, **ProtocolStatsLensV1**, BribeRouter, **CirculatingSupplyV1** |
 | **Composability** | `deployComposabilityV4.ts` | StakingPool (stNARA), StakingPoolSY (Pendle), FractionalPosition + Factory |
 | **Baskets** (separate Foundry pkg) | `DeployMainnetReady.s.sol` | 4 immutable basket managers + fee collector + 5 DEX adapters |
 
@@ -61,9 +65,12 @@ happen, baskets can't route. It is the foundation everything sits on.
 
 ## 3. Complete contract inventory + status
 
-**Deployment status is uniform: nothing below is on mainnet.** The only deployed NARA contracts are
-RETIRED — see `CURRENT_STATE.md` (retired v3 table + retired 2026-04-23 v4 incident stack). So the
-columns that matter are **test coverage** and the **non-code prerequisite** to deploy each piece.
+Deployment status is not uniform. Controlled Stage A core contracts and
+`NARALiquidityCompounderV4` are deployed; allocation, router/lens,
+composability, and basket contracts are not deployed. See `CURRENT_STATE.md`
+and the deployment manifests for the exact live state. The inventory below
+describes implementation coverage and dependency order, not a claim that every
+listed contract is deployed.
 
 ### Protocol (`nara-protocol-hardhat/contracts/v4/`)
 
@@ -77,7 +84,7 @@ columns that matter are **test coverage** and the **non-code prerequisite** to d
 | `NARALauncher` / `utils/Create2HookDeployer` | Core | ✅ (deploy-path) | none |
 | `NARAPositionNFTV4` | Allocation | ✅ `NARAPositionNFTV4.test.ts` | engine |
 | `NARAPositionAccountV4` | Allocation | ✅ (NFT tests) | deployed as clone impl |
-| `NARAPositionRendererV4` | Allocation | ✅ `NARAPositionNFTV4.test.ts` (art/metadata/fallback) | deploy **before** NFT (NFT references it) |
+| `NARAPositionRendererV5` | Allocation | ✅ `NARAPositionNFTV4.test.ts` (art/metadata/fallback) | deploy **before** NFT (NFT references it) |
 | `NARAGenesisRewardDistributorV4` | Allocation | ✅ (NFT + genesis tests) | engine, NFT |
 | `NARABondVaultV4` | Allocation | ✅ `NARABondV4.test.ts` | engine |
 | `NARABondDepositoryV4NFT` (canonical bond path) | Allocation | ✅ `NARABondV4NFT.test.ts` | NFT, vault — **stays closed at launch** |
@@ -85,8 +92,10 @@ columns that matter are **test coverage** and the **non-code prerequisite** to d
 | `NARAOpsVaultV4` | Allocation | ✅ (alloc tests) | token |
 | `router/NARARouter` | Router | ✅ `NARARouter.test.ts` | engine |
 | `router/NARADashboardLens` | Router | ✅ `NARADashboardLens.test.ts` | engine, NFT |
-| `router/NARAPositionDataLensV1` | Router | ✅ `NARAPositionDataLensV1.test.ts` | engine, NFT |
+| `router/NARAPositionDataLensV1` | Router | ✅ `NARAPositionDataLensV1.test.ts` | engine, NFT; now incl. weight share / age / countdown / lifetime earned / realized return — see `NARA_V4_POSITION_STATS_AND_CLAIM_FEES.md` |
+| `router/NARAProtocolStatsLensV1` | Router | ✅ `NARAProtocolStatsLensV1.test.ts` | engine; one-call protocol headline stats (all-time ETH distributed, runway, totals). See `NARA_V4_POSITION_STATS_AND_CLAIM_FEES.md` |
 | `router/BribeRouterV4` | Router | ✅ `NARABribeRouterV4.test.ts` | engine; grant `REWARD_NOTIFIER_ROLE` after deploy |
+| `router/NARACirculatingSupplyV1` | Router | ✅ `NARACirculatingSupplyV1.test.ts` (25) | token + the excluded wallet set (reserve/bonds/vesting/dead — treasury stays circulating). Genesis ≈ 110k. See `CIRCULATING_SUPPLY.md` |
 | `composability/NARAStakingPoolV4` (stNARA) | Composability | ✅ `composability/NARAStakingPool.test.ts` | core + allocation + **TVL** |
 | `composability/NARAStakingPoolSYV4` (Pendle SY) | Composability | ✅ (staking pool tests) | stNARA pool |
 | `composability/NARAFractionalPositionV4` + Factory | Composability | ✅ `composability/NARAFractionalPosition.test.ts` | NFT |
@@ -109,9 +118,10 @@ writing contracts**:
 
 | Item | Type | Why it's not a code task |
 |---|---|---|
-| Fresh v4 mainnet deploy | **deploy** | Run the deploy scripts in order; nothing on mainnet yet |
-| Seed NARA/USDC liquidity (~$400 of a ~$500 budget) | **ops/capital** | Liquidity, not a contract |
-| Lock UI rebuilt for v4 | **frontend** | Apps are wired to v3 (broken until rebuilt) |
+| Execute NARA-depth update | **complete** | Executed after the timelock; active depth verified at 60,000 NARA and pending entry cleared |
+| Initialize and seed NARA/USDC | **ops/capital** | Atomic initial position is 60,000 NARA + 300 USDC; approximately $5,000 implied FDV |
+| Validate and freeze compounder | **ops** | Source is verified; run the live compound smoke and accounting checks, then the one-way freeze |
+| Lock UI rebuilt for v4 | **deferred frontend** | Lockboard is not part of the baskets-only launch |
 | Baskets buy/sell UI | **frontend** | The public front door app |
 | **stNARA AMM pool** for instant exit | **ops/liquidity** | A pool you seed, not a contract. Without it, exit is via the redemption queue (which IS built) |
 | **Pendle PT/YT market** | **external** | Pendle deploys it on top of the already-built SY adapter (`NARAStakingPoolSYV4`) |
@@ -158,10 +168,12 @@ lockers exist.
 
 ## 7. Satellite apps (`apps/`)
 
-All wired to **v3 ABIs → broken until rebuilt for v4**: `nara-lockboard` (primary lock UI / 100-slot
-grid), `nara-baskets` (front-door buy/sell — has its own design system, see `apps/nara-baskets/CLAUDE.md`),
-`nara-simple-ui`, `nara-lotto`, `nara-arena`, `nara-protocol-ui` (homepage), `nara-analytics`.
-New wallet apps scaffold from `templates/wallet-game-app` via `scripts/scaffold-game-app.mjs`.
+`apps/nara-baskets` is the only current launch frontend. It contains the fresh
+v4 launch configuration but remains fail-closed in preview until verified
+basket manager and adapter manifests exist. `nara-lockboard` is deferred.
+`nara-lotto` and `nara-arena` are retired. Other historical or experimental
+apps are not part of the launch scope and must not be presented as active v4
+surfaces.
 
 ---
 
@@ -175,6 +187,7 @@ New wallet apps scaffold from `templates/wallet-game-app` via `scripts/scaffold-
 | Product direction and phases | `ROADMAP.md` |
 | Operator deploy commands | `NARA_V4_LAUNCH_RUNBOOK.md`, `V4_LAUNCH_CHECKLIST.md` |
 | NFT position spec | `NARA_V4_NFT_POSITIONS.md`, `NARA_V4_NFT_PRODUCTION_PLAN.md` |
+| NFT protocol-wide role / gap audit | `NARA_V4_NFT_PROTOCOL_ROLE_AUDIT.md` |
 | Router/lens spec | `ROUTER_LENS.md` |
 | Emission model | `EMISSION_MECHANICS.md`, `LOCK_APY_REFERENCE.md` |
 | Security disclosure | `../SECURITY.md` |
@@ -199,9 +212,10 @@ npm run slither:v4                                           # static analysis
 ~/.foundry/bin/forge test --root nara-category-baskets-v1 --no-match-path "test/AerodromeBasketAdapterV1.t.sol"
 ```
 
-**Last full run — 2026-06-07:** Hardhat **360 passing / 0 failing / 0 skipped**; Baskets **136 passing /
-1 skipped** (fork test) **/ 0 failing**; size gate green; Slither exit 0. **Aderyn + Echidna re-run
-2026-06-08 on a Linux box, both green** against current code — Echidna invariant suite expanded 3 → 13,
+The dated verification stamp and current commands live in
+[`CURRENT_STATE.md`](CURRENT_STATE.md). Do not copy test totals into this scope
+map because they change as coverage grows. Aderyn and Echidna were re-run on
+2026-06-08 against that release line; the Echidna invariant suite expanded 3 → 13,
 all passing (10,004 calls); Aderyn 4 High / 18 Low (heuristic; Highs in bond/router/fractional, not the
 core; triage H-4 before bonds open). Linux-only — run on a Linux box or CI, not the dev PC. See `scripts/run-gates-linux.sh`.
 
@@ -217,7 +231,7 @@ What was stale/wrong before this audit, so a cold AI knows not to trust the old 
 2. **"568 passing"** (was in `CURRENT_STATE.md` + `ROADMAP.md`). **Stale** — predates the 2026-05-27
    v4 reset that archived the v3 tests. Live count is 360. Both docs now reference the command + a
    dated stamp instead of a frozen number.
-3. **Router/lens layer + `NARAPositionRendererV4` missing** from `CURRENT_STATE.md` tables (those docs
+3. **Router/lens layer + `NARAPositionRendererV5` missing** from `CURRENT_STATE.md` tables (those docs
    were frozen at 2026-05-27, before the 2026-05-28 router work and 2026-06 NFT-presentation work).
    Added.
 4. **"94 pass, 1 skip"** for baskets (in workspace-root `CLAUDE.md`). **Stale** — suite grew to 136

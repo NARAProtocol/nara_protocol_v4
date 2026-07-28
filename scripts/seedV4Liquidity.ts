@@ -1,18 +1,17 @@
 /**
  * Seed initial NARA/USDC liquidity into the v4 pool.
  *
- * Uses LIQ_PRIVATE_KEY - liquidity wallet holds both the 30 NARA LP seed and the
+ * Uses LIQ_PRIVATE_KEY - liquidity wallet holds the approved 60,000 NARA and
  * 300 USDC required for the initial position.
  *
  * Required env (in .env):
  *   LIQ_PRIVATE_KEY
  *   BASE_RPC_URL or BASE_MAINNET_RPC_URL
  *
- * Optional env:
- *   V4_NARA_TOKEN          default: 0x58c209B95350aFBEFa17137CEd209f8c4b7D896D
- *   V4_SEED_NARA           default: 30     (human NARA, 18 decimals)
- *   V4_SEED_USDC           default: 300    (human USDC, 6 decimals)
- *   V4_SEED_SLIPPAGE_BPS   default: 200    (2% max slippage on each token)
+ * Required launch amounts (no defaults):
+ *   V4_NARA_TOKEN          required fresh deployment address
+ *   V4_SEED_NARA           must be: 60000  (human NARA, 18 decimals)
+ *   V4_SEED_USDC           must be: 300    (human USDC, 6 decimals)
  *
  * Usage:
  *   npx tsx scripts/seedV4Liquidity.ts
@@ -23,7 +22,7 @@ import * as dotenv from "dotenv";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve, dirname } from "path";
 import { fileURLToPath } from "url";
-import { currentV4Config, optionalEnv, requiredBaseRpcUrl, requiredEnv } from "./lib/v4LiveConfig.js";
+import { currentV4Config, requiredBaseRpcUrl, requiredEnv } from "./lib/v4LiveConfig.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = dirname(__filename);
@@ -37,6 +36,9 @@ dotenv.config({ path: resolve(repoRoot, ".env") });
 // floor(887272 / 60) * 60 = 887220
 const TICK_LOWER = -887220;
 const TICK_UPPER =  887220;
+const APPROVED_SEED_NARA = "60000";
+const APPROVED_SEED_USDC = "300";
+const APPROVED_PRICE_USDC_PER_NARA = "0.005";
 
 // v4-periphery v1.0.3 action codes (contracts/v4/node_modules/.../Actions.sol)
 const MINT_POSITION = 0x02;
@@ -57,8 +59,12 @@ const PERMIT2_ABI = [
 ];
 
 const POSITION_MANAGER_ABI = [
+  "function initializePool((address,address,uint24,int24,address) key, uint160 sqrtPriceX96) external payable returns (int24)",
   "function modifyLiquidities(bytes calldata unlockData, uint256 deadline) external payable",
-  "function nextTokenId() external view returns (uint256)",
+  "function multicall(bytes[] calldata data) external payable returns (bytes[] memory results)",
+  "function ownerOf(uint256 tokenId) external view returns (address)",
+  "function getPositionLiquidity(uint256 tokenId) external view returns (uint128)",
+  "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
 ];
 
 const POOL_MANAGER_ABI = [
@@ -66,10 +72,6 @@ const POOL_MANAGER_ABI = [
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function applySlippage(amount: bigint, slippageBps: bigint): bigint {
-  return amount + (amount * slippageBps) / 10000n;
-}
 
 // Compute sqrtPriceX96 from raw token amounts (same formula as deploy script)
 function isqrt(n: bigint): bigint {
@@ -82,6 +84,47 @@ function isqrt(n: bigint): bigint {
 
 function sqrtPriceX96FromAmounts(amount0: bigint, amount1: bigint): bigint {
   return isqrt((amount1 * (1n << 192n)) / amount0);
+}
+
+export function requireApprovedSeedAmounts(seedNara: string, seedUsdc: string): void {
+  if (
+    ethers.parseUnits(seedNara, 18) !== ethers.parseUnits(APPROVED_SEED_NARA, 18) ||
+    ethers.parseUnits(seedUsdc, 6) !== ethers.parseUnits(APPROVED_SEED_USDC, 6)
+  ) {
+    throw new Error(
+      `Refusing unapproved launch ratio. V4_SEED_NARA must be ${APPROVED_SEED_NARA} ` +
+      `and V4_SEED_USDC must be ${APPROVED_SEED_USDC} ` +
+      `(${APPROVED_PRICE_USDC_PER_NARA} USDC/NARA; approximately $5,000 FDV).`,
+    );
+  }
+}
+
+export function mintedTokenIdFromReceipt(
+  receipt: ethers.TransactionReceipt,
+  positionManager: string,
+  expectedOwner: string,
+): bigint {
+  const iface = new ethers.Interface(POSITION_MANAGER_ABI);
+  const matches: bigint[] = [];
+  for (const log of receipt.logs) {
+    if (log.address.toLowerCase() !== positionManager.toLowerCase()) continue;
+    try {
+      const parsed = iface.parseLog(log);
+      if (
+        parsed?.name === "Transfer" &&
+        (parsed.args.from as string) === ethers.ZeroAddress &&
+        (parsed.args.to as string).toLowerCase() === expectedOwner.toLowerCase()
+      ) {
+        matches.push(parsed.args.tokenId as bigint);
+      }
+    } catch {
+      // Ignore unrelated PositionManager events.
+    }
+  }
+  if (matches.length !== 1) {
+    throw new Error(`Expected exactly one LP NFT mint in receipt, found ${matches.length}`);
+  }
+  return matches[0];
 }
 
 // Encode the pool key as the Solidity struct tuple
@@ -121,13 +164,16 @@ async function main() {
   const config    = currentV4Config();
   const naraAddr  = config.token;
   const usdcAddr  = config.base;
-  const seedNara  = optionalEnv("V4_SEED_NARA", "30");
-  const seedUsdc  = optionalEnv("V4_SEED_USDC", "300");
-  const slipBps   = BigInt(optionalEnv("V4_SEED_SLIPPAGE_BPS", "200"));
+  const seedNara  = requiredEnv("V4_SEED_NARA");
+  const seedUsdc  = requiredEnv("V4_SEED_USDC");
+  requireApprovedSeedAmounts(seedNara, seedUsdc);
 
   const provider  = new ethers.JsonRpcProvider(rpcUrl);
   const treasury  = new ethers.Wallet(liqKey, provider);
   const network   = await provider.getNetwork();
+  if (network.chainId !== 8453n) {
+    throw new Error(`Expected Base mainnet chainId 8453, got ${network.chainId}`);
+  }
 
   console.log("NARA v4 — Seed LP");
   console.log("Network:      ", network.chainId.toString());
@@ -135,13 +181,14 @@ async function main() {
   console.log("NARA token:   ", naraAddr);
   console.log("Seed NARA:    ", seedNara);
   console.log("Seed USDC:    ", seedUsdc);
-  console.log("Slippage:     ", slipBps.toString(), "bps");
+  console.log("Opening ratio:", APPROVED_PRICE_USDC_PER_NARA, "USDC/NARA");
   console.log("");
 
   const nara  = new ethers.Contract(naraAddr, ERC20_ABI, treasury);
   const usdc  = new ethers.Contract(usdcAddr, ERC20_ABI, treasury);
   const p2    = new ethers.Contract(config.permit2, PERMIT2_ABI, treasury);
   const pm    = new ethers.Contract(config.positionManager, POSITION_MANAGER_ABI, treasury);
+  const poolManager = new ethers.Contract(config.poolManager, POOL_MANAGER_ABI, provider);
 
   // Sort currencies: lower address = currency0
   const [currency0, currency1] = BigInt(naraAddr) < BigInt(usdcAddr)
@@ -159,6 +206,23 @@ async function main() {
   console.log("NARA is c0:   ", naraIsCurrency0);
   console.log("");
 
+  // Fail closed before approvals: this script is only for the first, atomic
+  // initialize+mint transaction. PoolManager stores pools at mapping slot 6.
+  const poolStateSlot = ethers.keccak256(
+    ethers.solidityPacked(
+      ["bytes32", "bytes32"],
+      [config.poolId, ethers.zeroPadValue("0x06", 32)],
+    ),
+  );
+  const rawSlot0 = await poolManager.extsload(poolStateSlot) as string;
+  const currentSqrtPriceX96 = BigInt(rawSlot0) & ((1n << 160n) - 1n);
+  if (currentSqrtPriceX96 !== 0n) {
+    throw new Error(
+      `Pool is already initialized at sqrtPriceX96=${currentSqrtPriceX96}. ` +
+      "Refusing to run the first-liquidity script.",
+    );
+  }
+
   // Balance checks
   const naraBal = await nara.balanceOf(treasury.address) as bigint;
   const usdcBal = await usdc.balanceOf(treasury.address) as bigint;
@@ -168,14 +232,16 @@ async function main() {
 
   if (naraBal < naraAmount) throw new Error(`Insufficient NARA: have ${ethers.formatUnits(naraBal, 18)}, need ${seedNara}`);
   if (usdcBal < usdcAmount) throw new Error(`Insufficient USDC: have ${ethers.formatUnits(usdcBal, 6)}, need ${seedUsdc}. Send ${seedUsdc} USDC to ${treasury.address} first.`);
+  const deadline = BigInt(Math.floor(Date.now() / 1000)) + 600n;
 
   // Permit2: approve both tokens to Permit2 if needed
   for (const [token, name] of [[nara, "NARA"], [usdc, "USDC"]] as const) {
     const tokenAddress = await token.getAddress();
+    const needAmount = tokenAddress.toLowerCase() === naraAddr.toLowerCase() ? naraAmount : usdcAmount;
     const p2Allowance = await token.allowance(treasury.address, config.permit2) as bigint;
-    if (p2Allowance < ethers.MaxUint256 / 2n) {
+    if (p2Allowance !== needAmount) {
       console.log(`Approving Permit2 for ${name}…`);
-      const tx = await token.approve(config.permit2, ethers.MaxUint256);
+      const tx = await token.approve(config.permit2, needAmount);
       await tx.wait();
       console.log(`${name} → Permit2 approved: ${tx.hash}`);
     } else {
@@ -183,13 +249,10 @@ async function main() {
     }
 
     // Permit2: approve PositionManager
-    const [p2Amount] = await p2.allowance(treasury.address, tokenAddress, config.positionManager) as [bigint, bigint, bigint];
-    const needAmount = tokenAddress.toLowerCase() === naraAddr.toLowerCase() ? naraAmount : usdcAmount;
-    if (p2Amount < needAmount) {
+    const [p2Amount, p2Expiration] = await p2.allowance(treasury.address, tokenAddress, config.positionManager) as [bigint, bigint, bigint];
+    if (p2Amount !== needAmount || p2Expiration < deadline) {
       console.log(`Setting Permit2 allowance for ${name} → PositionManager…`);
-      const maxUint160 = (1n << 160n) - 1n;
-      const maxUint48  = (1n << 48n) - 1n;
-      const tx = await p2.approve(tokenAddress, config.positionManager, maxUint160, maxUint48);
+      const tx = await p2.approve(tokenAddress, config.positionManager, needAmount, deadline);
       await tx.wait();
       console.log(`${name} Permit2 allowance set: ${tx.hash}`);
     } else {
@@ -210,8 +273,8 @@ async function main() {
   const liq1 = (amount1Raw * Q96) / sqrtPriceX96;
   const liquidity = liq0 < liq1 ? liq0 : liq1;
 
-  const amount0Max = applySlippage(amount0Raw, slipBps);
-  const amount1Max = applySlippage(amount1Raw, slipBps);
+  const amount0Max = amount0Raw;
+  const amount1Max = amount1Raw;
 
   // MINT_POSITION (0x02): explicit liquidity
   // params: (PoolKey, int24 tickLower, int24 tickUpper, uint256 liquidity, uint128 amount0Max, uint128 amount1Max, address owner, bytes hookData)
@@ -236,26 +299,51 @@ async function main() {
     [actions, [mintParams, settleParams]],
   );
 
-  const deadline = BigInt(Math.floor(Date.now() / 1000)) + 600n;
-
-  // Preview next token ID
-  const nextId = await pm.nextTokenId() as bigint;
-  console.log("Expected LP NFT token ID:", nextId.toString());
-  console.log("Submitting modifyLiquidities…");
+  console.log("Submitting atomic initializePool + modifyLiquidities...");
   console.log("  tickLower:", TICK_LOWER, "tickUpper:", TICK_UPPER);
   console.log("  liquidity:", liquidity.toString());
   console.log("  amount0Max:", ethers.formatUnits(amount0Max, naraIsCurrency0 ? 18 : 6));
   console.log("  amount1Max:", ethers.formatUnits(amount1Max, naraIsCurrency0 ? 6 : 18));
   console.log("");
 
-  const tx = await pm.modifyLiquidities(unlockData, deadline, { gasLimit: 2_000_000n });
+  const poolKey = [currency0, currency1, config.fee, config.tickSpacing, config.hook] as const;
+  const initializeCall = pm.interface.encodeFunctionData("initializePool", [poolKey, sqrtPriceX96]);
+  const mintCall = pm.interface.encodeFunctionData("modifyLiquidities", [unlockData, deadline]);
+  const tx = await pm.multicall([initializeCall, mintCall], { gasLimit: 2_000_000n });
   console.log("TX hash:", tx.hash);
   const receipt = await tx.wait();
   if (receipt?.status !== 1) throw new Error("Transaction reverted");
+  const lpTokenId = mintedTokenIdFromReceipt(receipt, config.positionManager, treasury.address);
+  const [lpOwner, positionLiquidity] = await Promise.all([
+    pm.ownerOf(lpTokenId) as Promise<string>,
+    pm.getPositionLiquidity(lpTokenId) as Promise<bigint>,
+  ]);
+  if (lpOwner.toLowerCase() !== treasury.address.toLowerCase()) {
+    throw new Error(`LP NFT ${lpTokenId} owner mismatch: ${lpOwner}`);
+  }
+  if (positionLiquidity === 0n) {
+    throw new Error(`LP NFT ${lpTokenId} has zero liquidity`);
+  }
+
+  // Remove both approval layers after the confirmed seed.
+  for (const [token, name] of [[nara, "NARA"], [usdc, "USDC"]] as const) {
+    const tokenAddress = await token.getAddress();
+    const revokePermit2 = await p2.approve(tokenAddress, config.positionManager, 0n, 0n);
+    await revokePermit2.wait();
+    const revokeErc20 = await token.approve(config.permit2, 0n);
+    await revokeErc20.wait();
+    const [remainingP2] = await p2.allowance(treasury.address, tokenAddress, config.positionManager) as [bigint, bigint, bigint];
+    const remainingErc20 = await token.allowance(treasury.address, config.permit2) as bigint;
+    if (remainingP2 !== 0n || remainingErc20 !== 0n) {
+      throw new Error(`${name} approval revocation verification failed`);
+    }
+    console.log(`${name} seed approvals revoked`);
+  }
 
   console.log("");
   console.log("LP seeded successfully.");
-  console.log("LP NFT token ID:", nextId.toString());
+  console.log("LP NFT token ID:", lpTokenId.toString());
+  console.log("LP liquidity:   ", positionLiquidity.toString());
   console.log("Owner:          ", treasury.address);
   console.log("Pool:            NARA/USDC v4 with hook", config.hook);
 
@@ -269,14 +357,17 @@ async function main() {
     vault: config.vault,
     engine: config.engine,
     poolId: config.poolId,
-    lpTokenId: nextId.toString(),
+    lpTokenId: lpTokenId.toString(),
+    positionLiquidity: positionLiquidity.toString(),
     seedNara,
     seedUsdc,
     transactionHash: tx.hash,
   });
 }
 
-main().catch(err => {
-  console.error(err.message ?? err);
-  process.exitCode = 1;
-});
+if (process.argv[1] && resolve(process.argv[1]) === __filename) {
+  main().catch(err => {
+    console.error(err.message ?? err);
+    process.exitCode = 1;
+  });
+}

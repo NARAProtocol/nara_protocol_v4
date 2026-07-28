@@ -46,6 +46,10 @@ contract NARAPositionAccountV4 {
         _;
     }
 
+    constructor() {
+        initialized = true;
+    }
+
     function initialize(address engine_, address nara_, address factory_) external {
         if (initialized) revert NARAPositionAccountV4__AlreadyInitialized();
         if (engine_ == address(0) || nara_ == address(0) || factory_ == address(0)) {
@@ -74,13 +78,25 @@ contract NARAPositionAccountV4 {
         positionId = id;
     }
 
-    function extend(uint64 additionalEpochs, address rewardRecipient) external onlyFactory {
+    function extend(uint64 additionalEpochs, address rewardRecipient)
+        external
+        onlyFactory
+        returns (uint256 naraAmount, uint256 ethAmount)
+    {
         uint256 id = positionId;
         if (id == 0 || unlocked) revert NARAPositionAccountV4__NotLocked();
 
+        uint256 naraBefore = IERC20(nara).balanceOf(address(this));
+        uint256 ethBefore = address(this).balance;
         INARAEngineAccountV4(engine).extend(id, additionalEpochs);
-        _sweepNara(rewardRecipient);
-        _sweepEth(rewardRecipient);
+        uint256 naraAfter = IERC20(nara).balanceOf(address(this));
+        uint256 ethAfter = address(this).balance;
+
+        naraAmount = naraAfter > naraBefore ? naraAfter - naraBefore : 0;
+        ethAmount = ethAfter > ethBefore ? ethAfter - ethBefore : 0;
+
+        if (naraAmount != 0) IERC20(nara).safeTransfer(rewardRecipient, naraAmount);
+        if (ethAmount != 0) _sendEth(rewardRecipient, ethAmount);
     }
 
     function claimRewards(address to)
@@ -137,8 +153,7 @@ contract NARAPositionAccountV4 {
         if (to == address(0)) revert NARAPositionAccountV4__ZeroAddress();
         uint256 balance = address(this).balance;
         if (balance != 0) {
-            (bool ok, ) = payable(to).call{value: balance}("");
-            if (!ok) revert NARAPositionAccountV4__SweepFailed();
+            _sendEth(to, balance);
         }
     }
 
@@ -148,6 +163,12 @@ contract NARAPositionAccountV4 {
         if (balance != 0) {
             IERC20(token).safeTransfer(to, balance);
         }
+    }
+
+    function _sendEth(address to, uint256 amount) internal {
+        if (to == address(0)) revert NARAPositionAccountV4__ZeroAddress();
+        (bool ok, ) = payable(to).call{value: amount}("");
+        if (!ok) revert NARAPositionAccountV4__SweepFailed();
     }
 
     receive() external payable {}

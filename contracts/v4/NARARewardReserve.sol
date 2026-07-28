@@ -8,7 +8,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 
 interface INARARewardReserveEngineView {
     function NARA() external view returns (address);
-    function nara() external view returns (address);
+    function currentEpoch() external view returns (uint64);
 }
 
 error AlreadySet();
@@ -29,10 +29,9 @@ error NotAContract();
 ///      `INaraRewardReserve` interface NARAEngine expects in setRewardReserve.
 ///      `nara` and `engine` addresses are each set exactly once at deploy.
 ///
-///      Behavior is identical to the v3 NARARewardReserve. The v3 version is archived
-///      at archive/legacy-v3/contracts/NARARewardReserve.sol. This v4 copy exists because
-///      v4 needs the sealed-reserve custodian role and the contract logic is
-///      version-agnostic (only the engine address it serves changes).
+///      This v4 reserve only accepts an engine exposing the v4 `NARA()` and
+///      `currentEpoch()` surface, which avoids accidentally sealing emissions
+///      to other contracts that happen to expose a lowercase `nara()` getter.
 contract NARARewardReserve is AccessControl, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
@@ -78,12 +77,12 @@ contract NARARewardReserve is AccessControl, ReentrancyGuard {
         if (address(nara) == address(0)) revert InvalidToken();
         bool valid;
         try INARARewardReserveEngineView(engine_).NARA() returns (address token) {
-            valid = token == address(nara);
-        } catch {
-            try INARARewardReserveEngineView(engine_).nara() returns (address token) {
-                valid = token == address(nara);
-            } catch {}
-        }
+            if (token == address(nara)) {
+                try INARARewardReserveEngineView(engine_).currentEpoch() returns (uint64) {
+                    valid = true;
+                } catch {}
+            }
+        } catch {}
         if (!valid) revert InvalidEngine();
         if (engine != address(0)) revert AlreadySet();
         engine = engine_;

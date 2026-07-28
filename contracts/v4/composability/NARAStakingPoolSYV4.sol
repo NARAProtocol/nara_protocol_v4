@@ -268,6 +268,11 @@ contract NARAStakingPoolSYV4 is ERC20, ReentrancyGuardTransient {
     // ── Reward indexes — debt reset AFTER balance change ───────────
 
     function _update(address from, address to, uint256 value) internal override {
+        // Fix reward entitlement at pre-transfer balances.
+        if (from != address(0) && to != address(0) && from != to) {
+            _pullAndDistributeRewards();
+        }
+
         if (from != address(0)) {
             uint256 p = _pendingUsdc(from);
             if (p > 0) _usdcAccrued[from] += p;

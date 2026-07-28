@@ -79,6 +79,7 @@ contract NARABondVaultV4 is AccessControl, ReentrancyGuard {
     event MarketChangeProposed(address indexed newMarket, uint64 eta);
     event MarketChanged(address indexed oldMarket, address indexed newMarket);
     event PreviousMarketCleared(address indexed oldPreviousMarket);
+    event PreviousMarketForceCleared(address indexed oldPreviousMarket, uint256 residualBalance);
     event MarketChangeCancelled();
     event ReleaseCapChangeProposed(uint256 newCap, uint64 eta);
     event ReleaseCapChanged(uint256 oldCap, uint256 newCap);
@@ -156,6 +157,7 @@ contract NARABondVaultV4 is AccessControl, ReentrancyGuard {
         if (pendingMarketChange.value != address(0)) revert PendingActionExists();
         if (newMarket == address(0)) revert ZeroAddress();
         if (newMarket.code.length == 0) revert NotAContract();
+        if (newMarket == address(this)) revert InvalidMarket();
         if (newMarket == market) revert SameValue();
         pendingMarketChange = PendingAddressChange({
             value: newMarket,
@@ -197,9 +199,9 @@ contract NARABondVaultV4 is AccessControl, ReentrancyGuard {
         if (oldPreviousMarket == address(0)) revert NothingToClear();
         IERC20 token = nara;
         if (address(token) == address(0)) revert InvalidToken();
-        if (token.balanceOf(oldPreviousMarket) != 0) revert PreviousMarketStillPendingReturns();
+        uint256 residualBalance = token.balanceOf(oldPreviousMarket);
         previousMarket = address(0);
-        emit PreviousMarketCleared(oldPreviousMarket);
+        emit PreviousMarketForceCleared(oldPreviousMarket, residualBalance);
     }
 
     // ─── Release cap management ─────────────────────────────────────────────────

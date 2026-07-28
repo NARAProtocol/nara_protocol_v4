@@ -6,7 +6,7 @@ const ONE = 10n ** 18n;
 const MAX_SUPPLY = 1_000_000n * ONE;
 const MAX_FLASH_LOAN = 100_000n * ONE;
 const FLASH_FEE_BPS = 10n;
-const TOKEN_NAME = "NARA Protocol";
+const TOKEN_NAME = "NARA Token";
 const TOKEN_SYMBOL = "NARA";
 
 async function setup() {
@@ -308,8 +308,8 @@ describe("NARAToken v4", function () {
 describe("NARALauncher", function () {
     async function deployLauncher() {
         const ctx = await setup();
-        const { ethers } = ctx;
-        const launcher = await ethers.deployContract("NARALauncher");
+        const { ethers, deployer } = ctx;
+        const launcher = await ethers.deployContract("NARALauncher", [deployer.address]);
         await launcher.waitForDeployment();
         return { ...ctx, launcher };
     }
@@ -319,6 +319,20 @@ describe("NARALauncher", function () {
         const encoded = ethers.AbiCoder.defaultAbiCoder().encode(["uint256"], [configValue]);
         return artifact.bytecode + encoded.slice(2);
     }
+
+    it("stores the explicit launch admin", async function () {
+        const { launcher, deployer } = await deployLauncher();
+
+        expect(await launcher.launcherAdmin()).to.equal(deployer.address);
+    });
+
+    it("reverts on zero launch admin", async function () {
+        const { ethers } = await setup();
+        const Launcher = await ethers.getContractFactory("NARALauncher");
+
+        await expect(Launcher.deploy(ethers.ZeroAddress))
+            .to.be.revertedWithCustomError(Launcher, "ZeroAddress");
+    });
 
     it("atomically deploys token and engine with matching CREATE2 address", async function () {
         const { ethers, launcher, treasury } = await deployLauncher();
@@ -353,7 +367,7 @@ describe("NARALauncher", function () {
         expect(await token.symbol()).to.equal(TOKEN_SYMBOL);
     });
 
-    it("only lets the launcher deployer execute the one-shot launch", async function () {
+    it("only lets the configured launcher admin execute the one-shot launch", async function () {
         const { ethers, launcher, treasury, alice } = await deployLauncher();
 
         const salt = ethers.keccak256(ethers.toUtf8Bytes("NARA-LAUNCH-AUTH"));
@@ -365,6 +379,32 @@ describe("NARALauncher", function () {
 
         await launcher.launch(treasury.address, code, salt, TOKEN_NAME, TOKEN_SYMBOL);
         expect(await launcher.launched()).to.equal(true);
+    });
+
+    it("failed engine deployment leaves the launcher unlaunched and retryable", async function () {
+        const { ethers, launcher, treasury } = await deployLauncher();
+
+        const badSalt = ethers.keccak256(ethers.toUtf8Bytes("NARA-LAUNCH-REVERT"));
+        const revertingCreationCode = "0x60006000fd";
+
+        await expect(
+            launcher.launch(treasury.address, revertingCreationCode, badSalt, TOKEN_NAME, TOKEN_SYMBOL)
+        ).to.be.revert(ethers);
+
+        expect(await launcher.launched()).to.equal(false);
+        expect(await launcher.pendingToken()).to.equal(ethers.ZeroAddress);
+        expect(await launcher.deployedToken()).to.equal(ethers.ZeroAddress);
+        expect(await launcher.deployedEngine()).to.equal(ethers.ZeroAddress);
+
+        const goodSalt = ethers.keccak256(ethers.toUtf8Bytes("NARA-LAUNCH-RETRY"));
+        const code = await buildEngineCreationCode(ethers, 7n);
+
+        await launcher.launch(treasury.address, code, goodSalt, TOKEN_NAME, TOKEN_SYMBOL);
+
+        expect(await launcher.launched()).to.equal(true);
+        expect(await launcher.pendingToken()).to.equal(ethers.ZeroAddress);
+        expect(await launcher.deployedToken()).to.not.equal(ethers.ZeroAddress);
+        expect(await launcher.deployedEngine()).to.not.equal(ethers.ZeroAddress);
     });
 
     it("reverts on second launch attempt", async function () {

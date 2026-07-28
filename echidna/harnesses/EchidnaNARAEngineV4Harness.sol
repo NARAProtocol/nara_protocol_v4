@@ -123,7 +123,7 @@ contract EchidnaNARAEngineV4Harness {
         _naraIdxBefore = engine.naraIndexRay();
         _ethIdxBefore = engine.ethIndexRay();
         _nextIdBefore = engine.nextPositionId();
-        _settledEpochBefore = engine.epochStateView().epoch;
+        _settledEpochBefore = _settledEpoch();
     }
 
     function _ensureEngine() internal {
@@ -209,7 +209,7 @@ contract EchidnaNARAEngineV4Harness {
     // 5. Settled epoch never runs ahead of the wall-clock epoch.
     function echidna_settled_epoch_not_ahead() external view returns (bool) {
         if (address(engine) == address(0)) return true;
-        return engine.epochStateView().epoch <= engine.currentEpoch();
+        return _settledEpoch() <= engine.currentEpoch();
     }
 
     // 6. Drip accounting: claimed NARA drip can never exceed paid NARA drip.
@@ -266,7 +266,18 @@ contract EchidnaNARAEngineV4Harness {
     function echidna_position_id_monotonic() external view returns (bool) {
         if (address(engine) == address(0)) return true;
         return engine.nextPositionId() >= _nextIdBefore
-            && engine.epochStateView().epoch >= _settledEpochBefore;
+            && _settledEpoch() >= _settledEpochBefore;
+    }
+
+    function _settledEpoch() internal view returns (uint64 settled) {
+        (bool ok, bytes memory data) =
+            address(engine).staticcall(abi.encodeWithSelector(bytes4(keccak256("epochState()"))));
+        if (!ok || data.length < 32) return 0;
+        uint256 raw;
+        assembly {
+            raw := mload(add(data, 32))
+        }
+        settled = uint64(raw);
     }
 
     receive() external payable {}

@@ -4,6 +4,7 @@ cache
 dist
 .env
 .env.*
+!.env.example
 coverage
 .codex-hardhat/
 typechain-types/

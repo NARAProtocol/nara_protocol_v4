@@ -36,7 +36,7 @@ struct RouterEpochSnapshot {
 interface IRouterEngine {
     function NARA() external view returns (address);
     function currentEpoch() external view returns (uint64);
-    function epochStateView() external view returns (RouterEpochSnapshot memory);
+    function epochState() external view returns (RouterEpochSnapshot memory);
     function advanceEpochs(uint256 maxSteps)
         external returns (uint256 stepsAdvanced, RouterEpochSnapshot memory);
     function lockFor(address owner, uint256 amount, uint64 durationEpochs, uint256 minWeight)
@@ -99,7 +99,7 @@ contract NARARouter is ReentrancyGuard {
     /// off-chain Railway cron keeper.
     function syncEpochs() external nonReentrant returns (uint256 stepsAdvanced) {
         uint64 live    = ENGINE.currentEpoch();
-        uint64 settled = ENGINE.epochStateView().epoch;
+        uint64 settled = ENGINE.epochState().epoch;
         if (live <= settled) return 0;
         (stepsAdvanced,) = ENGINE.advanceEpochs(uint256(live - settled));
     }
@@ -110,7 +110,7 @@ contract NARARouter is ReentrancyGuard {
     function syncEpochs(uint256 maxSteps) external nonReentrant returns (uint256 stepsAdvanced) {
         if (maxSteps == 0) return 0;
         uint64 live    = ENGINE.currentEpoch();
-        uint64 settled = ENGINE.epochStateView().epoch;
+        uint64 settled = ENGINE.epochState().epoch;
         if (live <= settled) return 0;
         uint256 backlog = uint256(live - settled);
         uint256 steps   = maxSteps < backlog ? maxSteps : backlog;
@@ -193,7 +193,7 @@ contract NARARouter is ReentrancyGuard {
     /// engine is always current before any state-modifying downstream call.
     function _syncAll() internal {
         uint64 live    = ENGINE.currentEpoch();
-        uint64 settled = ENGINE.epochStateView().epoch;
+        uint64 settled = ENGINE.epochState().epoch;
         if (live > settled) {
             ENGINE.advanceEpochs(uint256(live - settled));
         }

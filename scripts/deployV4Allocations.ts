@@ -4,7 +4,7 @@
  * This does not open public bonds by default. It:
  *   1. Deploys NARAOpsVaultV4.
  *   2. Deploys NARABondVaultV4.
- *   3. Deploys NARAPositionAccountV4, NARAPositionRendererV4, NARAPositionNFTV4, and Genesis reward distributor.
+ *   3. Deploys NARAPositionAccountV4, modular NARAPositionRendererV5, NARAPositionNFTV4, and Genesis reward distributor.
  *   4. Deploys NARABondDepositoryV4NFT with capacity 0 and inactive terms by default.
  *   5. Authorizes the depository as Genesis minter.
  *   6. Optionally funds NARA into the ops vault via fund().
@@ -27,8 +27,8 @@
  *   V4_LIQUIDITY_GROWTH_VAULT      default: latest v4 Base USDC vault if present
  *   V4_OPS_OWNER_ADDRESS           default: V4_ADMIN_ADDRESS
  *   V4_OPS_AMOUNT_NARA             default: 0 (keeps ops float liquid)
- *   V4_BOND_AMOUNT_NARA            default: 289970
- *   V4_MIN_TREASURY_FLOAT_NARA     default: 10030 (10k ops + 30 NARA LP seed)
+ *   V4_BOND_AMOUNT_NARA            default: 200000
+ *   V4_MIN_TREASURY_FLOAT_NARA     default: 150000 (LP 70k + owner 40k + treasury 40k)
  *   V4_OPS_VESTING_DAYS            default: 365
  *   V4_BOND_ACTION_DELAY_SECONDS   default: 86400
  *   V4_BOND_ADMIN_DELAY_SECONDS    default: 86400
@@ -58,8 +58,8 @@ const BASE_CHAIN_ID = 8453n;
 const DEFAULT_BASE_USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 const OPS_MAX_NARA = 10_000n;
 const BOND_MAX_NARA = 290_000n;
-const DEFAULT_BOND_NARA = 289_970n;
-const DEFAULT_MIN_TREASURY_FLOAT_NARA = 10_030n;
+const DEFAULT_BOND_NARA = 200_000n;
+const DEFAULT_MIN_TREASURY_FLOAT_NARA = 150_000n;
 const MIN_REMOTE_DELAY = 3600;
 const DAY_SECONDS = 24 * 60 * 60;
 
@@ -193,8 +193,24 @@ async function estimateGasFloor(
     "contracts/v4/NARAPositionAccountV4.sol:NARAPositionAccountV4",
     deployer,
   );
+  const artMetadataFactory = await ethers.getContractFactory(
+    "contracts/v4/NARAArtMetadataV1.sol:NARAArtMetadataV1",
+    deployer,
+  );
+  const artSecurityPrintFactory = await ethers.getContractFactory(
+    "contracts/v4/NARAArtSecurityPrintV1.sol:NARAArtSecurityPrintV1",
+    deployer,
+  );
+  const artCorePlateFactory = await ethers.getContractFactory(
+    "contracts/v4/NARAArtCorePlateV1.sol:NARAArtCorePlateV1",
+    deployer,
+  );
+  const artGenesisPlateFactory = await ethers.getContractFactory(
+    "contracts/v4/NARAArtGenesisPlateV1.sol:NARAArtGenesisPlateV1",
+    deployer,
+  );
   const positionRendererFactory = await ethers.getContractFactory(
-    "contracts/v4/NARAPositionRendererV4.sol:NARAPositionRendererV4",
+    "contracts/v4/NARAPositionRendererV5.sol:NARAPositionRendererV5",
     deployer,
   );
   const positionNftFactory = await ethers.getContractFactory(
@@ -213,7 +229,16 @@ async function estimateGasFloor(
   const opsTx = await opsFactory.getDeployTransaction(tokenAddress, opsOwner, opsVestingSeconds);
   const bondVaultTx = await bondVaultFactory.getDeployTransaction(deployer.address, bondActionDelay, bondAmount);
   const positionAccountTx = await positionAccountFactory.getDeployTransaction();
-  const positionRendererTx = await positionRendererFactory.getDeployTransaction();
+  const artMetadataTx = await artMetadataFactory.getDeployTransaction();
+  const artSecurityPrintTx = await artSecurityPrintFactory.getDeployTransaction();
+  const artCorePlateTx = await artCorePlateFactory.getDeployTransaction(tokenAddress);
+  const artGenesisPlateTx = await artGenesisPlateFactory.getDeployTransaction();
+  const positionRendererTx = await positionRendererFactory.getDeployTransaction(
+    tokenAddress,
+    tokenAddress,
+    tokenAddress,
+    tokenAddress,
+  );
   // Use tokenAddress as the placeholder implementation/NFT/vault for constructor gas estimation.
   // The real addresses are unknown before deployment; constructors only check code length.
   const positionNftTx = await positionNftFactory.getDeployTransaction(
@@ -241,6 +266,10 @@ async function estimateGasFloor(
     await ethers.provider.estimateGas({ ...opsTx, from: deployer.address }) +
     await ethers.provider.estimateGas({ ...bondVaultTx, from: deployer.address }) +
     await ethers.provider.estimateGas({ ...positionAccountTx, from: deployer.address }) +
+    await ethers.provider.estimateGas({ ...artMetadataTx, from: deployer.address }) +
+    await ethers.provider.estimateGas({ ...artSecurityPrintTx, from: deployer.address }) +
+    await ethers.provider.estimateGas({ ...artCorePlateTx, from: deployer.address }) +
+    await ethers.provider.estimateGas({ ...artGenesisPlateTx, from: deployer.address }) +
     await ethers.provider.estimateGas({ ...positionRendererTx, from: deployer.address }) +
     await ethers.provider.estimateGas({ ...positionNftTx, from: deployer.address }) +
     await ethers.provider.estimateGas({ ...genesisDistributorTx, from: deployer.address }) +
@@ -278,6 +307,11 @@ async function main() {
   const royaltyReceiver = ethers.getAddress(env("V4_POSITION_NFT_ROYALTY_RECEIVER", treasury));
   const royaltyBps = envNumber("V4_POSITION_NFT_ROYALTY_BPS", "0");
   const freezePositionNftRoyalties = envFlag("V4_POSITION_NFT_FREEZE_ROYALTIES", true);
+
+  const claimFeeRecipient = optionalEnv("V4_POSITION_NFT_CLAIM_FEE_RECIPIENT");
+  const naraClaimFeeBps = envNumber("V4_POSITION_NFT_NARA_CLAIM_FEE_BPS", "0");
+  const tokenClaimFeeBps = envNumber("V4_POSITION_NFT_TOKEN_CLAIM_FEE_BPS", "0");
+  const freezeClaimFees = envFlag("V4_POSITION_NFT_FREEZE_CLAIM_FEES", false);
   requireNotDeployerOnBase("V4_ADMIN_ADDRESS", finalAdmin, deployer.address, chainId, "V4_ALLOC_ALLOW_DEPLOYER_ADMIN");
   requireNotDeployerOnBase("V4_TREASURY_ADDRESS", treasury, deployer.address, chainId, "V4_ALLOC_ALLOW_DEPLOYER_TREASURY");
   requireNotDeployerOnBase(
@@ -326,6 +360,11 @@ async function main() {
   }
   if (bondAmount > BOND_MAX_NARA * 10n ** 18n) throw new Error("V4_BOND_AMOUNT_NARA exceeds 290,000 cap");
   if (royaltyBps > 1000) throw new Error("V4_POSITION_NFT_ROYALTY_BPS exceeds 1000 cap");
+  if (naraClaimFeeBps > 1000) throw new Error("V4_POSITION_NFT_NARA_CLAIM_FEE_BPS exceeds 1000 cap");
+  if (tokenClaimFeeBps > 1000) throw new Error("V4_POSITION_NFT_TOKEN_CLAIM_FEE_BPS exceeds 1000 cap");
+  if (freezeClaimFees && claimFeeRecipient === undefined && (naraClaimFeeBps !== 0 || tokenClaimFeeBps !== 0)) {
+    throw new Error("Cannot freeze non-zero claim fees without setting V4_POSITION_NFT_CLAIM_FEE_RECIPIENT");
+  }
   if (chainId === BASE_CHAIN_ID && !freezePositionNftRoyalties && !envFlag("V4_ALLOC_ALLOW_MUTABLE_ROYALTIES")) {
     throw new Error("Base allocation deploy requires frozen position NFT royalties. Set V4_ALLOC_ALLOW_MUTABLE_ROYALTIES=1 only for an intentional exception.");
   }
@@ -471,15 +510,49 @@ async function main() {
   const positionAccountAddress = await positionAccount.getAddress();
   console.log("NARAPositionAccountV4:", positionAccountAddress);
 
-  console.log("Step 5: deploy immutable position renderer");
-  const positionRenderer = await ethers.deployContract(
-    "contracts/v4/NARAPositionRendererV4.sol:NARAPositionRendererV4",
+  console.log("Step 5: deploy modular position art stack + renderer");
+  const artMetadata = await ethers.deployContract(
+    "contracts/v4/NARAArtMetadataV1.sol:NARAArtMetadataV1",
     [],
+    deployer,
+  );
+  const artSecurityPrint = await ethers.deployContract(
+    "contracts/v4/NARAArtSecurityPrintV1.sol:NARAArtSecurityPrintV1",
+    [],
+    deployer,
+  );
+  await artMetadata.waitForDeployment();
+  await artSecurityPrint.waitForDeployment();
+  const artMetadataAddress = await artMetadata.getAddress();
+  const artSecurityPrintAddress = await artSecurityPrint.getAddress();
+  console.log("NARAArtMetadataV1:", artMetadataAddress);
+  console.log("NARAArtSecurityPrintV1:", artSecurityPrintAddress);
+
+  const artCorePlate = await ethers.deployContract(
+    "contracts/v4/NARAArtCorePlateV1.sol:NARAArtCorePlateV1",
+    [artSecurityPrintAddress],
+    deployer,
+  );
+  const artGenesisPlate = await ethers.deployContract(
+    "contracts/v4/NARAArtGenesisPlateV1.sol:NARAArtGenesisPlateV1",
+    [],
+    deployer,
+  );
+  await artCorePlate.waitForDeployment();
+  await artGenesisPlate.waitForDeployment();
+  const artCorePlateAddress = await artCorePlate.getAddress();
+  const artGenesisPlateAddress = await artGenesisPlate.getAddress();
+  console.log("NARAArtCorePlateV1:", artCorePlateAddress);
+  console.log("NARAArtGenesisPlateV1:", artGenesisPlateAddress);
+
+  const positionRenderer = await ethers.deployContract(
+    "contracts/v4/NARAPositionRendererV5.sol:NARAPositionRendererV5",
+    [artMetadataAddress, artCorePlateAddress, artGenesisPlateAddress, artSecurityPrintAddress],
     deployer,
   );
   await positionRenderer.waitForDeployment();
   const positionRendererAddress = await positionRenderer.getAddress();
-  console.log("NARAPositionRendererV4:", positionRendererAddress);
+  console.log("NARAPositionRendererV5:", positionRendererAddress);
 
   console.log("Step 6: deploy position NFT");
   const positionNft = await ethers.deployContract(
@@ -573,6 +646,29 @@ async function main() {
     "positionNft.freezeGenesisMinters",
     positionNft.freezeGenesisMinters(),
   );
+
+  console.log("Step 12b: configure and freeze position NFT claim fees");
+  if (claimFeeRecipient !== undefined) {
+    const recipientAddr = ethers.getAddress(claimFeeRecipient);
+    txs.positionNftSetClaimFeeRecipient = await waitTx(
+      "positionNft.setClaimFeeRecipient",
+      positionNft.setClaimFeeRecipient(recipientAddr),
+    );
+    if (naraClaimFeeBps !== 0 || tokenClaimFeeBps !== 0) {
+      txs.positionNftSetClaimFees = await waitTx(
+        "positionNft.setClaimFees",
+        positionNft.setClaimFees(naraClaimFeeBps, tokenClaimFeeBps),
+      );
+    }
+  }
+  if (freezeClaimFees) {
+    txs.positionNftFreezeClaimFees = await waitTx(
+      "positionNft.freezeClaimFees",
+      positionNft.freezeClaimFees(),
+    );
+  } else {
+    console.log("Position NFT claim fees intentionally remain mutable/unfrozen.");
+  }
 
   console.log("Step 13: fund ops vault");
   if (opsAmount === 0n) {
@@ -687,6 +783,10 @@ async function main() {
     opsVault: opsVaultAddress,
     bondVault: bondVaultAddress,
     positionAccount: positionAccountAddress,
+    positionArtMetadata: artMetadataAddress,
+    positionArtSecurityPrint: artSecurityPrintAddress,
+    positionArtCorePlate: artCorePlateAddress,
+    positionArtGenesisPlate: artGenesisPlateAddress,
     positionRenderer: positionRendererAddress,
     positionNft: positionNftAddress,
     genesisRewardDistributor: genesisRewardDistributorAddress,
@@ -723,7 +823,11 @@ async function main() {
   console.log("NARAOpsVaultV4=", opsVaultAddress);
   console.log("NARABondVaultV4=", bondVaultAddress);
   console.log("NARAPositionAccountV4=", positionAccountAddress);
-  console.log("NARAPositionRendererV4=", positionRendererAddress);
+  console.log("NARAArtMetadataV1=", artMetadataAddress);
+  console.log("NARAArtSecurityPrintV1=", artSecurityPrintAddress);
+  console.log("NARAArtCorePlateV1=", artCorePlateAddress);
+  console.log("NARAArtGenesisPlateV1=", artGenesisPlateAddress);
+  console.log("NARAPositionRendererV5=", positionRendererAddress);
   console.log("NARAPositionNFTV4=", positionNftAddress);
   console.log("NARAGenesisRewardDistributorV4=", genesisRewardDistributorAddress);
   console.log("NARABondDepositoryV4NFT=", bondDepositoryAddress);

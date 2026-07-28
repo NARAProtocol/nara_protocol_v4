@@ -17,6 +17,8 @@ contract MockNARAEngineV4 {
     uint64 public maxLock = 35040;
     uint64 public currentEpoch;
     uint64 public settledEpoch;
+    uint256 public activeTotalWeight;
+    uint64 public epochLengthValue = 900;
     bool public revertOnNotify;
     bool public revertOnLock;
 
@@ -65,6 +67,14 @@ contract MockNARAEngineV4 {
     function setCurrentEpoch(uint64 v) external {
         currentEpoch = v;
         settledEpoch = v;
+    }
+
+    function setActiveTotalWeight(uint256 v) external {
+        activeTotalWeight = v;
+    }
+
+    function EPOCH_LENGTH() external view returns (uint64) {
+        return epochLengthValue;
     }
 
     function setSettledEpoch(uint64 v) external {
@@ -132,7 +142,7 @@ contract MockNARAEngineV4 {
         return positions[id];
     }
 
-    function epochStateView() external view returns (EpochSnapshot memory snap) {
+    function epochState() external view returns (EpochSnapshot memory snap) {
         snap.epoch = settledEpoch;
     }
 
@@ -232,7 +242,7 @@ contract MockNARAEngineV4 {
             weight: uint128(amount * durationEpochs),
             activationEpoch: activation,
             unlockEpoch: unlockEpoch,
-            _reserved0: 0,
+            tokenWeight: 0,
             naraDebtRay: 0,
             ethDebtRay: 0
         });

@@ -29,7 +29,7 @@ async function deployFixture() {
     const [deployer, alice] = await ethers.getSigners();
 
     const Token = await ethers.getContractFactory("MockERC20Permit", deployer);
-    const nara: any = await Token.deploy("NARA Protocol", "NARA");
+    const nara: any = await Token.deploy("NARA Token", "NARA");
     await nara.waitForDeployment();
 
     const Engine = await ethers.getContractFactory("MockEngineForRouter", deployer);
@@ -90,7 +90,7 @@ async function injectEnginePosition(
         weight,
         activationEpoch,
         unlockEpoch,
-        _reserved0:      0n,
+        tokenWeight:     0n,
         naraDebtRay:     0n,
         ethDebtRay:      0n,
     };
@@ -119,7 +119,7 @@ async function injectNftPosition(
         weight,
         activationEpoch,
         unlockEpoch,
-        _reserved0:      0n,
+        tokenWeight:     0n,
         naraDebtRay:     0n,
         ethDebtRay:      0n,
     };
@@ -233,7 +233,7 @@ describe("NARADashboardLens", () => {
 
             const expectedFee    = (amount * 200n) / 10_000n; // 20e18
             const expectedNet    = amount - expectedFee;       // 980e18
-            const expectedWeight = expectedNet * duration;     // 98_000e18 (mock: weight = amount * duration)
+            const expectedWeight = expectedNet;                // mock config has zero duration multipliers
 
             expect(netAmount).to.equal(expectedNet);
             expect(weight).to.equal(expectedWeight);

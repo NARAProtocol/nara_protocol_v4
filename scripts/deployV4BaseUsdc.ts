@@ -299,11 +299,13 @@ async function main() {
   const epochLengthSeconds = BigInt(envNumber("EPOCH_LENGTH_SECONDS", "900"));
   const configChangeDelaySeconds = BigInt(envNumber("CONFIG_CHANGE_DELAY_SECONDS", "86400"));
   const initialBaseEmission = envBigInt("INITIAL_BASE_EMISSION", "500000000000000000");
-  const tokenName = env("V4_TOKEN_NAME", "NARA Protocol");
-  const tokenSymbol = env("V4_TOKEN_SYMBOL", "NARA");
+  const canonicalTokenName = "NARA Token";
+  const canonicalTokenSymbol = "NARA";
+  const tokenName = env("V4_TOKEN_NAME", canonicalTokenName);
+  const tokenSymbol = env("V4_TOKEN_SYMBOL", canonicalTokenSymbol);
   const initialNaraAmount = ethers.parseUnits(env("V4_INITIAL_NARA_AMOUNT"), 18);
   const initialUsdcAmount = ethers.parseUnits(env("V4_INITIAL_USDC_AMOUNT"), 6);
-  const emissionReserveAmount = ethers.parseUnits(env("V4_EMISSION_RESERVE_NARA", "700000"), 18);
+  const emissionReserveAmount = ethers.parseUnits(env("V4_EMISSION_RESERVE_NARA", "650000"), 18);
   const hookSaltLabel = env("V4_HOOK_SALT_LABEL", "NARA-V4-BASE-USDC-HOOK-1");
   const engineSalt = ethers.keccak256(ethers.toUtf8Bytes(env("V4_ENGINE_SALT_LABEL", "NARA-V4-BASE-USDC-ENGINE-1")));
   const maxHookSaltIterations = envNumber("V4_HOOK_SALT_MAX_ITERATIONS", "2000000");
@@ -319,13 +321,11 @@ async function main() {
   if (initialNaraAmount <= 0n || initialUsdcAmount <= 0n) {
     throw new Error("V4_INITIAL_NARA_AMOUNT and V4_INITIAL_USDC_AMOUNT must be positive");
   }
-  if (
-    chainId === BASE_CHAIN_ID &&
-    tokenName === "NARA" &&
-    tokenSymbol === "NARA" &&
-    !envFlag("V4_ALLOW_DUPLICATE_TOKEN_METADATA")
-  ) {
-    throw new Error("Refusing duplicate NARA/NARA metadata on Base. Set V4_TOKEN_NAME/V4_TOKEN_SYMBOL, or V4_ALLOW_DUPLICATE_TOKEN_METADATA=1.");
+  if (tokenName !== canonicalTokenName || tokenSymbol !== canonicalTokenSymbol) {
+    throw new Error(
+      `Token identity is frozen as ${canonicalTokenName} (${canonicalTokenSymbol}); ` +
+      "V4_TOKEN_NAME and V4_TOKEN_SYMBOL must match the canonical values.",
+    );
   }
 
   console.log("NARA v4 Base USDC deployment");
@@ -352,11 +352,31 @@ async function main() {
 
   const cfg = buildEngineConfig(ethers);
 
-  console.log("Step 1: deploy launcher");
-  const launcher = await ethers.deployContract("contracts/v4/NARALauncher.sol:NARALauncher", [], deployer);
-  await launcher.waitForDeployment();
+  const existingLauncher = optionalEnv("V4_EXISTING_LAUNCHER");
+  console.log(existingLauncher ? "Step 1: resume with existing launcher" : "Step 1: deploy launcher");
+  const launcher = existingLauncher
+    ? await ethers.getContractAt(
+        "contracts/v4/NARALauncher.sol:NARALauncher",
+        ethers.getAddress(existingLauncher),
+        deployer,
+      )
+    : await ethers.deployContract(
+        "contracts/v4/NARALauncher.sol:NARALauncher",
+        [deployer.address],
+        deployer,
+      );
+  if (!existingLauncher) {
+    await launcher.waitForDeployment();
+  } else if ((await ethers.provider.getCode(await launcher.getAddress())) === "0x") {
+    throw new Error(`V4_EXISTING_LAUNCHER has no code: ${existingLauncher}`);
+  }
   const launcherAddress = await launcher.getAddress();
+  const launcherAdmin = await launcher.launcherAdmin();
+  if (launcherAdmin.toLowerCase() !== deployer.address.toLowerCase()) {
+    throw new Error(`NARALauncher admin mismatch: expected ${deployer.address}, got ${launcherAdmin}`);
+  }
   console.log("NARALauncher: ", launcherAddress);
+  console.log("Launcher admin:", launcherAdmin);
 
   console.log("Step 2: launch token and engine");
   const engineCreationCode = await buildEngineCreationCode(

@@ -225,7 +225,7 @@ contract NARAGenesisRewardDistributorV4 is ReentrancyGuard {
     }
 
     function _claim(uint256 tokenId, address owner, address to) internal returns (uint256 amount) {
-        if (to == address(0)) revert InvalidReceiver();
+        if (to == address(0) || to == address(this)) revert InvalidReceiver();
 
         _syncToWeight(tokenId, _currentNftRewardWeight(tokenId));
 
@@ -244,7 +244,7 @@ contract NARAGenesisRewardDistributorV4 is ReentrancyGuard {
     }
 
     function _claimToken(uint256 tokenId, address owner, address to) internal returns (uint256 amount) {
-        if (to == address(0)) revert InvalidReceiver();
+        if (to == address(0) || to == address(this)) revert InvalidReceiver();
 
         _syncToWeight(tokenId, _currentNftRewardWeight(tokenId));
 

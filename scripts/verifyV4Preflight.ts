@@ -42,6 +42,10 @@ const POSITION_MANAGER_ABI = [
   "function getPositionLiquidity(uint256 tokenId) view returns (uint128 liquidity)",
 ];
 
+const POOL_MANAGER_ABI = [
+  "function extsload(bytes32 slot) view returns (bytes32)",
+];
+
 const ERC20_ABI = [
   "function balanceOf(address) view returns (uint256)",
 ];
@@ -58,11 +62,17 @@ function stringifyTuple(value: unknown): string {
 
 async function main() {
   const provider = new ethers.JsonRpcProvider(requiredBaseRpcUrl());
+  const network = await provider.getNetwork();
+  if (network.chainId !== 8453n) {
+    throw new Error(`Expected Base mainnet chainId 8453, got ${network.chainId}`);
+  }
   const config = currentV4Config();
+  const preSeed = process.argv.includes("--pre-seed");
 
   const hook = new ethers.Contract(config.hook, HOOK_ABI, provider);
   const vault = new ethers.Contract(config.vault, VAULT_ABI, provider);
   const pm = new ethers.Contract(config.positionManager, POSITION_MANAGER_ABI, provider);
+  const poolManager = new ethers.Contract(config.poolManager, POOL_MANAGER_ABI, provider);
   const baseToken = new ethers.Contract(config.base, ERC20_ABI, provider);
   const naraToken = new ethers.Contract(config.token, ERC20_ABI, provider);
 
@@ -71,6 +81,7 @@ async function main() {
   console.log("Vault:            ", config.vault);
   console.log("Token/Base:       ", `${config.token} / ${config.base}`);
   console.log("LP token id:      ", config.lpTokenId.toString());
+  console.log("Mode:             ", preSeed ? "pre-seed wiring" : "post-seed launch");
   console.log("");
 
   const [
@@ -129,6 +140,18 @@ async function main() {
     throw new Error(`Registered poolId mismatch. expected=${config.poolId} actual=${registeredPool}`);
   }
 
+  // Uniswap v4 PoolManager stores pools at mapping slot 6. A zero sqrt price
+  // means the key is registered in our hook but not initialized in PoolManager.
+  const poolStateSlot = ethers.keccak256(
+    ethers.solidityPacked(
+      ["bytes32", "bytes32"],
+      [config.poolId, ethers.zeroPadValue("0x06", 32)],
+    ),
+  );
+  const rawSlot0 = await poolManager.extsload(poolStateSlot) as string;
+  const sqrtPriceX96 = BigInt(rawSlot0) & ((1n << 160n) - 1n);
+  const poolInitialized = sqrtPriceX96 !== 0n;
+
   let lpOwner = "burned-or-missing";
   let lpLiquidity = 0n;
   try {
@@ -140,6 +163,7 @@ async function main() {
 
   console.log("Checks");
   console.log("pool registered:   ", poolRegistered);
+  console.log("pool initialized:  ", poolInitialized);
   console.log("registered poolId: ", registeredPool);
   console.log("vault engine:      ", engine);
   console.log("vault compounder:  ", compounder);
@@ -166,17 +190,36 @@ async function main() {
   console.log("");
 
   const findings: string[] = [];
-  if (compounder === ethers.ZeroAddress && routeMode === 0) {
+  const notices: string[] = [];
+  if (!preSeed && compounder === ethers.ZeroAddress && BigInt(routeMode) === 0n) {
     findings.push("pool fees are parked in Liquidity mode with no compounder");
+  } else if (compounder === ethers.ZeroAddress && BigInt(routeMode) === 0n) {
+    notices.push("compounder is intentionally unset before liquidity activation");
   }
-  if (lpLiquidity === 0n) {
+  if (!preSeed && lpLiquidity === 0n) {
     findings.push("configured LP NFT currently has zero liquidity");
+  } else if (lpLiquidity === 0n) {
+    notices.push("LP NFT is intentionally absent before liquidity seed");
   }
   if (baseDepth > 0n || tokenDepth > 0n) {
-    findings.push("manual protocolDepth fallback is populated; verify live-depth hook logic before launch");
+    notices.push("manual protocolDepth fallback is populated");
+  }
+  if (preSeed && poolInitialized) {
+    findings.push("pool is already initialized during a pre-seed wiring check");
+  }
+  if (!preSeed && !poolInitialized) {
+    findings.push("PoolManager pool is not initialized");
   }
   if (engine.toLowerCase() !== config.engine.toLowerCase()) {
     findings.push(`vault engine does not match configured target engine (${config.engine})`);
+  }
+
+  if (notices.length > 0) {
+    console.log("Expected state / notices");
+    for (const notice of notices) {
+      console.log(`- ${notice}`);
+    }
+    console.log("");
   }
 
   if (findings.length > 0) {
@@ -186,7 +229,7 @@ async function main() {
     }
     throw new Error("v4 preflight failed");
   } else {
-    console.log("No preflight warnings.");
+    console.log(preSeed ? "Pre-seed wiring gate passed." : "Post-seed launch preflight passed.");
   }
 }
 

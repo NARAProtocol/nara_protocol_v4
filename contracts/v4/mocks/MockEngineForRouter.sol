@@ -89,7 +89,7 @@ contract MockEngineForRouter {
 
     function currentEpoch() external view returns (uint64) { return liveEpoch; }
 
-    function epochStateView() external view returns (EpochSnapshot memory snap) {
+    function epochState() external view returns (EpochSnapshot memory snap) {
         snap.epoch            = settledEpoch;
         snap.totalLocked      = _totalLocked;
         snap.activeTotalWeight = _activeTotalWeight;
@@ -124,7 +124,7 @@ contract MockEngineForRouter {
             weight:           uint128(amount * uint256(durationEpochs)),
             activationEpoch:  settledEpoch + _activationDelayEpochs + 1,
             unlockEpoch:      settledEpoch + durationEpochs + 1,
-            _reserved0:       0,
+            tokenWeight:      0,
             naraDebtRay:      0,
             ethDebtRay:       0
         });

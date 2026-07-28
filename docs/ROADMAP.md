@@ -1,6 +1,11 @@
 # NARA Protocol Roadmap
 
-Last updated: 2026-05-27.
+Last updated: 2026-07-26.
+
+> **Current-state override:** the fresh v4 Stage A core is deployed on Base
+> mainnet and remains dormant. The current product launch scope is NARA
+> Baskets only. Lockboard is deferred; Lotto and Arena are retired. This file
+> is product direction, not a deployment runbook. See [CURRENT_STATE.md](CURRENT_STATE.md).
 
 This roadmap is anchored to [CURRENT_STATE.md](CURRENT_STATE.md). Code and deployment scripts are the source of truth. If roadmap language conflicts with code, update the roadmap.
 
@@ -18,7 +23,7 @@ Current v4 thesis:
 - Dynamic liquidity-growth hook through `NARALiquidityGrowthHook`.
 - Fee routing through `NARALiquidityGrowthVault`.
 - Tradable lock positions through `NARAPositionNFTV4` and `NARAPositionAccountV4`, with immutable
-  on-chain art and stable marketplace metadata via `NARAPositionRendererV4`.
+  on-chain art and stable marketplace metadata via the modular `NARAPositionRendererV5`.
 - Public bond path through `NARABondDepositoryV4NFT`, not raw direct-lock bonds.
 - Genesis reward accounting through `NARAGenesisRewardDistributorV4`.
 - Lazy UX + read layer: `NARARouter` (permit+sync+lock, permissionless `syncEpochs()`),
@@ -31,23 +36,23 @@ The frontend is a launch and education surface. The protocol thesis is the durab
 
 ## Current Starting Point
 
-As of 2026-05-27 (v4 reset):
+As of 2026-07-26:
 
 - v3 is **retired**. All v3 mainnet contracts are archived at `archive/legacy-v3/`. See `archive/legacy-v3/README.md` for retired addresses.
 - The 2026-04-23 v4 incident stack is retired for launch purposes.
-- There is no approved public v4 launch candidate yet.
-- Next production launch must be a fresh v4 redeploy from current repo code.
+- Controlled Stage A is deployed and deliberately dormant.
+- The registered NARA/USDC pool is uninitialized and has no liquidity.
+- The current product launch scope is NARA Baskets only.
+- Do not repeat the core deployment.
 - Current v4 code uses `NARALiquidityGrowthHook` and `NARALiquidityGrowthVault`.
 - Current v4 launch pair is NARA/Base native USDC.
 - Current public bond path is `NARABondDepositoryV4NFT`.
 - Current composability code is implemented locally but not deployed.
 
 Latest verification — see [CURRENT_STATE.md](CURRENT_STATE.md#verification-status) for the live
-commands and dated stamp (test counts drift; do not hard-code them here). As of 2026-06-07:
-
-- Full Hardhat suite: 360 passing, 0 failing, 0 skipped. (The older "568 passing" predates the
-  2026-05-27 v4 reset that archived the v3 stack and its tests.)
-- Baskets Foundry suite: 136 passing, 1 skipped (fork test), 0 failing.
+commands and dated stamp. Test totals drift as coverage grows and are not
+duplicated in this roadmap. Use `npm test` for the current protocol result and
+the separate Foundry package for basket verification.
 - `npm run size`: passed, all artifacts within EVM limits.
 - Slither v4: passed (exit 0). Aderyn binary currently unavailable; Echidna rerun before launch.
 
@@ -79,7 +84,8 @@ commands and dated stamp (test counts drift; do not hard-code them here). As of 
 
 Status: active.
 
-Goal: keep the workspace synchronized while v4 waits for fresh redeploy.
+Goal: keep the workspace synchronized while the deployed Stage A stack remains
+dormant and the baskets activation gates are completed.
 
 Deliverables:
 
@@ -167,13 +173,14 @@ npm run verify:v4:allocations
 Default allocation posture:
 
 - `V4_OPS_AMOUNT_NARA=0`
-- `V4_BOND_AMOUNT_NARA=289970`
-- `V4_MIN_TREASURY_FLOAT_NARA=10030`
+- `V4_BOND_AMOUNT_NARA=200000`
+- `V4_MIN_TREASURY_FLOAT_NARA=150000`
 - `V4_BOND_ACTIVE=false`
 
 Success criteria:
 
-- Treasury float remains at least `10,030 NARA`.
+- Treasury float preserves the approved `70,000 NARA` LP allocation,
+  `40,000 NARA` external vesting allocation, and `40,000 NARA` treasury allocation.
 - Engine `bondVault` points to the new `NARABondVaultV4`.
 - Public bond depository is `NARABondDepositoryV4NFT`.
 - Bond terms remain inactive.
@@ -348,7 +355,7 @@ If smoke test fails:
 - Do not proceed to allocations.
 - Investigate hook, vault, route, token approval, and liquidity path.
 
-If treasury float would fall below `10,030 NARA`:
+If treasury float cannot preserve the approved `150,000 NARA` post-reserve allocation:
 
 - Stop allocation deploy.
 - Fix allocation inputs before retrying.

@@ -50,10 +50,8 @@ interface INARAEngine {
     function activeTotalWeight() external view returns (uint256);
     function totalLocked() external view returns (uint256);
     function currentEpoch() external view returns (uint64);
-    function epochStateView() external view returns (EpochSnapshot memory);
     function claimableRewards(uint256 positionId) external view returns (uint256 naraAmount, uint256 ethAmount);
     function claimableTokenRewards(uint256 positionId, address token) external view returns (uint256 amount);
-    function previewWeight(uint256 amount, uint64 durationEpochs) external view returns (uint256);
 
     // -------------------------------------------------------------
     // Core mutations
@@ -100,7 +98,6 @@ interface INARAEngine {
     // -------------------------------------------------------------
     // Epoch engine
     // -------------------------------------------------------------
-    function advanceEpoch() external returns (EpochSnapshot memory);
     function advanceEpochs(uint256 maxSteps) external returns (uint256 stepsAdvanced, EpochSnapshot memory lastSnapshot);
     function poke() external returns (uint256 stepsAdvanced);
 }
