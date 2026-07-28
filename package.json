@@ -32,6 +32,7 @@
     "verify:v4:allocations": "hardhat run scripts/verifyV4AllocationsLive.ts --network base",
     "verify:v4:preflight": "tsx scripts/verifyV4Preflight.ts",
     "verify:v4:preseed": "tsx scripts/verifyV4Preflight.ts --pre-seed",
+    "execute:v4:nara-depth": "tsx scripts/executeV4NaraDepth.ts",
     "verify:v4:launch-gates": "tsx scripts/verifyV4LaunchGates.ts",
     "smoke:v4": "tsx scripts/smokeTestV4Deployment.ts",
     "v4:env:sync": "tsx scripts/syncV4FreshEnv.ts",

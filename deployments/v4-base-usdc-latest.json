@@ -43,7 +43,8 @@
   "compounderSourceVerification": "verified",
   "compounderEvidence": "v4-liquidity-compounder-2026-07-26.json",
   "protocolDepthNaraActive": "30000000000000000000",
-  "protocolDepthNaraPending": "60000000000000000000000",
+  "protocolDepthNara": "60000000000000000000000",
+  "protocolDepthNaraPending": null,
   "protocolDepthNaraProposalExecuted": false,
   "protocolDepthProposalEvidence": "v4-nara-depth-proposal-2026-07-27.json",
   "approvedInitialLiquidity": {
@@ -52,7 +53,7 @@
     "openingPriceUsdPerNara": "0.005",
     "impliedFdvUsd": "5000"
   },
-  "activationState": "blocked-pending-depth-execution-and-verification",
+  "activationState": "preseed-depth-verified-pool-uninitialized",
   "launchFrontendScope": {
     "active": "apps/nara-baskets",
     "activeStatus": "preview",

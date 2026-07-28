@@ -16,7 +16,7 @@ remain retired.
 Stage A core is already deployed. Use
 `deployments/v4-base-usdc-latest.json` and
 `npm run verify:v4:preseed`; do not repeat the core deployment step. The
-applicable next steps are the pending protocol-depth execution, pool initialization/liquidity,
+applicable next steps are pool initialization/liquidity,
 basket deployment and verification, baskets frontend configuration, basket
 monitoring, smoke tests, and observation.
 
@@ -103,7 +103,7 @@ npm run v4:env:sync:write    # merges fresh addresses into .env
 
 ---
 
-## Step 3 — Preseed Verification And Pending Depth Execution
+## Step 3 — Preseed Verification And Executed Depth Evidence
 
 Run the dormant-state verifier first:
 
@@ -112,12 +112,12 @@ npm run verify:v4:preseed
 ```
 
 The NARA protocol-depth update was proposed in transaction
-`0x899a8b7ae2b22703741d2797d79f2895276b2830ede0521e193cb81758b6623d`.
-Its earliest execution time is `2026-07-28T05:51:21Z`. The active depth remains
-`30 NARA` until `executeProtocolDepth(NARA)` confirms. Execute that separately
-after the timelock, verify the active value is exactly `60,000 NARA`, and rerun
-`npm run verify:v4:preseed`. Do not initialize or seed while the active value is
-still `30 NARA`.
+`0x899a8b7ae2b22703741d2797d79f2895276b2830ede0521e193cb81758b6623d`
+and executed after its timelock in transaction
+`0x86d6f37b9d35040a3bd1a89c6d0fe398b4ba65f7ce5a06a7360d80c75e12b6ba`.
+The read-only verifier confirmed the active value is exactly `60,000 NARA` and
+the pending entry is cleared. Continue to require `npm run verify:v4:preseed`
+immediately before pool initialization.
 
 ---
 

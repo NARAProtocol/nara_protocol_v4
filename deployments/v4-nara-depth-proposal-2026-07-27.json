@@ -15,6 +15,13 @@
   "eta": 1785217881,
   "etaUtc": "2026-07-28T05:51:21Z",
   "etaKyiv": "2026-07-28T08:51:21+03:00",
-  "executed": false,
-  "note": "The active depth remains 30 NARA until executeProtocolDepth(NARA) confirms after eta. Do not initialize or seed liquidity before execution and verification."
+  "executed": true,
+  "executionTransactionHash": "0x86d6f37b9d35040a3bd1a89c6d0fe398b4ba65f7ce5a06a7360d80c75e12b6ba",
+  "executionBlockNumber": 49215671,
+  "executionBlockTimestamp": 1785220689,
+  "executionTimeUtc": "2026-07-28T06:38:09Z",
+  "executionGasUsed": "32620",
+  "verifiedActiveDepth": "60000000000000000000000",
+  "pendingCleared": true,
+  "note": "The timelocked NARA protocol-depth update executed successfully and the read-only pre-seed verifier confirmed an active depth of 60,000 NARA. Pool initialization and liquidity seeding remain separate, unexecuted production actions."
 }

@@ -24,7 +24,7 @@ no public app or market is live yet.**
 | NARA token | Deployed | Fixed supply minted; no public market yet |
 | NARA/USDC pool | Registered only | Uninitialized, zero liquidity |
 | Liquidity compounder | Deployed, wired, source verified | Not frozen until post-seed validation |
-| NARA protocol depth | Update pending | 30 NARA remains active; 60,000 NARA proposed and timelocked |
+| NARA protocol depth | Executed and verified | 60,000 NARA active; pending entry cleared |
 | Public launch surface | Preview only | Baskets only; Lockboard deferred; Lotto and Arena retired |
 | Locking | Contract deployed | No approved public frontend yet |
 | Bonds | Closed at launch | Opens separately after verification |

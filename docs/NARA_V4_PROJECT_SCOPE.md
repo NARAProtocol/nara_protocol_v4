@@ -118,7 +118,7 @@ writing contracts**:
 
 | Item | Type | Why it's not a code task |
 |---|---|---|
-| Execute pending NARA-depth update | **ops/timelock** | Verify the active depth changes from 30 to 60,000 NARA after the one-day delay |
+| Execute NARA-depth update | **complete** | Executed after the timelock; active depth verified at 60,000 NARA and pending entry cleared |
 | Initialize and seed NARA/USDC | **ops/capital** | Atomic initial position is 60,000 NARA + 300 USDC; approximately $5,000 implied FDV |
 | Validate and freeze compounder | **ops** | Source is verified; run the live compound smoke and accounting checks, then the one-way freeze |
 | Lock UI rebuilt for v4 | **deferred frontend** | Lockboard is not part of the baskets-only launch |
