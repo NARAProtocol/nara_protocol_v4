@@ -70,7 +70,8 @@ Use this lens for current financial data; NFT marketplace JSON is intentionally 
 
 Every user write should prepend `router.syncEpochs()` in an EIP-5792 batch. Smart-wallet apps fire it silently on page load. Engine's `advanceEpochs(maxSteps)` has no per-call cap (only Base block gas, ~30M = ~100 epochs/tx). At 15-min epochs that's ~25h of backlog per tx, so multi-day silence still clears in a few chained calls.
 
-Railway cron is retired — see [cron/DEPRECATED.md](../../cron/DEPRECATED.md).
+The historical Railway cron is retired. v4 uses bounded permissionless epoch
+advancement instead of that offchain keeper.
 
 ## Deploy
 

@@ -28,8 +28,6 @@ jobs:
         with:
           node-version: 20
           cache: npm
-      - name: Configure Hardhat Node options
-        run: echo "NODE_OPTIONS=--require $GITHUB_WORKSPACE/polyfill.cjs" >> "$GITHUB_ENV"
       - name: Install
         run: npm ci
       - name: Dependency audit (High and Critical)
@@ -38,10 +36,16 @@ jobs:
         run: npm run verify:public
       - name: Compile
         run: npm run build
+        env:
+          NODE_OPTIONS: --require ${{ github.workspace }}/polyfill.cjs
       - name: Test (full v4 suite)
         run: npm test
+        env:
+          NODE_OPTIONS: --require ${{ github.workspace }}/polyfill.cjs
       - name: Bytecode size limits (24576 / 49152)
         run: npm run size
+        env:
+          NODE_OPTIONS: --require ${{ github.workspace }}/polyfill.cjs
 
   # ── Free static analysis (advisory; review the output, don't ignore it) ──────
   slither:
@@ -58,12 +62,12 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.11"
-      - name: Configure Hardhat Node options
-        run: echo "NODE_OPTIONS=--require $GITHUB_WORKSPACE/polyfill.cjs" >> "$GITHUB_ENV"
       - run: npm ci
       - run: pip install slither-analyzer
       - name: Slither (v4 production contracts)
         run: slither . --filter-paths "node_modules|contracts/v4/mocks|test" || true
+        env:
+          NODE_OPTIONS: --require ${{ github.workspace }}/polyfill.cjs
 
   aderyn:
     name: aderyn (advisory)
@@ -76,8 +80,6 @@ jobs:
         with:
           node-version: 20
           cache: npm
-      - name: Configure Hardhat Node options
-        run: echo "NODE_OPTIONS=--require $GITHUB_WORKSPACE/polyfill.cjs" >> "$GITHUB_ENV"
       - run: npm ci
       - name: Install Aderyn (Cyfrin)
         run: |
@@ -86,6 +88,8 @@ jobs:
           echo "$HOME/.cyfrin/bin" >> "$GITHUB_PATH"
       - name: Aderyn (v4 contracts)
         run: aderyn --src contracts/v4 . || true
+        env:
+          NODE_OPTIONS: --require ${{ github.workspace }}/polyfill.cjs
 
   # ── Free property fuzzing of the engine invariants (advisory) ────────────────
   echidna:
