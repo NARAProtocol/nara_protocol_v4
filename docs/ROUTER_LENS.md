@@ -25,7 +25,6 @@ not part of the current baskets-only launch and are not deployed.
 | [test/NARADashboardLens.test.ts](../test/NARADashboardLens.test.ts) | 28 tests, all passing |
 | [test/NARABribeRouterV4.test.ts](../test/NARABribeRouterV4.test.ts) | 14 tests, all passing |
 | [scripts/deployRouterLens.ts](../scripts/deployRouterLens.ts) | Deploy + verify all three |
-| [cron/DEPRECATED.md](../../cron/DEPRECATED.md) | Railway keeper retirement notice |
 
 ## Router surface
 
