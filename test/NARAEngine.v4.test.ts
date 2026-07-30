@@ -1075,13 +1075,11 @@ describe("NARAEngine v4 — multi-token bribes", () => {
             .to.emit(engine, "Extended");
     });
 
-    // M-05 (audit 2026-06-10): in production BribeRouterV4 (permissionless notify) and the
-    // growth vault HOLD REWARD_NOTIFIER_ROLE, so a *legitimate* token-reward notify used to set a
-    // global latch that permanently disabled extend() for every active position. The fix freezes
-    // a position's token-reward weight (`tokenWeight`) once token rewards are live, so extend()
-    // works again while still preventing the larger post-extend weight from over-crediting token
-    // rewards. The test above only proves an UNAUTHORIZED caller can't notify; these prove the
-    // real-world authorized path now behaves correctly.
+    // M-05 history (audit 2026-06-10): freezing tokenWeight kept extend() available
+    // without retroactively over-crediting earlier token rewards. It also created a
+    // permanent under-allocation for rewards notified after an active extension.
+    // Production mitigates that immutable-engine limitation by granting no
+    // REWARD_NOTIFIER_ROLE and disabling engine-token routing in the growth vault.
     it("M-05 fix: extend() succeeds for active positions even after an authorized token-reward notify", async () => {
         const { token, engine, engineAddr } = await launchSystem(ethers, deployer, treasury);
         const aliceAddr = await alice.getAddress();
@@ -1101,7 +1099,7 @@ describe("NARAEngine v4 — multi-token bribes", () => {
         await expect(engine.connect(alice).extend(1n, 10n)).to.emit(engine, "Extended");
     });
 
-    it("M-05 fix: extending does NOT over-credit token rewards (token weight frozen, no insolvency)", async () => {
+    it("documents the immutable-engine remainder created by a post-notify active extension", async () => {
         const { token, engine, engineAddr } = await launchSystem(ethers, deployer, treasury);
         const aliceAddr = await alice.getAddress();
         const bob = (await ethers.getSigners())[4];
@@ -1140,8 +1138,13 @@ describe("NARAEngine v4 — multi-token bribes", () => {
         // Equal frozen token weight => equal token-reward claims (extend gave Alice no token-share boost).
         const diff = aliceGot > bobGot ? aliceGot - bobGot : bobGot - aliceGot;
         expect(diff).to.be.lte(10n); // rounding dust only
-        // Solvency: total claimed never exceeds total notified.
-        expect(aliceGot + bobGot).to.be.lte(2_000n * ONE);
+        const claimed = aliceGot + bobGot;
+        const stranded = await bribe.balanceOf(engineAddr);
+
+        // This is the deployed-engine limitation the launch configuration must
+        // keep dormant: some of bribe #2 has no position claim basis.
+        expect(stranded).to.be.greaterThan(0n);
+        expect(claimed + stranded).to.equal(2_000n * ONE);
     });
 
     it("M-03 regression: config-decrease extend cannot drop live weight below frozen token weight", async () => {

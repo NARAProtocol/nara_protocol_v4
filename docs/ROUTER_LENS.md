@@ -16,7 +16,7 @@ not part of the current baskets-only launch and are not deployed.
 |---|---|
 | [contracts/v4/router/NARARouter.sol](../contracts/v4/router/NARARouter.sol) | Router (stateless, no admin, no upgrade) |
 | [contracts/v4/router/NARADashboardLens.sol](../contracts/v4/router/NARADashboardLens.sol) | Lens (pure view) |
-| [contracts/v4/router/BribeRouterV4.sol](../contracts/v4/router/BribeRouterV4.sol) | Permissionless bribe wrapper (needs REWARD_NOTIFIER_ROLE) |
+| [contracts/v4/router/BribeRouterV4.sol](../contracts/v4/router/BribeRouterV4.sol) | Dormant reference implementation; do not grant it a role on the deployed engine |
 | [contracts/v4/mocks/MockEngineForRouter.sol](../contracts/v4/mocks/MockEngineForRouter.sol) | Test mock |
 | [contracts/v4/mocks/MockNFTForRouter.sol](../contracts/v4/mocks/MockNFTForRouter.sol) | Test mock |
 | [contracts/v4/mocks/MockERC20Permit.sol](../contracts/v4/mocks/MockERC20Permit.sol) | Test mock |
@@ -24,7 +24,7 @@ not part of the current baskets-only launch and are not deployed.
 | [test/NARARouter.test.ts](../test/NARARouter.test.ts) | 28 tests, all passing |
 | [test/NARADashboardLens.test.ts](../test/NARADashboardLens.test.ts) | 28 tests, all passing |
 | [test/NARABribeRouterV4.test.ts](../test/NARABribeRouterV4.test.ts) | 14 tests, all passing |
-| [scripts/deployRouterLens.ts](../scripts/deployRouterLens.ts) | Deploy + verify all three |
+| [scripts/deployRouterLens.ts](../scripts/deployRouterLens.ts) | Deploy and verify the safe router/read components; BribeRouter is skipped |
 | [cron/DEPRECATED.md](../../cron/DEPRECATED.md) | Railway keeper retirement notice |
 
 ## Router surface
@@ -80,7 +80,7 @@ production position-NFT address exists. Do not invent an address or run
 
 Writes addresses to `deployments/router-lens-<chainId>.json`. Set `VITE_NARA_ROUTER_ADDRESS` / `VITE_NARA_LENS_ADDRESS` in any consuming app's env, or hardcode in `nara.ts`.
 
-## BribeRouterV4 surface
+## BribeRouterV4 status
 
 ```solidity
 function notify(address token, uint256 amount) external;
@@ -89,11 +89,16 @@ function notify(address token, uint256 amount) external;
 // Emits: BribeNotified(caller, token, amount)
 ```
 
-**Post-deploy action required:** the engine admin must call:
-```
-engine.grantRole(keccak256("REWARD_NOTIFIER_ROLE"), <BribeRouterV4 address>)
-```
-Without this role the contract is deployed but `notify()` will revert.
+The source remains as a reference and its isolated tests document the intended
+token-transfer behavior. It must not be deployed for, or granted
+`REWARD_NOTIFIER_ROLE` on, the deployed v4 engine.
+
+Reason: after the first ERC-20 notification, an active position can extend and
+increase `activeTotalWeight` while its token-reward weight remains frozen. A
+later notification divides by the larger live total even though positions
+cannot claim that full share, leaving a permanent token remainder in the
+engine. The engine is immutable and bound to the sealed reserve, so the launch
+configuration disables the reachable path instead of pretending to repair it.
 
 ## What is still NOT built (and why it's OK for mainnet)
 
@@ -107,8 +112,10 @@ The FOX report conclusion: "Solidity architecture is largely ready. Operational 
 
 ## Status (2026-05-28)
 
-- Code complete, 70/70 new tests passing (28 router + 28 lens + 14 bribe router).
+- Router and lens code remain covered by their focused tests. BribeRouter's
+  isolated tests do not authorize it for the deployed engine.
 - **Not deployed to mainnet.** The fresh engine exists, but the position NFT and
   this router/lens layer are deferred from the baskets-only launch.
-- After engine deploy: run `npm run deploy:v4:router:lens`, then grant `REWARD_NOTIFIER_ROLE` to `BribeRouterV4`.
+- `npm run deploy:v4:router:lens` intentionally skips `BribeRouterV4`, even if
+  `BRIBE_*` variables are configured.
 - Frontend wiring deferred per user decision. Each app imports ABIs/addresses from `nara.ts`.

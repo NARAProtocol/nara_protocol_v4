@@ -56,3 +56,16 @@ docs/NARA_V4_BASKETS_LAUNCH_STRATEGY.md
 docs/NARA_V4_BASKETS_MAINNET_READINESS.md
 docs/NARA_V4_BASKETS_INCIDENT_RESPONSE_RUNBOOK.md
 docs/research/
+
+# Scratch build/test output dumps (never part of the release record)
+compile_*.txt
+test_*.txt
+final_*.txt
+deploy_*output.txt
+audit_final.txt
+scan_output.txt
+svg_debug.txt
+output.txt
+roleGrantBatch.json
+roleRenounceBatch.json
+roleTransferBatch.json

@@ -1,6 +1,7 @@
 # Current State
 
-Last updated: 2026-07-26 (fresh v4 controlled Stage A deployment on Base mainnet).
+Last updated: 2026-07-30 (replacement liquidity trio deployed under the Safe;
+pre-seed launch gates 14 pass / 0 fail / 0 skip).
 
 This is the canonical state document for the active NARA workspace. Code is the source of truth. When this document conflicts with Solidity or deployment scripts, update this document.
 
@@ -42,6 +43,13 @@ seeded, smoke-tested, and observed for the documented soak period before any
 basket can be enabled. Position NFTs, bonds, router/lenses, lockboard, and
 composability are deferred. Lotto and Arena are retired.
 
+The canonical remediation record is
+[NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md](NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md).
+The fixes are currently source-level only. The replacement liquidity trio,
+redesigned basket fee collector, immutable basket managers, and frontend still
+require fresh deployment and verification. Current status is **source
+remediated, deployment blocked**, not production-ready.
+
 ---
 
 ## v4 Is Not v3
@@ -55,8 +63,8 @@ Any AI, developer, or operator reading this document must treat v4 as a differen
 | Epoch advance | Keeper-driven cron; backlog can block writes | JIT auto-advance inside user calls, capped by `MAX_JIT_ADVANCE = 8`; remaining backlog returns `EpochStale` |
 | LP pair | NARA/WETH on Uniswap v3 | NARA/USDC on Uniswap v4 |
 | Hook | Flat tax-style hook in older design | `NARALiquidityGrowthHook` with dynamic buy/sell pressure tiers |
-| Fee vault | Simple tax vault | `NARALiquidityGrowthVault` with `Liquidity`, `Engine`, `Split`, `Genesis`, and `GenesisSplit` routes |
-| Reward tokens | ETH-focused reward flow | ETH plus role-gated ERC-20 reward flow through `notifyTokenRewards(address,uint256)` |
+| Fee vault | Simple tax vault | Replacement `NARALiquidityGrowthVault` supports `Liquidity`, `Genesis`, and `GenesisSplit`; legacy `Engine` and `Split` enum values permanently revert |
+| Reward tokens | ETH-focused reward flow | NARA emissions plus ETH rewards; deployed-engine ERC-20 notification is disabled operationally |
 | Position IDs | Per-wallet indexed positions | Global `positionId`, starting at 1 |
 | Position ownership | v3 wrapper retrofit | Native `NARAPositionNFTV4` plus clone account |
 | Bonds | Raw-position bond path exists | Launch path is `NARABondDepositoryV4NFT`, which mints position NFTs |
@@ -81,8 +89,8 @@ has been deployed; the remaining launch surfaces are still pending.
 | `NARABondDepositoryV4` | `contracts/v4/NARABondDepositoryV4.sol` | Direct raw-position bond depository; not the preferred launch path |
 | `NARABondDepositoryV4NFT` | `contracts/v4/NARABondDepositoryV4NFT.sol` | NFT bond depository; preferred launch path |
 | `NARALiquidityGrowthHook` | `contracts/v4/NARALiquidityGrowthHook.sol` | Uniswap v4 exact-input hook with dynamic fee curves |
-| `NARALiquidityGrowthVault` | `contracts/v4/NARALiquidityGrowthVault.sol` | Pool-fee vault for LP compounding, engine routing, and Genesis routing. LP compounding plugs in an external `ILiquidityCompounder` — production adapter is `NARALiquidityCompounderV4` (see "Liquidity Routing" below). |
-| `NARALiquidityCompounderV4` | `contracts/v4/NARALiquidityCompounderV4.sol` | Deployed at `0xc327e50c14002a82c9F1477122204BB183f446Ab` and set on the Stage A vault. Full-range, no-swap, exact-spend POL adapter with remainder banking and a 7-day recovery timelock. `compounderFrozen` remains `false` until the initialized-pool smoke test succeeds. |
+| `NARALiquidityGrowthVault` | `contracts/v4/NARALiquidityGrowthVault.sol` | Replacement pool-fee vault for LP compounding and Genesis routing. `Engine` and `Split` cannot be selected. LP compounding plugs in an external `ILiquidityCompounder` — production adapter is `NARALiquidityCompounderV4` (see "Liquidity Routing" below). |
+| `NARALiquidityCompounderV4` | `contracts/v4/NARALiquidityCompounderV4.sol` | Full-range, no-swap, exact-spend POL adapter with remainder banking and a 7-day recovery timelock. The Stage A instance at `0xc327…46Ab` is quarantined with its old vault/hook; deploy a fresh instance with the replacement trio. |
 | `NARAOpsVaultV4` | `contracts/v4/NARAOpsVaultV4.sol` | One-shot operations vesting vault capped at `10,000 NARA` |
 
 ---
@@ -96,7 +104,7 @@ Lazy UX + read layer for any frontend. Deploy step `deploy:v4:router:lens`. Full
 | `NARARouter` | `contracts/v4/router/NARARouter.sol` | Permit + sync + lock in one tx; permissionless `syncEpochs()` (replaces the Railway keeper cron) |
 | `NARADashboardLens` | `contracts/v4/router/NARADashboardLens.sol` | Single-call `getUserState(user, positionIds[], nftTokenIds[])` for any frontend |
 | `NARAPositionDataLensV1` | `contracts/v4/router/NARAPositionDataLensV1.sol` | Typed live position-NFT data for apps; batches capped at 100. Added in the 2026-06 NFT presentation pass |
-| `BribeRouterV4` | `contracts/v4/router/BribeRouterV4.sol` | Permissionless `notify(token, amount)` → engine. Any external protocol can bribe NARA lockers. Needs `REWARD_NOTIFIER_ROLE` granted after deploy |
+| `BribeRouterV4` | `contracts/v4/router/BribeRouterV4.sol` | Dormant reference implementation. Deployment tooling skips it and the deployed engine must not grant it `REWARD_NOTIFIER_ROLE`. |
 
 ---
 
@@ -116,7 +124,31 @@ Lazy UX + read layer for any frontend. Deploy step `deploy:v4:router:lens`. Full
 
 ### ERC-20 Reward Handling
 
-`notifyTokenRewards(address token, uint256 amount)` distributes non-NARA ERC-20 rewards to active weight holders and requires `REWARD_NOTIFIER_ROLE`. NARA itself is rejected as a bribe token.
+The deployed engine contains
+`notifyTokenRewards(address token, uint256 amount)`, but launch configuration
+must keep that path disabled. After the first token notification, an active
+position may extend and increase `activeTotalWeight` while its token-reward
+weight remains frozen. A later distribution then divides by more weight than
+positions can claim, permanently leaving part of that token in the engine.
+
+Required pre-seed state:
+
+- no Safe, EOA, vault, or router holds `REWARD_NOTIFIER_ROLE`;
+- the replacement vault is deployed from the corrected source and rejects
+  `RouteMode.Engine` and `RouteMode.Split`;
+- `BribeRouterV4` is not deployed for this engine;
+- ETH rewards through `notifyEthRewards()` remain available.
+
+Read-only Base checks on 2026-07-28 showed `nextPositionId = 1`,
+`totalLocked = 0`, `activeTotalWeight = 0`, and a zero USDC token index. The
+accounting issue has therefore not been activated.
+
+The Stage A admin EOA and Stage A vault held `REWARD_NOTIFIER_ROLE` at that
+check. Both were revoked on 2026-07-30 and re-verified as `false`, alongside the
+Safe and the deployer. Evidence:
+[NARA_V4_REWARD_NOTIFIER_REVOCATION.md](NARA_V4_REWARD_NOTIFIER_REVOCATION.md).
+No address currently holds `REWARD_NOTIFIER_ROLE`. Keep it that way — do not
+grant it to the replacement vault, a router, the Safe, or an EOA.
 
 If epoch backlog exceeds `MAX_JIT_ADVANCE`, user-facing engine mutations revert `EpochStale` after the capped JIT advance. Call `poke()` or `advanceEpochs()` until `epochState.epoch == currentEpoch()` before retrying.
 
@@ -154,27 +186,27 @@ Bond term controls:
 
 ### Liquidity Routing
 
-`NARALiquidityGrowthVault` supports five route modes:
+`NARALiquidityGrowthVault` keeps five enum values for ABI compatibility, but
+only three are reachable:
 
 - `Liquidity`: compound NARA/USDC back into LP.
-- `Engine`: route NARA to engine emission reserve and USDC to engine ERC-20 rewards.
-- `Split`: route part to engine and part to LP compounding.
+- `Engine`: disabled; `setRouteMode` reverts `EngineTokenRoutingDisabled`.
+- `Split`: disabled; `setRouteMode` reverts `EngineTokenRoutingDisabled`.
 - `Genesis`: route USDC to `NARAGenesisRewardDistributorV4`.
 - `GenesisSplit`: split USDC between Genesis rewards and LP compounding.
 
-Launch expectation: begin in `Liquidity` mode to build depth (POL-first), then move to `Split`, `Engine`, or Genesis routing after liquidity and operations are ready. The skim is designed to **build protocol-owned liquidity first** and redirect to lockers later — it is not a "tax that funds lockers" by default.
+Launch expectation: remain in `Liquidity` mode to build depth (POL-first).
+`Genesis` or `GenesisSplit` may be considered later after their dependencies
+and operations are ready. Engine routing is not a future operator option on
+this vault.
 
-> **Flywheel status (2026-07-27): compounder deployed, wired, and source verified; not frozen.** `Liquidity` mode compounds via
-> an **external `ILiquidityCompounder` adapter** (`vault.setCompounder`). The production adapter is
-> **`NARALiquidityCompounderV4`** (full-range, no-swap, exact-spend, POL custody), unit-tested
-> through the real vault plus a faithful PositionManager/Permit2 mock. The Stage A vault now points
-> to the deployed compounder. **Remaining before it is frozen:** initialize and seed the pool, execute a
-> small live compound with a reviewed `minLiquidityAdded`, verify the LP NFT/accounting, then call
-> `vault.freezeCompounder()`. Until the pool is initialized, compounding remains unavailable. The
-> adapter completes the implementation path, but the live flywheel remains dormant until that
-> initialization and validation sequence succeeds. Source verification evidence
-> for Basescan, Blockscout, and Sourcify is recorded in
-> `deployments/v4-liquidity-compounder-2026-07-26.json`. See `UNISWAP_V4_HOOK.md`.
+> **Flywheel status (2026-07-28): replacement trio required.** The Stage A
+> compounder is deployed and source-verified but permanently bound to the
+> quarantined Stage A vault/hook. `Liquidity` mode uses an external
+> `ILiquidityCompounder` adapter. Deploy the corrected vault/hook and a fresh
+> `NARALiquidityCompounderV4` bound to them, verify the fresh addresses, seed,
+> execute a small reviewed compound, verify exact-spend accounting, and only
+> then call `freezeCompounder()`.
 
 ---
 
@@ -226,16 +258,31 @@ NODE_OPTIONS="--require ./polyfill.cjs" npm run size              # bytecode siz
 npm run slither:v4                                                # static analysis
 ```
 
-Last full run — **2026-07-04**:
+Last full run — **2026-07-29**:
 
-- Full Hardhat suite: **453 passing, 0 failing, 0 skipped**. Run `npx hardhat test` for the live number.
+- Full Hardhat suite: **468 passing, 0 failing**. This includes the real
+  Uniswap v4 PoolManager split-invariance test, Base compounder fork tests, and
+  the Stage A quarantine read.
 - Bytecode size gate: all deployable artifacts within EVM limits. `NARAEngine` 24,554 ·
-  `NARAPositionNFTV4` 21,562 · `NARAPositionRendererV5` 4,960 · `NARAArtCorePlateV1` 11,437 ·
-  `NARAArtSecurityPrintV1` 8,938 · `NARAArtGenesisPlateV1` 8,050 · `NARAArtMetadataV1` 4,701 · `NARAPositionDataLensV1` 7,017 ·
-  `NARAStakingPoolSYV4` 8,482 bytes.
-- Slither v4 gate: completed (exit 0). Findings on the new contracts are intentional (best-effort
-  `try/catch` unused-returns) or benign (trusted owner-set distributor, `nonReentrant` entry points).
-- **Aderyn + Echidna: re-run 2026-06-08 on a Linux box (Ubuntu 26.04), against current code — both green.**
+  `NARALiquidityGrowthHook` 11,511 · `NARALiquidityGrowthVault` 11,204 ·
+  `NARALiquidityCompounderV4` 10,843 · `NARAPositionNFTV4` 21,562 ·
+  `NARAPositionRendererV5` 4,972 · `NARAArtCorePlateV1` 15,530 ·
+  `NARAArtSecurityPrintV1` 9,694 · `NARAArtGenesisPlateV1` 12,676 ·
+  `NARAArtMetadataV1` 5,252 · `NARAPositionDataLensV1` 7,017 ·
+  `NARAStakingPoolSYV4` 8,503 bytes.
+- Slither v4 gate: completed on 2026-07-29 (exit 0). The hook reports four
+  heuristic findings, including the deliberate same-block equality guard and
+  view-only ignored tuple values. The vault reports eight, including the known
+  `reentrancy-balance` heuristic on compounder calls guarded by
+  `nonReentrant`; the balance deltas are the intended exact-spend check.
+- `npm audit --audit-level=high`: completed on 2026-07-28 with **0 high and
+  0 critical** findings after pinning corrected `brace-expansion` and `diff`
+  transitive versions. Eight low findings remain in Hardhat Verify's legacy
+  Ethers v5 dependency chain; npm reports no available fix.
+- **Aderyn + Echidna:** latest run was 2026-06-08 on the pre-2026-07-28
+  source. Those results are historical evidence, not current-patch verification.
+  A v4-only Aderyn rerun was attempted on 2026-07-29 but the local Aderyn
+  binary/WSL toolchain is unavailable; it did not execute.
   - **Echidna** v4 engine harness: invariant suite expanded **3 → 13**, **13/13 passing**, 0 falsified,
     10,004 calls. Covers fixed supply, principal conservation, NARA solvency, ETH solvency (exact
     inflow/outflow accounting), `totalLocked ≤ supply`, settled-epoch ≤ wall-clock, drip claimed ≤ paid,
@@ -256,8 +303,11 @@ Last full run — **2026-07-04**:
     `--legacy-peer-deps`; Aderyn needs solc 0.8.34 seeded into `~/.svm/`; crytic-compile 0.4.1 needs a
     one-line `default=str` patch to its `solc.py` JSON dump. See `scripts/run-gates-linux.sh`.
 - Baskets (separate Foundry package, `../../nara-category-baskets-v1/`):
-  **136 passing, 5 fork-dependent skipped, 0 failing** in the environment-free
-  full suite on 2026-07-26.
+  **138 deterministic tests passing, 1 environment-dependent skip, 0
+  failing** on 2026-07-29, with fork-named suites excluded. The separate
+  CI-profile invariant run passed 4/4. Four Base adapter fork suites passed
+  31/31. `ForkBuyProof` still requires a candidate basket stack deployed on
+  the local fork and remains a release gate.
 
 > Historical note: pre-reset runs cited different totals because they included
 > code and tests that are no longer in the active v4 compile. Use the dated
@@ -269,23 +319,36 @@ Last full run — **2026-07-04**:
 
 The Stage A core already exists. Do not redeploy it.
 
-1. Deploy and wire `NARALiquidityCompounderV4`; complete the required ownership
-   and recovery-policy review.
-2. Run `npm run verify:v4:preseed`.
-3. Initialize and seed the registered NARA/USDC pool with the approved,
-   explicitly reviewed transaction.
-4. Run `npm run v4:env:sync:write` so `.env` records the real LP NFT token ID
+1. ~~Deploy the corrected replacement vault, hook, and compounder trio. Verify
+   their source, exact immutable bindings, ownership, uninitialized pool state,
+   and recovery policy.~~ **Done 2026-07-30.**
+2. ~~Sync the replacement manifest into the reviewed fresh environment.~~
+   **Done 2026-07-30** via `npm run v4:env:sync` and `v4:env:sync:write`.
+3. ~~Revoke `REWARD_NOTIFIER_ROLE` from the Stage A admin and vault, then run
+   `npm run verify:v4:preseed` and
+   `npm run verify:v4:launch-gates:preseed`.~~ **Done 2026-07-30** — both
+   passed; launch gates 14/0/0.
+4. **NEXT.** Initialize and seed the replacement NARA/USDC pool with the
+   approved, explicitly reviewed transaction. Build it with
+   `npm run build:v4:atomic-pool-launch`; it must register, initialize, and
+   seed in one Safe batch. The Safe must hold exactly `60,000 NARA` and
+   `300 USDC` first. Requires explicit human approval.
+5. Run one reviewed validation compound, verify exact-spend accounting and the
+   full-range LP position, then freeze the replacement compounder.
+6. Run `npm run v4:env:sync:write` so `.env` records the real LP NFT token ID
    from `deployments/v4-liquidity-seed-latest.json`.
-5. Run `npm run verify:v4:preflight` and `npm run smoke:v4`.
-6. Complete and record the required stability soak.
-7. Run the complete basket deployment sequence on an exact Base-mainnet fork.
-   Validate every adapter, executor, selector, immutable constructor value, and
-   the fee collector's irreversible allowlist freeze before broadcast.
-8. Broadcast the basket sequence only with an approved contract Safe/timelock
+7. Run `npm run verify:v4:preflight`, `npm run smoke:v4`, and
+   `npm run verify:v4:launch-gates:baskets`.
+8. Complete and record the required stability soak.
+9. Run the complete basket deployment sequence on an exact Base-mainnet fork.
+   Validate every adapter, immutable constructor value, typed collector route,
+   oracle feed, role separation, engine/NARA binding, and exact-pull behavior
+   before broadcast.
+10. Broadcast the basket sequence only with an approved contract Safe/timelock
    as fee-collector admin. The deployment script rejects an EOA admin.
-9. Save and verify a deployment manifest for every basket.
-10. Run basket buy, sell, and `withdrawUnderlying` smoke tests.
-11. Keep every frontend basket in preview until its manifest and smoke evidence
+11. Save and verify a deployment manifest for every basket.
+12. Run basket buy, sell, and `withdrawUnderlying` smoke tests.
+13. Keep every frontend basket in preview until its manifest and smoke evidence
     pass the production gates.
 
 ---
@@ -303,11 +366,16 @@ ready for production activation until all gates below are true:
 - `npm run echidna:v4` passes.
 - `npm run verify:v4:preflight` passes against the intended deployment config.
 - `npm run smoke:v4` passes after liquidity is seeded.
-- `npm run launch:gates` passes. This wraps safe local/static gates and the read-only preflight.
+- `npm run verify:v4:launch-gates:preseed` passes before initialization.
+- `npm run verify:v4:launch-gates:baskets` passes after the validation compound
+  and compounder freeze.
+- `npm run launch:gates` passes after seed. This wraps local/static gates, the
+  strict read-only preflight, and the baskets-only final live gate.
 - Basket Foundry build, non-fork tests, and required Base-fork proofs pass.
-- The NARA pool is initialized, liquid, smoke-tested, and has completed the
+- The replacement NARA pool is initialized, liquid, smoke-tested, and has completed the
   required stability soak.
-- The compounder is deployed, wired, and verified.
+- The replacement hook/vault/compounder trio is deployed from corrected source,
+  mutually wired, and verified; the Stage A pool remains uninitialized.
 - The basket fee-collector admin is an approved contract Safe/timelock.
 - Every basket has a verified deployment manifest.
 - Admin, treasury, emergency, and owner roles for in-scope deployed contracts
@@ -328,12 +396,57 @@ Deployed 2026-07-26 from RC3 commit
 | `NARAToken` | `0x65E247AA3aa9C0131b2984b894c3D24c41341D7A` | Deployed; 1,000,000 fixed supply |
 | `NARAEngine` | `0xbC2492BA73dE35d1114b5c18d7db633aca8963c9` | Deployed |
 | `NARARewardReserve` | `0x5F3FF409b74395b031e0C5D6abdD7D8895d2c7AD` | Sealed with 650,000 NARA |
-| `NARALiquidityGrowthVault` | `0xc0cf9bCf8879182368b1CdBDC81B6a143fFA2988` | Deployed; compounder set and not frozen |
-| `Create2HookDeployer` | `0xC045644303E43cbb1E3c3E3fC851246F5c590834` | Ownership transferred to final admin |
-| `NARALiquidityGrowthHook` | `0x9a01c2DcF713cDB12B8ef4Eb264D5c3203b06088` | Pool registered |
+| `NARALiquidityGrowthVault` | `0xc0cf9bCf8879182368b1CdBDC81B6a143fFA2988` | Quarantined Stage A instance; do not use for launch |
+| `Create2HookDeployer` | `0xC045644303E43cbb1E3c3E3fC851246F5c590834` | Quarantined Stage A helper; superseded |
+| `NARALiquidityGrowthHook` | `0x9a01c2DcF713cDB12B8ef4Eb264D5c3203b06088` | Quarantined Stage A instance; registered pool must remain uninitialized |
 
-Pool ID:
+Stage A pool ID (quarantined, uninitialized, never to be seeded):
 `0xbb3287f32b95e96301c9582e8bf7e81fa362e4b9eea00cf016c537cf5970dff3`.
+
+## Replacement Liquidity Trio — Base Mainnet (2026-07-30)
+
+Deployed by `scripts/redeployPoolOnly.ts` from the corrected post-2026-07-28
+source. **This is the active liquidity stack.** All four contracts are owned by
+the custody Safe `0xd65c0e390Dc187A22c52c03816591CC736C0D755`.
+
+| Contract | Address | Status |
+|---|---|---|
+| `NARALiquidityGrowthVault` | `0x2dfE578C4342750Cd8fE618605eeB0E9C00Ba94d` | Active; `RouteMode.Liquidity`; compounder wired, not frozen |
+| `NARALiquidityGrowthHook` | `0xA1c6a86d6F7B83deE32D7bc4aA6D35C14A8e6088` | Active; flags `0x2088`; pool **not registered** |
+| `NARALiquidityCompounderV4` | `0xE28C05cC6ad9f2C48DBB7eCCD44b323370586C98` | Active; no pending recovery |
+| `Create2HookDeployer` | `0xa6Ef629291170B80e5f23Ab14dB0B3620062f016` | Helper; owned by the Safe |
+
+Planned replacement pool ID (not yet registered):
+`0x221d377779f958eadf35122810743a6ba11e9079b0b6bd05234ea9500b227318`.
+
+- Pool key: currency0 `NARA`, currency1 native `USDC`, fee `3000`, tick spacing `60`.
+- Configured fee-basis depth: `60,000 NARA` and `300 USDC`, set before
+  registration so no timelocked pending update exists.
+- Planned opening `sqrtPriceX96`: `5602277097478613991873`, which is
+  `$0.005` per NARA and a `$5,000` implied FDV on the fixed supply. This value
+  is bound permanently by `registerPool` in the atomic Safe batch — it is
+  **not** yet bound on-chain (`hook.expectedSqrtPriceX96()` currently reads `0`).
+- Hook salt `0x76a3bf2187024a7512f6f516bc0fa035419260f26a702e11b2b208db91454160`
+  with init-code hash
+  `0x391b688cd9637189a3c15cc2583f4e9f1c1f156a7334e6b37e348bb64421abcd`
+  reproduces the hook address exactly through the CREATE2 helper.
+- `REWARD_NOTIFIER_ROLE` was deliberately **not** granted to the replacement
+  vault. Deployed-engine ERC-20 reward notification stays disabled (PS-02).
+
+Evidence:
+`deployments/v4-pool-redeploy-2026-07-30-replacement-trio.json`, mirrored to
+`deployments/v4-liquidity-replacement-latest.json`.
+
+> Operator note: the deploy script exited non-zero on its final `owner()`
+> read-back after every transaction had already succeeded — a stale-RPC read,
+> not a failed transfer. The manifest was therefore reconstructed from chain
+> state and independently re-verified. All four owners, both reciprocal binding
+> sets, both depths, and the unregistered pool state were confirmed by direct
+> reads.
+
+Pre-seed gate result on 2026-07-30: `npm run verify:v4:preseed` passed, and
+`npm run verify:v4:launch-gates:preseed` returned **14 pass, 0 fail, 0 skip, 9
+not applicable** to the baskets-only scope.
 
 This deployment is deliberately dormant:
 
@@ -341,18 +454,34 @@ This deployment is deliberately dormant:
 - No LP NFT or public liquidity exists.
 - The approved supply allocation and controlled initial-liquidity ratio are
   documented in `SUPPLY_ALLOCATION.md`. No liquidity transaction has been sent.
-- The timelocked NARA protocol-depth update from `30` to `60,000 NARA`
+- The historical Stage A NARA protocol-depth update from `30` to `60,000 NARA`
   executed successfully in transaction
   `0x86d6f37b9d35040a3bd1a89c6d0fe398b4ba65f7ce5a06a7360d80c75e12b6ba`
   at block `49215671`. The pending entry is cleared, and the read-only pre-seed
-  verifier confirmed the active depth is exactly `60,000 NARA`.
-- The compounder is deployed, wired, and source verified but not frozen. Position NFT,
+  verifier confirmed the active depth is exactly `60,000 NARA`. This does not
+  authorize or validate seeding the old pool.
+- The old compounder is deployed, wired, and source verified but quarantined
+  with the old vault/hook. A fresh matching trio is required. Position NFT,
   allocations, router/lenses, bonds, and composability are not deployed.
 - `apps/nara-baskets/` contains the fresh v4 launch configuration but remains
   fail-closed in preview until verified manager/adapter manifests exist.
   Lockboard is deferred; Lotto and Arena remain retired.
-- Final admin and treasury are EOAs. Custody/recovery acceptance or migration
-  to a verified Safe is required before public activation.
+- Engine role custody moved to a Base Safe on 2026-07-30. Safe
+  `0xd65c0e390Dc187A22c52c03816591CC736C0D755`, version `1.4.1`, threshold
+  `2 of 3`, no modules, runtime code hash
+  `0xd7d408ebcd99b2b70be43e20253d6d92a8ea8fab29bd3be7f55b10032331fb4c`. The Safe
+  now solely holds `DEFAULT_ADMIN_ROLE`, `PARAM_ROLE`, and `TREASURY_ROLE`; the
+  legacy admin EOA and the deployer hold none. Evidence:
+  [NARA_V4_SAFE_CUSTODY_HANDOFF.md](NARA_V4_SAFE_CUSTODY_HANDOFF.md) and
+  `deployments/v4-custody-2026-07-30.json`.
+- This custody gate is **not** closed. The approved plan
+  [NARA_V4_CUSTODY_AND_GOVERNANCE_PLAN.md](NARA_V4_CUSTODY_AND_GOVERNANCE_PLAN.md)
+  requires two `3-of-5` Safes with separated admin and treasury, a phase-2 48h
+  timelock, and a `240,000 NARA` treasury lock commitment. The deployed posture
+  is one `2-of-3` Safe with no Safe B. `engine.treasury()` is still the EOA
+  `0xfe3A8678A9c729438BB11718bD1391E7Ab491E8e`, which is also a Safe owner. The
+  liquidity-stack owner roles are still pending because the replacement trio is
+  not deployed. Resolve or formally amend the plan before public activation.
 
 Canonical evidence:
 `deployments/v4-base-usdc-2026-07-26-controlled-stage-a.json`.
@@ -392,7 +521,7 @@ Retired stack facts from prior notes:
 | `npm run v4:env:sync` | Generate `.env.v4.fresh` from a fresh deploy log and refuse retired incident-stack addresses |
 | `npm run v4:env:sync:write` | Merge the generated fresh V4 launch keys into `.env` after review |
 | `npm run deploy:v4:allocations` | Deploy or configure v4 allocations |
-| `npm run deploy:v4:pool:only` | Redeploy only the v4 pool/hook/vault path |
+| `npm run deploy:v4:pool:only` | Deploy a matching replacement vault/hook/compounder trio and leave its pool unregistered |
 | `npm run verify:v4:preflight` | Hook, vault, pool, and routing verification gate |
 | `npm run smoke:v4` | Post-deploy smoke test |
 | `npm run launch:gates` | Mainnet automatic gate wrapper; does not replace explicit operator approval for live smoke transactions |
@@ -402,7 +531,8 @@ Retired stack facts from prior notes:
 | `npm run echidna:v4:smoke` | Short Echidna smoke profile for tool/path validation |
 | `scripts/deployComposabilityV4.ts` | Deploy v4 composability layer |
 | `scripts/lib/v4LiveConfig.ts` | Shared canonical v4 live config for ops scripts |
-| `scripts/seedV4Liquidity.ts` | Seed v4 NARA/USDC liquidity |
+| `npm run build:v4:atomic-pool-launch` | Build the one Safe batch that registers, initializes, and seeds the v4 NARA/USDC pool |
+| `scripts/seedV4Liquidity.ts` | Disabled direct-seed helper retained only for receipt/recovery utilities |
 | `scripts/removeV4Liquidity.ts` | Config-driven LP removal |
 | `scripts/swapUsdcForNara.ts` | Exact-path buy script for the hook pool |
 

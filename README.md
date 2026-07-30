@@ -2,19 +2,19 @@
 
 # NARA Protocol v4
 
-**A fixed-supply, time-preference commitment protocol on Base. Commit NARA, hold a tradable position NFT; the protocol distributes NARA, ETH, and ERC-20 rewards across committed weight each epoch.**
+**A fixed-supply, time-preference commitment protocol on Base. Commit NARA, hold a tradable position NFT; the protocol distributes NARA emissions and contributed ETH across committed weight each epoch.**
 
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.34-363636?logo=solidity)](https://soliditylang.org)
 [![Hardhat](https://img.shields.io/badge/Built%20with-Hardhat-fff100)](https://hardhat.org)
-[![Tests](https://img.shields.io/badge/tests-360%20passing-2ea44f)](#-build--test)
+[![Tests](https://img.shields.io/badge/tests-468%20passing-2ea44f)](#-build--test)
 [![Echidna](https://img.shields.io/badge/invariants-13%2F13%20passing-2ea44f)](#-security)
 [![Uniswap v4](https://img.shields.io/badge/Uniswap-v4%20hook-ff007a)](docs/UNISWAP_V4_HOOK.md)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
-[![Status](https://img.shields.io/badge/status-pre--launch%20(not%20deployed)-orange)](#-status)
+[![Status](https://img.shields.io/badge/status-core%20deployed%20%C2%B7%20liquidity%20pending-orange)](#-status)
 
 <br/>
 
-![NARA Protocol — The Commitment Engine on Base. Commit NARA, hold a tradable position NFT, and the NARAEngine distributes NARA, ETH and any ERC-20 rewards across committed weight every 15-minute epoch. A Uniswap v4 hook skims a small fee from every trade into deeper liquidity. Compose via stNARA, Pendle SY, fractionalization, and discounted bonds.](docs/assets/how-it-works.png)
+![NARA Protocol — The Commitment Engine on Base. Commit NARA, hold a tradable position NFT, and the NARAEngine distributes NARA emissions and contributed ETH across committed weight every 15-minute epoch. A Uniswap v4 hook can route a bounded fee from the registered pool into protocol liquidity or Genesis rewards.](docs/assets/how-it-works.png)
 
 </div>
 
@@ -24,8 +24,9 @@
 
 NARA is built around commitment. You commit a fixed-supply token for a chosen duration; the longer you
 commit, the more **weight** your position carries; and the protocol distributes its reward streams —
-NARA emissions, ETH, and any ERC-20 a partner chooses to add — across committed weight **every 15-minute
-epoch**. Rewards are variable, never promised, and can be zero.
+NARA emissions and contributed ETH across committed weight **every 15-minute epoch**. Rewards are
+variable, never promised, and can be zero. The deployed engine's generic ERC-20 notification surface
+is intentionally disabled; see [Current State](docs/CURRENT_STATE.md).
 
 A commitment isn't a database row you can't move — **it's an NFT**. You can sell it, fractionalize it, wrap
 it into a liquid staking token, or borrow against it, all without breaking the underlying commitment.
@@ -34,7 +35,7 @@ And the value flywheel is built into the AMM itself: NARA's liquidity lives in a
 pool** whose hook skims a small fee from every trade and routes that flow back to committers.
 
 ```
-      commit NARA (time)  ──▶  weight  ──▶  NARA + ETH + ERC-20 rewards each epoch
+      commit NARA (time)  ──▶  weight  ──▶  NARA + contributed ETH each epoch
               ▲                                          │
               └──────── buy pressure + protocol fees ◀───┘  (Uniswap v4 hook → reward vault)
 ```
@@ -64,9 +65,10 @@ pool** whose hook skims a small fee from every trade and routes that flow back t
 
 ## 🚦 Status
 
-**Pre-launch. No v4 contracts are deployed to mainnet.** The code is complete and test-green; the gap
-is deployment, not code. The retired v3 stack and the retired 2026-04-23 v4 incident stack are
-**historical only** — never integrate against them. Canonical live state:
+**Core deployed; liquidity not launched.** The v4 token, engine, and sealed reward reserve are on Base.
+The originally registered Stage A hook, vault, and compounder are quarantined; their pool remains
+uninitialized and must not be seeded. A corrected replacement liquidity trio must pass the documented
+fresh-address gates before initialization. Canonical addresses and evidence:
 [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md).
 
 ---
@@ -82,7 +84,7 @@ flowchart TD
     end
     subgraph LIQ[Liquidity]
       H[NARALiquidityGrowthHook<br/>Uniswap v4 · buy-weighted fee]
-      V[NARALiquidityGrowthVault<br/>5 routing modes]
+      V[NARALiquidityGrowthVault<br/>3 enabled routing modes]
       P((NARA / USDC<br/>v4 pool))
     end
     subgraph POS[Positions]
@@ -120,7 +122,7 @@ Full layer model and per-contract status: [`docs/NARA_V4_PROJECT_SCOPE.md`](docs
 | Pillar | What it is |
 |--------|-----------|
 | **Token** | `NARAToken` — 1,000,000 fixed supply, minted once. ERC-2612 permit, ERC-1363 (`transferAndCall` to commit in one tx), capped ERC-3156 flash mint, multicall. |
-| **Engine** | `NARAEngine` — the settlement core: JIT epoch advance, weight-based reward accounting, NARA + ETH + ERC-20 rails. |
+| **Engine** | `NARAEngine` — the settlement core: JIT epoch advance and weight-based NARA/ETH accounting. Its generic ERC-20 rail exists in immutable code but is disabled for this deployment. |
 | **Liquidity** | A fee-charging **Uniswap v4** pool (`NARALiquidityGrowthHook` + `NARALiquidityGrowthVault`) that turns swap fees into committer rewards. |
 | **Positions** | `NARAPositionNFTV4` — a commitment *is* a tradable NFT, with Genesis tiers and a bond intake path. |
 | **Composability** | `stNARA`, a Pendle SY adapter, and fractional position wrappers built on top of the position layer. |
@@ -138,9 +140,11 @@ Full layer model and per-contract status: [`docs/NARA_V4_PROJECT_SCOPE.md`](docs
   accelerates with duration).
 - **Adaptive emission.** Per-epoch NARA emission responds to commitment share, stress, a warmup factor
   (converges up to 1.0), and a decaying bootstrap weight — an incentive loop that rewards real commitment.
-- **Three reward rails.** NARA drip (emissions), **ETH** via `notifyEthRewards()`, and arbitrary
-  **ERC-20** via `notifyTokenRewards()` (role-gated — any protocol can reward NARA committers). Direct ETH
-  transfers to the engine are rejected (`DirectEthTransferForbidden`).
+- **Two active reward rails.** NARA drip (emissions) and **ETH** through
+  `notifyEthRewards()`. The deployed engine contains a role-gated ERC-20 reward
+  function, but launch policy disables it because post-notification extensions
+  can make later distributions under-allocate. Direct ETH transfers to the
+  engine are rejected (`DirectEthTransferForbidden`).
 
 Details: [`docs/EMISSION_MECHANICS.md`](docs/EMISSION_MECHANICS.md) · [`docs/LOCK_APY_REFERENCE.md`](docs/LOCK_APY_REFERENCE.md).
 
@@ -157,9 +161,10 @@ NARA's liquidity home is a **custom Uniswap v4 pool**. The hook is not a neutral
   declared permissions and the required address bits match exactly.
 - **Asymmetric curves.** Buyers pay more under pressure than sellers (default buy 5→25%, sell 5→20%,
   across four pressure tiers). Buy pressure = `amountIn / depth`.
-- **Anti-manipulation.** Depth uses `min(liveDepth, protocolDepth)` so a swapper can't inflate depth
-  in-block to cheapen the fee, and **per-block cumulative-flow accounting** means splitting one large
-  swap into many small ones charges the same total.
+- **Deterministic pressure basis.** Each input currency uses its configured
+  `protocolDepth`, captured on the first flow of the block. Live pool depth is
+  monitoring telemetry only, and per-block cumulative fee deltas make a
+  same-block split charge exactly the same aggregate fee as one gross input.
 - **Fee skim, the v4 way.** The hook returns a `BeforeSwapDelta` and `poolManager.take()`s the fee in
   the input currency straight to the vault (best-effort accounting that never blocks a swap).
 - **Vault routing (5 modes).** `NARALiquidityGrowthVault` routes collected fees: `Liquidity`
@@ -204,7 +209,7 @@ Built and tested, deployed after the core proves out (needs TVL + a market):
 |-------|-----------|
 | **Core** | `NARAToken` · `NARAEngine` · `NARARewardReserve` · `NARALauncher` · `NARALiquidityGrowthHook` · `NARALiquidityGrowthVault` · `utils/Create2HookDeployer` |
 | **Positions** | `NARAPositionNFTV4` · `NARAPositionAccountV4` · `NARAPositionRendererV4` · `NARAGenesisRewardDistributorV4` · `NARABondVaultV4` · `NARABondDepositoryV4NFT` · `NARAOpsVaultV4` |
-| **Router / Lens** | `router/NARARouter` · `router/NARADashboardLens` · `router/NARAPositionDataLensV1` · `router/BribeRouterV4` |
+| **Router / Lens** | `router/NARARouter` · `router/NARADashboardLens` · `router/NARAPositionDataLensV1` · dormant `router/BribeRouterV4` reference |
 | **Composability** | `composability/NARAStakingPoolV4` · `NARAStakingPoolSYV4` · `NARAFractionalPositionV4` · `NARAFractionalPositionFactoryV4` |
 
 ---
@@ -219,7 +224,7 @@ npm install
 # compile
 NODE_OPTIONS="--require ./polyfill.cjs" npx hardhat compile
 
-# full suite — 360 passing
+# full suite — 468 passing on 2026-07-29
 NODE_OPTIONS="--require ./polyfill.cjs" npx hardhat test
 
 # bytecode size gate
@@ -235,23 +240,24 @@ not a Forge setup.)
 
 ---
 
-## 🔐 Security
+## 🔐 Security verification
 
-NARA v4 is engineered like production infrastructure, not hackathon DeFi.
+| Gate | Latest evidence |
+|------|-----------------|
+| Hardhat test suite | **468 passing, 0 failing** on 2026-07-29 |
+| Real Uniswap v4 path | Single-vs-split buy and sell equality through the actual PoolManager/test routers on 2026-07-29 |
+| Slither | Completed with exit 0 on 2026-07-29; heuristic findings are recorded in `CURRENT_STATE.md` |
+| Bytecode size | All deployable artifacts within EVM limits on 2026-07-29 |
+| npm dependency audit | **0 high / 0 critical** on 2026-07-28; 8 low findings remain in Hardhat Verify's legacy Ethers v5 chain with no upstream fix |
+| Echidna | **13/13** invariants on 2026-06-08, before the 2026-07-28 liquidity patch |
+| Aderyn | Latest completed run is 2026-06-08; the 2026-07-29 rerun could not start because the binary is unavailable |
 
-| Gate | Result (last verified 2026-06-08) |
-|------|-----------------------------------|
-| Hardhat test suite | **360 passing**, 0 failing, 0 skipped |
-| Echidna invariants | **13/13 passing**, 10,004 calls (supply · NARA + ETH solvency · drip · weight · epoch/index monotonicity) |
-| Slither | clean of new issues |
-| Aderyn | 4 High / 18 Low — heuristic; Highs in bond/router/fractional, none in core (triaged) |
-| Bytecode size | all deployable artifacts within EVM limits |
-
-Design posture: sealed reward reserve & bond inventory (admin can't sweep), JIT liveness with explicit
-`EpochStale` guards, role-gated reward notifiers, and immutable safety caps on owner setters. A
-multi-lens internal audit (architecture / economics / UX) rated the system **~8.4–8.5/10** with **no
-catastrophic design flaw** — the dominant risk is operational ("correct code, misoperated system"), not
-contract logic.
+Design posture includes a sealed reward reserve, JIT liveness with explicit
+`EpochStale` guards, immutable parameter caps, a quarantined Stage A liquidity
+stack, and disabled deployed-engine ERC-20 notification. These are internal
+verification results, not an independent audit or a production-readiness
+claim. See [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md) for open launch
+gates.
 
 > Automated analysis is necessary but not sufficient. An independent human / competitive review is
 > planned before mainnet value. Disclosure policy: [`SECURITY.md`](SECURITY.md).
@@ -267,7 +273,8 @@ Strict order (full runbook: [`docs/NARA_V4_LAUNCH_RUNBOOK.md`](docs/NARA_V4_LAUN
 2. `npm run verify:v4:preflight` — hook `0x2088` bits, pool/vault wiring
 3. seed NARA/USDC liquidity → `npm run smoke:v4`
 4. `npm run deploy:v4:allocations` — position NFT layer (bonds **closed**)
-5. `npm run deploy:v4:router:lens` — router · lens · `BribeRouterV4`
+5. `npm run deploy:v4:router:lens` — safe router and read-only lens components;
+   `BribeRouterV4` is intentionally skipped for the deployed engine
 6. composability — only after core proves out
 7. hand all roles to a Safe/timelock
 
@@ -285,7 +292,7 @@ Nothing is "done" until deployed addresses + verification are recorded in `CURRE
 | [UNISWAP_V4_HOOK.md](docs/UNISWAP_V4_HOOK.md) | Hook architecture deep-dive (`0x2088`, fee curves, anti-gaming) |
 | [EMISSION_MECHANICS.md](docs/EMISSION_MECHANICS.md) | Adaptive emission model |
 | [NARA_V4_NFT_POSITIONS.md](docs/NARA_V4_NFT_POSITIONS.md) | Position NFT + account + Genesis spec |
-| [ROUTER_LENS.md](docs/ROUTER_LENS.md) | Router · lens · `BribeRouterV4` layer |
+| [ROUTER_LENS.md](docs/ROUTER_LENS.md) | Router · lens · disabled `BribeRouterV4` reference |
 | [ROADMAP.md](docs/ROADMAP.md) | Product direction and phases |
 
 Full index: [`docs/README.md`](docs/README.md).

@@ -2,8 +2,11 @@
 
 ## Status
 
-**Pre-launch — no v4 contracts are deployed to mainnet.** The retired v3 stack and the retired
-2026-04-23 v4 incident stack are historical only; never integrate against them. Canonical live state:
+**Pre-launch — controlled Stage A core contracts are deployed on Base, but no
+public market or app is live.** The Stage A liquidity hook, vault, and
+compounder are quarantined and must not be used for launch; a corrected
+replacement trio is still pending. The retired v3 stack and retired 2026-04-23
+v4 incident stack are historical only. Canonical live state:
 [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md).
 
 ## Security model
@@ -20,24 +23,23 @@
 - **Custody isolation.** Each position NFT is backed by its own minimal-clone account; the fee/vault
   paths can route value but cannot touch user principal.
 
-## Verification performed (last verified 2026-06-08)
+## Verification performed
 
 | Gate | Result |
 |------|--------|
-| Hardhat test suite | **360 passing**, 0 failing, 0 skipped |
-| Echidna invariants | **13/13 passing**, 10,004 calls |
-| Slither | clean of new issues |
-| Aderyn | 4 High / 18 Low (heuristic; Highs in bond/router/fractional, none in core) |
-| Bytecode size | all deployable artifacts within EVM limits |
+| Hardhat test suite | **468 passing, 0 failing** on 2026-07-29 |
+| Real Uniswap v4 regression | Actual `PoolManager` same-block split tests passed |
+| Slither | Current v4 target list completed with exit 0 on 2026-07-29; raw heuristic alerts are classified in `docs/CURRENT_STATE.md` |
+| Bytecode size | All deployable artifacts within EVM limits on 2026-07-29 |
+| Echidna | **13/13 passing**, 10,004 calls on 2026-06-08; historical, not a current-patch run |
+| Aderyn | Last completed 2026-06-08; current-patch rerun did not execute because the binary is unavailable |
 
 Run them yourself — see the README "Build & test" and "Security" sections. Test counts drift; the live
 number is `npx hardhat test`.
 
-A multi-lens internal audit (architecture / economics / UX) rated the system **~8.4–8.5/10** with **no
-catastrophic design flaw**; the dominant risk is operational ("correct code, misoperated system"), not
-contract logic. **Automated analysis is necessary but not sufficient** — an independent human /
-competitive review is planned before mainnet value, and a bug-bounty program will be announced ahead of
-launch.
+No independent audit is claimed. Automated and internal review cannot prove
+the absence of defects or replace the remaining deployment, fork-rehearsal,
+live-read, and smoke-test gates.
 
 ## Reporting a vulnerability
 

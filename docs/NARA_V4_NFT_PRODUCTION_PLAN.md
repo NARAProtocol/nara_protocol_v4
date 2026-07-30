@@ -73,7 +73,7 @@ typed lens instead of stale marketplace caches.
 ## Historical validation performed on 2026-06-07 (pre-V5 renderer split)
 
 - Focused NFT/data-lens/dashboard suite: 72 passing.
-- Full Hardhat regression suite: 360 passing, 0 failing.
+- Full Hardhat regression suite: 468 passing, 0 failing on 2026-07-29.
 - Clean bytecode-size gate: all deployable artifacts within EVM limits.
   - `NARAPositionNFTV4`: 19,010 deployed bytes.
   - `NARAPositionRendererV4`: 11,906 deployed bytes.

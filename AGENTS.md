@@ -2,7 +2,32 @@
 
 This file is read by AI coding assistants that look for `AGENTS.md` on entry (OpenAI Codex, Cursor, DeepSeek, Gemini, and others). The companion file [CLAUDE.md](CLAUDE.md) carries the same context framed for Claude / Anthropic models.
 
-Last updated: 2026-07-26.
+Last updated: 2026-07-28.
+
+## Cross-Repository Role
+
+This repository is the upstream engineering authority for
+`NARAProtocol/nara_protocol_v4`. Protocol contracts, ABIs, events, artifacts,
+deployment scripts, and protocol manifests originate here.
+
+For a change that affects another NARA repository:
+
+1. finish and test the protocol change here;
+2. merge it through protected CI and record the full origin commit;
+3. record verified deployment evidence when the change is deployed;
+4. then update `nara_protocol_v4_baskets` and `nara-swarm-monitor` as direct
+   consumers;
+5. update `nara_protocol` public documentation last.
+
+In the FIELD workspace, read
+`../docs/NARA_CROSS_REPOSITORY_RELEASE_PROTOCOL.md` before a multi-repository
+change. `../nara_protocol_v4_publication/` is a secondary checkout of this same
+GitHub remote, not a second source of truth. Never copy uncommitted source,
+artifacts, manifests, or addresses between the two working trees.
+
+Every downstream handoff records a change ID, this repository's full commit,
+artifact or ABI source, evidence state, deployment manifest and verification
+block when applicable, test results, and unresolved risks.
 
 ## 🚨 v4 RESET — READ FIRST
 
@@ -13,10 +38,19 @@ On **2026-05-27** the project committed to a clean fresh start on the v4 stack.
 - **Active token:** the fresh `NARAToken` is deployed on Base at
   `0x65E247AA3aa9C0131b2984b894c3D24c41341D7A`. The v3 mainnet token
   `0xE444de61752bD13D1D37Ee59c31ef4e489bd727C` is **retired**.
-- **Deployment state:** Stage A is already deployed. The registered NARA/USDC
-  pool is uninitialized and has no liquidity. Do not repeat the core deployment.
+- **Deployment state:** The Stage A token, engine, and sealed reward reserve
+  remain the active core. The Stage A hook, vault, compounder, and registered
+  NARA/USDC pool are quarantined by the 2026-07-28 review. The pool is
+  uninitialized and has no liquidity; never initialize or seed it. Deploy and
+  verify the corrected replacement liquidity trio before launch. Do not repeat
+  the core deployment.
 - **Launch scope:** NARA Baskets only. Lockboard and composability are deferred;
   Lotto and Arena are retired.
+- **Pre-seed findings:** read
+  `docs/NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md` before touching the
+  hook, vault, compounder, fee collector, seed flow, or basket limits. Never
+  remove the exact opening-price bind, configured-depth fee basis, reciprocal
+  one-shot binding checks, notifier-role prohibition, or live basket-size cap.
 - **Other retired Base mainnet addresses** are listed in `archive/legacy-v3/README.md`. Do not surface them as "live" or "current" in any output.
 
 ## Rules of engagement
@@ -135,7 +169,12 @@ npm run launch:gates       # combined local launch gate
 
 See [CLAUDE.md](CLAUDE.md) → "MANDATORY PROTOCOL SAFETY STANDARDS" for the full rules. The four cornerstones:
 
-1. All ecosystem fees route to the engine via `NARAEngine.notifyEthRewards()` or `notifyTokenRewards(token, amount)`. Always guard with `if (fee > 0)` because the engine reverts on zero.
+1. ETH rewards may route through `NARAEngine.notifyEthRewards()`. Do not grant
+   `REWARD_NOTIFIER_ROLE` or call `notifyTokenRewards(token, amount)` on the
+   deployed v4 engine: a post-notification active-position extension can make
+   its live denominator exceed the frozen per-position claim basis. Pool ERC-20
+   fees route only through `Liquidity`, `Genesis`, or `GenesisSplit`; the
+   replacement vault permanently rejects `Engine` and `Split`.
 2. Every `onlyOwner` setter has a hard-coded min/max cap.
 3. All external-call functions use `nonReentrant`.
 4. All admin functions have a comment explaining worst-case impact.

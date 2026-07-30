@@ -6,8 +6,9 @@ without the history in their context window.
 ## What NARA Is
 
 NARA is a fixed-supply, time-preference yield protocol on Base. The active
-design centers on locking NARA for weighted participation in NARA, ETH, and
-approved ERC-20 reward flows. The v4 system is a fresh start, not a continuation
+design centers on locking NARA for weighted participation in NARA and ETH
+reward flows. The deployed engine's optional ERC-20 notification path is
+disabled. The v4 system is a fresh start, not a continuation
 of the retired v3 mainnet contracts.
 
 The protocol identity is larger than any one UI or launch surface:
@@ -38,7 +39,9 @@ Core active contracts:
 - `NARABondDepositoryV4.sol`: raw-position bond path, not the preferred launch
   path.
 - `NARALiquidityGrowthHook.sol`, `NARALiquidityGrowthVault.sol`, and
-  `NARALiquidityCompounderV4.sol`: liquidity growth stack.
+  `NARALiquidityCompounderV4.sol`: corrected replacement liquidity stack. It
+  uses configured-depth block snapshots and permanently rejects Engine/Split
+  vault routing.
 - `NARAOpsVaultV4.sol`: capped operations vesting vault.
 - `composability/`: staking, Pendle SY, and fractional position extensions.
 - `router/`: periphery routers and lenses, including the monitored engine ops
@@ -88,6 +91,10 @@ Controlled Stage A is deployed. The NARA/USDC pool is registered but
 uninitialized and has no liquidity. The current launch product is NARA Baskets.
 Position NFTs, bonds, router/lenses, lockboard, allocations, and composability
 are deferred. Lotto, Arena, and the old cron are retired.
+
+Before seeding, deploy and verify fresh hook/vault/compounder addresses from the
+corrected source, then revoke `REWARD_NOTIFIER_ROLE` from the Stage A admin and
+Stage A vault. No Safe, EOA, vault, or router may hold that role.
 
 Do not repeat the core deployment. Do not invent addresses for deferred
 contracts. Keep baskets in preview until verified deployment manifests exist.

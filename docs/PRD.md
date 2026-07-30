@@ -197,8 +197,10 @@ Fresh v4 launch scope:
 - `EPOCH_LENGTH` is set in the constructor; deployments must check the actual value.
 - Rejects direct ETH transfers.
 - Accepts ETH rewards through `notifyEthRewards()`.
-- Accepts non-NARA ERC-20 rewards through `notifyTokenRewards(address token, uint256 amount)` from `REWARD_NOTIFIER_ROLE` callers.
-- Rejects NARA as an ERC-20 bribe token.
+- Contains a role-gated non-NARA ERC-20 reward surface, but the deployed-engine
+  launch configuration keeps it disabled because later notifications can
+  under-allocate after an active-position extension.
+- Rejects NARA as an ERC-20 reward token.
 - Supports `lockWithPermit(uint256 amount, uint64 durationEpochs, uint256 minWeight, uint256 deadline, uint8 v, bytes32 r, bytes32 s)`.
 - Supports ERC-1363 `onTransferReceived(address operator, address from, uint256 value, bytes data)` locking when flat lock ETH fee is zero.
 
@@ -219,11 +221,12 @@ Fresh v4 launch scope:
 - Starts in `RouteMode.Liquidity`.
 - Supports route modes:
   - `Liquidity`
-  - `Engine`
-  - `Split`
   - `Genesis`
   - `GenesisSplit`
-- Can route NARA and USDC into LP compounding, engine rewards, Genesis rewards, or split flows depending on mode and configuration.
+  - legacy `Engine` and `Split` enum values, both permanently rejected by
+    `setRouteMode`
+- Can route NARA and USDC into LP compounding, or USDC into Genesis rewards and
+  Genesis/LP split flows, depending on mode and configuration.
 - `setHook(address)` is one-time.
 - `setCompounder(address)` is optional; without a reviewed compounder, fees can accumulate in the vault. Compound/split callers must be owner or allowed with `setCompoundKeeper(address,bool)`.
 

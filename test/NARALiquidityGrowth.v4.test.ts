@@ -127,36 +127,49 @@ describe("NARALiquidityGrowth v4 - hook registration", () => {
     it("registers one pool and rejects wrong hook, wrong pair, and duplicate registrations", async () => {
         const { ethers, owner, attacker, hook, key, tokenAddr, baseAddr } = await deployFixture();
 
-        await expect(hook.connect(attacker).registerPool(key))
+        await expect(hook.connect(attacker).registerPool(key, SQRT_PRICE_1_1))
             .to.be.revertedWithCustomError(hook, "OwnableUnauthorizedAccount")
             .withArgs(attacker.address);
 
-        await expect(hook.connect(owner).registerPool({ ...key, hooks: ethers.ZeroAddress }))
+        await expect(hook.connect(owner).registerPool({ ...key, hooks: ethers.ZeroAddress }, SQRT_PRICE_1_1))
             .to.be.revertedWithCustomError(hook, "UnauthorizedPool");
+        await expect(hook.connect(owner).registerPool({ ...key, fee: 500 }, SQRT_PRICE_1_1))
+            .to.be.revertedWithCustomError(hook, "InvalidPoolConfig");
+        await expect(hook.connect(owner).registerPool({ ...key, tickSpacing: 10 }, SQRT_PRICE_1_1))
+            .to.be.revertedWithCustomError(hook, "InvalidPoolConfig");
 
         const wrongToken = await ethers.deployContract("MockERC20", ["Other", "OTHER", 18], owner);
         await wrongToken.waitForDeployment();
         const wrongTokenAddr = await wrongToken.getAddress();
         const [wrong0, wrong1] = sortAddresses(wrongTokenAddr, baseAddr);
         await expect(
-            hook.connect(owner).registerPool({ ...key, currency0: wrong0, currency1: wrong1 }),
+            hook.connect(owner).registerPool(
+                { ...key, currency0: wrong0, currency1: wrong1 },
+                SQRT_PRICE_1_1,
+            ),
         ).to.be.revertedWithCustomError(hook, "InvalidTokenPair");
 
-        await expect(hook.connect(owner).registerPool(key)).to.emit(hook, "PoolRegistered");
+        await expect(hook.connect(owner).registerPool(key, 0n))
+            .to.be.revertedWithCustomError(hook, "ZeroInitializationPrice");
+
+        await expect(hook.connect(owner).registerPool(key, SQRT_PRICE_1_1))
+            .to.emit(hook, "PoolRegistered")
+            .and.to.emit(hook, "InitializationPriceBound");
         expect(await hook.poolRegistered()).to.equal(true);
+        expect(await hook.expectedSqrtPriceX96()).to.equal(SQRT_PRICE_1_1);
 
         const [currency0, currency1] = sortAddresses(tokenAddr, baseAddr);
         expect(key.currency0).to.equal(currency0);
         expect(key.currency1).to.equal(currency1);
         expect(await hook.tokenIsCurrency0()).to.equal(sameAddress(currency0, tokenAddr));
 
-        await expect(hook.connect(owner).registerPool(key))
+        await expect(hook.connect(owner).registerPool(key, SQRT_PRICE_1_1))
             .to.be.revertedWithCustomError(hook, "PoolAlreadyRegistered");
     });
 
-    it("rejects a different pool id even when the token pair is correct", async () => {
+    it("rejects a noncanonical pool config after registration", async () => {
         const { owner, manager, hook, hookAddr, key, exactInParams, baseAddr } = await deployFixture();
-        await hook.connect(owner).registerPool(key);
+        await hook.connect(owner).registerPool(key, SQRT_PRICE_1_1);
 
         await expect(
             manager.callBeforeSwap(
@@ -165,7 +178,20 @@ describe("NARALiquidityGrowth v4 - hook registration", () => {
                 exactInParams(baseAddr, ONE),
                 "0x",
             ),
-        ).to.be.revertedWithCustomError(hook, "UnauthorizedPool");
+        ).to.be.revertedWithCustomError(hook, "InvalidPoolConfig");
+    });
+
+    it("permanently binds initialization to the registered opening price", async () => {
+        const { owner, attacker, manager, hook, hookAddr, key } = await deployFixture();
+        await hook.connect(owner).registerPool(key, SQRT_PRICE_1_1);
+
+        await expect(
+            manager.connect(attacker).callBeforeInitialize(hookAddr, key, SQRT_PRICE_1_1 + 1n),
+        )
+            .to.be.revertedWithCustomError(hook, "InvalidInitializationPrice")
+            .withArgs(SQRT_PRICE_1_1, SQRT_PRICE_1_1 + 1n);
+
+        await manager.connect(attacker).callBeforeInitialize(hookAddr, key, SQRT_PRICE_1_1);
     });
 });
 
@@ -175,7 +201,7 @@ describe("NARALiquidityGrowth v4 - pool fee", () => {
             await deployFixture();
 
         await hook.connect(owner).setProtocolDepth(baseAddr, 10n * ONE);
-        await hook.connect(owner).registerPool(key);
+        await hook.connect(owner).registerPool(key, SQRT_PRICE_1_1);
 
         const amountIn = ONE / 10n;
         const expectedFee = poolFee(amountIn, 500n);
@@ -200,7 +226,7 @@ describe("NARALiquidityGrowth v4 - pool fee", () => {
             await deployFixture();
 
         await hook.connect(owner).setProtocolDepth(baseAddr, 10n * ONE);
-        await hook.connect(owner).registerPool(key);
+        await hook.connect(owner).registerPool(key, SQRT_PRICE_1_1);
 
         const amountIn = 35n * ONE / 10n;
         const [, expectedFee] = await hook.quotePoolFee(true, amountIn);
@@ -211,10 +237,10 @@ describe("NARALiquidityGrowth v4 - pool fee", () => {
         expect(await vault.totalBaseFeeRecorded()).to.equal(expectedFee);
     });
 
-    it("charges the same aggregate fee when threshold-crossing flow is split", async () => {
+    it("charges exactly the same aggregate fee for a meaningful same-block split", async () => {
         const single = await deployFixture();
         await single.hook.connect(single.owner).setProtocolDepth(single.baseAddr, 10n * ONE);
-        await single.hook.connect(single.owner).registerPool(single.key);
+        await single.hook.connect(single.owner).registerPool(single.key, SQRT_PRICE_1_1);
         const total = 3n * ONE;
         await single.manager.connect(single.alice).callBeforeSwap(
             single.hookAddr, single.key, single.exactInParams(single.baseAddr, total), "0x",
@@ -223,17 +249,49 @@ describe("NARALiquidityGrowth v4 - pool fee", () => {
 
         const split = await deployFixture();
         await split.hook.connect(split.owner).setProtocolDepth(split.baseAddr, 10n * ONE);
-        await split.hook.connect(split.owner).registerPool(split.key);
-        await split.manager.connect(split.alice).callBeforeSwap(
-            split.hookAddr, split.key, split.exactInParams(split.baseAddr, total - 1n), "0x",
-        );
-        await split.manager.connect(split.alice).callBeforeSwap(
-            split.hookAddr, split.key, split.exactInParams(split.baseAddr, 1n), "0x",
+        await split.hook.connect(split.owner).registerPool(split.key, SQRT_PRICE_1_1);
+        await split.manager.connect(split.alice).callBeforeSwaps(
+            split.hookAddr,
+            split.key,
+            [
+                split.exactInParams(split.baseAddr, 2n * ONE),
+                split.exactInParams(split.baseAddr, ONE),
+            ],
+            "0x",
         );
         const splitFee = await split.manager.taken(split.baseAddr, split.vaultAddr);
 
-        const roundingDelta = splitFee > singleFee ? splitFee - singleFee : singleFee - splitFee;
-        expect(roundingDelta).to.be.lte(1n);
+        expect(splitFee).to.equal(singleFee);
+        expect(await split.hook.flowAmountInBlock(split.baseAddr)).to.equal(total);
+        expect(await split.hook.flowDepthInBlock(split.baseAddr)).to.equal(10n * ONE);
+    });
+
+    it("uses deterministic configured depth while exposing lower live depth as telemetry", async () => {
+        const { owner, alice, manager, vault, hook, hookAddr, key, exactInParams, tokenAddr, vaultAddr } =
+            await deployFixture();
+        const configuredDepth = 60_000n * ONE;
+        const liveDepth = 20_000n * ONE;
+        const amountIn = 11_367n * ONE;
+
+        await hook.connect(owner).setProtocolDepth(tokenAddr, configuredDepth);
+        await hook.connect(owner).registerPool(key, SQRT_PRICE_1_1);
+        const poolId = await hook.registeredPoolId();
+        await manager.setPoolState(poolId, SQRT_PRICE_1_1, liveDepth);
+
+        expect(await hook.probeLiveDepth(tokenAddr)).to.equal(liveDepth);
+        const [, quotedFee] = await hook.quotePoolFee(false, amountIn);
+        expect(quotedFee).to.equal(8_067n * ONE / 10n);
+
+        await manager.connect(alice).callBeforeSwap(
+            hookAddr,
+            key,
+            exactInParams(tokenAddr, amountIn),
+            "0x",
+        );
+
+        expect(await manager.taken(tokenAddr, vaultAddr)).to.equal(quotedFee);
+        expect(await vault.totalTokenFeeRecorded()).to.equal(quotedFee);
+        expect(await hook.flowDepthInBlock(tokenAddr)).to.equal(configuredDepth);
     });
 
     it("skims token-side sell pool fee and records it separately", async () => {
@@ -241,7 +299,7 @@ describe("NARALiquidityGrowth v4 - pool fee", () => {
             await deployFixture();
 
         await hook.connect(owner).setProtocolDepth(tokenAddr, 25_000n * ONE);
-        await hook.connect(owner).registerPool(key);
+        await hook.connect(owner).registerPool(key, SQRT_PRICE_1_1);
 
         const amountIn = 1_000n * ONE;
         const expectedFee = poolFee(amountIn, 500n);
@@ -261,7 +319,7 @@ describe("NARALiquidityGrowth v4 - pool fee", () => {
         const { owner, alice, manager, vault, hook, hookAddr, key, exactInParams, baseAddr } =
             await deployFixture();
 
-        await hook.connect(owner).registerPool(key);
+        await hook.connect(owner).registerPool(key, SQRT_PRICE_1_1);
 
         const amountIn = ONE;
         const expectedFee = poolFee(amountIn, 2_000n);
@@ -275,7 +333,7 @@ describe("NARALiquidityGrowth v4 - pool fee", () => {
             await deployFixture({ skipVaultHook: true });
 
         await hook.connect(owner).setProtocolDepth(baseAddr, 10n * ONE);
-        await hook.connect(owner).registerPool(key);
+        await hook.connect(owner).registerPool(key, SQRT_PRICE_1_1);
 
         const amountIn = ONE / 10n;
         const expectedFee = poolFee(amountIn, 500n);
@@ -296,7 +354,7 @@ describe("NARALiquidityGrowth v4 - pool fee", () => {
 
     it("rejects exact-output swaps so the pool fee cannot flip swap semantics", async () => {
         const { owner, alice, manager, hook, hookAddr, key } = await deployFixture();
-        await hook.connect(owner).registerPool(key);
+        await hook.connect(owner).registerPool(key, SQRT_PRICE_1_1);
 
         await expect(
             manager.connect(alice).callBeforeSwap(
@@ -354,7 +412,7 @@ describe("NARALiquidityGrowth v4 - pool fee", () => {
         };
 
         await hook.connect(owner).setProtocolDepth(baseAddr, 10n * ONE);
-        await hook.connect(owner).registerPool(key);
+        await hook.connect(owner).registerPool(key, SQRT_PRICE_1_1);
 
         await expect(hook.connect(owner).setFeeCurve(true, curve)).to.emit(hook, "FeeCurveProposed");
         await expect(hook.connect(owner).setProtocolDepth(baseAddr, 20n * ONE))
@@ -378,9 +436,92 @@ describe("NARALiquidityGrowth v4 - pool fee", () => {
         expect(bps).to.equal(900n);
         expect(quotedFee).to.equal(poolFee(quotedAmount, 400n));
     });
+
+    it("executes ready updates after a dust flow without changing that block's fee basis", async () => {
+        const { ethers, owner, manager, hook, hookAddr, key, baseAddr, vaultAddr, exactInParams } =
+            await deployFixture();
+        const oldDepth = 10n * ONE;
+        const newDepth = 100n * ONE;
+        const amountPerSwap = ONE;
+        const curve = {
+            mediumPressureBps: 100,
+            highPressureBps: 500,
+            extremePressureBps: 1_000,
+            baseFeeBps: 100,
+            mediumFeeBps: 200,
+            highFeeBps: 300,
+            extremeFeeBps: 400,
+            maxFeeBps: 400,
+        };
+
+        await hook.connect(owner).setProtocolDepth(baseAddr, oldDepth);
+        await hook.connect(owner).registerPool(key, SQRT_PRICE_1_1);
+        const [, expectedOldBlockFee] = await hook.quotePoolFee(true, amountPerSwap * 2n);
+
+        await hook.connect(owner).setFeeCurve(true, curve);
+        await hook.connect(owner).setProtocolDepth(baseAddr, newDepth);
+        await increaseTime(ethers, FEE_UPDATE_DELAY + 1);
+
+        const sequencer = await ethers.deployContract("MockHookUpdateSequencer", [], owner);
+        await sequencer.waitForDeployment();
+        await hook.connect(owner).transferOwnership(await sequencer.getAddress());
+
+        await sequencer.swapExecuteAndSwap(
+            await manager.getAddress(),
+            hookAddr,
+            key,
+            exactInParams(baseAddr, amountPerSwap),
+            exactInParams(baseAddr, amountPerSwap),
+            baseAddr,
+        );
+
+        expect(await manager.taken(baseAddr, vaultAddr)).to.equal(expectedOldBlockFee);
+        expect(await hook.protocolDepth(baseAddr)).to.equal(newDepth);
+        const activeCurve = await hook.buyCurve();
+        expect(activeCurve.baseFeeBps).to.equal(curve.baseFeeBps);
+        expect(activeCurve.maxFeeBps).to.equal(curve.maxFeeBps);
+
+        await ethers.provider.send("evm_mine", []);
+        const [, nextBlockFee] = await hook.quotePoolFee(true, amountPerSwap * 2n);
+        expect(nextBlockFee).to.not.equal(expectedOldBlockFee);
+    });
 });
 
 describe("NARALiquidityGrowth v4 - vault routing", () => {
+    it("rejects a one-shot hook binding that points at a different vault", async () => {
+        const { ethers, owner, token, base, vaultAddr } = await deployFixture();
+        const freshVault = await ethers.deployContract(
+            "NARALiquidityGrowthVault",
+            [owner.address, await token.getAddress(), await base.getAddress()],
+            owner,
+        );
+        await freshVault.waitForDeployment();
+        const wrongBinding = await ethers.deployContract(
+            "MockLiquidityHookBinding",
+            [await token.getAddress(), await base.getAddress(), vaultAddr],
+            owner,
+        );
+        await wrongBinding.waitForDeployment();
+
+        await expect(freshVault.connect(owner).setHook(await wrongBinding.getAddress()))
+            .to.be.revertedWithCustomError(freshVault, "InvalidConfig");
+        expect(await freshVault.hook()).to.equal(ethers.ZeroAddress);
+    });
+
+    it("rejects a compounder bound to the wrong token pair or vault", async () => {
+        const { ethers, owner, token, base, vault, vaultAddr } = await deployFixture();
+        const wrongCompounder = await ethers.deployContract(
+            "MockLiquidityCompounder",
+            [await base.getAddress(), await token.getAddress(), vaultAddr],
+            owner,
+        );
+        await wrongCompounder.waitForDeployment();
+
+        await expect(vault.connect(owner).setCompounder(await wrongCompounder.getAddress()))
+            .to.be.revertedWithCustomError(vault, "InvalidConfig");
+        expect(await vault.compounder()).to.equal(ethers.ZeroAddress);
+    });
+
     it("only accepts pool-fee accounting from the hook", async () => {
         const { owner, vault, hookAddr, baseAddr } = await deployFixture();
 
@@ -394,7 +535,11 @@ describe("NARALiquidityGrowth v4 - vault routing", () => {
 
     it("compounds pool-fee balances with an authorized keeper bounty", async () => {
         const { ethers, owner, keeper, token, base, vault, vaultAddr } = await deployFixture();
-        const compounder = await ethers.deployContract("MockLiquidityCompounder", [], owner);
+        const compounder = await ethers.deployContract(
+            "MockLiquidityCompounder",
+            [await token.getAddress(), await base.getAddress(), vaultAddr],
+            owner,
+        );
         await compounder.waitForDeployment();
         const compounderAddr = await compounder.getAddress();
 
@@ -422,7 +567,11 @@ describe("NARALiquidityGrowth v4 - vault routing", () => {
 
     it("reverts if the compounder adapter does not actually consume the approved funds", async () => {
         const { ethers, owner, keeper, token, base, vault, vaultAddr } = await deployFixture();
-        const compounder = await ethers.deployContract("MockLiquidityCompounder", [], owner);
+        const compounder = await ethers.deployContract(
+            "MockLiquidityCompounder",
+            [await token.getAddress(), await base.getAddress(), vaultAddr],
+            owner,
+        );
         await compounder.waitForDeployment();
         await compounder.setSkipPulls(true);
 
@@ -442,7 +591,11 @@ describe("NARALiquidityGrowth v4 - vault routing", () => {
 
     it("rejects unauthorized compound callers", async () => {
         const { ethers, owner, attacker, token, base, vault, vaultAddr } = await deployFixture();
-        const compounder = await ethers.deployContract("MockLiquidityCompounder", [], owner);
+        const compounder = await ethers.deployContract(
+            "MockLiquidityCompounder",
+            [await token.getAddress(), await base.getAddress(), vaultAddr],
+            owner,
+        );
         await compounder.waitForDeployment();
 
         const tokenAmount = 100n * ONE;
@@ -456,18 +609,25 @@ describe("NARALiquidityGrowth v4 - vault routing", () => {
             .to.be.revertedWithCustomError(vault, "UnauthorizedKeeper");
     });
 
-    it("rejects unauthorized route callers", async () => {
-        const { ethers, owner, attacker, token, base, vault, vaultAddr } = await deployFixture();
+    it("permanently disables engine token-reward routing modes", async () => {
+        const { ethers, owner, keeper, token, base, vault, vaultAddr } = await deployFixture();
         const engine = await ethers.deployContract("MockNARAEngineRouting", [await token.getAddress()], owner);
         await engine.waitForDeployment();
 
         await token.mint(vaultAddr, 100n * ONE);
         await base.mint(vaultAddr, ONE);
         await vault.connect(owner).setEngine(await engine.getAddress());
-        await vault.connect(owner).setRouteMode(1);
+        await vault.connect(owner).setSplitEngineShare(3_000);
 
-        await expect(vault.connect(attacker).routeToEngine(100n * ONE, ONE))
-            .to.be.revertedWithCustomError(vault, "UnauthorizedKeeper");
+        await expect(vault.connect(owner).setRouteMode(1))
+            .to.be.revertedWithCustomError(vault, "EngineTokenRoutingDisabled");
+        await expect(vault.connect(owner).setRouteMode(2))
+            .to.be.revertedWithCustomError(vault, "EngineTokenRoutingDisabled");
+        await expect(vault.connect(keeper).routeToEngine(100n * ONE, ONE))
+            .to.be.revertedWithCustomError(vault, "WrongRouteMode");
+
+        expect(await token.balanceOf(vaultAddr)).to.equal(100n * ONE);
+        expect(await base.balanceOf(vaultAddr)).to.equal(ONE);
     });
 
     it("rejects engine routing targets bound to a different NARA token", async () => {
@@ -481,7 +641,11 @@ describe("NARALiquidityGrowth v4 - vault routing", () => {
 
     it("enforces vault-level deadline and minimum liquidity output", async () => {
         const { ethers, owner, keeper, token, base, vault, vaultAddr } = await deployFixture();
-        const compounder = await ethers.deployContract("MockLiquidityCompounder", [], owner);
+        const compounder = await ethers.deployContract(
+            "MockLiquidityCompounder",
+            [await token.getAddress(), await base.getAddress(), vaultAddr],
+            owner,
+        );
         await compounder.waitForDeployment();
 
         const tokenAmount = 100n * ONE;
@@ -502,94 +666,17 @@ describe("NARALiquidityGrowth v4 - vault routing", () => {
             .to.emit(vault, "Compounded");
     });
 
-    it("can stop compounding mode and route balances into the engine", async () => {
-        const { ethers, owner, keeper, token, base, vault, vaultAddr, baseAddr } = await deployFixture();
-        const engine = await ethers.deployContract("MockNARAEngineRouting", [await token.getAddress()], owner);
-        await engine.waitForDeployment();
-        const engineAddr = await engine.getAddress();
-
-        const tokenAmount = 500n * ONE;
-        const baseAmount = ONE / 2n;
-
-        await token.mint(vaultAddr, tokenAmount);
-        await base.mint(vaultAddr, baseAmount);
-        await vault.connect(owner).setEngine(engineAddr);
-
-        await expect(vault.connect(keeper).routeToEngine(tokenAmount, baseAmount))
-            .to.be.revertedWithCustomError(vault, "WrongRouteMode");
-
-        await vault.connect(owner).setRouteMode(1);
-        await expect(vault.connect(keeper).compound(tokenAmount, baseAmount, 1, MAX_UINT64, "0x"))
-            .to.be.revertedWithCustomError(vault, "WrongRouteMode");
-
-        await expect(vault.connect(keeper).routeToEngine(tokenAmount, baseAmount))
-            .to.emit(vault, "RoutedToEngine")
-            .withArgs(keeper.address, tokenAmount, baseAmount);
-
-        expect(await token.balanceOf(engineAddr)).to.equal(tokenAmount);
-        expect(await base.balanceOf(engineAddr)).to.equal(baseAmount);
-        expect(await engine.syncEmissionReserveCalls()).to.equal(1n);
-        expect(await engine.notifiedTokenRewards(baseAddr)).to.equal(baseAmount);
-        expect(await vault.totalTokenRoutedToEngine()).to.equal(tokenAmount);
-        expect(await vault.totalBaseRoutedToEngine()).to.equal(baseAmount);
-    });
-
-    it("enforces a deterministic split route instead of letting keepers choose the path", async () => {
-        const { ethers, owner, keeper, token, base, vault, vaultAddr } = await deployFixture();
-        const compounder = await ethers.deployContract("MockLiquidityCompounder", [], owner);
-        await compounder.waitForDeployment();
-        const compounderAddr = await compounder.getAddress();
-
-        const engine = await ethers.deployContract("MockNARAEngineRouting", [await token.getAddress()], owner);
-        await engine.waitForDeployment();
-        const engineAddr = await engine.getAddress();
-
-        const tokenAmount = 1_000n * ONE;
-        const baseAmount = 10n * ONE;
-        const tokenToEngine = 300n * ONE;
-        const baseToEngine = 3n * ONE;
-        const tokenToCompound = 700n * ONE;
-        const baseToCompound = 7n * ONE;
-
-        await token.mint(vaultAddr, tokenAmount);
-        await base.mint(vaultAddr, baseAmount);
-        await vault.connect(owner).setCompounder(compounderAddr);
-        await vault.connect(owner).setEngine(engineAddr);
-
-        await expect(vault.connect(owner).setRouteMode(2))
-            .to.be.revertedWithCustomError(vault, "InvalidConfig");
+    it("keeps split-engine configuration bounded even though the route is disabled", async () => {
+        const { owner, vault } = await deployFixture();
         await expect(vault.connect(owner).setSplitEngineShare(0))
             .to.be.revertedWithCustomError(vault, "InvalidConfig");
         await expect(vault.connect(owner).setSplitEngineShare(10_000))
             .to.be.revertedWithCustomError(vault, "InvalidConfig");
 
         await vault.connect(owner).setSplitEngineShare(3_000);
-        await vault.connect(owner).setRouteMode(2);
-
-        await expect(vault.connect(keeper).compound(tokenAmount, baseAmount, 1, MAX_UINT64, "0x"))
-            .to.be.revertedWithCustomError(vault, "WrongRouteMode");
-        await expect(vault.connect(keeper).routeToEngine(tokenAmount, baseAmount))
-            .to.be.revertedWithCustomError(vault, "WrongRouteMode");
-
-        await expect(vault.connect(keeper).processSplitAll(tokenToCompound + baseToCompound, MAX_UINT64, "0x"))
-            .to.emit(vault, "SplitProcessed")
-            .withArgs(
-                keeper.address,
-                tokenToEngine,
-                baseToEngine,
-                tokenToCompound,
-                baseToCompound,
-                tokenToCompound + baseToCompound,
-            );
-
-        expect(await token.balanceOf(engineAddr)).to.equal(tokenToEngine);
-        expect(await base.balanceOf(engineAddr)).to.equal(baseToEngine);
-        expect(await token.balanceOf(compounderAddr)).to.equal(tokenToCompound);
-        expect(await base.balanceOf(compounderAddr)).to.equal(baseToCompound);
-        expect(await vault.totalTokenRoutedToEngine()).to.equal(tokenToEngine);
-        expect(await vault.totalBaseRoutedToEngine()).to.equal(baseToEngine);
-        expect(await vault.totalTokenCompounded()).to.equal(tokenToCompound);
-        expect(await vault.totalBaseCompounded()).to.equal(baseToCompound);
+        expect(await vault.splitEngineShareBps()).to.equal(3_000n);
+        await expect(vault.connect(owner).setRouteMode(2))
+            .to.be.revertedWithCustomError(vault, "EngineTokenRoutingDisabled");
     });
 
     it("routes USDC pool fees into Genesis NFT reward claims", async () => {
@@ -661,7 +748,7 @@ describe("NARALiquidityGrowth v4 - vault routing", () => {
         await vault.connect(owner).setGenesisRewardDistributor(await genesisDistributor.getAddress());
         await vault.connect(owner).setRouteMode(3);
         await hook.connect(owner).setProtocolDepth(baseAddr, 10_000n * USDC);
-        await hook.connect(owner).registerPool(key);
+        await hook.connect(owner).registerPool(key, SQRT_PRICE_1_1);
 
         const amountIn = 1_000n * USDC;
         const [, expectedFee] = await hook.quotePoolFee(true, amountIn);
@@ -684,7 +771,11 @@ describe("NARALiquidityGrowth v4 - vault routing", () => {
 
     it("splits USDC pool fees between Genesis rewards and liquidity compounding", async () => {
         const { ethers, owner, keeper, token, base, vault, vaultAddr, baseAddr } = await deployFixture();
-        const compounder = await ethers.deployContract("MockLiquidityCompounder", [], owner);
+        const compounder = await ethers.deployContract(
+            "MockLiquidityCompounder",
+            [await token.getAddress(), await base.getAddress(), vaultAddr],
+            owner,
+        );
         await compounder.waitForDeployment();
         const compounderAddr = await compounder.getAddress();
 

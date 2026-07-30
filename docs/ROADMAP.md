@@ -26,8 +26,9 @@ Current v4 thesis:
   on-chain art and stable marketplace metadata via the modular `NARAPositionRendererV5`.
 - Public bond path through `NARABondDepositoryV4NFT`, not raw direct-lock bonds.
 - Genesis reward accounting through `NARAGenesisRewardDistributorV4`.
-- Lazy UX + read layer: `NARARouter` (permit+sync+lock, permissionless `syncEpochs()`),
-  `NARADashboardLens` / `NARAPositionDataLensV1` (typed live reads), `BribeRouterV4` (external bribes).
+- Lazy UX + read layer: `NARARouter` (permit+sync+lock, permissionless
+  `syncEpochs()`) and `NARADashboardLens` / `NARAPositionDataLensV1` (typed
+  live reads). External ERC-20 bribes are disabled for the deployed engine.
 - Optional composability through `NARAStakingPoolV4`, `NARAStakingPoolSYV4`, and fractional position wrappers.
 
 The frontend is a launch and education surface. The protocol thesis is the durable layer; UI surfaces can change without changing the core commitment model.
@@ -50,13 +51,18 @@ As of 2026-07-26:
 - Current composability code is implemented locally but not deployed.
 
 Latest verification — see [CURRENT_STATE.md](CURRENT_STATE.md#verification-status) for the live
-commands and dated stamp (test counts drift; do not hard-code them here). As of 2026-06-07:
+commands and dated stamp. As of 2026-07-29:
 
-- Full Hardhat suite: 360 passing, 0 failing, 0 skipped. (The older "568 passing" predates the
-  2026-05-27 v4 reset that archived the v3 stack and its tests.)
-- Baskets Foundry suite: 136 passing, 1 skipped (fork test), 0 failing.
+- Full Hardhat suite: 468 passing, 0 failing. This includes the real Uniswap v4
+  split-invariance test and the read-only Stage A quarantine check.
+- The most recent basket verification evidence is recorded separately in
+  [CURRENT_STATE.md](CURRENT_STATE.md); rerun it before basket deployment.
 - `npm run size`: passed, all artifacts within EVM limits.
-- Slither v4: passed (exit 0). Aderyn binary currently unavailable; Echidna rerun before launch.
+- Slither v4: passed (exit 0).
+- `npm audit --audit-level=high`: 0 high / 0 critical; 8 low upstream findings
+  remain in Hardhat Verify's legacy Ethers v5 dependency chain.
+- The current-patch Aderyn rerun remains unavailable locally; do not present
+  the 2026-06-08 Aderyn/Echidna results as verification of the 2026-07-28 patch.
 
 ---
 
@@ -125,7 +131,7 @@ Required command path:
 ```bash
 npm run deploy:v4:base:usdc
 npm run verify:v4:preflight
-npx tsx scripts/seedV4Liquidity.ts
+npm run build:v4:atomic-pool-launch
 npm run smoke:v4
 ```
 
@@ -228,10 +234,10 @@ Goal: operate `NARALiquidityGrowthVault` deliberately.
 Route modes:
 
 - `Liquidity`
-- `Engine`
-- `Split`
 - `Genesis`
 - `GenesisSplit`
+
+The `Engine` and `Split` enum values are unreachable and must remain disabled.
 
 Launch expectation:
 
@@ -244,7 +250,7 @@ Success criteria:
 - Route mode is recorded in ops docs.
 - Compounder status is recorded.
 - Keeper bounty settings are intentional.
-- Any move to `Engine`, `Split`, `Genesis`, or `GenesisSplit` is documented before execution.
+- Any move to `Genesis` or `GenesisSplit` is documented before execution.
 
 ---
 

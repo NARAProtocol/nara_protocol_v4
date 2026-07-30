@@ -19,7 +19,7 @@ Code and deployment scripts are the source of truth. If a doc disagrees with the
 | [LOCK_APY_REFERENCE.md](LOCK_APY_REFERENCE.md) | Lock weight + reward-rate reference math |
 | [NARA_V4_NFT_POSITIONS.md](NARA_V4_NFT_POSITIONS.md) | Position NFT + clone account + Genesis spec |
 | [NARA_V4_NFT_PRODUCTION_PLAN.md](NARA_V4_NFT_PRODUCTION_PLAN.md) | NFT renderer / metadata production plan |
-| [ROUTER_LENS.md](ROUTER_LENS.md) | Router / dashboard lens / position-data lens / bribe router |
+| [ROUTER_LENS.md](ROUTER_LENS.md) | Router / dashboard lens / position-data lens; disabled BribeRouter reference |
 | [V4_BUILD_PLAN_COMPOSABILITY.md](V4_BUILD_PLAN_COMPOSABILITY.md) | Composability layer (stNARA / SY / fractional) build plan |
 | [NARA_V4_DASHBOARD_SPEC.md](NARA_V4_DASHBOARD_SPEC.md) | Frontend data spec (single-call lens, panels) |
 | [NARA_V4_LOCK_USER_GUIDE.md](NARA_V4_LOCK_USER_GUIDE.md) | Locking guide: duration, weight, claiming, exits |
@@ -31,8 +31,11 @@ Code and deployment scripts are the source of truth. If a doc disagrees with the
 | [COMPOSABILITY_AUDIT_CHECKLIST.md](COMPOSABILITY_AUDIT_CHECKLIST.md) | Composability security checklist |
 | [NARA_CUSTODY_AND_RECOVERY.md](NARA_CUSTODY_AND_RECOVERY.md) | Custody and recovery procedures |
 | [ENGINE_OPS_RUNBOOK.md](ENGINE_OPS_RUNBOOK.md) | Engine operational procedures |
+| [REPOSITORY_MAINTENANCE.md](REPOSITORY_MAINTENANCE.md) | Mandatory engineering, verification, and cross-repository release procedure |
 | [NARA_V4_LAUNCH_RUNBOOK.md](NARA_V4_LAUNCH_RUNBOOK.md) | Step-by-step deploy sequence with gates |
 | [V4_LAUNCH_CHECKLIST.md](V4_LAUNCH_CHECKLIST.md) | Pre-launch gates |
+| [NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md](NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md) | Canonical findings #1–#5, remediations, evidence, and remaining deployment gates |
+| [releases/NARA-20260729-v4-preseed-remediation.md](releases/NARA-20260729-v4-preseed-remediation.md) | Cross-repository handoff and publication gates for the current pre-seed remediation |
 | [NARA_V4_BOND_OPENING_CRITERIA.md](NARA_V4_BOND_OPENING_CRITERIA.md) | Operator checklist before opening bonds |
 | [LOCAL_TESTING.md](LOCAL_TESTING.md) | Local test environment setup |
 

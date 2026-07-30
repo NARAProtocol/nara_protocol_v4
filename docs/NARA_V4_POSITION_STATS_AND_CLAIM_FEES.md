@@ -23,7 +23,9 @@ there for this reason, not by oversight.
 
 A short-lived experiment that added an engine-level `tokenClaimFeeBps` was **reverted** because it
 pushed the engine 293 bytes over the limit (the +347-byte change blew the 54-byte headroom). That is
-why the bribe-token fee ended up in the wrapper instead.
+why the optional token-claim fee ended up in the wrapper instead. The deployed
+engine's token-notification path is now disabled, so this wrapper fee is
+dormant unless a future compatible distributor is introduced.
 
 ---
 
@@ -34,7 +36,7 @@ Two optional, owner-set, capped fees on rewards **claimed through the NFT wrappe
 | Field | Taxes | Default | Cap | Notes |
 |---|---|---|---|---|
 | `naraClaimFeeBps` | NARA emission claims | `0` | `MAX_CLAIM_FEE_BPS = 1000` (10%) | Skim on `claimRewards`; ETH passes through untouched |
-| `tokenClaimFeeBps` | bribed/external ERC-20 claims | `0` | 1000 (10%) | Skim on `claimTokenRewards` + `claimClosedTokenRewards` |
+| `tokenClaimFeeBps` | dormant external ERC-20 claims | `0` | 1000 (10%) | Skim on token-claim functions if a future compatible distributor exists |
 
 - `claimFeeRecipient` (owner-set) is the destination. **Fees are inert until it is set** — both rates
   default to 0 and the code no-ops when the recipient is `address(0)`, so shipping changes nothing.
@@ -49,8 +51,8 @@ Two optional, owner-set, capped fees on rewards **claimed through the NFT wrappe
 ### Why NARA-claim fee defaults to 0 and should probably stay 0
 NARA emissions are the protocol's own incentive. Taxing them lowers headline yield, double-dips the
 lock fee, and is dominated by simply tuning emission size. The hook exists only to preserve the
-**option** (it can't be added to an immutable contract later). The **token (bribe) fee** is the
-economically clean one — it taxes external value the protocol provides a rail for.
+**option** (it can't be added to an immutable contract later). It is not an
+active revenue rail for the deployed engine.
 
 ### Caveat a cold AI must know: wrapper-only capture
 These fees only hit claims routed through the NFT wrapper. A position locked **directly** via

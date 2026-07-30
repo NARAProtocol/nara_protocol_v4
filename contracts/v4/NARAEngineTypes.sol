@@ -110,8 +110,9 @@ struct Position {
     uint64 unlockEpoch;
     // Weight basis for instant-distribution token (bribe / pool-fee) rewards. Set to `weight`
     // at lock time. extend() only raises it while no token reward has ever been notified; once
-    // token rewards are live it is frozen, so a larger post-extend weight can never retroactively
-    // over-credit token rewards (sum of tokenWeight <= activeTotalWeight). (Was `_reserved0`.)
+    // token rewards are live it is frozen. This prevents retroactive over-crediting, but a later
+    // distribution can under-allocate when activeTotalWeight has increased. Production therefore
+    // keeps engine token notification disabled. (Was `_reserved0`.)
     uint128 tokenWeight;
     uint256 naraDebtRay;
     uint256 ethDebtRay;

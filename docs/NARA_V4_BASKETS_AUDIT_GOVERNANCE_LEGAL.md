@@ -65,47 +65,54 @@ Three questions answered here:
 
 ---
 
-### NARAIndexFeeCollectorV1 (the fee router)
+### NARAIndexFeeCollectorV2 (the canonical fee router)
 
-> **⚠️ This subsection describes the SUPERSEDED V1 collector.** The **canonical, launch contract is
-> `NARAIndexFeeCollectorV2`** (`src/NARAIndexFeeCollectorV2.sol`). V2 **removes `sweepToken` and
-> `sweepETH` entirely** (closing F-08) and has only 3 roles (`DEFAULT_ADMIN`, `SWAPPER`,
-> `EXECUTOR_MANAGER`). Tokens can leave V2 **only** through the swap pipeline (output constrained to
-> NARA or WETH) → engine. Idle native ETH leaves only via `notifyNativeEth` → engine. V2 also adds
-> **`freezeAllowlist()`** — a one-way lock on the executor/selector allowlist. See **F-14** below: V2's
-> anti-drain guarantee is only *fully* realized once the allowlist is frozen. The V1 role table /
-> F-08…F-12 below are retained as historical context for the retired V1 collector.
+The original V1 and the earlier allowlist-based V2 are superseded. The
+canonical pre-deploy V2 accepts no arbitrary executor, selector, calldata, or
+caller-supplied minimum output.
 
-| Role | What it can do | Risk if compromised |
+| Role | What it can do | Required custody |
 |---|---|---|
-| `DEFAULT_ADMIN_ROLE` | Grant/revoke all roles. Call `sweepToken` (non-NARA, non-WETH). Call `sweepETH`. | Drain accumulated USDC/asset fees before swap. Drain idle ETH. **See F-08 below.** |
-| `EXECUTOR_MANAGER_ROLE` | Allowlist/revoke executor addresses and 4-byte selectors. | Add a malicious executor or broad selector that lets a swap output be misdirected. **See F-09.** |
-| `SWAPPER_ROLE` | Execute fee swaps via `executeFeeSwap`. Push rewards via `depositNaraRewards`, `unwrapWethAndNotifyEth`, `notifyNativeEth`. | Misdirect swap outputs within executor allowlist limits. |
-| `REDEEMER_ROLE` | Redeem static-vault fee shares into underlying. | Only matters if static vault path is enabled. |
-| `VAULT_MANAGER_ROLE` | Allowlist redeemable vaults. | Only matters if static vault path is enabled. |
+| `DEFAULT_ADMIN_ROLE` | Grant/revoke roles and independently cancel a queued route | Contract Safe/guardian |
+| `SWAPPER_ROLE` | Convert held USDC through the typed route; forward held NARA, WETH, or native ETH to the engine | Separate operational signer |
+| `ROUTE_MANAGER_ROLE` | Propose and cancel a typed router/feed/pool-fee migration | Separate contract timelock |
 
-**Strong protections already present**:
+The constructor rejects collapsed roles and requires the admin and route
+manager to have contract code. Route changes wait two days. The admin can
+cancel a pending proposal, and revoking the proposer’s route-manager role makes
+its pending proposal unexecutable.
 
-- Swap output is restricted to NARA or WETH (`_executeSwap` line 184–186)
-- Executor + selector double allowlist
-- Exact balance-delta accounting
-- `sweepToken` cannot remove NARA or WETH (line 162)
-- Approval cleared after every swap (`forceApprove(0)`)
-- ReentrancyGuard everywhere
+**Current protections**:
 
-**Findings**:
+- typed SwapRouter02 `exactInputSingle` from USDC to WETH only;
+- minimum WETH output derived from fresh USDC/USD and ETH/USD feeds;
+- immutable maximum oracle age and slippage cap;
+- absolute USDC and ETH price sanity bounds;
+- exact USDC spend and WETH balance-delta checks;
+- constructor verification that the engine reports the same immutable NARA
+  token;
+- exact NARA balance-delta verification after each engine deposit;
+- approval cleared after each conversion;
+- atomic WETH unwrap and engine notification;
+- direct NARA engine deposit; and
+- no token or ETH sweep.
 
-| ID | Severity | Issue | Action |
+**Updated findings**:
+
+| ID | Severity | Issue | Resolution |
 |---|---|---|---|
-| **F-08** | **HIGH (trust)** | `sweepToken(USDC, attacker, balance)` is callable by `DEFAULT_ADMIN_ROLE`. USDC is the actual fee inflow on every basket buy. A malicious admin could drain protocol fees before they swap into NARA/WETH. NARA and WETH are blocked, but USDC is not. | **`ADMIN` MUST be a Safe with timelock.** A 1-of-1 EOA admin = catastrophic single-point-of-failure. Make this a `LAUNCH_RUNBOOK` gate. |
-| **F-09** | **HIGH (trust)** | Selector allowlist is load-bearing. If `EXECUTOR_MANAGER_ROLE` allowlists a multicall, batch, or generic-call selector, funds can be drained inside a single swap call. | Selector allowlist must be a multisig action with deliberate review. Document the exact allowed selectors per executor (e.g., Uniswap V3 SwapRouter02 `exactInputSingle` = `0x414bf389`, `exactInput` = `0xc04b8d59`). Never allowlist `multicall`, `aggregate`, `execute`, or proxy entry points. |
-| F-10 | MEDIUM | `_executeSwap` accepts `actualIn = 0` (executor takes no input but delivers tokenOut from elsewhere). Not a drain, but weird accounting. | **Fixed in V2** (`if (actualIn == 0) revert ZeroAmount()`). |
-| F-11 | MEDIUM | Admin can revoke `SWAPPER_ROLE` from everyone, then sweep accumulated non-reward fees. Fees would never reach lockers. | Same mitigation as F-08 — `ADMIN` must be a Safe with timelock. |
-| F-12 | LOW | `notifyNativeEth` and `unwrapWethAndNotifyEth` will revert if engine paused/misbehaving. Fees stuck until engine recovered. | Engine has no pause — non-issue for v4. Document. |
-| F-13 | INFO | Anyone can send ETH via `receive()`. Sweep is admin-only. | Expected pattern. None. |
-| **F-14** | **MEDIUM (trust, V2)** | V2 removed `sweepToken`, but until `freezeAllowlist()` is called, a key holding **both** `EXECUTOR_MANAGER_ROLE` + `SWAPPER_ROLE` (both granted to `admin` at construction) can allowlist a malicious executor+selector and call `executeFeeSwap` with `minAmountOut ≈ 1`, skimming pre-swap fee tokens (the output-≥-minAmountOut check is set by the same actor). | **Launch gate:** after wiring the legit DEX executors/selectors, call `freezeAllowlist()` (one-way) so no malicious executor can ever be added. Additionally **split the roles**: grant `SWAPPER_ROLE` and `EXECUTOR_MANAGER_ROLE` to different keys. Safe+timelock (A-01) helps but freeze is the definitive fix. |
+| F-08 | HIGH (historical V1) | Admin sweep could remove USDC fees. | Canonical V2 has no sweep. |
+| F-09 | HIGH (historical V1/earlier V2) | Arbitrary executor/selector authorization was load-bearing. | Canonical V2 has no arbitrary execution surface. |
+| F-10 | MEDIUM (historical) | Swap or engine input accounting could accept partial/zero consumption. | Canonical V2 requires exact USDC route and NARA engine balance deltas. |
+| F-11 | MEDIUM (historical V1) | Role revocation plus sweep could strand/divert fees. | No sweep; role recovery remains an operational availability duty. |
+| F-12 | LOW | Engine notification failure reverts the conversion atomically. | Accepted fail-closed behavior; funds remain in the collector. |
+| F-13 | INFO | Anyone can send ETH to the collector. | Only `SWAPPER_ROLE` can forward it to the engine; no external recipient exists. |
+| F-14 | HIGH (earlier V2) | Frozen routes could permanently strand fees, and caller-controlled near-zero minimum output could destroy value. | Replaced with delayed typed routes and oracle-derived minimum output. Launch holding and raw-withdraw fees are zero so long-tail assets do not enter the narrow collector. |
 
-**Verdict on the fee collector**: well-designed *if* `ADMIN` is a Safe with a timelock. **As an EOA, the fee collector is a custodial honeypot for accumulated USDC fees.** This is the single most important pre-launch action item.
+**Verdict on the fee collector**: source remediation removes the previously
+identified arbitrary-call, value-floor, engine-binding, and partial-pull
+failures. Deployment remains blocked until the router, feeds, roles, engine
+binding, and fork conversion are verified and recorded.
 
 ---
 
@@ -439,9 +446,9 @@ Hard gates derived from the audit. None of these are optional.
 
 | ID | Item | Why | Status |
 |---|---|---|---|
-| A-01 | `ADMIN` for fee collector must be a Safe with timelock | F-08, F-09, F-11 — single EOA admin is a USDC honeypot | Pending |
+| A-01 | Fee collector admin must be a contract Safe/guardian, separate from swapper and route manager | F-08, F-09, F-11, F-14 | Pending |
 | A-02 | Deploy + verify Uniswap V3 swap adapter on Base | No adapter exists today | Pending |
-| A-03 | Document exact allowed selectors for each executor | F-09 — broad selector = drain | Pending |
+| A-03 | Verify the exact typed router, USDC/USD feed, ETH/USD feed, pool fee, oracle-age bound, and slippage bound | F-09 and F-14 | Pending |
 | A-04 | Frontend verifies `manager.requiredAsset() == NARA_TOKEN` per basket | F-02 — rogue basket impersonation risk | Pending |
 | A-05 | Curated asset list with verified Base addresses + pool depth + admin audit | Asset hygiene per `SECURITY_CHECKLIST.md` | Pending |
 | A-06 | Securities counsel review of ToS and public copy (no-block posture) | Part 3 — under no-block policy, language is the only protection | Pending |
@@ -452,7 +459,7 @@ Hard gates derived from the audit. None of these are optional.
 | A-10 | Slither + Echidna + external review on adapter + collector before mainnet | Defense-in-depth | Pending |
 | A-11 | Exact Base-mainnet fork full-flow smoke test (buy, sell, `withdrawUnderlying`) per launch basket | Pre-mainnet hygiene | Pending |
 | A-12 | `baskets.ts` registry committed and reviewed before frontend ships | Curation gate | Pending |
-| A-13 | Fee collector V2: after wiring legit executors/selectors, call `freezeAllowlist()` (one-way); grant `SWAPPER_ROLE` and `EXECUTOR_MANAGER_ROLE` to **separate** keys | F-14 — unfrozen allowlist + combined roles can skim pre-swap fees | Pending |
+| A-13 | Deploy canonical V2 with distinct `ADMIN`, `SWAPPER`, and contract `ROUTE_MANAGER`; require zero holding and withdraw fees; test admin cancellation and proposer revocation | F-14 | Pending |
 | A-14 | Confirm the receipt's **owner-only / non-delegable** model is intended before the immutable deploy (no approvals, not marketplace-listable); align all user copy | F-03 — permanent at deploy; docs corrected 2026-06-30 | Pending |
 
 ---

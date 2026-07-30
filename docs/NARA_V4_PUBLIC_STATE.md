@@ -1,6 +1,6 @@
 # NARA v4 — Public State
 
-Last updated: 2026-07-27.
+Last updated: 2026-07-29.
 Audience: users, analysts, external protocols, integrators.  
 Maintained by: protocol operator. Update every time deployment state changes.
 
@@ -8,9 +8,10 @@ Maintained by: protocol operator. Update every time deployment state changes.
 
 ## One-Sentence State
 
-**The fresh v4 token, engine, reward reserve, and liquidity-routing contracts
-are deployed on Base. The pool is not initialized, there is no liquidity, and
-no public app or market is live yet.**
+**The fresh v4 token, engine, and reward reserve are deployed on Base. The
+Stage A liquidity trio is quarantined; its corrected replacement is not yet
+deployed. There is no initialized launch pool, liquidity, public app, or
+market.**
 
 ---
 
@@ -18,12 +19,13 @@ no public app or market is live yet.**
 
 | Surface | Status | Notes |
 |---|---|---|
-| v4 contracts (code) | Complete | 453 tests passing (2026-07-26), static analysis reviewed |
+| v4 contracts (code) | Source remediated | 468 tests passing (2026-07-29); Slither completed |
 | v4 mainnet deploy | Stage A complete | Fresh core deployed; public activation pending |
 | v3 contracts | Retired 2026-05-27 | Archived, not operational |
 | NARA token | Deployed | Fixed supply minted; no public market yet |
 | NARA/USDC pool | Registered only | Uninitialized, zero liquidity |
-| Liquidity compounder | Deployed, wired, source verified | Not frozen until post-seed validation |
+| Stage A liquidity trio | Quarantined | Historical deployment evidence only; do not integrate |
+| Replacement liquidity trio | Pending | Corrected hook, vault, and compounder require fresh deployment |
 | NARA protocol depth | Executed and verified | 60,000 NARA active; pending entry cleared |
 | Public launch surface | Preview only | Baskets only; Lockboard deferred; Lotto and Arena retired |
 | Locking | Contract deployed | No approved public frontend yet |
@@ -31,7 +33,7 @@ no public app or market is live yet.**
 | stNARA / staking pool | Pending | Deploys in composability phase |
 | Pendle SY adapter | Pending | After stNARA is deployed and validated |
 | fracNARA | Pending | After composability phase |
-| BribeRouterV4 | Pending | Deploys with router/lens; needs role grant |
+| BribeRouterV4 | Disabled | Source retained as a dormant reference; not authorized for the deployed engine |
 
 ---
 
@@ -42,14 +44,13 @@ The following contracts are deployed:
 1. **NARAToken** — 1,000,000 NARA fixed supply, ERC-20 with EIP-2612 permit, ERC-1363, flash mint.
 2. **NARAEngine** — lock NARA for any duration, earn NARA + ETH rewards each epoch.
 3. **NARARewardReserve** — holds the sealed 650,000 NARA emission reserve.
-4. **NARALiquidityGrowthHook** — registered for the intended NARA/USDC pool.
-5. **NARALiquidityGrowthVault** — deployed and bound to the hook and engine.
+4. **NARALiquidityGrowthHook** — quarantined Stage A instance; not the launch hook.
+5. **NARALiquidityGrowthVault** — quarantined Stage A instance; not the launch vault.
 
-The pool is not initialized and no LP position exists. The production
-`NARALiquidityCompounderV4` was subsequently deployed at
-`0xc327e50c14002a82c9F1477122204BB183f446Ab` and wired to the vault. It is not
-frozen. Its source is verified on Basescan, Blockscout, and Sourcify. Position NFT,
-router, lenses, bonds, and composability contracts are not part of Stage A.
+The Stage A pool is not initialized and no LP position exists. Its
+`NARALiquidityCompounderV4` was deployed and source-verified, but the entire
+liquidity trio is quarantined for launch. Position NFT, router, lenses, bonds,
+and composability contracts are not part of Stage A.
 
 The reviewed initial position is `60,000 NARA + 300 USDC`, which represents an
 opening ratio of `$0.005` per NARA and an implied FDV of approximately `$5,000`
@@ -73,7 +74,7 @@ that verification.
 | fracNARA marketplace | After composability phase |
 | stNARA oracle | After stNARA is deployed and has history |
 | NARA/stNARA AMM | After stNARA is deployed |
-| External bribe integrations | BribeRouterV4 is not deployed in the baskets-only launch scope |
+| External ERC-20 bribe integrations | Disabled for the deployed engine |
 
 ---
 
@@ -88,7 +89,7 @@ that verification.
 | Hook fees | Flat tax-style | Dynamic pressure tiers, asymmetric buy/sell curves |
 | Position ownership | v3 wrapper (EIP-1167 clone) | Native `NARAPositionNFTV4` + clone account; tradable on any NFT market |
 | Dashboard reads | ~17 separate RPC calls | 1 call to `NARADashboardLens.getUserState()` |
-| External bribe routing | Role-gated only | `BribeRouterV4` makes it permissionless for any protocol |
+| External ERC-20 bribe routing | Role-gated engine surface | Disabled operationally because later rewards can under-allocate after an extension |
 
 ---
 
@@ -100,7 +101,8 @@ that verification.
 - **Weight formula:** quadratic in duration. Max-duration lock earns up to ~3× the weight per NARA vs shortest lock.
 - **Activation delay:** 3 epochs after locking, weight becomes active and earning begins.
 - **ETH rewards:** flow in via `notifyEthRewards()` (from bond purchases and other sources). Distributed to active weight holders.
-- **ERC-20 rewards:** any external protocol can deliver token bribes to all active lockers via `BribeRouterV4.notify(token, amount)`.
+- **ERC-20 rewards:** disabled for the deployed engine. No launch component may
+  hold `REWARD_NOTIFIER_ROLE`.
 - **Exit:** positions unlock after `unlockEpoch`. No early exit. NFT is tradable at any time.
 
 ---
@@ -139,13 +141,14 @@ Stage A addresses are populated below. Pending entries have not been deployed.
 | NARAGenesisRewardDistributorV4 | `— pending —` |
 | NARABondVaultV4 | `— pending —` |
 | NARABondDepositoryV4NFT | `— pending —` |
-| NARALiquidityGrowthHook | `0x9a01c2DcF713cDB12B8ef4Eb264D5c3203b06088` |
-| NARALiquidityGrowthVault | `0xc0cf9bCf8879182368b1CdBDC81B6a143fFA2988` |
-| NARALiquidityCompounderV4 | `0xc327e50c14002a82c9F1477122204BB183f446Ab` (wired and source verified; not frozen) |
+| NARALiquidityGrowthHook | `0x9a01c2DcF713cDB12B8ef4Eb264D5c3203b06088` — quarantined Stage A; do not use |
+| NARALiquidityGrowthVault | `0xc0cf9bCf8879182368b1CdBDC81B6a143fFA2988` — quarantined Stage A; do not use |
+| NARALiquidityCompounderV4 | `0xc327e50c14002a82c9F1477122204BB183f446Ab` — quarantined Stage A; do not use |
+| Launch replacement hook / vault / compounder | `— pending —` |
 | CREATE2 Hook Deployer | `0xC045644303E43cbb1E3c3E3fC851246F5c590834` |
 | NARARouter | `— pending —` |
 | NARADashboardLens | `— pending —` |
-| BribeRouterV4 | `— pending —` |
+| BribeRouterV4 | `— intentionally not deployed —` |
 | NARAStakingPoolV4 (stNARA) | `— pending (composability phase) —` |
 | NARAStakingPoolSYV4 | `— pending (composability phase) —` |
 | NARAFractionalPositionFactoryV4 | `— pending (composability phase) —` |
@@ -169,17 +172,17 @@ Full retired list: `archive/legacy-v3/README.md`.
 
 ## For Integrators
 
-The router, dashboard lens, position NFT, and BribeRouter are not deployed in
-the baskets-only launch scope. Do not integrate against their planned addresses
-or advertise those paths as live.
+The router, dashboard lens, and position NFT are not deployed in the
+baskets-only launch scope. BribeRouter is intentionally disabled for the
+deployed engine. Do not integrate against planned addresses or advertise those
+paths as live.
 
 **Planned position read after the router/lens phase:** one call —
 `NARADashboardLens.getUserState(user, positionIds[], nftTokenIds[])`.
 
-**Planned bribe flow after BribeRouter deployment and role verification:**
-1. Approve `BribeRouterV4` for your token amount.
-2. Call `BribeRouterV4.notify(yourToken, amount)`.
-3. Active weight holders receive the token pro-rata on the next claim.
+There is no planned ERC-20 bribe flow for the deployed engine. A future
+compatible reward distributor would require a separate design, review,
+deployment, and documentation update.
 
 **ETH reward pipe:** call `NARAEngine.notifyEthRewards{value: amount}()`. Permissionless.
 

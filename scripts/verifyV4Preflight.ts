@@ -15,12 +15,33 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 dotenv.config({ path: resolve(__dirname, "../.env") });
 
+export function requireExpectedPoolRegistrationState(
+  preSeed: boolean,
+  poolRegistered: boolean,
+  registeredPool: string,
+  configuredPool: string,
+  expectedSqrtPriceX96: bigint,
+): void {
+  if (preSeed) {
+    if (poolRegistered || registeredPool !== ethers.ZeroHash || expectedSqrtPriceX96 !== 0n) {
+      throw new Error("Pre-seed hook must remain unregistered until the atomic Safe launch batch");
+    }
+    return;
+  }
+  if (!poolRegistered) throw new Error("Hook pool is not registered");
+  if (registeredPool.toLowerCase() !== configuredPool.toLowerCase()) {
+    throw new Error(`Registered poolId mismatch. expected=${configuredPool} actual=${registeredPool}`);
+  }
+  if (expectedSqrtPriceX96 === 0n) throw new Error("Hook opening price is not bound");
+}
+
 const HOOK_ABI = [
   "function token() view returns (address)",
   "function base() view returns (address)",
   "function vault() view returns (address)",
   "function registeredPoolId() view returns (bytes32)",
   "function poolRegistered() view returns (bool)",
+  "function expectedSqrtPriceX96() view returns (uint160)",
   "function protocolDepth(address) view returns (uint256)",
   "function buyCurve() view returns (uint32,uint32,uint32,uint16,uint16,uint16,uint16,uint16)",
   "function sellCurve() view returns (uint32,uint32,uint32,uint16,uint16,uint16,uint16,uint16)",
@@ -90,6 +111,7 @@ async function main() {
     hookVault,
     registeredPool,
     poolRegistered,
+    expectedSqrtPriceX96,
     baseDepth,
     tokenDepth,
     buyCurve,
@@ -110,6 +132,7 @@ async function main() {
     hook.vault() as Promise<string>,
     hook.registeredPoolId() as Promise<string>,
     hook.poolRegistered() as Promise<boolean>,
+    hook.expectedSqrtPriceX96() as Promise<bigint>,
     hook.protocolDepth(config.base) as Promise<bigint>,
     hook.protocolDepth(config.token) as Promise<bigint>,
     hook.buyCurve(),
@@ -133,12 +156,13 @@ async function main() {
   assertEqual("vault base", vaultBase, config.base);
   assertEqual("vault hook", vaultHook, config.hook);
 
-  if (!poolRegistered) {
-    throw new Error("Hook pool is not registered");
-  }
-  if (registeredPool.toLowerCase() !== config.poolId) {
-    throw new Error(`Registered poolId mismatch. expected=${config.poolId} actual=${registeredPool}`);
-  }
+  requireExpectedPoolRegistrationState(
+    preSeed,
+    poolRegistered,
+    registeredPool,
+    config.poolId,
+    expectedSqrtPriceX96,
+  );
 
   // Uniswap v4 PoolManager stores pools at mapping slot 6. A zero sqrt price
   // means the key is registered in our hook but not initialized in PoolManager.
@@ -151,6 +175,11 @@ async function main() {
   const rawSlot0 = await poolManager.extsload(poolStateSlot) as string;
   const sqrtPriceX96 = BigInt(rawSlot0) & ((1n << 160n) - 1n);
   const poolInitialized = sqrtPriceX96 !== 0n;
+  if (poolInitialized && sqrtPriceX96 !== expectedSqrtPriceX96) {
+    throw new Error(
+      `Pool opening price mismatch. expected=${expectedSqrtPriceX96} actual=${sqrtPriceX96}`,
+    );
+  }
 
   let lpOwner = "burned-or-missing";
   let lpLiquidity = 0n;
@@ -165,6 +194,8 @@ async function main() {
   console.log("pool registered:   ", poolRegistered);
   console.log("pool initialized:  ", poolInitialized);
   console.log("registered poolId: ", registeredPool);
+  console.log("bound sqrtPriceX96:", expectedSqrtPriceX96.toString());
+  console.log("live sqrtPriceX96: ", sqrtPriceX96.toString());
   console.log("vault engine:      ", engine);
   console.log("vault compounder:  ", compounder);
   console.log("vault routeMode:   ", routeMode.toString());
@@ -202,10 +233,12 @@ async function main() {
     notices.push("LP NFT is intentionally absent before liquidity seed");
   }
   if (baseDepth > 0n || tokenDepth > 0n) {
-    notices.push("manual protocolDepth fallback is populated");
+    notices.push("configured protocolDepth fee basis is populated");
   }
   if (preSeed && poolInitialized) {
-    findings.push("pool is already initialized during a pre-seed wiring check");
+    findings.push("PoolManager pool must remain uninitialized before the atomic Safe launch batch");
+  } else if (preSeed) {
+    notices.push("hook and PoolManager pool are intentionally unregistered and uninitialized before atomic launch");
   }
   if (!preSeed && !poolInitialized) {
     findings.push("PoolManager pool is not initialized");
@@ -233,7 +266,9 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  console.error(err.message ?? err);
-  process.exitCode = 1;
-});
+if (process.argv[1] && resolve(process.argv[1]) === __filename) {
+  main().catch((err) => {
+    console.error(err.message ?? err);
+    process.exitCode = 1;
+  });
+}

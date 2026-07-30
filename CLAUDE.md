@@ -1,6 +1,6 @@
 # NARA Protocol AI Context
 
-Last updated: 2026-07-26.
+Last updated: 2026-07-28.
 This repository is the active NARA contracts and operations workspace.
 
 ## 🚨 v4 RESET — READ FIRST
@@ -28,18 +28,23 @@ When the user asks anything about NARA (token, engine, bond, NFT position, etc.)
 ## Active Paths
 
 - Active contracts and ops: `nara-protocol-hardhat/`
-- Active launch frontend: `../apps/nara-baskets/` only.
+- Active publishable launch frontend: `../nara-category-baskets-v1/app/` only.
+  `../apps/nara-baskets/` is a non-publishing historical working copy.
 - `../apps/nara-lockboard/` is deferred. `../apps/nara-lotto/` and
   `../apps/nara-arena/` remain retired and must not be enabled.
 - Active cron folder: `../cron/` — **RETIRED 2026-05-28**, see `../cron/DEPRECATED.md`. Router replaces it.
 - Historical only: `archive/legacy-field/` and `archive/checkpoints/`
 
-## v4 Router + Lens + BribeRouter (added 2026-05-28)
+## v4 Router + Lens (BribeRouter disabled on deployed engine)
 
 - `contracts/v4/router/NARARouter.sol` — permit + sync + lock in one tx, plus permissionless `syncEpochs()` (kills the keeper).
 - `contracts/v4/router/NARADashboardLens.sol` — single-call `getUserState(user, positionIds[], nftTokenIds[])` for any frontend.
-- `contracts/v4/router/BribeRouterV4.sol` — permissionless `notify(token, amount)` wrapper around engine.notifyTokenRewards. Holds REWARD_NOTIFIER_ROLE. Any external protocol can bribe NARA lockers. Grant role after deploy.
-- Deploy: `npm run deploy:v4:router:lens` (needs `ENGINE_V4`, `POSITION_NFT_V4` env). Then grant role to BribeRouterV4.
+- `contracts/v4/router/BribeRouterV4.sol` is a dormant reference implementation.
+  Do not deploy it for, or grant `REWARD_NOTIFIER_ROLE` on, the deployed v4
+  engine. The 2026-07-28 review confirmed that an active extension after the
+  first token notification can strand part of later token distributions.
+- `npm run deploy:v4:router:lens` deploys only the safe router/read components
+  when their dependencies exist. It intentionally skips `BribeRouterV4`.
 - Full spec: `docs/ROUTER_LENS.md`.
 - ABI source of truth: generated artifacts under `artifacts/contracts/v4/`.
   Router/lens deployment and frontend integration are deferred from the
@@ -62,10 +67,18 @@ All in `docs/`:
 - `NARA_V4_ANALYST_POSTS.md` — draft comms (publish post-deploy)
 - `NARA_V4_POST_LAUNCH_WORK.md` — deferred work tracker
 
-**Controlled Stage A deployed to Base mainnet on 2026-07-26.** Token, engine,
-reward reserve, hook, vault, CREATE2 deployer, and launcher are deployed and
-verified. The NARA/USDC pool is registered but uninitialized, with no
-liquidity. The current launch scope is NARA Baskets only.
+**Controlled Stage A deployed to Base mainnet on 2026-07-26.** The token,
+engine, and sealed reward reserve remain the active core. The Stage A hook,
+vault, compounder, and registered NARA/USDC pool are quarantined by the
+2026-07-28 review. The pool is uninitialized and has no liquidity; never
+initialize or seed it. Deploy and verify the corrected replacement liquidity
+trio before launch. The current launch scope is NARA Baskets only.
+
+Before changing the hook, vault, compounder, fee collector, seed flow, or
+basket limits, read
+`docs/NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md`. Preserve the exact
+opening-price bind, configured-depth fee basis, reciprocal one-shot binding
+checks, engine notifier-role prohibition, and live basket-size cap.
 
 ## Canonical Documents
 
@@ -94,12 +107,13 @@ liquidity. The current launch scope is NARA Baskets only.
 
 ## Current v4 Launch State
 
-The fresh v4 controlled Stage A stack is deployed. Canonical addresses and
-evidence are in `docs/CURRENT_STATE.md` and
-`deployments/v4-base-usdc-latest.json`. Run
-`npm run verify:v4:preseed` for the current dormant state. The strict
-`npm run verify:v4:preflight` must remain blocked until the compounder is
-wired and the pool is initialized and seeded.
+The fresh v4 core is deployed. Canonical addresses and evidence are in
+`docs/CURRENT_STATE.md` and `deployments/v4-base-usdc-latest.json`. That
+manifest deliberately marks the Stage A liquidity stack as quarantined.
+Deploy the corrected replacement trio, sync its fresh manifest, then run
+`npm run verify:v4:preseed` and
+`npm run verify:v4:launch-gates:preseed`. The strict
+`npm run verify:v4:preflight` remains a post-initialization gate.
 
 Do not use retired v3 addresses for new integrations, UI, scripts, baskets, or
 public copy. The retired v3 address table lives in `archive/legacy-v3/README.md`

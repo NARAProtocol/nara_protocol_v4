@@ -357,13 +357,17 @@ Latest known local targeted result after the May 7 audit remediations:
 
 Static analysis:
 
-- Slither was not available in the last local environment. Verification not possible.
-- Run Slither or equivalent static analysis on `contracts/v4/composability/` before mainnet deployment.
+- The repository's scoped Slither run completed on 2026-07-29 with exit 0 and
+  included all four active composability contracts.
+- Slither emitted heuristic findings for the fractional and staking contracts;
+  they remain review inputs, not proof of an exploit or a clean bill of health.
+- Aderyn has not run against the current patch because its binary is
+  unavailable. Rerun both tools before the later composability deployment.
 
-Suggested command if Slither is installed:
+Reproduction command:
 
 ```bash
-npx slither contracts/v4/composability/ --exclude naming-convention
+npm run slither:v4
 ```
 
 ---

@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-07-27T00:00:00+03:00",
-  "statusAsOf": "2026-07-27",
+  "generatedAt": "2026-07-28T00:00:00+03:00",
+  "statusAsOf": "2026-07-30",
   "snapshotSemantics": "Stage A transaction evidence is preserved in v4-base-usdc-2026-07-26-controlled-stage-a.json. Fields below add later verified deployment events without rewriting that original evidence.",
   "network": "base",
   "chainId": "8453",
@@ -28,7 +28,6 @@
   "poolId": "0xbb3287f32b95e96301c9582e8bf7e81fa362e4b9eea00cf016c537cf5970dff3",
   "poolFee": 3000,
   "tickSpacing": 60,
-  "protocolDepthNara": "30000000000000000000",
   "protocolDepthUsdc": "300000000",
   "emissionReserveAmount": "650000000000000000000000",
   "treasuryTokenBalanceAtStageA": "350000000000000000000000",
@@ -36,16 +35,23 @@
   "poolRegistered": true,
   "poolInitialized": false,
   "liquiditySeeded": false,
+  "liquidityStackStatus": "quarantined-do-not-initialize-or-seed",
+  "replacementLiquidityTrioRequired": false,
+  "replacementScope": [
+    "NARALiquidityGrowthVault",
+    "NARALiquidityGrowthHook",
+    "NARALiquidityCompounderV4"
+  ],
   "compounderDeployed": true,
   "compounder": "0xc327e50c14002a82c9F1477122204BB183f446Ab",
   "compounderWired": true,
   "compounderFrozen": false,
   "compounderSourceVerification": "verified",
   "compounderEvidence": "v4-liquidity-compounder-2026-07-26.json",
-  "protocolDepthNaraActive": "30000000000000000000",
+  "protocolDepthNaraActive": "60000000000000000000000",
   "protocolDepthNara": "60000000000000000000000",
   "protocolDepthNaraPending": null,
-  "protocolDepthNaraProposalExecuted": false,
+  "protocolDepthNaraProposalExecuted": true,
   "protocolDepthProposalEvidence": "v4-nara-depth-proposal-2026-07-27.json",
   "approvedInitialLiquidity": {
     "nara": "60000000000000000000000",
@@ -53,11 +59,30 @@
     "openingPriceUsdPerNara": "0.005",
     "impliedFdvUsd": "5000"
   },
-  "activationState": "preseed-depth-verified-pool-uninitialized",
+  "activationState": "replacement-trio-deployed-pool-unregistered",
   "launchFrontendScope": {
     "active": "apps/nara-baskets",
     "activeStatus": "preview",
-    "deferred": ["apps/nara-lockboard"],
-    "retired": ["apps/nara-lotto", "apps/nara-arena"]
-  }
+    "deferred": [
+      "apps/nara-lockboard"
+    ],
+    "retired": [
+      "apps/nara-lotto",
+      "apps/nara-arena"
+    ]
+  },
+  "replacementLiquidityTrioDeployed": true,
+  "replacementLiquidityEvidence": "v4-pool-redeploy-2026-07-30-replacement-trio.json",
+  "replacementTrio": {
+    "vault": "0x2dfE578C4342750Cd8fE618605eeB0E9C00Ba94d",
+    "hook": "0xA1c6a86d6F7B83deE32D7bc4aA6D35C14A8e6088",
+    "compounder": "0xE28C05cC6ad9f2C48DBB7eCCD44b323370586C98",
+    "create2HookDeployer": "0xa6Ef629291170B80e5f23Ab14dB0B3620062f016",
+    "poolId": "0x221d377779f958eadf35122810743a6ba11e9079b0b6bd05234ea9500b227318",
+    "owner": "0xd65c0e390Dc187A22c52c03816591CC736C0D755",
+    "poolRegistered": false
+  },
+  "custodySafe": "0xd65c0e390Dc187A22c52c03816591CC736C0D755",
+  "custodyEvidence": "v4-custody-2026-07-30.json",
+  "finalAdminNote": "Stage A finalAdmin field above is historical. Engine roles and all replacement liquidity contracts are now owned by the custody Safe."
 }

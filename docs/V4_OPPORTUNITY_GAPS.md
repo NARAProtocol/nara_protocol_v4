@@ -34,7 +34,7 @@ Current code status:
 | Liquid ERC-20 wrapper | `NARAStakingPoolV4` exists and mints `stNARA`. | Not deployed on fresh v4 mainnet stack; no seeded TVL; no NARA/stNARA AMM. |
 | Pendle SY adapter | `NARAStakingPoolSYV4` exists. | No deployed Pendle PT/YT market; needs fork/testnet validation and Pendle coordination. |
 | Fractional single-position wrappers | `NARAFractionalPositionFactoryV4` and `NARAFractionalPositionV4` exist. | No public UI/indexer/marketplace flow documented yet. |
-| Real-yield routing | Role-gated `NARAEngine.notifyTokenRewards(address,uint256)` and `NARALiquidityGrowthVault` route modes exist. | Needs fresh deployment, seeded liquidity, reward-notifier role wiring, and monitored route-mode operations. |
+| ERC-20 reward routing | The engine source contains `notifyTokenRewards(address,uint256)`. | Disabled for the deployed engine; do not wire a notifier role. A future distributor needs a separate reviewed design. |
 | **Self-sustaining POL flywheel** | Hook (harvest) + vault (5 route modes, default `Liquidity`) built and tested. **Production compounder `NARALiquidityCompounderV4` built, unit-tested + Base fork-validated (2026-06-29)** — full-range, no-swap, exact-spend, POL custody, 7-day recovery timelock. | Deploy via `scripts/deployLiquidityCompounderV4.ts`, then `vault.setCompounder` + `freezeCompounder` (Safe). Code is fork-certified against live v4; remaining work is operational deploy/wiring only. Until wired, `Liquidity` mode is still inert. |
 | Gas sponsorship | No custom onchain paymaster in repo. | Optional frontend/ops integration through provider paymaster infrastructure. |
 | v4 sponsor hub | No v4 sponsor hub contracts in repo. | Deferred product lane. |
@@ -200,9 +200,9 @@ Action:
 | ERC-20 wrapper | `NARAStakingPoolV4` |
 | Pendle-style SY adapter | `NARAStakingPoolSYV4` |
 | Single-position fractional wrappers | `NARAFractionalPositionV4` and factory |
-| USDC reward routing | role-gated `NARAEngine.notifyTokenRewards(address,uint256)` |
+| USDC engine reward routing | Disabled for the deployed engine |
 | ETH reward routing | `NARAEngine.notifyEthRewards()` |
-| Liquidity growth routing | `NARALiquidityGrowthVault` route modes: `Liquidity`, `Engine`, `Split`, `Genesis`, `GenesisSplit` |
+| Liquidity growth routing | Reachable vault routes: `Liquidity`, `Genesis`, `GenesisSplit`; `Engine` and `Split` revert |
 | Dynamic swap fee hook | `NARALiquidityGrowthHook` |
 | JIT epoch advancement | `NARAEngine` |
 | Genesis reward weights | `NARAPositionNFTV4` and `NARAGenesisRewardDistributorV4` |

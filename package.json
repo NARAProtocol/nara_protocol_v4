@@ -10,13 +10,13 @@
     "test": "hardhat test",
     "test:token:v4": "hardhat test test/NARAToken.v4.test.ts",
     "test:engine:v4": "hardhat test test/NARAEngine.v4.test.ts",
-    "test:liquidity:v4": "hardhat test test/NARALiquidityGrowth.v4.test.ts",
+    "test:liquidity:v4": "hardhat test test/NARALiquidityGrowth.v4.test.ts test/NARALiquidityGrowth.real-v4.test.ts",
     "test:bond:v4": "hardhat test test/NARABondV4.test.ts",
     "test:nft:v4": "hardhat test test/NARAPositionNFTV4.test.ts test/NARAPositionDataLensV1.test.ts",
     "test:bond-nft:v4": "hardhat test test/NARABondV4NFT.test.ts",
     "test:invariants:v4": "hardhat test test/NARAInvariantRegression.v4.test.ts",
     "test:composability:v4": "hardhat test test/composability/NARAStakingPool.test.ts test/composability/NARAFractionalPosition.test.ts",
-    "test:v4": "hardhat test test/NARAToken.v4.test.ts && hardhat test test/NARAEngine.v4.test.ts && hardhat test test/NARALiquidityGrowth.v4.test.ts",
+    "test:v4": "hardhat test test/NARAToken.v4.test.ts && hardhat test test/NARAEngine.v4.test.ts && hardhat test test/NARALiquidityGrowth.v4.test.ts test/NARALiquidityGrowth.real-v4.test.ts",
     "size": "tsx scripts/checkBytecodeSizes.ts",
     "slither:v4": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/runSlitherV4.ps1",
     "aderyn:v4": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/runAderynV4.ps1",
@@ -29,9 +29,12 @@
     "deploy:v4:allocations": "hardhat run scripts/deployV4Allocations.ts --network base",
     "deploy:v4:router:lens": "hardhat run scripts/deployRouterLens.ts --network base",
     "deploy:v4:pool:only": "hardhat run scripts/redeployPoolOnly.ts --network base",
+    "build:v4:atomic-pool-launch": "tsx scripts/buildAtomicV4PoolLaunch.ts",
     "verify:v4:allocations": "hardhat run scripts/verifyV4AllocationsLive.ts --network base",
     "verify:v4:preflight": "tsx scripts/verifyV4Preflight.ts",
     "verify:v4:preseed": "tsx scripts/verifyV4Preflight.ts --pre-seed",
+    "verify:v4:launch-gates:preseed": "tsx scripts/verifyV4LaunchGates.ts --pre-seed --baskets-only",
+    "verify:v4:launch-gates:baskets": "tsx scripts/verifyV4LaunchGates.ts --baskets-only",
     "execute:v4:nara-depth": "tsx scripts/executeV4NaraDepth.ts",
     "verify:v4:launch-gates": "tsx scripts/verifyV4LaunchGates.ts",
     "smoke:v4": "tsx scripts/smokeTestV4Deployment.ts",
@@ -68,12 +71,13 @@
       "adm-zip": "0.6.0"
     },
     "minimatch@3.1.5": {
-      "brace-expansion": "1.1.16"
+      "brace-expansion": "5.0.8"
     },
     "minimatch@9.0.9": {
-      "brace-expansion": "2.1.2"
+      "brace-expansion": "5.0.8"
     },
     "mocha": {
+      "diff": "8.0.3",
       "serialize-javascript": "7.0.5"
     }
   }

@@ -38,7 +38,7 @@ most should not be built unless the underlying mechanic ships first.
 | Position ownership | `lock()` → engine position, wrapped 1:1 by NFT + EIP-1167 clone account | ✅ `NARAPositionNFTV4` | Covered — the NFT *is* the position |
 | Locks | `lock/extend/unlock`, weight = amount × duration | ✅ same NFT (receipt by construction) | Covered |
 | "Mining" | No separate mechanic; NARA emission drip earned by lock weight via `claimRewards` | ✅ implied by position NFT | Covered |
-| Claims (NARA/ETH/bribe) | `claimRewards` (NARA+ETH), `claimTokenRewards` (ERC-20 bribes) | ✅ claim rights gated to NFT owner | Covered |
+| Claims | `claimRewards` (NARA+ETH); token claim surface exists but notification is disabled for this deployment | ✅ claim rights gated to NFT owner | Covered |
 | Bonds | `NARABondDepositoryV4NFT.mintGenesisAndLockFor(...)` delivers discounted NARA as a genesis NFT | ✅ bond = NFT delivery | Covered |
 | Genesis users | `GenesisMetadata{roundId,tierId,rewardMultiplierBps,eternal,rewardWeight}` + parallel pool | ✅ flag inside the same NFT | Covered |
 | Eternal / long-term | `isEternal` → no normal unlock; only `burnEternalGenesis` after maturity | ✅ | Covered |
@@ -86,7 +86,7 @@ badge (pay-to-win optic).
 
 **Bond NFT** — already correct: bonds deliver a genesis position NFT directly. One artifact, not two.
 Early unlock: impossible for eternal; normal genesis unlocks like any position (burns NFT, records
-`closedRewardOwnerOfPosition` for trailing bribes). "Collectible after redemption" is **not possible
+`closedRewardOwnerOfPosition` for a dormant trailing-token claim surface). "Collectible after redemption" is **not possible
 today** (unlock burns the NFT) — would require a new soulbound "spent bond" stub on burn. Defer.
 
 **Mining position NFT** — do not build. Mining is not a v4 mechanic; the position NFT +

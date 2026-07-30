@@ -6,8 +6,9 @@ Status: v3 engine operations reference. v3 is retired as of 2026-05-27. This run
 
 **v4 differences from v3:**
 - No `EPOCH_ROLE` in v4. Epoch advancement is JIT (auto-triggered on `lock`/`unlock`/`claim` calls). No keeper cron needed.
-- v4 adds `REWARD_NOTIFIER_ROLE` for `notifyEthRewards` / `notifyTokenRewards`.
-- v4 engine address will be in `CURRENT_STATE.md` after fresh v4 deploy.
+- v4 `notifyEthRewards` is permissionless. `REWARD_NOTIFIER_ROLE` gates only
+  `notifyTokenRewards`, which is disabled operationally for the deployed engine.
+- The current v4 engine address and launch gates are in `CURRENT_STATE.md`.
 - `npm run check:nara:live` is removed in v4. Read state directly from v4 contract addresses.
 
 ## Roles
