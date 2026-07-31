@@ -76,7 +76,9 @@ Deprecated or out-of-scope assumptions:
 - v3 token/engine/bond/NFT wrapper addresses are retired.
 - jackpot/lotto is not active.
 - mining is not active.
-- old keeper/cron epoch assumptions are not active.
+- old v3 keeper/cron assumptions are not active. The new guarded v4 operations
+  workflow described below is active and must not be confused with the retired
+  cron folder.
 - old incident-stack v4 addresses are retired for public launch.
 - hand-written ABIs are not the source of truth.
 
@@ -84,13 +86,54 @@ Use generated active v4 Hardhat artifacts for ABIs.
 
 ## Current deployment and launch scope
 
-Controlled Stage A is deployed. The NARA/USDC pool is registered but
-uninitialized and has no liquidity. The current launch product is NARA Baskets.
-Position NFTs, bonds, router/lenses, lockboard, allocations, and composability
-are deferred. Lotto, Arena, and the old cron are retired.
+Controlled Stage A is deployed. The hardened replacement NARA/USDC pool is
+initialized and seeded, and its replacement hook, vault, and compounder are
+configured under Safe custody. The earlier Stage A pool is quarantined; do not
+mix its addresses or state with the active replacement. The current launch
+product is NARA Baskets, but the publishable app remains preview-only until
+verified basket manager/adapter manifests exist. Position NFTs, bonds,
+router/lenses, lockboard, allocations, and composability are deferred. Lotto,
+Arena, and the old cron folder are retired.
 
 Do not repeat the core deployment. Do not invent addresses for deferred
 contracts. Keep baskets in preview until verified deployment manifests exist.
+
+## Current v4 epoch and liquidity operations
+
+The v4 engine is not indefinitely keeperless. User-facing calls can perform a
+bounded just-in-time advance of at most eight epochs. If the backlog exceeds
+that cap, lock-related calls revert with `EpochStale()` until permissionless
+`advanceEpochs` maintenance catches up.
+
+The active maintenance path is:
+
+- workflow: `.github/workflows/v4-epoch-maintainer.yml`;
+- cadence: every 30 minutes at `:07` and `:37` UTC;
+- execution guard: repository variable
+  `V4_OPERATIONS_KEEPER_ENABLED=true`;
+- dedicated keeper: `0xa4B4B00f067cB4f5607c9a7298827fa1C1315aB7`;
+- vault authority: restricted compounding only in the current `Liquidity`
+  route mode; no owner, parameter, treasury, Safe, recovery, or arbitrary
+  withdrawal authority;
+- recovery evidence: transaction
+  `0x906296a6041117a3ce1b895de291a221dcc5caad406f190ca548b7bf52854091`
+  advanced epoch `475` to `484` at Base block `49366244`;
+- independent post-state: workflow run `30654597591` confirmed epoch `484/484`,
+  backlog `0`, frozen compounder, authorized keeper, and no liquidity
+  transaction required;
+- validation status: manual read-only and execute runs passed; the 48-hour
+  scheduled-run soak remains open.
+
+The engine's direct `emissionReserve()` may correctly read zero while
+`rewardReserveAvailable()` reports the external `650,000 NARA` reserve.
+`syncEmissionReserve()` registers untracked NARA held directly by the engine;
+it is not required merely to make the direct-reserve number nonzero when the
+untracked direct balance is zero.
+
+Use `docs/CURRENT_STATE.md` and
+`docs/releases/NARA-20260731-epoch-recovery.md` for the canonical detailed
+evidence. Never copy RPC URLs or signing-key values from local configuration or
+workflow secrets.
 
 ## Monitor Stack
 
@@ -160,4 +203,6 @@ When uncertain:
 4. Search for the exact active contract, event, or function in generated
    artifacts/source.
 5. If a folder status is unclear, mark it unknown and ask for verification.
-6. Do not infer v3, jackpot, mining, cron, or old UI behavior from names alone.
+6. Do not infer v3, jackpot, mining, retired cron, or old UI behavior from names
+   alone. Distinguish the retired cron folder from the active guarded v4 GitHub
+   workflow.

@@ -7,7 +7,9 @@ Last updated: 2026-07-26.
 Deferred router/read-layer contracts for a future v4 position frontend. They are
 not part of the current baskets-only launch and are not deployed.
 
-- **`NARARouter`** — permit + sync + lock in one tx, plus permissionless `syncEpochs()` (replaces the Railway cron keeper).
+- **`NARARouter`** — permit + permissionless sync + lock in one transaction.
+  It can reduce short-gap friction when deployed, but it does not replace the
+  active recurring v4 operations workflow during periods without users.
 - **`NARADashboardLens`** — single `getUserState(user, positionIds[], nftTokenIds[])` call returns wallet, epoch, fees, totals, positions, NFT positions. Replaces ~17 fan-out reads.
 
 ## Files
@@ -16,7 +18,7 @@ not part of the current baskets-only launch and are not deployed.
 |---|---|
 | [contracts/v4/router/NARARouter.sol](../contracts/v4/router/NARARouter.sol) | Router (stateless, no admin, no upgrade) |
 | [contracts/v4/router/NARADashboardLens.sol](../contracts/v4/router/NARADashboardLens.sol) | Lens (pure view) |
-| [contracts/v4/router/BribeRouterV4.sol](../contracts/v4/router/BribeRouterV4.sol) | Permissionless bribe wrapper (needs REWARD_NOTIFIER_ROLE) |
+| [contracts/v4/router/BribeRouterV4.sol](../contracts/v4/router/BribeRouterV4.sol) | Source-only notification wrapper; undeployed and inactive under the current no-notifier policy |
 | [contracts/v4/mocks/MockEngineForRouter.sol](../contracts/v4/mocks/MockEngineForRouter.sol) | Test mock |
 | [contracts/v4/mocks/MockNFTForRouter.sol](../contracts/v4/mocks/MockNFTForRouter.sol) | Test mock |
 | [contracts/v4/mocks/MockERC20Permit.sol](../contracts/v4/mocks/MockERC20Permit.sol) | Test mock |
@@ -65,12 +67,18 @@ custodian, live and settled epochs, lifecycle state, claimables, and Genesis dat
 booleans use the settled epoch so apps do not present accounting state before the engine catches up.
 Use this lens for current financial data; NFT marketplace JSON is intentionally stable.
 
-## Keeper elimination
+## Epoch synchronization and recurring maintenance
 
-Every user write should prepend `router.syncEpochs()` in an EIP-5792 batch. Smart-wallet apps fire it silently on page load. Engine's `advanceEpochs(maxSteps)` has no per-call cap (only Base block gas, ~30M = ~100 epochs/tx). At 15-min epochs that's ~25h of backlog per tx, so multi-day silence still clears in a few chained calls.
+If this router is deployed in a future release, an app may prepend
+`router.syncEpochs()` in an explicitly reviewed transaction batch. The engine's
+permissionless `advanceEpochs(maxSteps)` can clear a large backlog in operator
+batches, while user-facing engine calls perform at most eight epochs of
+just-in-time advancement. Therefore user activity handles short gaps but is not
+an indefinite maintenance guarantee.
 
-The historical Railway cron is retired. v4 uses bounded permissionless epoch
-advancement instead of that offchain keeper.
+The historical Railway cron is retired. The current production path is the
+guarded `.github/workflows/v4-epoch-maintainer.yml` schedule documented in
+`CURRENT_STATE.md`, plus permissionless/JIT advancement as a safety buffer.
 
 ## Deploy
 
@@ -89,11 +97,11 @@ function notify(address token, uint256 amount) external;
 // Emits: BribeNotified(caller, token, amount)
 ```
 
-**Post-deploy action required:** the engine admin must call:
-```
-engine.grantRole(keccak256("REWARD_NOTIFIER_ROLE"), <BribeRouterV4 address>)
-```
-Without this role the contract is deployed but `notify()` will revert.
+**Current policy:** do not grant `REWARD_NOTIFIER_ROLE`. The deployed engine
+intentionally has no holder because ERC-20 reward notification is disabled for
+the active release. `BribeRouterV4` is source-only and `notify()` is expected to
+remain unavailable unless a future explicitly authorized security review,
+deployment, role assignment, and state record change this policy.
 
 ## What is still NOT built (and why it's OK for mainnet)
 
@@ -110,5 +118,7 @@ The FOX report conclusion: "Solidity architecture is largely ready. Operational 
 - Code complete, 70/70 new tests passing (28 router + 28 lens + 14 bribe router).
 - **Not deployed to mainnet.** The fresh engine exists, but the position NFT and
   this router/lens layer are deferred from the baskets-only launch.
-- After engine deploy: run `npm run deploy:v4:router:lens`, then grant `REWARD_NOTIFIER_ROLE` to `BribeRouterV4`.
+- Do not run the historical deploy/grant sequence against the live engine.
+  Any future router/lens release requires fresh verified manifests and an
+  explicit decision on the intentionally disabled notifier role.
 - Frontend wiring deferred per user decision. Each app imports ABIs/addresses from `nara.ts`.

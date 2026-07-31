@@ -20,10 +20,14 @@ Fees from everything route back to lockers via the engine. The **five pillars** 
 Liquidity (the taxed Uniswap v4 pool), the NFT lock layer, and Baskets** (the brand front door).
 Controlled Stage A is deployed on Base: token, engine, reward reserve, hook,
 vault, launcher, and CREATE2 hook deployer. The production liquidity compounder
-was deployed afterward, wired to the vault, and source verified. It is not
-frozen. The registered NARA/USDC pool remains
-uninitialized with zero liquidity. The launch surface is Baskets only and
-remains in preview; Lockboard is deferred, while Lotto and Arena are retired.
+and hardened replacement hook/vault were deployed afterward, wired, source
+verified, validation-compounded, and placed under Safe custody. The replacement
+NARA/USDC pool is initialized and seeded; the earlier Stage A pool is
+quarantined. The guarded 30-minute v4 operations workflow is enabled after a
+reviewed epoch recovery, with its 48-hour soak still open. The launch surface
+is Baskets only and remains in preview; Lockboard is deferred, while Lotto and
+Arena are retired. Exact addresses and state evidence live in
+`CURRENT_STATE.md`.
 
 ---
 
@@ -94,7 +98,7 @@ listed contract is deployed.
 | `router/NARADashboardLens` | Router | ✅ `NARADashboardLens.test.ts` | engine, NFT |
 | `router/NARAPositionDataLensV1` | Router | ✅ `NARAPositionDataLensV1.test.ts` | engine, NFT; now incl. weight share / age / countdown / lifetime earned / realized return — see `NARA_V4_POSITION_STATS_AND_CLAIM_FEES.md` |
 | `router/NARAProtocolStatsLensV1` | Router | ✅ `NARAProtocolStatsLensV1.test.ts` | engine; one-call protocol headline stats (all-time ETH distributed, runway, totals). See `NARA_V4_POSITION_STATS_AND_CLAIM_FEES.md` |
-| `router/BribeRouterV4` | Router | ✅ `NARABribeRouterV4.test.ts` | engine; grant `REWARD_NOTIFIER_ROLE` after deploy |
+| `router/BribeRouterV4` | Router | ✅ `NARABribeRouterV4.test.ts` | source-only and undeployed; the live engine intentionally has no `REWARD_NOTIFIER_ROLE` holder, so do not grant or describe this route as active without a new authorized security/deployment record |
 | `router/NARACirculatingSupplyV1` | Router | ✅ `NARACirculatingSupplyV1.test.ts` (25) | token + the excluded wallet set (reserve/bonds/vesting/dead — treasury stays circulating). Genesis ≈ 110k. See `CIRCULATING_SUPPLY.md` |
 | `composability/NARAStakingPoolV4` (stNARA) | Composability | ✅ `composability/NARAStakingPool.test.ts` | core + allocation + **TVL** |
 | `composability/NARAStakingPoolSYV4` (Pendle SY) | Composability | ✅ (staking pool tests) | stNARA pool |
