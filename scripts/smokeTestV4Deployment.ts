@@ -3,7 +3,7 @@
  *
  * This verifies:
  * - live preflight wiring
- * - ability to seed liquidity
+ * - the atomically seeded LP position is live
  * - one small buy through the intended script path
  * - one small sell through the hook pool
  * - Liquidity Growth vault balance changes after each trade
@@ -12,10 +12,6 @@
  *   BASE_RPC_URL or BASE_MAINNET_RPC_URL
  *   LIQ_PRIVATE_KEY
  *
- * Required env:
- *   V4_SMOKE_SEED_NARA (must be 60000)
- *   V4_SMOKE_SEED_USDC (must be 300)
- *
  * Optional env:
  *   V4_SMOKE_BUY_USDC
  *   V4_SMOKE_SELL_NARA
@@ -23,7 +19,6 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
 import { ethers } from "ethers";
 import * as dotenv from "dotenv";
 import { resolve, dirname } from "path";
@@ -33,7 +28,6 @@ import {
   boundedSlippageBps,
   calculateSpotMinimum,
   readSqrtPriceX96,
-  requiredExactAmount,
 } from "./lib/v4SwapSafety.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -158,8 +152,6 @@ async function main() {
   const config = currentV4Config();
   const provider = new ethers.JsonRpcProvider(requiredBaseRpcUrl());
   const wallet = new ethers.Wallet(requiredEnv("LIQ_PRIVATE_KEY"), provider);
-  const seedNara = requiredExactAmount("V4_SMOKE_SEED_NARA", "60000");
-  const seedUsdc = requiredExactAmount("V4_SMOKE_SEED_USDC", "300");
   const buyUsdc = process.env.V4_SMOKE_BUY_USDC?.trim() || "5";
   const sellNaraAmount = process.env.V4_SMOKE_SELL_NARA?.trim() || "5";
   const slippageBps = boundedSlippageBps(process.env.V4_SMOKE_SLIPPAGE_BPS);
@@ -170,32 +162,10 @@ async function main() {
   console.log("Wallet:", wallet.address);
   console.log("");
 
-  runScript("scripts/verifyV4Preflight.ts", ["--pre-seed"], {});
+  runScript("scripts/verifyV4Preflight.ts", [], {});
 
   const vaultBaseBefore = await baseToken.balanceOf(config.vault) as bigint;
   const vaultTokenBefore = await naraToken.balanceOf(config.vault) as bigint;
-
-  console.log("Seeding liquidity for smoke test...");
-  runScript("scripts/seedV4Liquidity.ts", [], {
-    V4_SEED_NARA: seedNara,
-    V4_SEED_USDC: seedUsdc,
-  });
-
-  const vaultBaseAfterSeed = await baseToken.balanceOf(config.vault) as bigint;
-  const vaultTokenAfterSeed = await naraToken.balanceOf(config.vault) as bigint;
-  console.log("Vault after seed:", ethers.formatUnits(vaultBaseAfterSeed, 6), "USDC /", ethers.formatUnits(vaultTokenAfterSeed, 18), "NARA");
-
-  const seedEvidencePath = resolve(__dirname, "../deployments/v4-liquidity-seed-latest.json");
-  const seedEvidence = JSON.parse(readFileSync(seedEvidencePath, "utf8")) as {
-    lpTokenId?: string;
-    transactionHash?: string;
-  };
-  if (!seedEvidence.lpTokenId || !seedEvidence.transactionHash) {
-    throw new Error("Seed evidence is missing lpTokenId or transactionHash");
-  }
-  runScript("scripts/verifyV4Preflight.ts", [], {
-    V4_LP_TOKEN_ID: seedEvidence.lpTokenId,
-  });
 
   console.log("Running smoke buy...");
   runScript("scripts/swapUsdcForNara.ts", [], {
@@ -205,11 +175,11 @@ async function main() {
 
   const vaultBaseAfterBuy = await baseToken.balanceOf(config.vault) as bigint;
   const vaultTokenAfterBuy = await naraToken.balanceOf(config.vault) as bigint;
-  console.log("Vault delta after buy:", ethers.formatUnits(vaultBaseAfterBuy - vaultBaseAfterSeed, 6), "USDC /", ethers.formatUnits(vaultTokenAfterBuy - vaultTokenAfterSeed, 18), "NARA");
-  if (vaultBaseAfterBuy <= vaultBaseAfterSeed) {
+  console.log("Vault delta after buy:", ethers.formatUnits(vaultBaseAfterBuy - vaultBaseBefore, 6), "USDC /", ethers.formatUnits(vaultTokenAfterBuy - vaultTokenBefore, 18), "NARA");
+  if (vaultBaseAfterBuy <= vaultBaseBefore) {
     throw new Error("Buy smoke test did not increase the vault USDC balance");
   }
-  if (vaultTokenAfterBuy !== vaultTokenAfterSeed) {
+  if (vaultTokenAfterBuy !== vaultTokenBefore) {
     throw new Error("Buy smoke test unexpectedly changed the vault NARA balance");
   }
 

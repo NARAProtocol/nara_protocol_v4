@@ -2,9 +2,10 @@
  * Main Base deployment script for NARA v4 with a NARA/USDC Uniswap v4 pool.
  *
  * This script intentionally uses Base native USDC, not ETH and not WETH.
- * It deploys/wires the protocol and initializes the v4 pool price; it does
- * not mint the first LP position. Seed liquidity through PositionManager or
- * a reviewed compounder after this script completes.
+ * It deploys/wires the protocol but deliberately leaves the v4 pool
+ * unregistered and uninitialized. The final Safe must register, initialize,
+ * and mint the first LP position in one atomic batch built by
+ * scripts/buildAtomicV4PoolLaunch.ts.
  *
  * Required for live Base:
  *   PRIVATE_KEY
@@ -515,8 +516,9 @@ async function main() {
   console.log("Step 8: bind vault and hook");
   await waitTx("vault.setHook", vault.setHook(mined.address));
   await waitTx("vault.setEngine", vault.setEngine(engineAddress));
-  const rewardNotifierRole = ethers.id("REWARD_NOTIFIER_ROLE");
-  await waitTx("engine.grantRole(REWARD_NOTIFIER_ROLE, vault)", engine.grantRole(rewardNotifierRole, vaultAddress));
+  console.log(
+    "REWARD_NOTIFIER_ROLE intentionally not granted: deployed-engine token rewards remain disabled.",
+  );
   if (compounder !== undefined) {
     await waitTx("vault.setCompounder", vault.setCompounder(ethers.getAddress(compounder)));
     await waitTx("vault.freezeCompounder", vault.freezeCompounder());
@@ -534,7 +536,7 @@ async function main() {
     await waitTx("vault.setKeeperBounty", vault.setKeeperBounty(keeperBountyBps, minCompoundBase));
   }
 
-  console.log("Step 9: register and initialize NARA/USDC pool");
+  console.log("Step 9: configure NARA/USDC pool for the later atomic Safe launch");
   const [poolCurrency0, poolCurrency1] = sortAddresses(tokenAddress, usdcAddress);
   const tokenIsCurrency0 = poolCurrency0.toLowerCase() === tokenAddress.toLowerCase();
   const amount0 = tokenIsCurrency0 ? initialNaraAmount : initialUsdcAmount;
@@ -551,26 +553,15 @@ async function main() {
 
   await waitTx("hook.setProtocolDepth(USDC)", hook.setProtocolDepth(usdcAddress, initialUsdcAmount));
   await waitTx("hook.setProtocolDepth(NARA)", hook.setProtocolDepth(tokenAddress, initialNaraAmount));
-  await waitTx("hook.registerPool", hook.registerPool(key));
-
-  if (!envFlag("V4_SKIP_POOL_INITIALIZE")) {
-    const poolManager = new ethers.Contract(
-      poolManagerAddress,
-      ["function initialize((address,address,uint24,int24,address) key,uint160 sqrtPriceX96) external returns (int24 tick)"],
-      deployer,
-    );
-    const poolKeyTuple = [key.currency0, key.currency1, key.fee, key.tickSpacing, key.hooks];
-    await waitTx("PoolManager.initialize", poolManager.initialize(poolKeyTuple, sqrtPriceX96, { gasLimit: 1_000_000n }));
-  } else {
-    console.log("Pool initialization skipped by V4_SKIP_POOL_INITIALIZE=1");
-  }
+  console.log("Pool registration and initialization intentionally deferred to one atomic Safe batch.");
 
   console.log("Step 10: transfer final admin/owner controls");
+  const rewardNotifierRole = ethers.id("REWARD_NOTIFIER_ROLE");
   if (finalAdmin.toLowerCase() !== deployer.address.toLowerCase()) {
     const defaultAdminRole = ethers.ZeroHash;
     const paramRole = ethers.id("PARAM_ROLE");
     const treasuryRole = ethers.id("TREASURY_ROLE");
-    for (const role of [defaultAdminRole, paramRole, treasuryRole, rewardNotifierRole]) {
+    for (const role of [defaultAdminRole, paramRole, treasuryRole]) {
       await waitTx(`engine.grantRole(${role})`, engine.grantRole(role, finalAdmin));
     }
     for (const role of [paramRole, treasuryRole, rewardNotifierRole, defaultAdminRole]) {
@@ -590,7 +581,13 @@ async function main() {
     await waitTx("vault.transferOwnership", vault.transferOwnership(finalAdmin));
     await waitTx("create2Deployer.transferOwnership", create2Deployer.transferOwnership(finalAdmin));
   } else {
-    console.log("Final admin is deployer; ownership/roles remain on deployer.");
+    if (await engine.hasRole(rewardNotifierRole, deployer.address)) {
+      await waitTx(
+        "engine.renounceRole(REWARD_NOTIFIER_ROLE)",
+        engine.renounceRole(rewardNotifierRole, deployer.address),
+      );
+    }
+    console.log("Final admin is deployer; ownership remains on deployer and token rewards stay disabled.");
   }
 
   const log = {
@@ -622,6 +619,9 @@ async function main() {
     poolFee,
     tickSpacing,
     sqrtPriceX96: sqrtPriceX96.toString(),
+    poolRegistered: false,
+    poolInitialized: false,
+    liquiditySeeded: false,
     initialNaraAmount: initialNaraAmount.toString(),
     initialUsdcAmount: initialUsdcAmount.toString(),
     emissionReserveAmount: emissionReserveAmount.toString(),
@@ -634,8 +634,9 @@ async function main() {
       allocations: "npm run verify:v4:allocations",
     },
     nextSteps: [
-      "Run npm run verify:v4:preflight",
-      "Seed liquidity with scripts/seedV4Liquidity.ts",
+      "Run npm run verify:v4:preseed",
+      "Fund the final admin Safe with the exact approved NARA and USDC seed amounts",
+      "Run npm run build:v4:atomic-pool-launch and execute the output as one Safe batch",
       "Run the v4 smoke test before public launch",
     ],
     compounder: compounder ?? null,

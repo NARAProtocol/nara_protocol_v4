@@ -47,6 +47,9 @@ function hasFlag(name: string): boolean {
 }
 
 function latestDeploymentFile(): string {
+  const replacement = resolve(deploymentsDir, "v4-liquidity-replacement-latest.json");
+  if (existsSync(replacement)) return replacement;
+
   const canonical = resolve(deploymentsDir, "v4-base-usdc-latest.json");
   if (existsSync(canonical)) return canonical;
 
@@ -153,6 +156,16 @@ function main() {
   const writeDotenv = hasFlag("--write-dotenv");
   const allowRetired = hasFlag("--allow-retired");
   const deployment = readJsonFile(sourcePath);
+  if (
+    deployment.replacementLiquidityTrioRequired === true ||
+    (typeof deployment.liquidityStackStatus === "string" &&
+      deployment.liquidityStackStatus.startsWith("quarantined"))
+  ) {
+    throw new Error(
+      "Refusing to generate launch env from a quarantined liquidity manifest. " +
+      "Deploy and verify the corrected replacement trio first.",
+    );
+  }
   const poolKey = (deployment.poolKey ?? {}) as JsonObject;
 
   const lpTokenId =

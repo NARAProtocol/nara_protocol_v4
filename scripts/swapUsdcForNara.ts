@@ -100,14 +100,24 @@ export async function main() {
     console.log("USDC -> Permit2 already approved");
   }
 
-  const [routerAllowance] = await p2.allowance(wallet.address, config.base, config.universalRouter) as [bigint, bigint, bigint];
-  if (routerAllowance < amountIn) {
-    console.log("Setting Permit2 USDC -> Universal Router allowance...");
+  // Permit2 allowances carry BOTH an amount and an expiration. Checking only the
+  // amount lets an expired-but-nonzero allowance look healthy, and the swap then
+  // reverts inside Universal Router with AllowanceExpired(uint48). Check both.
+  const [routerAllowance, routerExpiration] =
+    await p2.allowance(wallet.address, config.base, config.universalRouter) as [bigint, bigint, bigint];
+  const nowSeconds = BigInt(Math.floor(Date.now() / 1000));
+  const allowanceExpired = routerExpiration <= nowSeconds;
+  if (routerAllowance < amountIn || allowanceExpired) {
+    console.log(
+      allowanceExpired && routerAllowance >= amountIn
+        ? `Permit2 allowance expired at ${routerExpiration} — renewing...`
+        : "Setting Permit2 USDC -> Universal Router allowance...",
+    );
     const maxU160 = (1n << 160n) - 1n;
     const maxU48 = (1n << 48n) - 1n;
     await (await p2.approve(config.base, config.universalRouter, maxU160, maxU48)).wait();
   } else {
-    console.log("USDC -> Universal Router Permit2 allowance OK");
+    console.log(`USDC -> Universal Router Permit2 allowance OK (expires ${routerExpiration})`);
   }
   console.log("");
 

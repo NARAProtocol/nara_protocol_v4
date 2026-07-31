@@ -14,8 +14,12 @@ export const DEFAULT_V4_LP_TOKEN_ID = 2187473n;
 export const DEFAULT_V4_POOL_ID = "0x1d291f26281fb2a8dda28c0c35bd79251956dfef110266f4c53e62e65239ba34";
 export const DEFAULT_V4_VAULT = "0x58C3f6E6b005009B775C0912B003D39660D14391";
 export const DEFAULT_V4_ENGINE = "0x9E8cE51805b13a4d75c324F75B06ABc00d9b1E03";
+export const QUARANTINED_STAGE_A_HOOK = "0x9a01c2DcF713cDB12B8ef4Eb264D5c3203b06088";
+export const QUARANTINED_STAGE_A_POOL_ID =
+    "0xbb3287f32b95e96301c9582e8bf7e81fa362e4b9eea00cf016c537cf5970dff3";
 
 const RETIRED_DEFAULTS_FLAG = "V4_ALLOW_RETIRED_DEFAULTS";
+const QUARANTINED_STAGE_A_FLAG = "V4_ALLOW_QUARANTINED_STAGE_A";
 
 function readEnv(name: string): string | undefined {
     const value = process.env[name]?.trim();
@@ -81,7 +85,7 @@ export function currentV4Config() {
     const token = ethers.getAddress(requiredLaunchEnv("V4_NARA_TOKEN", DEFAULT_V4_NARA));
     const base = ethers.getAddress(optionalEnv("V4_BASE_TOKEN", BASE_USDC));
 
-    return {
+    const config = {
         universalRouter: ethers.getAddress(optionalEnv("V4_UNIVERSAL_ROUTER", BASE_UNIVERSAL_ROUTER)),
         permit2: ethers.getAddress(optionalEnv("V4_PERMIT2", BASE_PERMIT2)),
         poolManager: ethers.getAddress(optionalEnv("V4_POOL_MANAGER", BASE_POOL_MANAGER)),
@@ -96,4 +100,17 @@ export function currentV4Config() {
         vault: ethers.getAddress(requiredLaunchEnv("V4_VAULT", DEFAULT_V4_VAULT)),
         engine: ethers.getAddress(requiredLaunchEnv("V4_ENGINE", DEFAULT_V4_ENGINE)),
     };
+
+    const isQuarantinedStageA =
+        config.hook.toLowerCase() === QUARANTINED_STAGE_A_HOOK.toLowerCase() ||
+        config.poolId === QUARANTINED_STAGE_A_POOL_ID;
+    if (isQuarantinedStageA && readEnv(QUARANTINED_STAGE_A_FLAG) !== "1") {
+        throw new Error(
+            "Configured hook/pool belongs to the quarantined Stage A liquidity stack. " +
+            `Set ${QUARANTINED_STAGE_A_FLAG}=1 only for explicit read-only recovery analysis; ` +
+            "never initialize or seed that pool.",
+        );
+    }
+
+    return config;
 }

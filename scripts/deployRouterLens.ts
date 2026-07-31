@@ -152,10 +152,11 @@ async function main() {
     const EngineOpsRouter = await ethers.getContractFactory("NARAEngineOpsRouterV1");
     const opsRouter = await EngineOpsRouter.deploy(engineAddress, opsParamOperator, opsTreasuryOperator);
     await opsRouter.waitForDeployment();
-    engineOpsRouterAddress = await opsRouter.getAddress();
-    console.log("Deployed:", engineOpsRouterAddress);
-    console.log("ACTION REQUIRED: grant PARAM_ROLE and TREASURY_ROLE to", engineOpsRouterAddress);
-    if (isMainnet) await verify(engineOpsRouterAddress, [engineAddress, opsParamOperator, opsTreasuryOperator]);
+    const deployedOpsRouter = await opsRouter.getAddress();
+    engineOpsRouterAddress = deployedOpsRouter;
+    console.log("Deployed:", deployedOpsRouter);
+    console.log("ACTION REQUIRED: grant PARAM_ROLE and TREASURY_ROLE to", deployedOpsRouter);
+    if (isMainnet) await verify(deployedOpsRouter, [engineAddress, opsParamOperator, opsTreasuryOperator]);
   } else {
     console.log("Skipped. Set ENGINE_OPS_PARAM_OPERATOR and ENGINE_OPS_TREASURY_OPERATOR to deploy.");
   }
@@ -165,16 +166,11 @@ async function main() {
   const bribeMinAmount = process.env.BRIBE_MIN_AMOUNT;
   let bribeRouterAddress: string | null = null;
   if (bribeRewardToken && bribeMinAmount) {
-    const rewardToken = ethers.getAddress(bribeRewardToken);
-    const BribeRouter = await ethers.getContractFactory("BribeRouterV4");
-    const bribeRouter = await BribeRouter.deploy(engineAddress, rewardToken, BigInt(bribeMinAmount));
-    await bribeRouter.waitForDeployment();
-    bribeRouterAddress = await bribeRouter.getAddress();
-    console.log("Deployed:", bribeRouterAddress);
-    console.log("ACTION REQUIRED: grant REWARD_NOTIFIER_ROLE to", bribeRouterAddress);
-    if (isMainnet) await verify(bribeRouterAddress, [engineAddress, rewardToken, BigInt(bribeMinAmount)]);
+    console.log(
+      "Skipped even though BRIBE_* is configured: deployed-engine ERC-20 reward notification is disabled.",
+    );
   } else {
-    console.log("Skipped. Set BRIBE_REWARD_TOKEN and BRIBE_MIN_AMOUNT to deploy.");
+    console.log("Skipped. Deployed-engine ERC-20 reward notification is disabled.");
   }
 
   console.log("\n-- NARACirculatingSupplyV1 --");
@@ -203,12 +199,13 @@ async function main() {
     const Circ = await ethers.getContractFactory("NARACirculatingSupplyV1");
     const circ = await Circ.deploy(naraTokenForCirc, maxSupplyCap, excluded);
     await circ.waitForDeployment();
-    circulatingSupplyAddress = await circ.getAddress();
-    console.log("Deployed:", circulatingSupplyAddress);
+    const deployedCirculatingSupply = await circ.getAddress();
+    circulatingSupplyAddress = deployedCirculatingSupply;
+    console.log("Deployed:", deployedCirculatingSupply);
     console.log("Excluded:", excluded.join(", "));
     console.log("circulatingSupply:", (await circ.circulatingSupply()).toString());
     console.log("ACTION: submit excludedAccounts() to CoinGecko/CMC as the excluded list.");
-    if (isMainnet) await verify(circulatingSupplyAddress, [naraTokenForCirc, maxSupplyCap, excluded]);
+    if (isMainnet) await verify(deployedCirculatingSupply, [naraTokenForCirc, maxSupplyCap, excluded]);
   } else {
     console.log("Skipped. Set NARA_V4 and CIRC_EXCLUDED to deploy the circulating-supply oracle.");
   }
