@@ -12,12 +12,13 @@ interface IBribeEngine {
 }
 
 /// @title BribeRouterV4
-/// @notice Permissionless delivery for one explicitly approved ERC-20 reward token.
+/// @notice Dormant reference implementation for one ERC-20 reward token.
 ///
 /// @dev Problem: engine.notifyTokenRewards() is gated behind REWARD_NOTIFIER_ROLE.
-///      This contract holds that role and exposes a permissionless `notify(token, amount)`.
-///      A router is deployed for one reviewed reward token and minimum amount so a dust
-///      bribe or arbitrary ERC-20 cannot globally change active-position extension UX.
+///      The deployed engine must NOT grant that role to this contract: active-position
+///      extensions can make the engine's live distribution denominator exceed its
+///      frozen per-position token-reward claim basis. Deployment tooling therefore
+///      leaves this router disabled unless a future engine/distributor replaces that path.
 ///
 ///      Flow per call:
 ///        1. Caller approves BribeRouter for `amount` of `token`.
@@ -29,8 +30,9 @@ interface IBribeEngine {
 ///
 ///      No mutable state. No admin. No fees. No upgrade. Holds zero balance across calls.
 ///
-///      REWARD_NOTIFIER_ROLE must be granted to this contract by the engine admin
-///      after deployment. The engine validates:
+///      If a future compatible engine is introduced, its admin would grant the
+///      corresponding notifier role only after reviewing that engine's accounting
+///      and these call preconditions:
 ///        - token matches this router's immutable reward token
 ///        - amount > 0
 ///        - activeTotalWeight > 0 (at least one active locker exists)

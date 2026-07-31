@@ -16,6 +16,18 @@ interface ILiquidityCompounder {
     ) external returns (uint256 liquidityAdded);
 }
 
+interface ILiquidityGrowthHookBinding {
+    function token() external view returns (address);
+    function base() external view returns (address);
+    function vault() external view returns (address);
+}
+
+interface ILiquidityCompounderBinding {
+    function nara() external view returns (address);
+    function usdc() external view returns (address);
+    function vault() external view returns (address);
+}
+
 interface INARAEngineRouting {
     function NARA() external view returns (address);
     function notifyTokenRewards(address token, uint256 amount) external;
@@ -30,7 +42,8 @@ interface INARAGenesisRewardDistributorRouting {
 
 /// @title NARA Liquidity Growth Vault
 /// @notice Receives Uniswap v4 pool-level fees and routes them either into protocol
-///         liquidity or, after the switch is flipped, into the NARA engine.
+///         liquidity or configured Genesis rewards. Engine-token routing modes
+///         are retained only as unreachable legacy ABI values.
 /// @dev ERC20-only by design. On Base the base asset is native USDC.
 contract NARALiquidityGrowthVault is Ownable, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
@@ -127,6 +140,7 @@ contract NARALiquidityGrowthVault is Ownable, ReentrancyGuardTransient {
     error NotAContract();
     error UnauthorizedKeeper();
     error CompounderFrozenErr();
+    error EngineTokenRoutingDisabled();
 
     modifier onlyHook() {
         if (msg.sender != hook) revert UnauthorizedHook();
@@ -149,6 +163,13 @@ contract NARALiquidityGrowthVault is Ownable, ReentrancyGuardTransient {
         if (hook != address(0)) revert AlreadySet();
         if (hook_ == address(0)) revert ZeroAddress();
         if (hook_.code.length == 0) revert NotAContract();
+        if (
+            ILiquidityGrowthHookBinding(hook_).token() != address(token)
+                || ILiquidityGrowthHookBinding(hook_).base() != address(base)
+                || ILiquidityGrowthHookBinding(hook_).vault() != address(this)
+        ) {
+            revert InvalidConfig();
+        }
         hook = hook_;
         emit HookSet(hook_);
     }
@@ -157,6 +178,13 @@ contract NARALiquidityGrowthVault is Ownable, ReentrancyGuardTransient {
         if (compounderFrozen) revert CompounderFrozenErr();
         if (compounder_ == address(0)) revert ZeroAddress();
         if (compounder_.code.length == 0) revert NotAContract();
+        if (
+            ILiquidityCompounderBinding(compounder_).nara() != address(token)
+                || ILiquidityCompounderBinding(compounder_).usdc() != address(base)
+                || ILiquidityCompounderBinding(compounder_).vault() != address(this)
+        ) {
+            revert InvalidConfig();
+        }
         compounder = compounder_;
         emit CompounderSet(compounder_);
     }
@@ -192,8 +220,12 @@ contract NARALiquidityGrowthVault is Ownable, ReentrancyGuardTransient {
     }
 
     function setRouteMode(RouteMode mode_) external onlyOwner {
-        if (mode_ == RouteMode.Split && (splitEngineShareBps == 0 || splitEngineShareBps >= BPS)) {
-            revert InvalidConfig();
+        // The deployed engine freezes each position's ERC-20 reward weight after
+        // the first token notification while extend() can still raise live weight.
+        // Engine and Split would therefore make later token distributions
+        // under-allocate. Keep those legacy enum values unreachable.
+        if (mode_ == RouteMode.Engine || mode_ == RouteMode.Split) {
+            revert EngineTokenRoutingDisabled();
         }
         if (mode_ == RouteMode.Genesis && genesisRewardDistributor == address(0)) {
             revert InvalidConfig();

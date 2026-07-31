@@ -109,10 +109,14 @@ contract NARAStakingPoolSYV4 is ERC20, ReentrancyGuardTransient {
             NARA.forceApprove(address(POOL), amountIn);
             sharesOut = POOL.deposit(amountIn, 0);
             NARA.forceApprove(address(POOL), 0);
-            _pullAndDistributeRewards();
         } else {
             revert UnsupportedToken();
         }
+
+        // Moving stNARA can harvest pool rewards and accrue them to this contract at its
+        // pre-transfer stNARA balance. Pull those rewards against the unchanged pre-mint SY
+        // supply so the entrant cannot participate in rewards earned before this deposit.
+        _pullAndDistributeRewards();
 
         if (sharesOut < minSharesOut) revert SlippageExceeded();
         _mint(receiver, sharesOut);
@@ -134,10 +138,14 @@ contract NARAStakingPoolSYV4 is ERC20, ReentrancyGuardTransient {
 
         _pullAndDistributeRewards();
 
-        _burn(msg.sender, amountIn);
         amountOut = amountIn;
         if (amountOut < minTokenOut) revert SlippageExceeded();
         STNARA.safeTransfer(receiver, amountOut);
+        // The outbound stNARA transfer can crystallize rewards at this contract's pre-transfer
+        // balance. Pull and index them before reducing SY supply so the redeemer retains its
+        // pro-rata entitlement.
+        _pullAndDistributeRewards();
+        _burn(msg.sender, amountIn);
         emit Redeemed(msg.sender, receiver, amountIn, amountOut);
     }
 

@@ -6,6 +6,7 @@ import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20P
 import {ERC20FlashMint} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20FlashMint.sol";
 import {ERC1363} from "@openzeppelin/contracts/token/ERC20/extensions/ERC1363.sol";
 import {Multicall} from "@openzeppelin/contracts/utils/Multicall.sol";
+import {IERC3156FlashBorrower} from "@openzeppelin/contracts/interfaces/IERC3156FlashBorrower.sol";
 import {IERC3156FlashLender} from "@openzeppelin/contracts/interfaces/IERC3156FlashLender.sol";
 
 /// @title NARA Token (v4)
@@ -21,6 +22,9 @@ import {IERC3156FlashLender} from "@openzeppelin/contracts/interfaces/IERC3156Fl
 ///  - FLASH_FEE_SINK is immutable; set once at deploy (typically the engine).
 ///  - No owner, no pause, no blacklist, no upgrade path, no admin setter.
 contract NARAToken is ERC20, ERC20Permit, ERC20FlashMint, ERC1363, Multicall {
+    bytes32 private constant FLASH_CALLBACK_SUCCESS =
+        keccak256("ERC3156FlashBorrower.onFlashLoan");
+
     /// @notice Total token supply. 1,000,000 NARA. Minted once to `treasury_`.
     uint256 public constant MAX_SUPPLY = 1_000_000 ether;
 
@@ -36,6 +40,7 @@ contract NARAToken is ERC20, ERC20Permit, ERC20FlashMint, ERC1363, Multicall {
     /// fees arrive as a token-balance surplus and are absorbed into the emission
     /// reserve by syncEmissionReserve or epoch advancement.
     address public immutable FLASH_FEE_SINK;
+    uint256 private _outstandingFlashPrincipal;
 
     error ZeroAddress();
     error EmptyMetadata();
@@ -79,7 +84,40 @@ contract NARAToken is ERC20, ERC20Permit, ERC20FlashMint, ERC1363, Multicall {
     /// @notice Bound flash-minted supply to the protocol cap.
     function maxFlashLoan(address token) public view override returns (uint256) {
         if (token != address(this)) return 0;
-        return MAX_FLASH_LOAN;
+        return MAX_FLASH_LOAN - _outstandingFlashPrincipal;
+    }
+
+    /// @notice Flash mint with one aggregate cap shared by every recursive loan.
+    function flashLoan(
+        IERC3156FlashBorrower receiver,
+        address token,
+        uint256 value,
+        bytes calldata data
+    ) public override returns (bool) {
+        uint256 maxLoan = maxFlashLoan(token);
+        if (value > maxLoan) revert ERC3156ExceededMaxLoan(maxLoan);
+
+        uint256 fee = flashFee(token, value);
+        _outstandingFlashPrincipal += value;
+        _mint(address(receiver), value);
+
+        if (
+            receiver.onFlashLoan(_msgSender(), token, value, fee, data) !=
+            FLASH_CALLBACK_SUCCESS
+        ) {
+            revert ERC3156InvalidReceiver(address(receiver));
+        }
+
+        address feeReceiver = _flashFeeReceiver();
+        _spendAllowance(address(receiver), address(this), value + fee);
+        if (fee == 0 || feeReceiver == address(0)) {
+            _burn(address(receiver), value + fee);
+        } else {
+            _burn(address(receiver), value);
+            _transfer(address(receiver), feeReceiver, fee);
+        }
+        _outstandingFlashPrincipal -= value;
+        return true;
     }
 
     /// @dev Add IERC3156FlashLender to the list of supported interfaces.
