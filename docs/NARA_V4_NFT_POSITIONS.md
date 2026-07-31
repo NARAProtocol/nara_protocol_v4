@@ -61,7 +61,7 @@ A position earns from **two independent pools**:
 
 | Pool | What | Claim |
 |---|---|---|
-| **Engine** (all lockers) | NARA drip + ETH + any ERC-20 reward stream, by lock **weight** | `claimRewards(tokenId, to)` → NARA + ETH; `claimTokenRewards(tokenId, token, to)` → ERC-20 |
+| **Engine** (all lockers) | Active: NARA drip + ETH by lock **weight**. ERC-20 claim functions exist but notification is disabled for this deployment. | `claimRewards(tokenId, to)` → NARA + ETH; token-claim functions remain dormant |
 | **Genesis** (genesis NFTs only) | Extra ETH + reward-token (USDC) by **reward weight**, parallel pool | `claimGenesisEth(tokenId, to)`, `claimGenesisToken(tokenId, to)` |
 
 - Engine claims flow NFT → `account.claimRewards(to)` → `engine.claimRewards(positionId, to)` → assets
@@ -80,8 +80,8 @@ A position earns from **two independent pools**:
   fee when that fee path is active. Explicit `sweepAccount*` calls recover unrelated stray account balances.
 - `unlock(tokenId)` / `unlockTo(tokenId, to)` — `msg.value == engine.unlockFeeWei()`. Claims genesis
   rewards first, unlocks the engine position, sweeps principal+rewards to `to`, **burns the NFT**, and
-  records `closedRewardOwnerOfPosition` so the ex-owner can still pull trailing ERC-20 rewards via
-  `claimClosedTokenRewards(positionId, token, to)`.
+  records `closedRewardOwnerOfPosition`; the trailing ERC-20 claim surface
+  exists but remains dormant while token notification is disabled.
 - A transfer is **blocked while an unlock is in progress** (`unlocking[tokenId]`).
 
 ## Eternal Genesis (fixed at mint)
