@@ -3,11 +3,18 @@ import { ethers } from "ethers";
 import {
   activeLegacyRoleHolders,
   activeRoleHoldersFromHistory,
+  launchEpochBacklogAcceptable,
   rewardNotifierHistoryLogs,
   runtimeCodeHashMatches,
 } from "../scripts/verifyV4LaunchGates.js";
 
 describe("v4 launch-gate role enumeration", function () {
+  it("fails launch when the epoch backlog exceeds the operator tolerance", function () {
+    expect(launchEpochBacklogAcceptable(462n, 0n)).to.deep.equal({ ok: false, backlog: 462n });
+    expect(launchEpochBacklogAcceptable(462n, 461n)).to.deep.equal({ ok: true, backlog: 1n });
+    expect(launchEpochBacklogAcceptable(462n, 463n)).to.deep.equal({ ok: false, backlog: 0n });
+  });
+
   it("reconstructs every currently active holder from grant and revoke history", function () {
     const alice = "0x0000000000000000000000000000000000001001";
     const bob = "0x0000000000000000000000000000000000001002";

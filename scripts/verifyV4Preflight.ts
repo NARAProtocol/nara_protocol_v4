@@ -35,6 +35,36 @@ export function requireExpectedPoolRegistrationState(
   if (expectedSqrtPriceX96 === 0n) throw new Error("Hook opening price is not bound");
 }
 
+/**
+ * PS-05 opening-price integrity.
+ *
+ * The opening price is enforced on-chain, not here: `registerPool` is one-shot and
+ * rejects a zero price, and `_beforeInitialize` reverts with
+ * `InvalidInitializationPrice` unless `sqrtPriceX96 == expectedSqrtPriceX96`. So an
+ * initialized pool plus a nonzero bound price *proves* the pool opened at that price.
+ *
+ * Live price is therefore NOT compared to the bound price. Once the pool trades, the
+ * two legitimately diverge; asserting equality would permanently fail every post-seed
+ * gate the moment anyone swaps. Drift is reported, never fatal.
+ *
+ * The one genuine anomaly is an initialized pool with no bound price — that would mean
+ * this hook did not gate initialization, so it is fatal.
+ */
+export function assertPoolOpeningIntegrity(
+  poolInitialized: boolean,
+  boundSqrtPriceX96: bigint,
+  liveSqrtPriceX96: bigint,
+): { drifted: boolean } {
+  if (!poolInitialized) return { drifted: false };
+  if (boundSqrtPriceX96 === 0n) {
+    throw new Error(
+      "Pool is initialized but the hook has no bound opening price. " +
+      "Initialization was not gated by this hook — investigate before trusting this pool.",
+    );
+  }
+  return { drifted: liveSqrtPriceX96 !== boundSqrtPriceX96 };
+}
+
 const HOOK_ABI = [
   "function token() view returns (address)",
   "function base() view returns (address)",
@@ -175,11 +205,11 @@ async function main() {
   const rawSlot0 = await poolManager.extsload(poolStateSlot) as string;
   const sqrtPriceX96 = BigInt(rawSlot0) & ((1n << 160n) - 1n);
   const poolInitialized = sqrtPriceX96 !== 0n;
-  if (poolInitialized && sqrtPriceX96 !== expectedSqrtPriceX96) {
-    throw new Error(
-      `Pool opening price mismatch. expected=${expectedSqrtPriceX96} actual=${sqrtPriceX96}`,
-    );
-  }
+  const { drifted: priceDrifted } = assertPoolOpeningIntegrity(
+    poolInitialized,
+    expectedSqrtPriceX96,
+    sqrtPriceX96,
+  );
 
   let lpOwner = "burned-or-missing";
   let lpLiquidity = 0n;
@@ -195,7 +225,11 @@ async function main() {
   console.log("pool initialized:  ", poolInitialized);
   console.log("registered poolId: ", registeredPool);
   console.log("bound sqrtPriceX96:", expectedSqrtPriceX96.toString());
-  console.log("live sqrtPriceX96: ", sqrtPriceX96.toString());
+  console.log(
+    "live sqrtPriceX96: ",
+    sqrtPriceX96.toString(),
+    priceDrifted ? "(moved from opening price — pool has traded)" : "(still at opening price)",
+  );
   console.log("vault engine:      ", engine);
   console.log("vault compounder:  ", compounder);
   console.log("vault routeMode:   ", routeMode.toString());

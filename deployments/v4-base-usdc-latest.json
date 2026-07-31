@@ -1,6 +1,6 @@
 {
   "generatedAt": "2026-07-28T00:00:00+03:00",
-  "statusAsOf": "2026-07-30",
+  "statusAsOf": "2026-07-31",
   "snapshotSemantics": "Stage A transaction evidence is preserved in v4-base-usdc-2026-07-26-controlled-stage-a.json. Fields below add later verified deployment events without rewriting that original evidence.",
   "network": "base",
   "chainId": "8453",
@@ -31,11 +31,11 @@
   "protocolDepthUsdc": "300000000",
   "emissionReserveAmount": "650000000000000000000000",
   "treasuryTokenBalanceAtStageA": "350000000000000000000000",
-  "lpTokenId": "0",
+  "lpTokenId": "2884402",
   "poolRegistered": true,
-  "poolInitialized": false,
-  "liquiditySeeded": false,
-  "liquidityStackStatus": "quarantined-do-not-initialize-or-seed",
+  "poolInitialized": true,
+  "liquiditySeeded": true,
+  "liquidityStackStatus": "replacement-pool-initialized-seeded-smoke-tested",
   "replacementLiquidityTrioRequired": false,
   "replacementScope": [
     "NARALiquidityGrowthVault",
@@ -59,9 +59,9 @@
     "openingPriceUsdPerNara": "0.005",
     "impliedFdvUsd": "5000"
   },
-  "activationState": "replacement-trio-deployed-pool-unregistered",
+  "activationState": "market-active-product-blocked-automation-fee-baskets-custody",
   "launchFrontendScope": {
-    "active": "apps/nara-baskets",
+    "active": "../nara-category-baskets-v1/app",
     "activeStatus": "preview",
     "deferred": [
       "apps/nara-lockboard"
@@ -80,7 +80,37 @@
     "create2HookDeployer": "0xa6Ef629291170B80e5f23Ab14dB0B3620062f016",
     "poolId": "0x221d377779f958eadf35122810743a6ba11e9079b0b6bd05234ea9500b227318",
     "owner": "0xd65c0e390Dc187A22c52c03816591CC736C0D755",
-    "poolRegistered": false
+    "poolRegistered": true,
+    "poolInitialized": true,
+    "liquiditySeeded": true,
+    "lpTokenId": "2884402",
+    "compounderFrozen": true,
+    "compounderPositionTokenId": "2885838",
+    "compounderPositionLiquidity": "441516751441525",
+    "totalNaraCompounded": "10497819596280213570307",
+    "totalUsdcCompounded": "289617384"
+  },
+  "poolLaunchEvidence": "v4-pool-launch-2026-07-30.json",
+  "engineOperationalState": {
+    "verificationBlock": 49363662,
+    "currentEpoch": "478",
+    "settledEpoch": "475",
+    "backlog": "3",
+    "maxJitAdvance": "8",
+    "jitUserMutationsAvailable": true,
+    "zeroBacklogPathsAvailable": false,
+    "rewardReserveAvailable": "650000000000000000000000",
+    "localEmissionReserve": "0",
+    "directUntrackedEngineNara": "0",
+    "recoveryStatus": "original-backlog-cleared-scheduled-maintainer-pending",
+    "finalRecoveryTransaction": "0xbef876cf4c0c23972bd54b508563550522d6a3bc79eacb56cdb01f58a42da7f"
+  },
+  "operationsKeeper": {
+    "address": "0xa4B4B00f067cB4f5607c9a7298827fa1C1315aB7",
+    "authorizationTransaction": "0x27d87f0c216133c590e49e59980b208d22726c5b6522d9572a9f16cff8f33cbd",
+    "authorizationBlock": 49363406,
+    "authorized": true,
+    "workflowState": "configured-disabled-pending-merge-and-manual-validation"
   },
   "custodySafe": "0xd65c0e390Dc187A22c52c03816591CC736C0D755",
   "custodyEvidence": "v4-custody-2026-07-30.json",

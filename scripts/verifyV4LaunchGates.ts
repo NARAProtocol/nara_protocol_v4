@@ -63,8 +63,11 @@ const NFT_ABI = [
 const ENGINE_ABI = [
   ...ACCESS_ABI,
   "function rewardReserve() view returns (address)",
+  "function rewardReserveAvailable() view returns (uint256)",
   "function bondVault() view returns (address)",
   "function treasury() view returns (address)",
+  "function currentEpoch() view returns (uint64)",
+  "function epochState() view returns (tuple(uint64 epoch,uint64 timestamp,uint256 circulatingSupply,uint256 totalLocked,uint256 activeTotalWeight,uint256 weightedLockShareWad,uint256 stressWad,uint256 betaWad,uint256 horizon,uint256 retentionWad,uint256 baseEmission,uint256 emission,uint256 admittedSupply,uint256 distributedNara,uint256 distributedEth,uint256 treasuryAmount,uint256 warmupFactorWad,uint256 bootstrapWeight,uint256 heartbeat))",
 ];
 const RESERVE_ABI = [
   ...ACCESS_ABI,
@@ -125,6 +128,16 @@ export function activeLegacyRoleHolders(
     if (key !== safeKey) active.set(key, account);
   }
   return [...active.values()].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+}
+
+export function launchEpochBacklogAcceptable(
+  currentEpoch: bigint,
+  settledEpoch: bigint,
+  maxBacklog = 1n,
+): { ok: boolean; backlog: bigint } {
+  if (settledEpoch > currentEpoch) return { ok: false, backlog: 0n };
+  const backlog = currentEpoch - settledEpoch;
+  return { ok: backlog <= maxBacklog, backlog };
 }
 
 export async function rewardNotifierHistoryLogs(
@@ -287,6 +300,25 @@ async function main() {
     ];
   });
 
+  // A backlog above the configured launch tolerance is an availability failure.
+  // The default permits one boundary epoch so a 15-minute maintainer is not
+  // spuriously red during the few seconds around an epoch transition.
+  await gate("OPS engine epoch backlog within launch tolerance", [engineA], async () => {
+    const maxBacklogRaw = process.env.V4_MAX_LAUNCH_EPOCH_BACKLOG?.trim() || "1";
+    if (!/^\d+$/.test(maxBacklogRaw)) return [false, "V4_MAX_LAUNCH_EPOCH_BACKLOG must be a non-negative integer"];
+    const maxBacklog = BigInt(maxBacklogRaw);
+    const e = new ethers.Contract(engineA!, ENGINE_ABI, provider);
+    const [currentEpoch, state] = await Promise.all([
+      e.currentEpoch() as Promise<bigint>,
+      e.epochState() as Promise<{ epoch: bigint }>,
+    ]);
+    const result = launchEpochBacklogAcceptable(currentEpoch, state.epoch, maxBacklog);
+    return [
+      result.ok,
+      `current=${currentEpoch} settled=${state.epoch} backlog=${result.backlog} max=${maxBacklog}`,
+    ];
+  });
+
   // AC-07: deployed-engine ERC-20 rewards remain disabled. Post-notify extends can make
   // activeTotalWeight exceed the frozen token-reward claim basis, so no launch component
   // may retain REWARD_NOTIFIER_ROLE.
@@ -418,6 +450,11 @@ async function main() {
     const nara = new ethers.Contract(naraA!, ERC20_ABI, provider);
     const bal = (await nara.balanceOf(reserveA!)) as bigint;
     return [bal > 0n, `reserve NARA balance=${ethers.formatUnits(bal, 18)}`];
+  });
+  await gate("DEP-02 reward reserve available to engine", [engineA], async () => {
+    const e = new ethers.Contract(engineA!, ENGINE_ABI, provider);
+    const available = (await e.rewardReserveAvailable()) as bigint;
+    return [available > 0n, `engine rewardReserveAvailable=${ethers.formatUnits(available, 18)} NARA`];
   });
 
   // Bond vault wired to engine + market = bond depository.
