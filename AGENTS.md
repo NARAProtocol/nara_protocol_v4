@@ -13,8 +13,11 @@ On **2026-05-27** the project committed to a clean fresh start on the v4 stack.
 - **Active token:** the fresh `NARAToken` is deployed on Base at
   `0x65E247AA3aa9C0131b2984b894c3D24c41341D7A`. The v3 mainnet token
   `0xE444de61752bD13D1D37Ee59c31ef4e489bd727C` is **retired**.
-- **Deployment state:** Stage A is already deployed. The registered NARA/USDC
-  pool is uninitialized and has no liquidity. Do not repeat the core deployment.
+- **Deployment state:** Stage A is deployed. The replacement NARA/USDC pool is
+  initialized and seeded, and the replacement liquidity trio is configured
+  under Safe custody. Do not repeat the core or pool deployment. Read
+  `docs/CURRENT_STATE.md` for exact addresses, transaction evidence, and the
+  distinction between the quarantined Stage A pool and the active replacement.
 - **Launch scope:** NARA Baskets only. Lockboard and composability are deferred;
   Lotto and Arena are retired.
 - **Other retired Base mainnet addresses** are listed in `archive/legacy-v3/README.md`. Do not surface them as "live" or "current" in any output.
@@ -36,7 +39,11 @@ and handoff requirements.
 
 - Do not reintroduce mining.
 - Do not reintroduce jackpot/lotto behavior.
-- Do not reintroduce old keeper/cron assumptions.
+- Do not reintroduce old v3 keeper/cron assumptions. This does not mean v4 is
+  indefinitely keeperless: user calls can advance at most eight stale epochs.
+  The active guarded v4 maintainer is
+  `.github/workflows/v4-epoch-maintainer.yml`; read `docs/CURRENT_STATE.md`
+  before changing, disabling, or making availability claims about it.
 - Do not edit `contracts/v4/NARAEngine.sol` unless the user explicitly orders
   that exact core edit.
 - Do not edit `contracts/v4/NARAPositionNFTV4.sol` unless the user explicitly
