@@ -545,8 +545,16 @@ Current outstanding state:
   Keeper authorization transaction
   `0x27d87f0c216133c590e49e59980b208d22726c5b6522d9572a9f16cff8f33cbd`
   set `compoundKeeper(0xa4B4B00f067cB4f5607c9a7298827fa1C1315aB7)=true`
-  at block `49363406`. The scheduled workflow is still disabled pending merge
-  and its first reviewed execute-mode run.
+  at block `49363406`. The protected operations release merged as verified
+  commit `0a3b16961ab66a7b870bbfd52cd0b5a5049ddfdf`. A reviewed read-only
+  workflow run found a nine-epoch backlog; execute run `30654484536` advanced
+  it to zero in transaction
+  `0x906296a6041117a3ce1b895de291a221dcc5caad406f190ca548b7bf52854091`
+  at block `49366244`. Independent post-state run `30654597591` then confirmed
+  current/settled epoch `484/484`, the external `650,000 NARA` reserve, frozen
+  compounder, authorized keeper, and no liquidity transaction required. The
+  30-minute schedule was enabled at `2026-07-31T18:19:32Z`; its 48-hour soak
+  remains in progress.
   Position NFT, allocations, router/lenses, bonds, and composability are not deployed.
 - `../nara-category-baskets-v1/app/` contains the publishable launch frontend but remains
   fail-closed in preview until verified manager/adapter manifests exist.
