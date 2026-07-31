@@ -9,6 +9,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
+import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 
 import {EngineConfig} from "./NARAEngineTypes.sol";
 
@@ -539,8 +540,33 @@ contract NARABondDepositoryV4NFT is AccessControl, Pausable, ReentrancyGuard, EI
                 termsActivatedAt
             )
         );
-        address signer = ECDSA.recover(_hashTypedDataV4(structHash), signature);
-        if (!hasRole(PRICE_SIGNER_ROLE, signer)) revert InvalidQuote();
+        bytes32 digest = _hashTypedDataV4(structHash);
+        bool valid;
+
+        if (signature.length == 65) {
+            (address signer, ECDSA.RecoverError error,) =
+                ECDSA.tryRecoverCalldata(digest, signature);
+            valid =
+                error == ECDSA.RecoverError.NoError &&
+                hasRole(PRICE_SIGNER_ROLE, signer);
+        } else if (signature.length > 20) {
+            // Contract-wallet quotes use `signer address || ERC-1271 signature`.
+            // The existing 65-byte EOA format remains unchanged.
+            address signer;
+            assembly ("memory-safe") {
+                signer := shr(96, calldataload(signature.offset))
+            }
+            valid =
+                signer.code.length > 0 &&
+                hasRole(PRICE_SIGNER_ROLE, signer) &&
+                SignatureChecker.isValidSignatureNowCalldata(
+                    signer,
+                    digest,
+                    signature[20:]
+                );
+        }
+
+        if (!valid) revert InvalidQuote();
     }
 
     function _computePayout(uint256 bondEthIn, BondTerms memory t) internal pure returns (uint256) {

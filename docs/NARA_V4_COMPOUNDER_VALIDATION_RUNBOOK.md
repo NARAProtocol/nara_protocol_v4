@@ -1,0 +1,57 @@
+# NARA v4 Compounder Validation Runbook
+
+Change-ID: `NARA-20260731-compounder-validation`
+
+The replacement vault is in `Liquidity` mode and holds collected NARA and USDC
+fees, but its compounder is not frozen. Final launch gates correctly remain
+blocked until one live compound is verified and the Safe performs the separate
+one-way freeze.
+
+## Build The Validation Transaction
+
+```powershell
+npm run build:v4:compounder-validation
+```
+
+The builder:
+
+- checks Base chain ID and every vault/compounder/token/Safe binding;
+- rejects a pending compounder recovery;
+- reads both vault balances;
+- simulates `compoundAll` from the Safe;
+- sets `minLiquidityAdded` to 99% of the simulated result; and
+- writes `deployments/v4-compounder-validation-batch.json`.
+
+It does not send a transaction. Review the deadline and simulation again just
+before Safe execution; regenerate the file if the deadline expires.
+
+## Verify The Compound
+
+After the Safe transaction confirms, record its hash and block, then verify:
+
+```text
+vault totalTokenCompounded increased by the exact requested NARA amount
+vault totalBaseCompounded increased by the exact requested USDC amount
+compounder positionTokenId is nonzero
+PositionManager ownerOf(positionTokenId) is the compounder
+PositionManager getPositionLiquidity(positionTokenId) is nonzero
+compounder totalLiquidityAdded is nonzero
+banked balances plus added balances reconcile to the vault inputs
+compounder pendingRecovery.kind is zero
+```
+
+## Build The Permanent Freeze
+
+Only after the preceding evidence is on-chain:
+
+```powershell
+npm run build:v4:compounder-validation -- --freeze
+```
+
+The builder refuses to create the freeze batch unless it can read all required
+position evidence. It then simulates `freezeCompounder()` from the Safe and
+writes `deployments/v4-compounder-freeze-batch.json`.
+
+`freezeCompounder()` is permanent. The validation and freeze are deliberately
+separate transactions so a failing or surprising compound cannot be hidden by
+an atomic batch.

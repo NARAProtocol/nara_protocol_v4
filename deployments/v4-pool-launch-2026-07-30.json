@@ -1,0 +1,87 @@
+{
+  "changeId": "NARA-20260731-epoch-recovery",
+  "evidenceState": "configured",
+  "network": "base",
+  "chainId": 8453,
+  "originReleaseCommit": "3215b69a1154b9c30957cd8d875b636dedc9d0ca",
+  "poolLaunch": {
+    "transactionHash": "0x91638d26adbc301e715f76ea2c3e8e6bf6727590f4bcd46416dfbeb456740c8c",
+    "blockNumber": 49328483,
+    "blockHash": "0x1f829e363ef42faed120df03a80e78f0256587e04ec45bcef05148865d5cdd72",
+    "timestamp": "2026-07-30T21:18:33Z",
+    "status": 1,
+    "safe": "0xd65c0e390Dc187A22c52c03816591CC736C0D755",
+    "executor": "0x42365cAE9abB6cb357dd485734CAd75a2d3c6664",
+    "gasUsed": "692359"
+  },
+  "activeLiquidityStack": {
+    "nara": "0x65E247AA3aa9C0131b2984b894c3D24c41341D7A",
+    "usdc": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    "engine": "0xbC2492BA73dE35d1114b5c18d7db633aca8963c9",
+    "vault": "0x2dfE578C4342750Cd8fE618605eeB0E9C00Ba94d",
+    "hook": "0xA1c6a86d6F7B83deE32D7bc4aA6D35C14A8e6088",
+    "compounder": "0xE28C05cC6ad9f2C48DBB7eCCD44b323370586C98",
+    "poolId": "0x221d377779f958eadf35122810743a6ba11e9079b0b6bd05234ea9500b227318",
+    "poolRegistered": true,
+    "poolInitialized": true,
+    "liquiditySeeded": true,
+    "boundOpeningSqrtPriceX96": "5602277097478613991873",
+    "lpTokenId": "2884402",
+    "lpOwner": "0xd65c0e390Dc187A22c52c03816591CC736C0D755",
+    "lpLiquidity": "4242640687119285",
+    "compounderFrozen": false
+  },
+  "postLaunchVerification": {
+    "command": "npm run verify:v4:preflight",
+    "blockRange": [49358638, 49358654],
+    "result": "passed",
+    "liveSqrtPriceX96": "10286818103701060489888",
+    "protocolDepthUsdc": "300000000",
+    "protocolDepthNara": "60000000000000000000000",
+    "vaultUsdcBalance": "289617384",
+    "vaultNaraBalance": "2296964487140051923556",
+    "vaultUsdcPoolFeesRecorded": "289617384",
+    "vaultNaraPoolFeesRecorded": "2296964487140051923556"
+  },
+  "smokeTransactions": [
+    {
+      "kind": "buy",
+      "transactionHash": "0xc8652610b74bf25662f8870206bb7edb6f4818d00e8b2134a17ac771f5194a1a",
+      "blockNumber": 49330472,
+      "blockHash": "0x6638cbd36162cb62613abf96a7b0d7b2ff9028852d8e2a5339117b0534a8f89d",
+      "timestamp": "2026-07-30T22:24:51Z",
+      "status": 1,
+      "gasUsed": "202455"
+    },
+    {
+      "kind": "sell",
+      "transactionHash": "0x4031f5e4fb57dfabbc6b07633b3b9892544bceebc25c196b360b542793959380",
+      "blockNumber": 49330481,
+      "blockHash": "0xe363b7dace44a82a9ca91e45030664ef39d4783e3352c737c98ee05aaf0df00a",
+      "timestamp": "2026-07-30T22:25:09Z",
+      "status": 1,
+      "gasUsed": "193519"
+    }
+  ],
+  "engineOperationalGate": {
+    "verificationBlock": 49358447,
+    "currentEpoch": "466",
+    "settledEpoch": "0",
+    "backlog": "466",
+    "maxJitAdvance": "8",
+    "userMutationsAvailable": false,
+    "rewardReserveAvailable": "650000000000000000000000",
+    "localEmissionReserve": "0",
+    "directUntrackedEngineNara": "0",
+    "note": "The external sealed reserve is available through rewardReserveAvailable(); syncEmissionReserve() is not required when direct untracked engine NARA is zero. Epoch recovery and sustained keeper evidence remain required."
+  },
+  "availability": "blocked",
+  "unresolvedGates": [
+    "Clear the epoch backlog and sustain the permissionless maintainer within tolerance.",
+    "Execute and verify one validation compound, then permanently freeze the compounder.",
+    "Execute the reviewed fee-curve update through the Safe and its one-day timelock.",
+    "Complete basket deployment, end-to-end smoke evidence, frontend integration, and soak.",
+    "Resolve or formally amend the documented custody deviations."
+  ],
+  "onchainWritesByThisChange": "none"
+}

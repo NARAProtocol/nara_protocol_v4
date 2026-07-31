@@ -4,11 +4,16 @@ pragma solidity 0.8.34;
 import {IHooks} from "@uniswap/v4-periphery/lib/v4-core/src/interfaces/IHooks.sol";
 import {PoolKey} from "@uniswap/v4-periphery/lib/v4-core/src/types/PoolKey.sol";
 import {Currency} from "@uniswap/v4-periphery/lib/v4-core/src/types/Currency.sol";
+import {PoolId} from "@uniswap/v4-periphery/lib/v4-core/src/types/PoolId.sol";
 import {SwapParams} from "@uniswap/v4-periphery/lib/v4-core/src/types/PoolOperation.sol";
 import {BeforeSwapDelta} from "@uniswap/v4-periphery/lib/v4-core/src/types/BeforeSwapDelta.sol";
 
 contract MockV4PoolManager {
+    bytes32 internal constant POOLS_SLOT = bytes32(uint256(6));
+    uint256 internal constant LIQUIDITY_OFFSET = 3;
+
     mapping(address currency => mapping(address to => uint256 amount)) public taken;
+    mapping(bytes32 slot => bytes32 value) internal poolWords;
     bytes4 public lastBeforeSwapSelector;
     BeforeSwapDelta public lastBeforeSwapDelta;
     uint24 public lastBeforeSwapFeeOverride;
@@ -34,6 +39,38 @@ contract MockV4PoolManager {
         lastBeforeSwapDelta = delta;
         lastBeforeSwapFeeOverride = feeOverride;
         return (selector, delta, feeOverride);
+    }
+
+    /// @dev Executes every callback in one transaction so tests exercise one
+    /// actual block-flow accumulator instead of separate automined blocks.
+    function callBeforeSwaps(
+        IHooks hook,
+        PoolKey calldata key,
+        SwapParams[] calldata params,
+        bytes calldata data
+    ) external {
+        uint256 length = params.length;
+        for (uint256 i; i < length; ) {
+            (bytes4 selector, BeforeSwapDelta delta, uint24 feeOverride) =
+                hook.beforeSwap(msg.sender, key, params[i], data);
+            lastBeforeSwapSelector = selector;
+            lastBeforeSwapDelta = delta;
+            lastBeforeSwapFeeOverride = feeOverride;
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    /// @dev Programs the two Pool.State words read by StateLibrary.
+    function setPoolState(PoolId poolId, uint160 sqrtPriceX96, uint128 liquidity) external {
+        bytes32 stateSlot = keccak256(abi.encodePacked(PoolId.unwrap(poolId), POOLS_SLOT));
+        poolWords[stateSlot] = bytes32(uint256(sqrtPriceX96));
+        poolWords[bytes32(uint256(stateSlot) + LIQUIDITY_OFFSET)] = bytes32(uint256(liquidity));
+    }
+
+    function extsload(bytes32 slot) external view returns (bytes32) {
+        return poolWords[slot];
     }
 
     function take(Currency currency, address to, uint256 amount) external {

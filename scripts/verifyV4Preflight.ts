@@ -15,12 +15,63 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 dotenv.config({ path: resolve(__dirname, "../.env") });
 
+export function requireExpectedPoolRegistrationState(
+  preSeed: boolean,
+  poolRegistered: boolean,
+  registeredPool: string,
+  configuredPool: string,
+  expectedSqrtPriceX96: bigint,
+): void {
+  if (preSeed) {
+    if (poolRegistered || registeredPool !== ethers.ZeroHash || expectedSqrtPriceX96 !== 0n) {
+      throw new Error("Pre-seed hook must remain unregistered until the atomic Safe launch batch");
+    }
+    return;
+  }
+  if (!poolRegistered) throw new Error("Hook pool is not registered");
+  if (registeredPool.toLowerCase() !== configuredPool.toLowerCase()) {
+    throw new Error(`Registered poolId mismatch. expected=${configuredPool} actual=${registeredPool}`);
+  }
+  if (expectedSqrtPriceX96 === 0n) throw new Error("Hook opening price is not bound");
+}
+
+/**
+ * PS-05 opening-price integrity.
+ *
+ * The opening price is enforced on-chain, not here: `registerPool` is one-shot and
+ * rejects a zero price, and `_beforeInitialize` reverts with
+ * `InvalidInitializationPrice` unless `sqrtPriceX96 == expectedSqrtPriceX96`. So an
+ * initialized pool plus a nonzero bound price *proves* the pool opened at that price.
+ *
+ * Live price is therefore NOT compared to the bound price. Once the pool trades, the
+ * two legitimately diverge; asserting equality would permanently fail every post-seed
+ * gate the moment anyone swaps. Drift is reported, never fatal.
+ *
+ * The one genuine anomaly is an initialized pool with no bound price — that would mean
+ * this hook did not gate initialization, so it is fatal.
+ */
+export function assertPoolOpeningIntegrity(
+  poolInitialized: boolean,
+  boundSqrtPriceX96: bigint,
+  liveSqrtPriceX96: bigint,
+): { drifted: boolean } {
+  if (!poolInitialized) return { drifted: false };
+  if (boundSqrtPriceX96 === 0n) {
+    throw new Error(
+      "Pool is initialized but the hook has no bound opening price. " +
+      "Initialization was not gated by this hook — investigate before trusting this pool.",
+    );
+  }
+  return { drifted: liveSqrtPriceX96 !== boundSqrtPriceX96 };
+}
+
 const HOOK_ABI = [
   "function token() view returns (address)",
   "function base() view returns (address)",
   "function vault() view returns (address)",
   "function registeredPoolId() view returns (bytes32)",
   "function poolRegistered() view returns (bool)",
+  "function expectedSqrtPriceX96() view returns (uint160)",
   "function protocolDepth(address) view returns (uint256)",
   "function buyCurve() view returns (uint32,uint32,uint32,uint16,uint16,uint16,uint16,uint16)",
   "function sellCurve() view returns (uint32,uint32,uint32,uint16,uint16,uint16,uint16,uint16)",
@@ -90,6 +141,7 @@ async function main() {
     hookVault,
     registeredPool,
     poolRegistered,
+    expectedSqrtPriceX96,
     baseDepth,
     tokenDepth,
     buyCurve,
@@ -110,6 +162,7 @@ async function main() {
     hook.vault() as Promise<string>,
     hook.registeredPoolId() as Promise<string>,
     hook.poolRegistered() as Promise<boolean>,
+    hook.expectedSqrtPriceX96() as Promise<bigint>,
     hook.protocolDepth(config.base) as Promise<bigint>,
     hook.protocolDepth(config.token) as Promise<bigint>,
     hook.buyCurve(),
@@ -133,12 +186,13 @@ async function main() {
   assertEqual("vault base", vaultBase, config.base);
   assertEqual("vault hook", vaultHook, config.hook);
 
-  if (!poolRegistered) {
-    throw new Error("Hook pool is not registered");
-  }
-  if (registeredPool.toLowerCase() !== config.poolId) {
-    throw new Error(`Registered poolId mismatch. expected=${config.poolId} actual=${registeredPool}`);
-  }
+  requireExpectedPoolRegistrationState(
+    preSeed,
+    poolRegistered,
+    registeredPool,
+    config.poolId,
+    expectedSqrtPriceX96,
+  );
 
   // Uniswap v4 PoolManager stores pools at mapping slot 6. A zero sqrt price
   // means the key is registered in our hook but not initialized in PoolManager.
@@ -151,6 +205,11 @@ async function main() {
   const rawSlot0 = await poolManager.extsload(poolStateSlot) as string;
   const sqrtPriceX96 = BigInt(rawSlot0) & ((1n << 160n) - 1n);
   const poolInitialized = sqrtPriceX96 !== 0n;
+  const { drifted: priceDrifted } = assertPoolOpeningIntegrity(
+    poolInitialized,
+    expectedSqrtPriceX96,
+    sqrtPriceX96,
+  );
 
   let lpOwner = "burned-or-missing";
   let lpLiquidity = 0n;
@@ -165,6 +224,12 @@ async function main() {
   console.log("pool registered:   ", poolRegistered);
   console.log("pool initialized:  ", poolInitialized);
   console.log("registered poolId: ", registeredPool);
+  console.log("bound sqrtPriceX96:", expectedSqrtPriceX96.toString());
+  console.log(
+    "live sqrtPriceX96: ",
+    sqrtPriceX96.toString(),
+    priceDrifted ? "(moved from opening price — pool has traded)" : "(still at opening price)",
+  );
   console.log("vault engine:      ", engine);
   console.log("vault compounder:  ", compounder);
   console.log("vault routeMode:   ", routeMode.toString());
@@ -202,10 +267,12 @@ async function main() {
     notices.push("LP NFT is intentionally absent before liquidity seed");
   }
   if (baseDepth > 0n || tokenDepth > 0n) {
-    notices.push("manual protocolDepth fallback is populated");
+    notices.push("configured protocolDepth fee basis is populated");
   }
   if (preSeed && poolInitialized) {
-    findings.push("pool is already initialized during a pre-seed wiring check");
+    findings.push("PoolManager pool must remain uninitialized before the atomic Safe launch batch");
+  } else if (preSeed) {
+    notices.push("hook and PoolManager pool are intentionally unregistered and uninitialized before atomic launch");
   }
   if (!preSeed && !poolInitialized) {
     findings.push("PoolManager pool is not initialized");
@@ -233,7 +300,9 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  console.error(err.message ?? err);
-  process.exitCode = 1;
-});
+if (process.argv[1] && resolve(process.argv[1]) === __filename) {
+  main().catch((err) => {
+    console.error(err.message ?? err);
+    process.exitCode = 1;
+  });
+}

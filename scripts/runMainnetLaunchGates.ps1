@@ -91,7 +91,7 @@ try {
       throw "Gate failed: V4_ALLOW_RETIRED_DEFAULTS=1 is recovery-only and cannot be used for launch gates."
     }
     Invoke-Gate "read-only v4 preflight" @("npm", "run", "verify:v4:preflight")
-    Invoke-Gate "v4 launch-gate verification (audit gates)" @("npm", "run", "verify:v4:launch-gates")
+    Invoke-Gate "v4 launch-gate verification (baskets-only final gates)" @("npm", "run", "verify:v4:launch-gates:baskets")
   }
 
   Write-Host ""

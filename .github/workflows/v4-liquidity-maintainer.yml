@@ -1,0 +1,52 @@
+name: NARA v4 liquidity maintainer
+
+on:
+  workflow_dispatch:
+    inputs:
+      execute:
+        description: "Submit a restricted compound transaction when the threshold is met"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nara-v4-liquidity-maintainer
+  cancel-in-progress: false
+
+jobs:
+  maintain:
+    runs-on: ubuntu-slim
+    timeout-minutes: 10
+    env:
+      BASE_RPC_URL: ${{ secrets.BASE_RPC_URL }}
+      V4_NARA_TOKEN: ${{ vars.V4_NARA_TOKEN }}
+      V4_BASE_TOKEN: ${{ vars.V4_BASE_TOKEN }}
+      V4_VAULT: ${{ vars.V4_VAULT }}
+      V4_HOOK: ${{ vars.V4_HOOK }}
+      V4_ENGINE: ${{ vars.V4_ENGINE }}
+      V4_POOL_ID: ${{ vars.V4_POOL_ID }}
+      V4_LP_TOKEN_ID: ${{ vars.V4_LP_TOKEN_ID }}
+      V4_COMPOUNDER: ${{ vars.V4_COMPOUNDER }}
+      V4_SAFE: ${{ vars.V4_SAFE }}
+      V4_COMPOUND_KEEPER_ADDRESS: ${{ vars.V4_COMPOUND_KEEPER_ADDRESS }}
+      V4_COMPOUND_MIN_LIQUIDITY_USDC: ${{ vars.V4_COMPOUND_MIN_LIQUIDITY_USDC }}
+      V4_OPERATIONS_KEEPER_PRIVATE_KEY: ${{ secrets.V4_OPERATIONS_KEEPER_PRIVATE_KEY }}
+      V4_COMPOUND_ALERT_WEBHOOK_URL: ${{ secrets.V4_COMPOUND_ALERT_WEBHOOK_URL }}
+      V4_COMPOUND_HEARTBEAT_URL: ${{ secrets.V4_COMPOUND_HEARTBEAT_URL }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+      - name: Read-only liquidity check
+        if: github.event_name == 'workflow_dispatch' && inputs.execute != true
+        run: npm run maintain:v4:liquidity
+      - name: Compound collected fees
+        if: inputs.execute == true
+        run: npm run maintain:v4:liquidity -- --execute

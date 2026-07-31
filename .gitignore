@@ -17,7 +17,8 @@ archive/
 # dev / analysis artifacts (regenerated; not source)
 audit-runs/
 broadcast/
-deployments/
+deployments/*
+!deployments/v4-pool-launch-2026-07-30.json
 slither-reports/
 aderyn-reports/
 crytic-export/
@@ -57,3 +58,16 @@ docs/NARA_V4_BASKETS_LAUNCH_STRATEGY.md
 docs/NARA_V4_BASKETS_MAINNET_READINESS.md
 docs/NARA_V4_BASKETS_INCIDENT_RESPONSE_RUNBOOK.md
 docs/research/
+
+# Scratch build/test output dumps (never part of the release record)
+compile_*.txt
+test_*.txt
+final_*.txt
+deploy_*output.txt
+audit_final.txt
+scan_output.txt
+svg_debug.txt
+output.txt
+roleGrantBatch.json
+roleRenounceBatch.json
+roleTransferBatch.json

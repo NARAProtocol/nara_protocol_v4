@@ -9,6 +9,9 @@ import {ILiquidityCompounder} from "../NARALiquidityGrowthVault.sol";
 contract MockLiquidityCompounder is ILiquidityCompounder {
     using SafeERC20 for IERC20;
 
+    address public immutable nara;
+    address public immutable usdc;
+    address public immutable vault;
     address public lastCaller;
     address public lastToken;
     address public lastBase;
@@ -26,6 +29,12 @@ contract MockLiquidityCompounder is ILiquidityCompounder {
         uint256 baseAmount,
         uint256 liquidityAdded
     );
+
+    constructor(address nara_, address usdc_, address vault_) {
+        nara = nara_;
+        usdc = usdc_;
+        vault = vault_;
+    }
 
     function setSkipPulls(bool skipPulls_) external {
         skipPulls = skipPulls_;
