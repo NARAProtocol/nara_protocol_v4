@@ -6,14 +6,15 @@ Origin remote: `NARAProtocol/nara_protocol_v4`
 
 Origin evidence: deployed engine source and ABI commit
 `3215b69a1154b9c30957cd8d875b636dedc9d0ca`; sanitized launch and replacement
-deployment manifests in `deployments/`. Record the immutable protected-branch
-merge commit in downstream handoffs after this release pull request merges.
+deployment manifests in `deployments/`; protected operations source release
+commit `0a3b16961ab66a7b870bbfd52cd0b5a5049ddfdf`. Use that immutable merge commit
+for downstream handoffs.
 
-Evidence state: engine backlog recovered; emission reserve synchronized;
+Evidence state: engine backlog recovered; external reward reserve available;
 replacement liquidity trio deployed, configured, validation-compounded, and
 frozen; dedicated compound keeper authorized; recurring operations workflow
-implemented and tested but deliberately disabled pending its first reviewed
-manual execute-mode run.
+merged, manually exercised in read-only and execute modes, and enabled on its
+30-minute schedule. The 48-hour soak remains in progress.
 
 Changed contracts/interfaces: the repository now includes the hardened active
 v4 source corresponding to the deployed replacement stack. This pull request
@@ -49,10 +50,11 @@ The keeper has no owner, parameter, treasury, Safe, recovery, or arbitrary
 withdrawal authority. Its vault authorization permits `compound` operations in
 the current `Liquidity` route mode; route or split behavior remains controlled
 by the Safe through the vault configuration. Execution is guarded by the
-repository variable `V4_OPERATIONS_KEEPER_ENABLED`, currently `false`.
+repository variable `V4_OPERATIONS_KEEPER_ENABLED`, enabled at
+`2026-07-31T18:19:32Z` after the reviewed manual gates passed.
 
-Commands and results at release candidate `223d524` before this documentation
-correction:
+Commands and results for the exact release tree later merged as
+`0a3b16961ab66a7b870bbfd52cd0b5a5049ddfdf`:
 
 - `npm ci`: passed;
 - `npm run verify:public`: passed, 251 files inspected;
@@ -70,18 +72,39 @@ correction:
   authorization and frozen compounder, and correctly planned no transaction
   while vault balances were zero.
 
-On-chain or production writes by this pull request: none. The evidence above
-records separately authorized operator and Safe transactions performed before
-publication.
+Activation evidence:
+
+- protected PR `#7` merged as verified commit
+  `0a3b16961ab66a7b870bbfd52cd0b5a5049ddfdf` after every required CI check
+  passed;
+- read-only workflow run `30654242972` found current epoch `484`, settled epoch
+  `475`, and backlog `9`; liquidity was below its threshold;
+- reviewed execute workflow run `30654484536` submitted only
+  `advanceEpochs(9)` in transaction
+  `0x906296a6041117a3ce1b895de291a221dcc5caad406f190ca548b7bf52854091`;
+  the transaction succeeded at Base block `49366244`, used `465,698` gas, and
+  paid `0.0000027971572256 ETH`;
+- the execute run's liquidity stage submitted no transaction because the vault
+  balances were below the configured `5 USDC` depth threshold;
+- independent post-state run `30654597591` confirmed current/settled epoch
+  `484/484`, backlog `0`, external reserve `650,000 NARA`, no untracked direct
+  reserve, frozen compounder, authorized keeper, and compounder position NFT
+  `2885838`;
+- `V4_OPERATIONS_KEEPER_ENABLED=true` activated the 30-minute schedule at
+  `2026-07-31T18:19:32Z`.
+
+On-chain or production writes by the source-release pull request: none. After
+merge, the separately authorized manual activation run submitted the single
+permissionless epoch-recovery transaction recorded above. Enabling the
+repository variable was a separate operations configuration write.
 
 Unresolved risks and next gates:
 
-- merge through protected-branch CI;
-- dispatch the published workflow in read-only mode and inspect its logs;
-- dispatch one reviewed execute-mode run, confirm epoch and liquidity
-  post-state, then enable the schedule;
-- observe at least 48 hours of successful maintenance and alerting before
-  describing the operations path as activated;
+- observe at least 48 hours of successful scheduled maintenance before
+  describing the operations path as fully soaked;
+- configure optional external heartbeat/alert webhook secrets if independent
+  dead-man notification is required; GitHub run history currently provides the
+  primary operations record;
 - finish the two-stage Safe/timelock fee-policy update separately;
 - custody remains one 2-of-3 Safe rather than the documented two-Safe 3-of-5
   target, and the treasury lock commitment remains unexecuted;
