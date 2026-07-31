@@ -288,6 +288,47 @@ describe("NARAToken v4", function () {
             ).to.be.revertedWithCustomError(token, "ERC3156ExceededMaxLoan")
               .withArgs(MAX_FLASH_LOAN);
         });
+
+        it("enforces the cap across recursive flash loans", async function () {
+            const { ethers, token, treasury } = await deployTokenFixture();
+            const borrower = await ethers.deployContract(
+                "MockRecursiveFlashBorrower",
+                [await token.getAddress()],
+            );
+            await borrower.waitForDeployment();
+
+            const outer = 60_000n * ONE;
+            const nested = 40_000n * ONE;
+            const totalFee = ((outer + nested) * FLASH_FEE_BPS) / 10_000n;
+            await token.connect(treasury).transfer(await borrower.getAddress(), totalFee);
+
+            await borrower.borrow(await token.getAddress(), outer, nested);
+
+            expect(await borrower.peakSupply()).to.equal(MAX_SUPPLY + MAX_FLASH_LOAN);
+            expect(await borrower.minimumRemainingCapacity()).to.equal(0n);
+            expect(await token.totalSupply()).to.equal(MAX_SUPPLY);
+            expect(await token.maxFlashLoan(await token.getAddress())).to.equal(MAX_FLASH_LOAN);
+        });
+
+        it("rejects recursion above the remaining aggregate capacity", async function () {
+            const { ethers, token, treasury } = await deployTokenFixture();
+            const borrower = await ethers.deployContract(
+                "MockRecursiveFlashBorrower",
+                [await token.getAddress()],
+            );
+            await borrower.waitForDeployment();
+
+            const outer = 60_000n * ONE;
+            const nested = 40_000n * ONE + 1n;
+            const totalFee = ((outer + nested) * FLASH_FEE_BPS) / 10_000n;
+            await token.connect(treasury).transfer(await borrower.getAddress(), totalFee);
+
+            await expect(
+                borrower.borrow(await token.getAddress(), outer, nested),
+            ).to.be.revertedWithCustomError(token, "ERC3156ExceededMaxLoan")
+              .withArgs(40_000n * ONE);
+            expect(await token.totalSupply()).to.equal(MAX_SUPPLY);
+        });
     });
 
     describe("Multicall", function () {

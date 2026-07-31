@@ -228,6 +228,44 @@ describe("NARABondDepositoryV4NFT", () => {
     expect(await f.dep.excessNara()).to.equal(0n);
   });
 
+  it("accepts quotes from an authorized EIP-1271 contract signer", async () => {
+    const f = await deployFixture();
+    await openMarket(f);
+
+    const contractSigner = await f.ethers.deployContract(
+      "MockEIP1271Signer",
+      [await f.deployer.getAddress()],
+      f.deployer,
+    );
+    await contractSigner.waitForDeployment();
+
+    const signerRole = await f.dep.PRICE_SIGNER_ROLE();
+    await f.dep.grantRole(signerRole, await contractSigner.getAddress());
+    await f.dep.revokeRole(signerRole, await f.deployer.getAddress());
+
+    const msgValue = LOCK_FEE + f.ethers.parseEther("1");
+    const signed = await signedBondQuote(
+      f,
+      f.alice,
+      await f.alice.getAddress(),
+      msgValue,
+    );
+    const contractSignature = f.ethers.concat([
+      await contractSigner.getAddress(),
+      signed.signature,
+    ]);
+
+    await expect(
+      f.dep.connect(f.alice).buyBondWithQuote(
+        signed.minPayout,
+        signed.maxPayout,
+        signed.deadline,
+        contractSignature,
+        { value: msgValue },
+      ),
+    ).to.emit(f.dep, "BondCreated");
+  });
+
   it("buyBondFor mints the NFT to the requested recipient", async () => {
     const f = await deployFixture();
     await openMarket(f);

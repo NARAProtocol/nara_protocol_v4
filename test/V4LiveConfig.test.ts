@@ -17,6 +17,7 @@ const LAUNCH_ENV_KEYS = [
   "V4_VAULT",
   "V4_ENGINE",
   "V4_ALLOW_RETIRED_DEFAULTS",
+  "V4_ALLOW_QUARANTINED_STAGE_A",
 ] as const;
 
 function withCleanLaunchEnv(run: () => void) {
@@ -86,6 +87,22 @@ describe("v4 live config launch guards", () => {
       expect(config.engine).to.equal(ethers.getAddress(fresh.engine));
       expect(config.lpTokenId).to.equal(BigInt(fresh.lpTokenId));
       expect(config.poolId).to.equal(fresh.poolId);
+    });
+  });
+
+  it("rejects the quarantined Stage A liquidity stack by default", () => {
+    withCleanLaunchEnv(() => {
+      process.env.V4_NARA_TOKEN = "0x65E247AA3aa9C0131b2984b894c3D24c41341D7A";
+      process.env.V4_HOOK = "0x9a01c2DcF713cDB12B8ef4Eb264D5c3203b06088";
+      process.env.V4_VAULT = "0xc0cf9bCf8879182368b1CdBDC81B6a143fFA2988";
+      process.env.V4_ENGINE = "0xbC2492BA73dE35d1114b5c18d7db633aca8963c9";
+      process.env.V4_LP_TOKEN_ID = "0";
+      process.env.V4_POOL_ID =
+        "0xbb3287f32b95e96301c9582e8bf7e81fa362e4b9eea00cf016c537cf5970dff3";
+
+      expect(() => currentV4Config()).to.throw(
+        "Configured hook/pool belongs to the quarantined Stage A liquidity stack",
+      );
     });
   });
 });

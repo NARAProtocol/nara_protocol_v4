@@ -142,7 +142,7 @@ describe("NARAStakingPoolV4", () => {
     expect(await f.pool.liquidNara()).to.equal(depositAmount + reward);
   });
 
-  it("bounds automatic user-path harvesting while preserving explicit full harvest", async () => {
+  it("checkpoints every underlying position before pricing a deposit", async () => {
     const f = await deployFixture();
     const amount = 100n * ONE;
     const poolAddr = await f.pool.getAddress();
@@ -164,7 +164,7 @@ describe("NARAStakingPoolV4", () => {
     await f.engine.resetClaimRewardsCalls();
     await f.nara.connect(f.other).approve(poolAddr, amount);
     await f.pool.connect(f.other).deposit(amount, 0);
-    expect(await f.engine.claimRewardsCalls()).to.equal(await f.pool.MAX_AUTO_HARVEST_POSITIONS());
+    expect(await f.engine.claimRewardsCalls()).to.equal(10n);
 
     for (const positionId of positionIds) {
       await f.engine.setClaimable(positionId, 1n, 0);
@@ -173,6 +173,47 @@ describe("NARAStakingPoolV4", () => {
     await f.engine.resetClaimRewardsCalls();
     await f.pool.connect(f.keeper).batchHarvest(0, await f.pool.underlyingTokenCount());
     expect(await f.engine.claimRewardsCalls()).to.equal(10n);
+  });
+
+  it("does not let a depositor capture rewards earned by position nine", async () => {
+    const f = await deployFixture();
+    const positionAmount = 100n * ONE;
+    const entrantAmount = 900n * ONE;
+    const naraReward = 90n * ONE;
+    const usdcReward = 900n * USDC;
+    const ethReward = 9n * 10n ** 15n;
+
+    for (let i = 0; i < 9; i++) {
+      await openPoolPosition(f, positionAmount);
+    }
+
+    const tokenId = await f.pool.underlyingTokenIds(8);
+    const positionId = await f.nft.positionIdOf(tokenId);
+    await f.nara.mint(await f.engine.getAddress(), naraReward);
+    await f.usdc.mint(await f.engine.getAddress(), usdcReward);
+    await f.admin.sendTransaction({ to: await f.engine.getAddress(), value: ethReward });
+    await f.engine.setClaimable(positionId, naraReward, ethReward);
+    await f.engine.setTokenClaimable(positionId, await f.usdc.getAddress(), usdcReward);
+
+    const incumbent = await f.user.getAddress();
+    const entrant = await f.other.getAddress();
+    const incumbentShares = await f.pool.balanceOf(incumbent);
+    const supplyBefore = await f.pool.totalSupply();
+
+    await f.nara.connect(f.other).approve(await f.pool.getAddress(), entrantAmount);
+    await f.pool.connect(f.other).deposit(entrantAmount, 0);
+
+    const expectedIncumbentUsdc =
+      (incumbentShares * ((usdcReward * (10n ** 27n)) / supplyBefore)) / (10n ** 27n);
+    const expectedIncumbentEth =
+      (incumbentShares * ((ethReward * (10n ** 27n)) / supplyBefore)) / (10n ** 27n);
+
+    expect(await f.pool.claimableUsdc(entrant)).to.equal(0n);
+    expect(await f.pool.claimableEth(entrant)).to.equal(0n);
+    expect(await f.pool.claimableUsdc(incumbent)).to.equal(expectedIncumbentUsdc);
+    expect(await f.pool.claimableEth(incumbent)).to.equal(expectedIncumbentEth);
+    expect(await f.pool.liquidNara()).to.equal(entrantAmount + naraReward);
+    expect(await f.pool.balanceOf(entrant)).to.be.lt(entrantAmount);
   });
 
   it("harvests stale NARA rewards before pricing redemptions", async () => {
@@ -446,6 +487,110 @@ describe("NARAStakingPoolV4", () => {
 
     expect(await sy.claimableUsdc(otherAddr)).to.equal(0n);
     expect(await sy.claimableUsdc(userAddr)).to.be.gt(0n);
+  });
+
+  it("assigns direct stNARA deposit rewards to the pre-mint SY supply", async () => {
+    const f = await deployFixture();
+    const { positionId } = await openPoolPosition(f);
+    const SY = await f.ethers.getContractFactory("NARAStakingPoolSYV4", f.admin);
+    const sy: any = await SY.deploy(
+      await f.nara.getAddress(),
+      await f.usdc.getAddress(),
+      await f.pool.getAddress(),
+      await f.pool.getAddress(),
+    );
+    await sy.waitForDeployment();
+
+    const userAddr = await f.user.getAddress();
+    const otherAddr = await f.other.getAddress();
+    const incumbentAmount = 400n * ONE;
+    const entrantAmount = 200n * ONE;
+
+    await f.pool.connect(f.user).transfer(otherAddr, entrantAmount);
+    await f.pool.connect(f.user).approve(await sy.getAddress(), incumbentAmount);
+    await sy.connect(f.user).deposit(
+      userAddr,
+      await f.pool.getAddress(),
+      incumbentAmount,
+      incumbentAmount,
+    );
+
+    const usdcReward = 1_000n * USDC;
+    const ethReward = 2n * 10n ** 15n;
+    await f.usdc.mint(await f.engine.getAddress(), usdcReward);
+    await f.admin.sendTransaction({ to: await f.engine.getAddress(), value: ethReward });
+    await f.engine.setTokenClaimable(positionId, await f.usdc.getAddress(), usdcReward);
+    await f.engine.setClaimable(positionId, 0, ethReward);
+
+    await f.pool.connect(f.other).approve(await sy.getAddress(), entrantAmount);
+    await sy.connect(f.other).deposit(
+      otherAddr,
+      await f.pool.getAddress(),
+      entrantAmount,
+      entrantAmount,
+    );
+
+    expect(await sy.claimableUsdc(userAddr)).to.be.gt(0n);
+    expect(await sy.claimableEth(userAddr)).to.be.gt(0n);
+    expect(await sy.claimableUsdc(otherAddr)).to.equal(0n);
+    expect(await sy.claimableEth(otherAddr)).to.equal(0n);
+  });
+
+  it("preserves a redeemer's share of rewards crystallized by the outbound stNARA transfer", async () => {
+    const f = await deployFixture();
+    const { positionId } = await openPoolPosition(f);
+    const SY = await f.ethers.getContractFactory("NARAStakingPoolSYV4", f.admin);
+    const sy: any = await SY.deploy(
+      await f.nara.getAddress(),
+      await f.usdc.getAddress(),
+      await f.pool.getAddress(),
+      await f.pool.getAddress(),
+    );
+    await sy.waitForDeployment();
+
+    const userAddr = await f.user.getAddress();
+    const otherAddr = await f.other.getAddress();
+    const userAmount = 400n * ONE;
+    const otherAmount = 200n * ONE;
+
+    await f.pool.connect(f.user).approve(await sy.getAddress(), userAmount + otherAmount);
+    await sy.connect(f.user).deposit(
+      userAddr,
+      await f.pool.getAddress(),
+      userAmount,
+      userAmount,
+    );
+    await sy.connect(f.user).deposit(
+      otherAddr,
+      await f.pool.getAddress(),
+      otherAmount,
+      otherAmount,
+    );
+
+    const usdcReward = 1_000n * USDC;
+    const ethReward = 2n * 10n ** 15n;
+    await f.usdc.mint(await f.engine.getAddress(), usdcReward);
+    await f.admin.sendTransaction({ to: await f.engine.getAddress(), value: ethReward });
+    await f.engine.setTokenClaimable(positionId, await f.usdc.getAddress(), usdcReward);
+    await f.engine.setClaimable(positionId, 0, ethReward);
+
+    await sy.connect(f.user).redeem(
+      userAddr,
+      userAmount,
+      await f.pool.getAddress(),
+      userAmount,
+      false,
+    );
+
+    const userUsdc = await sy.claimableUsdc(userAddr);
+    const otherUsdc = await sy.claimableUsdc(otherAddr);
+    const userEth = await sy.claimableEth(userAddr);
+    const otherEth = await sy.claimableEth(otherAddr);
+
+    expect(userUsdc).to.be.gt(otherUsdc);
+    expect(otherUsdc).to.be.gt(0n);
+    expect(userEth).to.be.gt(otherEth);
+    expect(otherEth).to.be.gt(0n);
   });
 
   it("SY disables public internal-balance redeem", async () => {
