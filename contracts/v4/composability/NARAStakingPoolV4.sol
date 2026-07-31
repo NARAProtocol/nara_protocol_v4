@@ -370,7 +370,10 @@ contract NARAStakingPoolV4 is ERC20, ReentrancyGuardTransient, AccessControl, IE
         if (emergencyShutdown) return;
         uint256 len = underlyingTokenIds.length;
         if (len == 0) return;
-        if (len > MAX_AUTO_HARVEST_POSITIONS) len = MAX_AUTO_HARVEST_POSITIONS;
+        // Every supply-changing path must checkpoint the complete position set. Harvesting only
+        // a prefix lets an entrant mint against a value that omits rewards already earned by a
+        // later position, then participate when that position is harvested. MAX_POSITIONS keeps
+        // this loop bounded.
         _harvestRange(0, len, address(0));
     }
 

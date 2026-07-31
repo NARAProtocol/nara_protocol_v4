@@ -1,5 +1,5 @@
 /**
- * Seed initial NARA/USDC liquidity into the v4 pool.
+ * Legacy direct-seed helper retained for receipt parsing and recovery utilities.
  *
  * Uses LIQ_PRIVATE_KEY - liquidity wallet holds the approved 60,000 NARA and
  * 300 USDC required for the initial position.
@@ -13,8 +13,8 @@
  *   V4_SEED_NARA           must be: 60000  (human NARA, 18 decimals)
  *   V4_SEED_USDC           must be: 300    (human USDC, 6 decimals)
  *
- * Usage:
- *   npx tsx scripts/seedV4Liquidity.ts
+ * Direct execution is disabled. Canonical launch uses:
+ *   npm run build:v4:atomic-pool-launch
  */
 
 import { ethers } from "ethers";
@@ -22,7 +22,13 @@ import * as dotenv from "dotenv";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve, dirname } from "path";
 import { fileURLToPath } from "url";
-import { currentV4Config, requiredBaseRpcUrl, requiredEnv } from "./lib/v4LiveConfig.js";
+import {
+  currentV4Config,
+  QUARANTINED_STAGE_A_HOOK,
+  QUARANTINED_STAGE_A_POOL_ID,
+  requiredBaseRpcUrl,
+  requiredEnv,
+} from "./lib/v4LiveConfig.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = dirname(__filename);
@@ -39,7 +45,6 @@ const TICK_UPPER =  887220;
 const APPROVED_SEED_NARA = "60000";
 const APPROVED_SEED_USDC = "300";
 const APPROVED_PRICE_USDC_PER_NARA = "0.005";
-
 // v4-periphery v1.0.3 action codes (contracts/v4/node_modules/.../Actions.sol)
 const MINT_POSITION = 0x02;
 const SETTLE_PAIR   = 0x0d;
@@ -71,6 +76,10 @@ const POOL_MANAGER_ABI = [
   "function extsload(bytes32 slot) external view returns (bytes32)",
 ];
 
+const HOOK_ABI = [
+  "function expectedSqrtPriceX96() external view returns (uint160)",
+];
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 // Compute sqrtPriceX96 from raw token amounts (same formula as deploy script)
@@ -97,6 +106,35 @@ export function requireApprovedSeedAmounts(seedNara: string, seedUsdc: string): 
       `(${APPROVED_PRICE_USDC_PER_NARA} USDC/NARA; approximately $5,000 FDV).`,
     );
   }
+}
+
+export function requireNonQuarantinedLiquidityStack(hook: string, poolId: string): void {
+  if (
+    hook.toLowerCase() === QUARANTINED_STAGE_A_HOOK.toLowerCase() ||
+    poolId.toLowerCase() === QUARANTINED_STAGE_A_POOL_ID
+  ) {
+    throw new Error(
+      "Refusing to seed the quarantined Stage A liquidity stack. " +
+      "Deploy, verify, and configure the corrected replacement vault/hook/compounder trio first.",
+    );
+  }
+}
+
+export type SeedInitializationPlan = "initialize-and-mint" | "mint-only";
+
+export function seedInitializationPlan(
+  currentSqrtPriceX96: bigint,
+  expectedSqrtPriceX96: bigint,
+): SeedInitializationPlan {
+  if (expectedSqrtPriceX96 <= 0n) {
+    throw new Error("Hook expectedSqrtPriceX96 is not configured");
+  }
+  if (currentSqrtPriceX96 === 0n) return "initialize-and-mint";
+  if (currentSqrtPriceX96 === expectedSqrtPriceX96) return "mint-only";
+  throw new Error(
+    `Pool initialization price mismatch: expected sqrtPriceX96=${expectedSqrtPriceX96}, ` +
+    `found ${currentSqrtPriceX96}. Refusing to seed.`,
+  );
 }
 
 export function mintedTokenIdFromReceipt(
@@ -159,9 +197,15 @@ function writeSeedLog(payload: Record<string, unknown>) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 async function main() {
+  throw new Error(
+    "Direct pool seeding is disabled. Build and execute the one atomic registration-and-seed Safe batch with " +
+    "`npm run build:v4:atomic-pool-launch`.",
+  );
+
   const rpcUrl    = requiredBaseRpcUrl();
-  const liqKey    = requiredEnv("LIQ_PRIVATE_KEY");
   const config    = currentV4Config();
+  requireNonQuarantinedLiquidityStack(config.hook, config.poolId);
+  const liqKey    = requiredEnv("LIQ_PRIVATE_KEY");
   const naraAddr  = config.token;
   const usdcAddr  = config.base;
   const seedNara  = requiredEnv("V4_SEED_NARA");
@@ -189,6 +233,7 @@ async function main() {
   const p2    = new ethers.Contract(config.permit2, PERMIT2_ABI, treasury);
   const pm    = new ethers.Contract(config.positionManager, POSITION_MANAGER_ABI, treasury);
   const poolManager = new ethers.Contract(config.poolManager, POOL_MANAGER_ABI, provider);
+  const hook = new ethers.Contract(config.hook, HOOK_ABI, provider);
 
   // Sort currencies: lower address = currency0
   const [currency0, currency1] = BigInt(naraAddr) < BigInt(usdcAddr)
@@ -200,14 +245,25 @@ async function main() {
   const usdcAmount = ethers.parseUnits(seedUsdc, 6);
   const amount0Raw = naraIsCurrency0 ? naraAmount : usdcAmount;
   const amount1Raw = naraIsCurrency0 ? usdcAmount : naraAmount;
+  const sqrtPriceX96 = sqrtPriceX96FromAmounts(amount0Raw, amount1Raw);
 
   console.log("currency0:    ", currency0);
   console.log("currency1:    ", currency1);
   console.log("NARA is c0:   ", naraIsCurrency0);
   console.log("");
 
-  // Fail closed before approvals: this script is only for the first, atomic
-  // initialize+mint transaction. PoolManager stores pools at mapping slot 6.
+  // Fail closed before approvals. The replacement hook permanently binds this
+  // exact opening price. A third party may harmlessly initialize at that price;
+  // in that case mint only. Any other initialized price is rejected.
+  const hookExpectedSqrtPriceX96 = await hook.expectedSqrtPriceX96() as bigint;
+  if (hookExpectedSqrtPriceX96 !== sqrtPriceX96) {
+    throw new Error(
+      `Seed ratio does not match hook expectedSqrtPriceX96: ` +
+      `hook=${hookExpectedSqrtPriceX96}, seed=${sqrtPriceX96}.`,
+    );
+  }
+
+  // PoolManager stores pools at mapping slot 6.
   const poolStateSlot = ethers.keccak256(
     ethers.solidityPacked(
       ["bytes32", "bytes32"],
@@ -216,12 +272,7 @@ async function main() {
   );
   const rawSlot0 = await poolManager.extsload(poolStateSlot) as string;
   const currentSqrtPriceX96 = BigInt(rawSlot0) & ((1n << 160n) - 1n);
-  if (currentSqrtPriceX96 !== 0n) {
-    throw new Error(
-      `Pool is already initialized at sqrtPriceX96=${currentSqrtPriceX96}. ` +
-      "Refusing to run the first-liquidity script.",
-    );
-  }
+  const initializationPlan = seedInitializationPlan(currentSqrtPriceX96, sqrtPriceX96);
 
   // Balance checks
   const naraBal = await nara.balanceOf(treasury.address) as bigint;
@@ -267,7 +318,6 @@ async function main() {
   // Compute sqrtPriceX96 and liquidity for full-range position
   // Full range: sqrtPriceLower ≈ 0, sqrtPriceUpper ≈ ∞
   // L ≈ min(amount0 * sqrtPriceX96 / Q96, amount1 * Q96 / sqrtPriceX96)
-  const sqrtPriceX96 = sqrtPriceX96FromAmounts(amount0Raw, amount1Raw);
   const Q96 = 1n << 96n;
   const liq0 = (amount0Raw * sqrtPriceX96) / Q96;
   const liq1 = (amount1Raw * Q96) / sqrtPriceX96;
@@ -299,7 +349,11 @@ async function main() {
     [actions, [mintParams, settleParams]],
   );
 
-  console.log("Submitting atomic initializePool + modifyLiquidities...");
+  console.log(
+    initializationPlan === "initialize-and-mint"
+      ? "Submitting atomic initializePool + modifyLiquidities..."
+      : "Pool already initialized at the immutable expected price; submitting modifyLiquidities only...",
+  );
   console.log("  tickLower:", TICK_LOWER, "tickUpper:", TICK_UPPER);
   console.log("  liquidity:", liquidity.toString());
   console.log("  amount0Max:", ethers.formatUnits(amount0Max, naraIsCurrency0 ? 18 : 6));
@@ -309,7 +363,10 @@ async function main() {
   const poolKey = [currency0, currency1, config.fee, config.tickSpacing, config.hook] as const;
   const initializeCall = pm.interface.encodeFunctionData("initializePool", [poolKey, sqrtPriceX96]);
   const mintCall = pm.interface.encodeFunctionData("modifyLiquidities", [unlockData, deadline]);
-  const tx = await pm.multicall([initializeCall, mintCall], { gasLimit: 2_000_000n });
+  const calls = initializationPlan === "initialize-and-mint"
+    ? [initializeCall, mintCall]
+    : [mintCall];
+  const tx = await pm.multicall(calls, { gasLimit: 2_000_000n });
   console.log("TX hash:", tx.hash);
   const receipt = await tx.wait();
   if (receipt?.status !== 1) throw new Error("Transaction reverted");
@@ -357,6 +414,8 @@ async function main() {
     vault: config.vault,
     engine: config.engine,
     poolId: config.poolId,
+    expectedSqrtPriceX96: sqrtPriceX96.toString(),
+    initializationPlan,
     lpTokenId: lpTokenId.toString(),
     positionLiquidity: positionLiquidity.toString(),
     seedNara,

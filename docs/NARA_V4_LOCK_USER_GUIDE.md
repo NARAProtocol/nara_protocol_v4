@@ -1,6 +1,6 @@
 # Locking on NARA v4 — User Guide
 
-Last updated: 2026-05-28.  
+Last updated: 2026-07-28.
 Audience: anyone who wants to lock NARA and earn rewards.
 
 ---
@@ -84,10 +84,12 @@ NARADashboardLens.getUserState(yourAddress, [positionId], [])
 
 Rewards accumulate every epoch. You can claim at any time before unlock.
 
-Two reward streams:
-- **NARA emission** — protocol distributes from the sealed 700k reserve based on your weight share.
+Active reward streams:
+- **NARA emission** — protocol distributes from the sealed 650,000 NARA reserve based on your weight share.
 - **ETH rewards** — from bond purchases and external notifiers (`notifyEthRewards()`).
-- **ERC-20 rewards** (optional) — from protocols bribing NARA lockers via `BribeRouterV4`.
+
+The engine's arbitrary ERC-20 reward path is disabled for this deployment. No
+vault, router, Safe, or EOA should hold `REWARD_NOTIFIER_ROLE`.
 
 Claiming does not affect your lock. Your position continues earning after you claim.
 
@@ -100,7 +102,10 @@ You can extend the duration of an active position before it matures. Extending:
 - Increases `unlockEpoch` by `additionalEpochs`.
 - Recomputes your weight at the new duration.
 
-Extending does not lose accumulated rewards. It is always beneficial to extend rather than exit and re-lock (no re-entry delay penalty, no re-activation wait for the existing position's weight).
+Extending settles accumulated rewards and keeps the existing position active.
+It also delays the date when the principal can be unlocked. Review the new
+unlock epoch and weight before confirming; the interface must not present
+extension as a recommended choice.
 
 ---
 
