@@ -62,11 +62,23 @@ if (contractFiles.length === 0) {
 
 const failures: string[] = [];
 
+// Node 20 needs the repo polyfill for every Hardhat invocation. Preserve any
+// polyfill the caller already set instead of appending it twice.
+const polyfillRequire = "--require ./polyfill.cjs";
+const inheritedNodeOptions = process.env.NODE_OPTIONS ?? "";
+const hardhatEnv = {
+  ...process.env,
+  NODE_OPTIONS: inheritedNodeOptions.includes("polyfill.cjs")
+    ? inheritedNodeOptions
+    : `${inheritedNodeOptions} ${polyfillRequire}`.trim(),
+};
+
 function hardhat(command: string): void {
   if (process.platform === "win32") {
     execFileSync("cmd", ["/c", "npx", "hardhat", command], {
       cwd: rootDir,
       stdio: "inherit",
+      env: hardhatEnv,
     });
     return;
   }
@@ -74,6 +86,7 @@ function hardhat(command: string): void {
   execFileSync("npx", ["hardhat", command], {
     cwd: rootDir,
     stdio: "inherit",
+    env: hardhatEnv,
   });
 }
 

@@ -18,6 +18,8 @@ audit-runs/
 broadcast/
 deployments/*
 !deployments/v4-pool-launch-2026-07-30.json
+!deployments/v4-liquidity-stack-recovery-proposal-batch.json
+!deployments/v4-liquidity-stack-recovery-stage0-execution-2026-07-31.json
 slither-reports/
 aderyn-reports/
 crytic-export/

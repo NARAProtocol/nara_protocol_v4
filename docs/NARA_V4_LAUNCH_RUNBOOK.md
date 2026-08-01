@@ -1,5 +1,13 @@
 # NARA v4 Launch Runbook
 
+> **LIQUIDITY STEPS SUPERSEDED — DO NOT RUN THE OLD POOL-ONLY OR `$0.005`
+> LAUNCH PATH.** For current liquidity, recovery, fees, pool deployment, or
+> basket activation, use
+> [NARA_V5_LIQUIDITY_RESET_COLD_HANDOFF.md](NARA_V5_LIQUIDITY_RESET_COLD_HANDOFF.md)
+> and the [reset plan](NARA_V4_LIQUIDITY_STACK_RESET_PLAN.md). This runbook's
+> core-deployment history remains useful, but its prior trio/pool actions are not
+> executable instructions.
+
 Last updated: 2026-07-29.
 Source of truth: `CURRENT_STATE.md`, `ROADMAP.md`, deploy scripts.  
 This doc turns the roadmap phases into a concrete command-by-command operator sequence.

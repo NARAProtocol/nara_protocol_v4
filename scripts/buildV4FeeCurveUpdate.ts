@@ -1,7 +1,7 @@
 /**
- * Builds, but never submits, Safe Transaction Builder batches for the reviewed
- * NARA/USDC fee-curve reduction. Run once to propose and again with --finalize
- * after the hook's one-day timelock.
+ * Historical Safe Transaction Builder for the superseded 2026-07-31 low-fee
+ * policy. The calculation helpers remain importable for regression evidence,
+ * but executable batch generation is deliberately fail-closed.
  */
 import { ethers } from "ethers";
 import * as dotenv from "dotenv";
@@ -105,6 +105,12 @@ export function curvesEqual(a: FeeCurve, b: FeeCurve): boolean {
   return curveArray(a).every((value, index) => value === curveArray(b)[index]);
 }
 
+export function assertFeeCurveBuilderEnabled(): void {
+  throw new Error(
+    "Disabled by NARA-20260731-liquidity-stack-reset: do not propose or finalize the pending low fee curves",
+  );
+}
+
 function safeBatch(safe: string, name: string, transactions: { to: string; value: string; data: string }[]) {
   return {
     version: "1.0",
@@ -126,6 +132,7 @@ function safeBatch(safe: string, name: string, transactions: { to: string; value
 }
 
 async function main(): Promise<void> {
+  assertFeeCurveBuilderEnabled();
   const requestedMode = process.env.V4_FEE_CURVE_BUILD_MODE?.trim();
   if (requestedMode && requestedMode !== "propose" && requestedMode !== "finalize") {
     throw new Error("V4_FEE_CURVE_BUILD_MODE must be propose or finalize");

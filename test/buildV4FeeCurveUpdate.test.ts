@@ -1,11 +1,12 @@
 import { expect } from "chai";
 import {
+  assertFeeCurveBuilderEnabled,
   cumulativeFee,
   curvesEqual,
   REVIEWED_BALANCED_CURVE,
 } from "../scripts/buildV4FeeCurveUpdate.js";
 
-describe("v4 reviewed balanced fee curve", function () {
+describe("v4 superseded balanced fee curve", function () {
   const usdc = 10n ** 6n;
   const depth = 300n * usdc;
 
@@ -28,5 +29,11 @@ describe("v4 reviewed balanced fee curve", function () {
       ...REVIEWED_BALANCED_CURVE,
       baseFeeBps: 76n,
     })).to.equal(false);
+  });
+
+  it("fails closed before building obsolete Safe calldata", function () {
+    expect(() => assertFeeCurveBuilderEnabled()).to.throw(
+      "Disabled by NARA-20260731-liquidity-stack-reset",
+    );
   });
 });

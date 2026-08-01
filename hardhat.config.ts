@@ -63,6 +63,19 @@ if (BASE_RPC_URL) {
       url: BASE_RPC_URL,
     },
   };
+  // Immutable incident-state fork used only by the end-to-end liquidity
+  // retirement proof. Keep the general Base fork on latest for other suites.
+  optionalNetworks.baseLiquidityRetirementFork = {
+    type: "edr-simulated",
+    chainType: "op",
+    allowUnlimitedContractSize: true,
+    blockGasLimit: 60_000_000,
+    hardfork: "isthmus",
+    forking: {
+      url: BASE_RPC_URL,
+      blockNumber: 49_372_240,
+    },
+  };
 }
 
 export default defineConfig({
@@ -136,6 +149,17 @@ export default defineConfig({
         },
       },
       "contracts/v4/NARALiquidityGrowthVault.sol": {
+        version: "0.8.34",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+          evmVersion: "cancun",
+          viaIR: true,
+        },
+      },
+      "contracts/v5/NARALiquidityGrowthHookV5.sol": {
         version: "0.8.34",
         settings: {
           optimizer: {

@@ -1,29 +1,65 @@
 # NARA Protocol AI Context
 
-Last updated: 2026-07-28.
+Last updated: 2026-08-01.
 This repository is the active NARA contracts and operations workspace.
+
+> **Liquidity reset override:** Before any pool, hook, vault, compounder, fee,
+> recovery, or basket-activation work, read
+> `docs/NARA_V5_LIQUIDITY_RESET_COLD_HANDOFF.md`. Human Safe signers executed
+> the no-movement Stage-0 `WindDown` proposal on 2026-07-31. The dedicated old
+> compound keeper is revoked; ETA is `2026-08-07T22:00:35Z`; maturity moves
+> nothing automatically.
+> V5 is a separate complete new token, engine, reserve, protocol-module,
+> liquidity, pool, custody, tooling, monitor, and integration release. Current
+> v4 addresses are recovery/retirement sources, not retained V5 components. This
+> override supersedes older pool-launch directions elsewhere in this file.
+> Hook V5 is the primary reason and first design workstream. Prove its
+> anti-splitting economics, dual-currency accounting, active-POL behavior, and
+> live-evidence simulations before freezing the wider V5 implementation.
+> The local complete-stack V5 contract candidate and local-review
+> disposition are in
+> `docs/NARA_V5_HOOK_IMPLEMENTATION_REVIEW_2026-08-01.md`. It includes the Hook,
+> Vault, Engine, named-POL custody/Controller, Compounder, core modules,
+> periphery, and deterministic offline deployment planning. It is tested but
+> undeployed, unapproved, unaudited, and not an immutable release. Production
+> parameters, protected integrations, an actual one-hour deployment/retirement
+> rehearsal, and a distinct seven-day-or-longer production approval remain.
+> Use `docs/NARA_V5_DEPTH_ECONOMICS_2026-08-01.md` for the parameter-neutral
+> reserve lower bound. It does not approve the five absolute POL thresholds.
+> Before any V5 bond work, read
+> `docs/NARA_V5_DEPLOYMENT_DECISION_RECORD.md`. The local canonical NFT-bond
+> candidate is one-campaign, exact-capacity, initially unfunded, and closed.
+> Its allocation, fixed-price/oracle policy, price, term, and lock remain
+> unapproved; do not fund, queue, activate, or call it deployed from local code.
 
 ## 🚨 v4 RESET — READ FIRST
 
 On **2026-05-27** the project committed to a clean fresh start on the v4 stack.
 The v3 stack was archived. On **2026-07-26**, controlled Stage A deployed the
 fresh `NARAToken` at `0x65E247AA3aa9C0131b2984b894c3D24c41341D7A`
-and its core dependencies. The registered pool remains uninitialized and has no
-liquidity. Do not repeat the core deployment. The v3 token
+and its core dependencies. Do not rerun that v4 deployment; V5 requires fresh
+reviewed source and addresses. The active
+2026-07-30 pool is liquid but retiring under the read-first reset handoff. The v3 token
 `0xE444de61752bD13D1D37Ee59c31ef4e489bd727C` is **retired**.
 
-**Active code paths (all v4):**
-- `contracts/v4/` — the only Solidity sources in the active compile path
-- `test/` — v4 test suite only (v3 tests are in `archive/legacy-v3/test/`)
-- `scripts/` — v4 deploy/verify/sync scripts only
-- `docs/` — v4 product, ops, and audit documentation only
-- `package.json` scripts — v4-only after this reset
+**Active code paths:**
+
+- `contracts/v4/` — deployed/recovery V4 sources
+- `contracts/v5/` — local undeployed complete-stack V5 contract candidate
+- `test/` — V4 plus local V5 unit, integration, and fork suites (v3 tests are in `archive/legacy-v3/test/`)
+- `scripts/` — v4 operations plus offline-only V5 planning/evidence helpers
+- `docs/` — V4 recovery truth plus the reviewed V5 planning/evidence records
+- `package.json` scripts — V4 operations plus local V5 verification
 
 **Archived (do not modify, do not import from `contracts/v4/`, do not redeploy):**
+
 - `archive/legacy-v3/` — frozen v3 stack with its own README, CLAUDE.md, AGENTS.md, and PORTING_ROADMAP.md
 - The four satellites with **no v4 equivalent yet** (Arena, Lotto, MisterMint, Sponsor Hub) are listed in `archive/legacy-v3/PORTING_ROADMAP.md`
 
-When the user asks anything about NARA (token, engine, bond, NFT position, etc.), the default answer is **v4** unless they explicitly ask about historical v3 behavior or porting. Never surface a retired v3 mainnet address as "live."
+When the user asks about deployed state, the default answer is **v4 recovery**.
+When they ask about the redesign, use the undeployed V5 source and planning
+records. Never surface a retired v3 address as live or call a planned V5
+address deployed.
 
 ## Active Paths
 
@@ -50,15 +86,16 @@ When the user asks anything about NARA (token, engine, bond, NFT position, etc.)
   Router/lens deployment and frontend integration are deferred from the
   baskets-only launch.
 
-## Pre-Launch Fix 2026-05-28: NARARewardReserve restored
+## Historical V4 Fix 2026-05-28: NARARewardReserve restored
 
 - `contracts/v4/NARARewardReserve.sol` — added. Same code as the archived v3 version (interface is version-agnostic). The v4 engine and `scripts/deployV4BaseUsdc.ts` already required it; the contract was archived prematurely.
 - Historical result at the time of that fix: **324/324 tests passing**. Use
   `docs/CURRENT_STATE.md` for the latest dated verification result.
 
-## Launch Documents (2026-05-28)
+## Historical V4 Launch Documents (2026-05-28)
 
 All in `docs/`:
+
 - `NARA_V4_LAUNCH_RUNBOOK.md` — step-by-step deploy with gates
 - `NARA_V4_PUBLIC_STATE.md` — honest current state for users/analysts
 - `NARA_V4_LOCK_USER_GUIDE.md` — user-facing lock guide
@@ -68,24 +105,27 @@ All in `docs/`:
 - `NARA_V4_POST_LAUNCH_WORK.md` — deferred work tracker
 
 **Controlled Stage A deployed to Base mainnet on 2026-07-26.** The token,
-engine, and sealed reward reserve remain the active core. The Stage A hook,
-vault, compounder, and registered NARA/USDC pool are quarantined by the
-2026-07-28 review. The pool is uninitialized and has no liquidity; never
-initialize or seed it. Deploy and verify the corrected replacement liquidity
-trio before launch. The current launch scope is NARA Baskets only.
+engine, and sealed reward reserve remain deployed only as recovery/retirement
+sources. A corrected
+liquidity trio and pool deployed on 2026-07-30 and traded, but economic testing
+now requires retiring v4 and building a separate complete V5. Stage 0 was
+executed successfully as recorded in the cold handoff. The eventual public
+product scope remains NARA Baskets only, and baskets remain preview-only
+through the V5 cutover gates.
 
-Before changing the hook, vault, compounder, fee collector, seed flow, or
-basket limits, read
-`docs/NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md`. Preserve the exact
-opening-price bind, configured-depth fee basis, reciprocal one-shot binding
-checks, engine notifier-role prohibition, and live basket-size cap.
+Before changing or operating the deployed v4 hook, vault, compounder, fee
+collector, seed flow, or basket limits, read
+`docs/NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md`. Those configured-depth
+rules are v4 recovery history. V5 preserves exact opening-price and reciprocal
+sealed binding guarantees, but deliberately has no fixed `300 USDC` / `60,000
+NARA` `protocolDepth` and must not reuse the v4 ERC-20 Engine notifier path.
 
 ## Canonical Documents
 
 - Save all new protocol and operations markdown docs under `docs/` in this repository.
 - `docs/README.md`, `docs/CLAUDE.md`, and `docs/APPS.md` are the landing docs for navigation and save location.
-- `docs/NARA_V4_PROJECT_SCOPE.md` is the **cold-AI whole-project map** — five pillars, layer model, build-vs-reveal order, exact status of every contract, what's genuinely outstanding (ops vs. external vs. code), the two-build-system gotcha, and the audit-corrections log. Read it first when starting cold.
-- `docs/V4_CONTRACT_INDEX.md` is the **v4 start-here map** — every active v4 contract → purpose → deploy step → its doc. Read it for per-contract detail under the scope map.
+- `docs/NARA_V4_PROJECT_SCOPE.md` is the **historical V4 whole-project map** — five pillars, layer model, build-vs-reveal order, contract inventory, the two-build-system gotcha, and the audit-corrections log. It does not define V5.
+- `docs/V4_CONTRACT_INDEX.md` is the **V4 source/recovery map** — each V4 contract → purpose → historical deploy step → its doc. It does not define V5 deployment.
 - `docs/CURRENT_STATE.md` is the source of truth for live protocol state.
 - `docs/ROADMAP.md` is the source of truth for where the product is headed.
 - `docs/NARA_MASTER_CONTEXT.md` is a **v3 archive reference only** (its header says so). Do not apply its formulas/patterns to v4 — use `V4_CONTRACT_INDEX.md` + `CURRENT_STATE.md` + `PRD.md` + the `V4_*` docs.
@@ -107,13 +147,14 @@ checks, engine notifier-role prohibition, and live basket-size cap.
 
 ## Current v4 Launch State
 
-The fresh v4 core is deployed. Canonical addresses and evidence are in
-`docs/CURRENT_STATE.md` and `deployments/v4-base-usdc-latest.json`. That
-manifest deliberately marks the Stage A liquidity stack as quarantined.
-Deploy the corrected replacement trio, sync its fresh manifest, then run
-`npm run verify:v4:preseed` and
-`npm run verify:v4:launch-gates:preseed`. The strict
-`npm run verify:v4:preflight` remains a post-initialization gate.
+The fresh v4 core is deployed and remains current pending explicit
+recovery/retirement. Canonical addresses and evidence
+are in `docs/CURRENT_STATE.md` and the read-first liquidity handoff. The
+2026-07-30 pool remains active only until the reviewed v4 withdrawal. Do not
+reuse the old pool-only launch path or pending low fee curve. Build and verify
+the separate complete V5 stack under
+`docs/NARA_V5_COMPLETE_STACK_REDEPLOY_PLAN.md`, then run its full deployment,
+preflight, smoke, monitoring, and soak gates.
 
 Do not use retired v3 addresses for new integrations, UI, scripts, baskets, or
 public copy. The retired v3 address table lives in `archive/legacy-v3/README.md`
@@ -144,8 +185,11 @@ Use `docs/CURRENT_STATE.md` as the canonical current-state source.
 
 ## ABI And Integration Truths
 
-- Integrate only against v4 ABIs generated from `contracts/v4/`.
-- The active engine contract is `contracts/v4/NARAEngine.sol`.
+- For deployed-v4 recovery state, integrate only against v4 ABIs generated from
+  `contracts/v4/`. Future V5 consumers may use only generated V5 artifacts from
+  an immutable reviewed origin commit and verified deployment manifest.
+- The currently deployed recovery engine source is `contracts/v4/NARAEngine.sol`.
+  No V5 Engine is deployed or production-approved.
 - The intended v4 bond delivery path is `NARABondDepositoryV4NFT`, which mints
   `NARAPositionNFTV4` positions.
 - Do not project retired v3 wrapper, lotto, arena, or lockboard assumptions onto
@@ -162,16 +206,35 @@ Use `docs/CURRENT_STATE.md` as the canonical current-state source.
 
 ## ⚠️ MANDATORY PROTOCOL SAFETY STANDARDS (Apply to EVERY contract)
 
-These rules MUST be implemented in every smart contract built on or integrated with NARA. No exceptions.
+Apply these rules according to the deployed version and the contract's actual
+execution model. Never project a V4 routing surface onto V5.
 
-### 1. All Ecosystem Fees Must Route to the Engine
-- Any protocol fee, wrapper fee, game fee, or integration fee **MUST** be sent to the active v4 engine's `notifyEthRewards()` to reward lockers.
-- Before calling `notifyEthRewards`, always guard with `if (fee > 0)` because the engine reverts on zero-value.
-- Only flat lock/unlock ETH fees set by the engine itself go to `accumulatedTreasuryEthFees` — that is the engine's own internal accounting.
-- **Never** accumulate fees in a contract balance without a guaranteed route to the engine or the owner wallet.
+### 1. Fee Routing Is Version-Scoped
+
+- Deployed-v4 native ETH reward flows may use `NARAEngine.notifyEthRewards()`;
+  guard the call with `if (fee > 0)` because that engine rejects zero value.
+- Never grant `REWARD_NOTIFIER_ROLE` or call `notifyTokenRewards(token, amount)`
+  on the deployed v4 Engine. Its repeated ERC-20 notification accounting can
+  strand value. The retiring v4 liquidity vault therefore permits only its
+  documented `Liquidity`, `Genesis`, and `GenesisSplit` routes.
+- In deployed V4, only flat lock/unlock ETH fees set by the engine itself go to
+  `accumulatedTreasuryEthFees`; that is the V4 engine's own internal accounting.
+- V5 must not reuse either the V4 generic ERC-20 notifier or
+  `syncEmissionReserve()` routing. Hook V5 accrues both fee currencies to its
+  bound Vault. `BootstrapLiquidity` permanently classifies 100% of both
+  currencies for liquidity; later `Shared` routing may send only an immutable,
+  human-approved share `X` of post-transition fees to the fresh V5 Engine.
+  The local Engine records active/inactive entitlement synchronously at accrual
+  and later exact-pulls backing; a stale Engine routes that share inactive
+  without blocking swaps. `X`, the inactive recipient, every production value,
+  and every production address remain unapproved and undeployed.
+- Never leave fees in an untracked balance. Each version needs explicit,
+  conservation-tested pending, redeemed, and destination accounting.
 
 ### 2. Safety Caps (Min / Max) Are MANDATORY on All Parameters
+
 Every configurable parameter exposed to an `onlyOwner` setter MUST have a hard-coded ceiling and/or floor:
+
 ```solidity
 // ✅ REQUIRED PATTERN
 uint256 public constant MAX_FEE_WEI = 0.1 ether;       // e.g., for protocol fees
@@ -182,21 +245,26 @@ function setFee(uint256 _fee) external onlyOwner {
     fee = _fee;
 }
 ```
+
 - Caps protect users even if the owner key is compromised.
 - Caps make the contract trustworthy to external auditors and users.
 - Caps MUST be commented with why the limit was chosen.
 
 ### 3. No Scary Trust Assumptions for Users
+
 - Fee changes must be bounded (see rule 2). Never allow unbounded admin power over user costs.
 - Timelocks: For any parameter change that could materially harm users (e.g., large fee hikes), a `TimelockController` or a `pendingValue` + `applyAfter` pattern is strongly recommended.
 - Emergency functions (sweeps, pauses) must be clearly documented and bounded.
 - Every `onlyOwner` function must have a comment explaining worst-case impact.
 
 ### 4. Security Checklist Before Every Deployment
+
 ```
-□ All fees route to the Engine (notifyEthRewards) or are clearly accounted for?
+□ Fee routing matches the reviewed version-specific policy and reconciles exactly?
+□ V5 companions are direct non-proxy contracts with sealed configuration hashes?
+□ V5 phase liquidity comes only from named, owned, active, recovery-locked POL?
 □ All admin setters have min/max caps?
-□ Reentrancy: all external-call functions use nonReentrant?
+□ Reentrancy is blocked by nonReentrant or an audited callback/context guard?
 □ Clone/proxy initialization is guarded against front-running?
 □ ETH accounting: no wei can be trapped or leaked?
 □ Tests: 100% of new code has corresponding test cases?

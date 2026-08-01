@@ -1,0 +1,155 @@
+{
+  "schemaVersion": "1.0",
+  "changeId": "NARA-20260731-liquidity-stack-reset",
+  "evidenceType": "executed-stage-0-liquidity-recovery-proposal",
+  "network": "base",
+  "chainId": 8453,
+  "sourceProposalArtifact": "deployments/v4-liquidity-stack-recovery-proposal-batch.json",
+  "safeTransaction": {
+    "hash": "0xf8079c502c32e037bbb947b0cccd3ef362a4f9b02325cff1f06db0963875435b",
+    "receiptStatus": 1,
+    "executionResult": "success",
+    "blockNumber": 49372944,
+    "blockHash": "0x3ec68c8347bcb9d7a1828572432b8db65e6b6f6c967c882bc4271daedf2643e3",
+    "blockTimestamp": 1785535235,
+    "blockTimestampIso": "2026-07-31T22:00:35.000Z",
+    "transactionFrom": "0x42365cAE9abB6cb357dd485734CAd75a2d3c6664",
+    "transactionToSafe": "0xd65c0e390Dc187A22c52c03816591CC736C0D755",
+    "gasUsed": "108282"
+  },
+  "executedCalls": [
+    {
+      "order": 1,
+      "to": "0x2dfE578C4342750Cd8fE618605eeB0E9C00Ba94d",
+      "method": "setCompoundKeeper(address,bool)",
+      "arguments": [
+        "0xa4B4B00f067cB4f5607c9a7298827fa1C1315aB7",
+        false
+      ],
+      "event": {
+        "name": "CompoundKeeperSet",
+        "keeper": "0xa4B4B00f067cB4f5607c9a7298827fa1C1315aB7",
+        "allowed": false
+      }
+    },
+    {
+      "order": 2,
+      "to": "0xE28C05cC6ad9f2C48DBB7eCCD44b323370586C98",
+      "method": "proposeRecovery(uint8,address)",
+      "arguments": [
+        3,
+        "0xd65c0e390Dc187A22c52c03816591CC736C0D755"
+      ],
+      "event": {
+        "name": "RecoveryProposed",
+        "kind": 3,
+        "kindName": "WindDown",
+        "to": "0xd65c0e390Dc187A22c52c03816591CC736C0D755",
+        "eta": 1786140035,
+        "etaIso": "2026-08-07T22:00:35.000Z"
+      }
+    }
+  ],
+  "postExecutionReadback": {
+    "observedAtBaseBlock": 49373282,
+    "keeperAuthorized": false,
+    "pendingRecovery": {
+      "kind": 3,
+      "kindName": "WindDown",
+      "to": "0xd65c0e390Dc187A22c52c03816591CC736C0D755",
+      "eta": 1786140035,
+      "etaIsoUtc": "2026-08-07T22:00:35.000Z",
+      "etaKyiv": "2026-08-08 01:00:35 EEST"
+    },
+    "positions": {
+      "seed": {
+        "tokenId": "2884402",
+        "owner": "0xd65c0e390Dc187A22c52c03816591CC736C0D755",
+        "liquidity": "4242640687119285"
+      },
+      "compounder": {
+        "tokenId": "2885838",
+        "owner": "0xE28C05cC6ad9f2C48DBB7eCCD44b323370586C98",
+        "liquidity": "931745121747730"
+      }
+    },
+    "balances": {
+      "vault": {
+        "nara": "23905.821206413424856364",
+        "usdc": "0.0"
+      },
+      "compounderBank": {
+        "nara": "24.383460617742441949",
+        "usdc": "268.675972"
+      },
+      "custodySafe": {
+        "nara": "10000.000000000002070478",
+        "usdc": "154.169235"
+      },
+      "sealedRewardReserve": {
+        "nara": "650000.0"
+      }
+    }
+  },
+  "verifiedImmediateEffect": {
+    "naraMoved": false,
+    "usdcMoved": false,
+    "nftMoved": false,
+    "liquidityRemoved": false,
+    "keeperRevoked": true,
+    "recoveryClockStarted": true,
+    "verificationScope": "Named NARA/USDC balances, both named LP NFT owners and liquidity, and the sealed NARA reserve were unchanged from the pinned pre-execution snapshot."
+  },
+  "maturityPolicy": {
+    "automaticAssetMovementAtEta": false,
+    "separateSafeExecutionRequired": true,
+    "requiredSafeThreshold": "2-of-3",
+    "ifReplacementIsNotReady": "Leave the matured recovery pending and leave both old LP positions active. Time passage alone is not authority to withdraw.",
+    "doNotRepropose": "Re-proposing overwrites the pending recovery and restarts the seven-day delay. Do not re-run or re-import the Stage-0 proposal artifact.",
+    "doNotExecuteRecoveryAlone": "executeRecovery() transfers only the compounder NFT and bank to the Safe. It does not decrease either LP NFT or drain the old vault."
+  },
+  "replacementScope": {
+    "name": "NARA V5 complete-stack redeployment",
+    "planningChangeId": "NARA-20260801-v5-complete-stack-reset",
+    "meaning": "A genuinely new protocol stack, including a new token, engine, reserve, protocol periphery, liquidity stack, pool, custody and operational integrations",
+    "v4RecoverySourceOnly": {
+      "naraToken": "0x65E247AA3aa9C0131b2984b894c3D24c41341D7A",
+      "naraEngine": "0xbC2492BA73dE35d1114b5c18d7db633aca8963c9",
+      "sealedRewardReserve": "0x5F3FF409b74395b031e0C5D6abdD7D8895d2c7AD",
+      "rule": "These are current v4 addresses to recover from and retire, not retained V5 components. Stage 0 grants no authority over the engine or sealed reserve."
+    },
+    "replaceWithFreshV5": [
+      "NARAToken",
+      "NARAEngine",
+      "NARARewardReserve",
+      "position NFT and position-account stack",
+      "Genesis and bond components selected for V5 scope",
+      "operations and treasury vault components selected for V5 scope",
+      "NARALiquidityGrowthHook",
+      "NARALiquidityGrowthVault",
+      "NARALiquidityCompounderV4",
+      "hooked NARA/USDC pool",
+      "deployment and migration tooling",
+      "custody, role, keeper and recovery configuration",
+      "monitor and basket integration ABIs, addresses and start blocks"
+    ],
+    "productionRecoveryDelay": "At least seven days and immutable or irreversibly sealed before public activation",
+    "oneHourRule": "One hour is permitted only on a disposable non-public V5 rehearsal deployment, which must be retired before a fresh production deployment.",
+    "migrationDecisionsNotImplied": [
+      "V4-holder treatment and whether any V4-to-V5 claim or conversion exists",
+      "V5 fixed supply, allocations, opening price and initial liquidity amounts",
+      "Disposition of recovered V4 NARA and the old sealed V4 reserve",
+      "Which deferred v4 satellites are included in the first V5 deployment"
+    ]
+  },
+  "operatorWarnings": [
+    "This file records a completed human Safe action; it is not a transaction payload and grants no broadcast authority.",
+    "The source proposal artifact is historical executed evidence. Do not import or execute it again.",
+    "The old source pool remains active and can trade during the delay, so every balance, fee, price, and withdrawal estimate must be recomputed at one fresh block before cutover.",
+    "Do not finalize the pending 0.75%/1%/2% old-hook fee curve.",
+    "Do not treat the current v4 token, engine, or reserve addresses as V5. V5 requires new reviewed source, fresh addresses, manifests and explicit human deployment approval.",
+    "Stage 0 authorizes only the old v4 compounder recovery clock. It does not authorize V5 deployment, old-engine shutdown, reserve movement, token migration or V5 mint/allocation decisions.",
+    "The v4 liquidity withdrawal must be one separately reviewed, exact-fork-simulated, atomic Safe transaction. V5 deployment and seeding require their own complete-stack plan and approvals."
+  ],
+  "onchainWritesByThisDocumentationChange": "none"
+}

@@ -1,5 +1,11 @@
 # NARA v4 Current Session Handoff
 
+> **SUPERSEDED FOR ALL CURRENT LIQUIDITY WORK.** This 2026-07-26 session record
+> describes an earlier dormant pool and must not be executed. Resume from
+> [NARA_V5_LIQUIDITY_RESET_COLD_HANDOFF.md](NARA_V5_LIQUIDITY_RESET_COLD_HANDOFF.md)
+> and [CURRENT_STATE.md](CURRENT_STATE.md). Stage 0 is already executed; do not
+> re-propose it or run this file's old pool-deployment sequence.
+
 Last updated: 2026-07-26.
 
 Code and deployment artifacts are authoritative. Begin with

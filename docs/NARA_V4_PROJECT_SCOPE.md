@@ -1,5 +1,15 @@
 # NARA v4 — Whole-Project Scope (Cold-AI Start Here)
 
+> **2026-08-01 liquidity override:** The liquidity status and next-step sections
+> in this older whole-project map are superseded by
+> [NARA_V5_LIQUIDITY_RESET_COLD_HANDOFF.md](NARA_V5_LIQUIDITY_RESET_COLD_HANDOFF.md)
+> and [CURRENT_STATE.md](CURRENT_STATE.md). Stage 0 is executed, the keeper is
+> revoked, `WindDown` ETA is `2026-08-07T22:00:35Z`, and nothing moves
+> automatically. Preserve v4 only as the recovery/retirement source; the
+> explicitly approved V5 direction is a separate new token, engine, reserve,
+> modules, liquidity stack, pool, custody, tooling, and integrations. Read
+> [NARA_V5_COMPLETE_STACK_REDEPLOY_PLAN.md](NARA_V5_COMPLETE_STACK_REDEPLOY_PLAN.md).
+
 Last updated: 2026-07-29. Produced by a full scope-coherence audit.
 
 **Audience:** any AI (Claude, GPT, Gemini, Cursor, Codex, …) or human starting cold on this workspace.

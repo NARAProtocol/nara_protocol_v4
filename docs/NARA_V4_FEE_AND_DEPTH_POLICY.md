@@ -1,9 +1,18 @@
 # NARA v4 Fee and Depth Policy
 
-Change-ID: `NARA-20260731-fee-policy`
+Historical Change-ID: `NARA-20260731-fee-policy`
 
-Status: implemented as a Safe-batch builder; not active on Base until both
-timelocked Safe batches execute and the post-change readback passes.
+Status: **SUPERSEDED — DO NOT FINALIZE.** The low 0.75%/1%/2% curves were
+proposed on-chain but were never activated. The liquidity-stack reset decision
+`NARA-20260731-liquidity-stack-reset` retires this policy and the current
+hook/vault/compounder stack. Do not build, sign, or execute the pending
+`executeFeeCurve(true)` or `executeFeeCurve(false)` calls. A pending curve is
+inert until those owner calls execute.
+
+The approved replacement direction is documented in
+[NARA_V4_LIQUIDITY_STACK_RESET_PLAN.md](NARA_V4_LIQUIDITY_STACK_RESET_PLAN.md).
+The material below is preserved as historical analysis only; it is not an
+operator runbook.
 
 ## Fee Curve
 
@@ -31,21 +40,21 @@ The maximum measured saving from that split is 0.0525 USDC, or roughly 0.055%
 of input, instead of the current 4.95 USDC saving. Price impact and the
 underlying Uniswap pool fee remain separate from the hook fee.
 
-Build the proposal without submitting it:
+Historical command (disabled for this migration; do not use):
 
 ```powershell
 npm run build:v4:fee-curve
 ```
 
-After the Safe executes that proposal and the one-day hook delay elapses:
+Historical finalization command (do not use):
 
 ```powershell
 npm run build:v4:fee-curve -- --finalize
 ```
 
-Each command simulates every Safe call from the configured Safe address and
-writes a reviewable Transaction Builder file under `deployments/`. Neither
-command sends a transaction.
+The old builder was non-broadcasting, but its calldata would target a policy
+that is no longer approved. The pending owner calls must remain unexecuted while
+the old pool is wound down.
 
 ## Protocol Depth
 
