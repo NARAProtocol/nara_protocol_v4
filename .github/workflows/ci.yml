@@ -52,10 +52,48 @@ jobs:
           python-version: "3.11"
       - run: npm ci
       - run: pip install slither-analyzer==0.11.3
-      - name: Slither (v4 production contracts)
-        run: slither . --filter-paths "node_modules|contracts/v4/mocks|test"
-        env:
-          NODE_OPTIONS: --require=${{ github.workspace }}/polyfill.cjs
+      - name: Install pinned Solidity 0.8.34 for Slither
+        run: |
+          curl --proto '=https' --tlsv1.2 --fail --silent --show-error --location \
+            https://binaries.soliditylang.org/linux-amd64/solc-linux-amd64-v0.8.34+commit.80d5c536 \
+            --output "$RUNNER_TEMP/solc-0.8.34"
+          echo "d40adc6f9fdbb22a97d32a02fa05688bf2ee7886affc48c9851b0afd4a726b39  $RUNNER_TEMP/solc-0.8.34" | sha256sum --check
+          chmod 0755 "$RUNNER_TEMP/solc-0.8.34"
+      - name: Slither (32 v4 production targets)
+        run: |
+          mapfile -t targets < <(find contracts/v4 -type f -name '*.sol' \
+            ! -path '*/interfaces/*' ! -path '*/libraries/*' ! -path '*/mocks/*' \
+            ! -name 'NARAEngineTypes.sol' | sort)
+          test "${#targets[@]}" -eq 32
+          failed=0
+
+          for target in "${targets[@]}"; do
+            runs=1
+            case "$target" in
+              contracts/v4/NARAToken.sol|contracts/v4/NARALauncher.sol|contracts/v4/NARALiquidityGrowthHook.sol|contracts/v4/NARALiquidityGrowthVault.sol)
+                runs=200
+                ;;
+            esac
+
+            solc_args="--base-path . --include-path node_modules --optimize --optimize-runs $runs --via-ir --evm-version cancun"
+            if [ "$target" = "contracts/v4/NARAEngine.sol" ]; then
+              solc_args="$solc_args --metadata-hash none"
+            fi
+
+            echo "Slither: $target"
+            if ! slither "$target" \
+              --solc "$RUNNER_TEMP/solc-0.8.34" \
+              --solc-working-dir . \
+              --solc-remaps '@openzeppelin/=node_modules/@openzeppelin/ @uniswap/v4-core/=node_modules/@uniswap/v4-periphery/lib/v4-core/ @uniswap/v4-periphery/=node_modules/@uniswap/v4-periphery/' \
+              --solc-args "$solc_args" \
+              --filter-paths 'node_modules|contracts/test|contracts/v4/mocks|contracts/mocks|archive' \
+              --exclude-informational \
+              --exclude-low \
+              --fail-none; then
+              failed=$((failed + 1))
+            fi
+          done
+          test "$failed" -eq 0
 
   aderyn:
     name: aderyn (advisory)
