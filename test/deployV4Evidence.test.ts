@@ -68,6 +68,9 @@ describe("v4 Base deployment evidence hardening", function () {
   it("records deployments, all transaction receipts, runtime hashes, and constructor inputs", function () {
     expect(SOURCE).to.contain("deployContractRecorded(");
     expect(SOURCE.match(/deployContractRecorded\(/g)?.length ?? 0).to.be.greaterThanOrEqual(5);
+    expect(SOURCE).to.contain("canonicalReceiptEvidence(tx.provider, tx.hash, receipt)");
+    expect(SOURCE).to.contain("canonicalReceiptEvidence(transaction.provider, transaction.hash, rawReceipt)");
+    expect(SOURCE).not.to.contain('typeof receipt.blockHash === "string" ? receipt.blockHash : null');
     expect(SOURCE).to.contain("deploymentReceipts");
     expect(SOURCE).to.contain("engineDeploymentTransactionHash: launchReceipt.transactionHash");
     expect(SOURCE).to.contain("engineDeploymentBlock: launchReceipt.blockNumber");

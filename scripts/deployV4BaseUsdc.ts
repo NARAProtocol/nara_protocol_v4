@@ -34,6 +34,7 @@ import { execFileSync } from "node:child_process";
 import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { BASE_PERMIT2, BASE_POSITION_MANAGER, BASE_UNIVERSAL_ROUTER } from "./lib/v4LiveConfig.js";
+import { canonicalReceiptEvidence, type ReceiptEvidence } from "./lib/v4ReceiptEvidence.js";
 
 const BASE_CHAIN_ID = 8453n;
 const BASE_USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
@@ -93,15 +94,6 @@ interface ReleaseSourceEvidence {
   originRemote: string;
   cleanWorkingTree: true;
   containedInOriginMain: true;
-}
-
-interface ReceiptEvidence {
-  transactionHash: string;
-  blockNumber: number;
-  blockHash: string | null;
-  status: number;
-  gasUsed: string;
-  contractAddress: string | null;
 }
 
 interface JournalStep {
@@ -506,17 +498,6 @@ function poolId(ethers: HardhatEthers, key: PoolKeyForScript): string {
   );
 }
 
-function receiptEvidence(txHash: string, receipt: any): ReceiptEvidence {
-  return {
-    transactionHash: txHash,
-    blockNumber: Number(receipt.blockNumber),
-    blockHash: typeof receipt.blockHash === "string" ? receipt.blockHash : null,
-    status: Number(receipt.status),
-    gasUsed: receipt.gasUsed?.toString?.() ?? "0",
-    contractAddress: typeof receipt.contractAddress === "string" ? receipt.contractAddress : null,
-  };
-}
-
 async function waitTx(
   journal: DeploymentReceiptJournal,
   label: string,
@@ -539,7 +520,7 @@ async function waitTx(
   try {
     const receipt = await tx.wait(effectiveConfirmations);
     if (receipt?.status !== 1) throw new Error(`${label} reverted`);
-    const evidence = receiptEvidence(tx.hash, receipt);
+    const evidence = await canonicalReceiptEvidence(tx.provider, tx.hash, receipt);
     if (expectedContractAddress) evidence.contractAddress = expectedContractAddress;
     journal.confirmed(step, evidence);
     return evidence;
@@ -575,7 +556,7 @@ async function deployContractRecorded(
     const rawReceipt = await transaction.wait(effectiveConfirmations);
     if (rawReceipt?.status !== 1) throw new Error(`${label} reverted`);
     const address = await contract.getAddress();
-    const evidence = receiptEvidence(transaction.hash, rawReceipt);
+    const evidence = await canonicalReceiptEvidence(transaction.provider, transaction.hash, rawReceipt);
     evidence.contractAddress = address;
     step.expectedContractAddress = address;
     journal.confirmed(step, evidence);
