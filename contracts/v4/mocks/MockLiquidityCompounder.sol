@@ -40,6 +40,10 @@ contract MockLiquidityCompounder is ILiquidityCompounder {
         skipPulls = skipPulls_;
     }
 
+    function peripheryBindingsValid() external pure returns (bool) {
+        return true;
+    }
+
     function compound(
         address token,
         address base,

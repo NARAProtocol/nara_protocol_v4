@@ -1,4 +1,4 @@
-# NARA Protocol Roadmap
+# NARA Roadmap
 
 Last updated: 2026-07-26.
 
@@ -26,8 +26,9 @@ Current v4 thesis:
   on-chain art and stable marketplace metadata via the modular `NARAPositionRendererV5`.
 - Public bond path through `NARABondDepositoryV4NFT`, not raw direct-lock bonds.
 - Genesis reward accounting through `NARAGenesisRewardDistributorV4`.
-- Lazy UX + read layer: `NARARouter` (permit+sync+lock, permissionless `syncEpochs()`),
-  `NARADashboardLens` / `NARAPositionDataLensV1` (typed live reads), `BribeRouterV4` (external bribes).
+- Lazy UX + read layer: `NARARouter` (permit+sync+lock, permissionless
+  `syncEpochs()`) and `NARADashboardLens` / `NARAPositionDataLensV1` (typed
+  live reads). External ERC-20 bribes are disabled for the deployed engine.
 - Optional composability through `NARAStakingPoolV4`, `NARAStakingPoolSYV4`, and fractional position wrappers.
 
 The frontend is a launch and education surface. The protocol thesis is the durable layer; UI surfaces can change without changing the core commitment model.
@@ -42,7 +43,7 @@ As of 2026-07-26:
 - The 2026-04-23 v4 incident stack is retired for launch purposes.
 - Controlled Stage A is deployed and deliberately dormant.
 - The registered NARA/USDC pool is uninitialized and has no liquidity.
-- The current product launch scope is NARA Baskets only.
+- The current product launch scope is the NARA basket app only.
 - Do not repeat the core deployment.
 - Current v4 code uses `NARALiquidityGrowthHook` and `NARALiquidityGrowthVault`.
 - Current v4 launch pair is NARA/Base native USDC.
@@ -50,11 +51,19 @@ As of 2026-07-26:
 - Current composability code is implemented locally but not deployed.
 
 Latest verification — see [CURRENT_STATE.md](CURRENT_STATE.md#verification-status) for the live
-commands and dated stamp. Test totals drift as coverage grows and are not
-duplicated in this roadmap. Use `npm test` for the current protocol result and
-the separate Foundry package for basket verification.
+commands and dated stamp. As of 2026-07-29:
+
+- Full Hardhat suite: 468 passing, 0 failing. This includes the real Uniswap v4
+  split-invariance test and the read-only Stage A quarantine check.
+- The most recent basket verification evidence is recorded separately in
+  [CURRENT_STATE.md](CURRENT_STATE.md); rerun it before basket deployment.
 - `npm run size`: passed, all artifacts within EVM limits.
-- Slither v4: passed (exit 0). Aderyn binary currently unavailable; Echidna rerun before launch.
+- Slither v4: passed (exit 0).
+- `npm audit --audit-level=high` on 2026-08-08: 0 high / 0 critical after
+  overriding Mocha's `js-yaml` to fixed `4.3.1`; 8 low upstream findings remain
+  in Hardhat Verify's legacy Ethers v5 dependency chain with no available fix.
+- The current-patch Aderyn rerun remains unavailable locally; do not present
+  the 2026-06-08 Aderyn/Echidna results as verification of the 2026-07-28 patch.
 
 ---
 
@@ -123,7 +132,7 @@ Required command path:
 ```bash
 npm run deploy:v4:base:usdc
 npm run verify:v4:preflight
-npx tsx scripts/seedV4Liquidity.ts
+npm run build:v4:atomic-pool-launch
 npm run smoke:v4
 ```
 
@@ -226,10 +235,10 @@ Goal: operate `NARALiquidityGrowthVault` deliberately.
 Route modes:
 
 - `Liquidity`
-- `Engine`
-- `Split`
 - `Genesis`
 - `GenesisSplit`
+
+The `Engine` and `Split` enum values are unreachable and must remain disabled.
 
 Launch expectation:
 
@@ -242,7 +251,7 @@ Success criteria:
 - Route mode is recorded in ops docs.
 - Compounder status is recorded.
 - Keeper bounty settings are intentional.
-- Any move to `Engine`, `Split`, `Genesis`, or `GenesisSplit` is documented before execution.
+- Any move to `Genesis` or `GenesisSplit` is documented before execution.
 
 ---
 
@@ -282,7 +291,9 @@ Success criteria:
 - Redemptions queue through `queueRedeem(uint256 shares)`.
 - SY accepts NARA and stNARA deposits.
 - SY redeems only to stNARA.
-- Fractional wrappers can be created and bound for approved NFT owners.
+- Fractional wrappers can be created and bound for approved owners of standard
+  (non-Genesis) NFTs; binding succeeds only for the factory's current canonical
+  `fractionalOf(tokenId)` wrapper.
 
 ---
 

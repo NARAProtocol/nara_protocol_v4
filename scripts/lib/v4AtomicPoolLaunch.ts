@@ -54,6 +54,20 @@ export interface AtomicPoolLaunchPlan {
   transactions: SafeCall[];
 }
 
+export function encodeSafeMultiSendTransactions(transactions: readonly SafeCall[]): string {
+  if (transactions.length === 0) throw new Error("Safe MultiSend requires at least one child call");
+  return ethers.concat(transactions.map((transaction) => {
+    if (transaction.operation !== 0) throw new Error("Atomic launch child calls must use CALL operation 0");
+    const target = checkedAddress("Safe child target", transaction.to);
+    const value = BigInt(transaction.value);
+    if (!ethers.isHexString(transaction.data)) throw new Error("Safe child calldata must be hex");
+    return ethers.solidityPacked(
+      ["uint8", "address", "uint256", "uint256", "bytes"],
+      [transaction.operation, target, value, ethers.dataLength(transaction.data), transaction.data],
+    );
+  }));
+}
+
 function integerSqrt(value: bigint): bigint {
   if (value < 0n) throw new Error("Cannot take the square root of a negative value");
   if (value < 2n) return value;

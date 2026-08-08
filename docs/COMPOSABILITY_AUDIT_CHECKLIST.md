@@ -54,6 +54,7 @@ Out of scope for this checklist:
 | HIGH-06 | High | Fixed | `NARAStakingPoolSYV4.previewDeposit` uses `POOL.exchangeRateWad()` for NARA deposits. |
 | HIGH-07 | High | Fixed | `NARAStakingPoolSYV4` mirrors the per-holder reward-index pattern. |
 | HIGH-11 | High | Fixed | `NARAFractionalPositionV4.unlockPosition()` calls `_harvestInternal()` before unlocking principal. |
+| HIGH-12 | High | Fixed | `bind` rejects Genesis NFTs and stale wrappers that no longer match `factory.fractionalOf(tokenId)`. |
 | MEDIUM-01 | Medium | Fixed | `NARAStakingPoolSYV4` now exposes `accruedRewards`, `rewardIndexesCurrent`, and `rewardIndexesStored` for Pendle reward-index compatibility. |
 | MEDIUM-03 | Medium | Fixed | `NARAStakingPoolV4` enforces `MAX_POSITIONS = 50` and exposes `batchHarvest(uint256 start, uint256 end)`. |
 | MEDIUM-04 | Medium | Verified | `onERC721Received` accepts only the configured `POSITION_NFT` where applicable. |
@@ -253,6 +254,8 @@ function onERC721Received(address, address, uint256, bytes calldata) external vi
 
 - [ ] `bind(uint256 tokenId, uint256 fractions)` is callable once.
 - [ ] `fractions` must be greater than zero and less than or equal to `MAX_FRACTIONS = 1e12`.
+- [ ] `bind` requires this wrapper to equal the factory's current `fractionalOf(tokenId)` entry; a replaced stale wrapper cannot bind.
+- [ ] `bind` rejects every Genesis NFT before custody transfer; only standard positions are supported.
 - [ ] `bind` transfers the NFT from `msg.sender` into the fractional contract before recording bound state.
 - [ ] `bind` reads the underlying engine position and stores `unlockEpoch`.
 - [ ] `bind` mints all fractions to `msg.sender`.
@@ -294,10 +297,13 @@ function allFractionalsLength() external view returns (uint256);
 ### Factory Behavior
 
 - [ ] Constructor requires non-zero NARA, USDC, ENGINE, and POSITION_NFT addresses.
-- [ ] `create(uint256 tokenId)` reverts when `fractionalOf[tokenId]` already exists.
+- [ ] `create(uint256 tokenId)` reverts when the registered wrapper is already
+  bound; an unbound stale wrapper can be replaced only by the current owner or
+  an approved operator.
 - [ ] `create` requires `msg.sender` to be the NFT owner, token-approved address, or operator-approved address.
 - [ ] `create` deploys a fresh `NARAFractionalPositionV4`.
 - [ ] `create` records `fractionalOf[tokenId]`, appends to `allFractionals`, and emits `FractionalCreated`.
+- [ ] Only the current `fractionalOf[tokenId]` entry can bind; replaced wrappers remain inert.
 - [ ] The factory does not bind the NFT. The creator must call `bind(tokenId, fractions)` on the deployed fractional contract after approval/transfer setup.
 - [ ] There is no admin role in the factory.
 

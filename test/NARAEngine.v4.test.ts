@@ -32,7 +32,7 @@ const RAY = 10n ** 27n;
 const EPOCH_SECONDS = 900n;       // 15 min
 const CONFIG_DELAY = 3600n;       // 1 hour
 const INITIAL_BASE = ONE / 2n;    // 0.5e18
-const TOKEN_NAME = "NARA Token";
+const TOKEN_NAME = "NARA";
 const TOKEN_SYMBOL = "NARA";
 // Storage slot for NARAEngine.totalPendingNaraRewards. Used only to model
 // the rare accounting-counter drift that can arise from per-position floors.
@@ -52,8 +52,8 @@ function defaultEngineConfig(ethers: any) {
         cWad:                   ethers.parseUnits("0.50",    18),
         dWad:                   ethers.parseUnits("0.50",    18),
         dripSplitWad:           ethers.parseUnits("0.85",    18),
-        durationLinearWad:      ethers.parseUnits("0.8",     18),
-        durationQuadraticWad:   ethers.parseUnits("0.9",     18),
+        durationLinearWad:      ethers.parseUnits("0.5",     18),
+        durationQuadraticWad:   ethers.parseUnits("2.5",     18),
         growthFactorWad:        ethers.parseUnits("1.000104",18),
         minBaseEmission:        ethers.parseUnits("0.2",     18),
         maxBaseEmission:        ethers.parseUnits("5",       18),

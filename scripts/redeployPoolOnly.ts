@@ -282,12 +282,19 @@ async function main() {
     await waitTx("vault.transferOwnership", vault.transferOwnership(finalAdmin));
     await waitTx("create2.transferOwnership", create2.transferOwnership(finalAdmin));
   }
-  for (const [label, contract] of [["hook", hook], ["vault", vault], ["create2", create2]] as const) {
+  for (const [label, contract] of [["hook", hook], ["vault", vault]] as const) {
     const owner = ethers.getAddress(await contract.owner());
-    if (owner.toLowerCase() !== finalAdmin.toLowerCase()) {
-      throw new Error(`${label} owner mismatch: expected ${finalAdmin}, got ${owner}`);
+    if (finalAdmin.toLowerCase() === deployer.address.toLowerCase()) {
+      if (owner !== finalAdmin) throw new Error(`${label} owner mismatch: expected ${finalAdmin}, got ${owner}`);
+    } else {
+      const pendingOwner = ethers.getAddress(await contract.pendingOwner());
+      if (owner !== deployer.address || pendingOwner !== finalAdmin) {
+        throw new Error(`${label} Ownable2Step handoff mismatch: owner=${owner}, pendingOwner=${pendingOwner}`);
+      }
     }
   }
+  const create2Owner = ethers.getAddress(await create2.owner());
+  if (create2Owner !== finalAdmin) throw new Error(`create2 owner mismatch: expected ${finalAdmin}, got ${create2Owner}`);
   const compounderOwner = ethers.getAddress(await compounderContract.owner());
   const compounderVault = ethers.getAddress(await compounderContract.vault());
   if (compounderOwner.toLowerCase() !== finalAdmin.toLowerCase()) {
@@ -298,6 +305,9 @@ async function main() {
   }
 
   console.log("");
+  if (finalAdmin !== deployer.address) {
+    console.log("SAFE ACTION REQUIRED: acceptOwnership() on Hook and Vault before any pool registration or launch batch.");
+  }
   console.log("Replacement pool intentionally remains unregistered and uninitialized.");
   console.log("  Pool ID:   ", pid);
   console.log("  Expected sqrtPriceX96:", expectedSqrtPriceX96.toString());

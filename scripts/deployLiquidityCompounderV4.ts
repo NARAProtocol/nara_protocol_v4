@@ -7,7 +7,9 @@
  * pool (PositionManager + Permit2). No swapping, no management.
  *
  * Run AFTER deployV4BaseUsdc.ts (which deploys the vault + hook + pool). Then have the vault owner
- * (Safe) call vault.setCompounder(compounder) and, once satisfied, vault.freezeCompounder().
+ * (Safe) use the Vault's verified bootstrap setter only before any fee custody;
+ * otherwise proposeCompounder -> wait 7 days -> executeCompounder. Freeze only
+ * after the live validation compound succeeds.
  *
  * Usage:
  *   NODE_OPTIONS="--require ./polyfill.cjs" npx hardhat run scripts/deployLiquidityCompounderV4.ts --network base
@@ -99,7 +101,8 @@ async function main() {
 
   console.log(`
 ── Post-deploy wiring (vault owner / Safe) ──
-[ ] vault.setCompounder(${addr})
+[ ] If Vault has zero lifetime fees and zero balances: vault.setCompounder(${addr})
+[ ] Otherwise: vault.proposeCompounder(${addr}) -> wait TARGET_UPDATE_DELAY -> vault.executeCompounder()
 [ ] Confirm route mode is Liquidity (default) and seed a small compound to validate end-to-end
 [ ] Once satisfied, vault.freezeCompounder()  // one-way; locks the compounder address
 [ ] Transfer compounder ownership to the Safe (Ownable2Step) — controls the recovery timelock

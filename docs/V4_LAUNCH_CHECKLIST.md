@@ -1,14 +1,12 @@
 # V4 Launch Checklist
 
-Last updated: 2026-07-26.
+Last updated: 2026-08-08.
 
-> **Historical full-stack checklist.** Stage A is already deployed. For the
-> current baskets-only launch, use [CURRENT_STATE.md](CURRENT_STATE.md) and
-> [NARA_V4_LAUNCH_RUNBOOK.md](NARA_V4_LAUNCH_RUNBOOK.md). Do not deploy
-> deferred lockboard/composability components or retired Lotto/Arena surfaces.
-
-The material below is the historical full-stack checklist and must not be
-executed as the current baskets-only plan.
+> **Active fixed-v4 checklist.** The candidate must be a fresh full-v4
+> deployment from one immutable reviewed origin commit. Controlled Stage A and
+> the 2026-07-30 pool are historical incident/recovery evidence only. Never
+> reuse their addresses, manifests, role assignments, or pool state. The
+> experimental protocol V5 stack is obsolete and deleted.
 
 Use this file when starting cold.
 
@@ -16,11 +14,18 @@ Use this file when starting cold.
 
 ## Rules
 
-- Do not reuse the retired 2026-04-23 v4 stack as the public launch candidate.
+- Do not reuse Stage A, the 2026-07-30 pool, or the retired 2026-04-23 stack as
+  any part of the public launch candidate.
+- Do not deploy or configure a consumer until the full 40-character reviewed
+  v4 origin commit and new verified deployment manifest exist.
 - Do not deploy or document retired liquidity tax contracts as current v4 launch code.
 - Do not run preflight, seed, or smoke scripts against default retired addresses.
 - Do not seed liquidity before core preflight passes.
 - Do not treat deployment as complete until smoke tests pass.
+- Verify the tax boundary precisely: supported exact-input swaps through the
+  one registered canonical NARA/USDC Hook pool are charged; exact-output is
+  rejected; ERC-20 transfers and third-party/unregistered pools are not
+  universally taxed.
 - Do not open public locks, bonds, or composability if docs, deployment logs, frontend config, and live contracts disagree.
 
 ---
@@ -28,18 +33,20 @@ Use this file when starting cold.
 ## Read First
 
 1. [CURRENT_STATE.md](CURRENT_STATE.md)
-2. [V4_DEPLOYMENT_HANDOFF.md](V4_DEPLOYMENT_HANDOFF.md)
-3. [V4_NEXT_SESSION_HANDOFF.md](V4_NEXT_SESSION_HANDOFF.md)
-4. [V4_REDEPLOY_NO_SURPRISE_PLAN.md](V4_REDEPLOY_NO_SURPRISE_PLAN.md)
+2. [UNISWAP_V4_HOOK.md](UNISWAP_V4_HOOK.md)
+3. [NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md](NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md)
+4. [NARA_V4_LAUNCH_RUNBOOK.md](NARA_V4_LAUNCH_RUNBOOK.md)
+5. [NARA_V4_COMPOUNDER_VALIDATION_RUNBOOK.md](NARA_V4_COMPOUNDER_VALIDATION_RUNBOOK.md)
 
-Historical incident context remains in Git history and is not an executable
-launch instruction.
+Historical context only:
+
+- [V4_INCIDENT_REDEPLOY_2026-04-23.md](V4_INCIDENT_REDEPLOY_2026-04-23.md)
 
 ---
 
 ## Required Current Contracts
 
-Fresh core deploy (`deploy:v4:base:usdc`) must use:
+Fresh full-v4 core deploy (`deploy:v4:base:usdc`) must create a new:
 
 - `NARALauncher`
 - `NARAToken`
@@ -49,9 +56,9 @@ Fresh core deploy (`deploy:v4:base:usdc`) must use:
 - `NARALiquidityGrowthHook`
 - `Create2HookDeployer`
 
-Liquidity compounder deploy (`scripts/deployLiquidityCompounderV4.ts`, after the vault exists — closes the POL flywheel):
+Liquidity compounder deploy (`scripts/deployLiquidityCompounderV4.ts`, after the vault exists):
 
-- `NARALiquidityCompounderV4`  ← then `vault.setCompounder(...)`, then `vault.freezeCompounder()` once validated. **Without this, `Liquidity` route mode is inert and the skim never compounds.**
+- `NARALiquidityCompounderV4`  ← then `vault.setCompounder(...)`, then `vault.freezeCompounder()` once validated. **Without this, `Liquidity` route mode is inert. Input-only fees can remain one-sided; only balanced NARA/USDC inventory compounds into active POL.**
 
 Allocation deploy must use, if bonds or NFT positions are in launch scope:
 
@@ -63,14 +70,16 @@ Allocation deploy must use, if bonds or NFT positions are in launch scope:
 - `NARAGenesisRewardDistributorV4`
 - `NARABondDepositoryV4NFT`
 
-Router / lens / bribe deploy (`deploy:v4:router:lens`) must use:
+Router / lens deploy (`deploy:v4:router:lens`) must use:
 
 - `NARARouter`
 - `NARADashboardLens`
 - `NARAPositionDataLensV1`
 - `NARAProtocolStatsLensV1`
 - `NARACirculatingSupplyV1`
-- `BribeRouterV4`  ← then grant `REWARD_NOTIFIER_ROLE` to it on the engine
+
+`BribeRouterV4` is intentionally not deployed. Do not grant
+`REWARD_NOTIFIER_ROLE` to any launch component.
 
 Optional composability deploy must use:
 
@@ -104,8 +113,7 @@ PRIVATE_KEY=
 BASE_RPC_URL=
 V4_ADMIN_ADDRESS=
 V4_TREASURY_ADDRESS=
-V4_TOKEN_NAME=NARA Token
-V4_TOKEN_SYMBOL=NARA
+V4_TOKEN_NAME=NARA
 V4_TOKEN_SYMBOL=NARA
 V4_INITIAL_NARA_AMOUNT=
 V4_INITIAL_USDC_AMOUNT=
@@ -131,7 +139,8 @@ Production rules:
 - `V4_INITIAL_NARA_AMOUNT` and `V4_INITIAL_USDC_AMOUNT` must be intentional launch pricing inputs.
 - Do not override `V4_BASE_USDC_ADDRESS`; production uses Base native USDC.
 - Do not use `V4_ALLOW_NON_BASE=1` for production.
-- Do not use `V4_SKIP_POOL_INITIALIZE=1` unless pool initialization has a separate reviewed runbook.
+- The replacement-liquidity deployment must leave its pool uninitialized.
+  Initialization belongs to the separately reviewed seed workflow.
 
 ---
 
@@ -161,16 +170,22 @@ Pass criteria:
 - Full suite passes.
 - Bytecode size check passes.
 
-Use the dated verification stamp in `CURRENT_STATE.md` and rerun the commands.
-Historical test totals are intentionally not duplicated here.
+Latest known local result:
+
+- Full Hardhat suite (`npm test`): 468 passing as of 2026-07-29.
+- Slither v4 scoped run: completed with exit 0 on 2026-07-29.
+- Echidna v4 engine harness: 13/13 properties passed on 2026-06-08; historical
+  evidence for the current liquidity correction.
 - `npm run size`: all deployable artifacts below EVM bytecode limits.
-- `NARAEngine` deployed bytecode: 24541 bytes.
-- `NARAStakingPoolSYV4` deployed bytecode: 8482 bytes.
+- `NARAEngine` deployed bytecode: 24,554 bytes.
+- `NARAStakingPoolSYV4` deployed bytecode: 8,503 bytes.
+- `npm audit --audit-level=high`: 0 high / 0 critical on 2026-07-28.
 
 Static analysis:
 
-- Slither was not available in the last local environment. Verification not possible.
-- Run Slither or equivalent static analysis before mainnet, or record an explicit governance waiver.
+- Slither completed on the current patch. The current-patch Aderyn rerun could
+  not start because the local binary/toolchain is unavailable; do not claim
+  that Aderyn passed this patch.
 
 ---
 
@@ -179,7 +194,7 @@ Static analysis:
 Run:
 
 ```bash
-npm run deploy:v4:base:usdc
+V4_SKIP_COMPOUNDER=1 npm run deploy:v4:base:usdc
 ```
 
 Pass criteria:
@@ -192,6 +207,10 @@ Pass criteria:
 - Hook address low bits satisfy `0x2088`.
 - Base native USDC is the base token.
 - PoolManager is Base Uniswap v4 PoolManager.
+- `Hook.poolRegistered()` is false, `Hook.expectedSqrtPriceX96()` is zero, and
+  PoolManager slot0 is zero. The core deploy only records the PoolKey and
+  configured depth; the later atomic Safe batch registers, initializes, and
+  seeds the pool.
 
 Immediately read:
 
@@ -224,7 +243,10 @@ If any value is wrong, stop.
 
 ## Post-Deploy Env Sync
 
-The post-deploy scripts read live addresses from environment variables through `scripts/lib/v4LiveConfig.ts`. That file still has retired incident-stack defaults for safety/backward compatibility, so the fresh deployment log must be synced into launch env before preflight, seed, or smoke.
+Post-deploy scripts read addresses from environment variables through
+`scripts/lib/v4LiveConfig.ts`. The new deployment log is the only allowed
+source for launch values. Historical fallbacks, recovery flags, and old
+manifests must never populate a launch environment.
 
 After `npm run deploy:v4:base:usdc` writes `deployments/v4-base-usdc-latest.json`, run:
 
@@ -238,9 +260,17 @@ Review `.env.v4.fresh`, then merge only the V4 launch address keys into `.env`:
 npm run v4:env:sync:write
 ```
 
-The sync helper refuses retired incident-stack addresses unless `--allow-retired` is passed for recovery checks.
+The sync helper refuses retired incident-stack addresses. Recovery-only escape
+hatches are never valid for launch preparation.
 
-`V4_LP_TOKEN_ID=0` is acceptable before liquidity seed creates the LP NFT. After seed, `scripts/seedV4Liquidity.ts` writes `deployments/v4-liquidity-seed-latest.json`; rerun sync so `.env` gets the real LP token ID:
+The synchronized environment must include the receipt-pinned Engine deployment
+block and transaction hash, the immutable release commit, and the final Safe
+runtime code hash. Missing evidence is not filled from a replacement/recovery
+manifest.
+
+`V4_LP_TOKEN_ID=0` is acceptable before the atomic Safe launch creates the LP
+NFT. After the confirmed batch, record its LP token ID in reviewed deployment
+evidence and rerun sync so `.env` gets the real value:
 
 ```bash
 npm run v4:env:sync:write
@@ -248,30 +278,35 @@ npm run v4:env:sync:write
 
 ---
 
-## Preflight Gate
+## Compounder Deploy And Pre-Seed Gate
 
-Run:
+After the fresh Vault exists, deploy `NARALiquidityCompounderV4` with exact
+fresh-manifest bindings and the production Safe as constructor owner. The core
+deploy proposes the Hook and Vault `Ownable2Step` transfers; the production Safe
+must first call `acceptOwnership()` on both contracts and verify their
+`owner()` values. Only then may the Safe wire the Compounder with
+`vault.setCompounder(...)` while the fresh Vault has zero lifetime fees and
+zero balances. Do not freeze the address yet.
+
+Then run:
 
 ```bash
-npm run verify:v4:preflight
+npm run verify:v4:preseed
+npm run verify:v4:launch-gates:preseed
 ```
 
 Pass criteria:
 
-- Hook token/base/vault match expected deployment.
-- Vault token/base/hook match expected deployment.
-- Registered pool id matches `V4_POOL_ID`.
-- Vault engine matches `V4_ENGINE`.
-- Hook pool is registered.
-- No unexpected stale address mismatch appears.
+- The pool remains unregistered and PoolManager slot0 remains zero.
+- Hook and Vault ownership transfers have been accepted by the production Safe;
+  neither contract merely reports the Safe as `pendingOwner()`.
+- Hook, Vault, Token, Engine, and Compounder bindings match reciprocally.
+- The Compounder address is configured but not frozen.
+- `REWARD_NOTIFIER_ROLE` is absent from the deployer, Safe, Vault, routers, and
+  every other launch component checked by the gate.
+- No retired incident-stack address appears in the fresh environment.
 
-Warnings that may be acceptable before first seed:
-
-- Configured LP NFT has zero liquidity.
-- Pool fees are parked in `RouteMode.Liquidity` with no compounder because `V4_SKIP_COMPOUNDER=1` was intentional.
-- Fallback protocol depth is populated because the deploy script set initial depth before pool registration.
-
-Any other mismatch: stop.
+Any mismatch: stop before generating the atomic Safe batch.
 
 ---
 
@@ -280,14 +315,19 @@ Any other mismatch: stop.
 Run:
 
 ```bash
-npx tsx scripts/seedV4Liquidity.ts
+npm run build:v4:atomic-pool-launch
 ```
 
 Required environment:
 
 ```bash
-TREASURY_PRIVATE_KEY=
 BASE_RPC_URL=
+V4_ADMIN_ADDRESS=
+V4_LP_OWNER_ADDRESS=
+V4_ATOMIC_LAUNCH_DEADLINE=
+V4_ENGINE_DEPLOYMENT_BLOCK=
+V4_ENGINE_DEPLOYMENT_TX_HASH=
+V4_SAFE_CODEHASH=
 ```
 
 Required reviewed seed overrides:
@@ -295,22 +335,80 @@ Required reviewed seed overrides:
 ```bash
 V4_SEED_NARA=60000
 V4_SEED_USDC=300
-V4_SEED_SLIPPAGE_BPS=200
 ```
 
 These values target an opening price of `$0.005` per NARA and an implied
 `$5,000` FDV. They use `60,000` of the locked `70,000 NARA` LP allocation.
 The remaining `10,000 NARA` is reserved for separately reviewed later
-liquidity additions. The executable script still has a historical `30 NARA`
-default, so operators must set these overrides explicitly and verify the printed
-amounts before signing. Documentation approval does not authorize execution.
+liquidity additions. The builder has no private key and never submits; operators
+must review the generated Safe batch before signing. Documentation approval
+does not authorize execution.
 
 Pass criteria:
 
+- Before generating the batch, the builder proves the seed ratio equals the
+  reviewed planned opening price and hook depth.
+- Base native USDC, Permit2, PoolManager, PositionManager, Hook immutables, and
+  every approved buy/sell curve field are exact.
+- The Engine deployment transaction and constructor notifier grant anchor the
+  complete role-history scan; an empty, behind, wrong-chain, or fork-mismatched
+  history query fails closed.
+- The Safe runtime hash, version 1.4.1, 2-of-3 threshold, no-guard/no-module
+  state, and canonical MultiSendCallOnly runtime hash are exact.
+- The generated artifact contains the Safe nonce, full MultiSend calldata,
+  packed-call hash, Safe transaction hash, and a passing whole-batch
+  `simulateAndRevert` result from the Safe context.
+- The signing UI shows the exact generated nonce, DelegateCall operation,
+  MultiSend target, calldata, and Safe transaction hash. Any mismatch or
+  intervening Safe transaction requires regeneration.
+- The hook must be unregistered and slot0 must be zero before the batch.
+- `registerPool` is immediately followed by initialize-and-mint in the same
+  Safe transaction.
+- Any registered or initialized pre-seed state stops batch generation.
 - LP seed transaction confirms.
-- Script prints the LP NFT token ID.
-- `V4_LP_TOKEN_ID` is updated to the printed LP NFT token ID.
+- Confirmed receipt contains exactly one LP NFT mint to `V4_LP_OWNER_ADDRESS`.
+- `V4_LP_TOKEN_ID` is updated to the confirmed LP NFT token ID.
 - Re-running `npm run verify:v4:preflight` shows nonzero LP liquidity for that LP NFT.
+
+---
+
+## Post-Seed Preflight And Compounder Freeze Gate
+
+After the atomic seed receipt is confirmed and `V4_LP_TOKEN_ID` is synchronized,
+run:
+
+```bash
+npm run verify:v4:preflight
+```
+
+Pass criteria:
+
+- Hook token/base/vault and Vault token/base/hook/engine match the fresh manifest.
+- Registered pool id matches `V4_POOL_ID`.
+- Hook pool is registered and its bound opening `sqrtPriceX96` is nonzero.
+- Pool fee is `3000`, tick spacing is `60`, and the seeded LP NFT has nonzero
+  liquidity.
+- Hook, Vault, and Compounder bindings match reciprocally.
+- No stale or retired address mismatch appears.
+
+Before any smoke swap, follow
+[NARA_V4_COMPOUNDER_VALIDATION_RUNBOOK.md](NARA_V4_COMPOUNDER_VALIDATION_RUNBOOK.md):
+
+1. Build and review the validation batch with an independently reviewed price
+   reference and explicit raw-unit NARA/USDC caps.
+2. Have the Safe execute the validation compound as its own transaction.
+3. Record the confirmed transaction hash and receipt block. Reconcile the exact
+   Vault counters, banked remainders, Compounder position ownership, and nonzero
+   full-range liquidity against that receipt.
+4. Only after that evidence passes, build the separate freeze batch with
+   `npm run build:v4:compounder-validation -- --freeze`, review its simulation,
+   and have the Safe execute the irreversible `vault.freezeCompounder()` call.
+5. Confirm `vault.compounderFrozen()` is true and run
+   `npm run verify:v4:launch-gates:baskets` successfully.
+
+A missing or unreconciled validation receipt, a failed exact-spend check, a
+pending recovery, or an unfrozen Compounder is a stop condition. Do not run the
+smoke test yet.
 
 ---
 
@@ -332,8 +430,6 @@ LIQ_PRIVATE_KEY=
 Optional smoke controls:
 
 ```bash
-V4_SMOKE_SEED_NARA=30
-V4_SMOKE_SEED_USDC=300
 V4_SMOKE_BUY_USDC=5
 V4_SMOKE_SELL_NARA=5
 ```
@@ -341,17 +437,15 @@ V4_SMOKE_SELL_NARA=5
 Important behavior:
 
 - `npm run smoke:v4` runs preflight.
-- It runs `scripts/seedV4Liquidity.ts` as part of the smoke flow.
+- It requires the atomic launch batch and final preflight to have completed.
 - It runs a small USDC-to-NARA buy.
 - It runs a small NARA-to-USDC sell.
 - It checks `NARALiquidityGrowthVault` balance deltas.
 
-If liquidity was already seeded manually, account for the smoke test's additional seed amounts.
-
 Pass criteria:
 
 - Preflight passes.
-- Seed path works.
+- Atomically seeded LP position is live.
 - Small buy works.
 - Small sell works.
 - Liquidity growth vault balances change in the expected direction.
@@ -388,6 +482,14 @@ V4_BOND_AMOUNT_NARA=200000
 V4_MIN_TREASURY_FLOAT_NARA=150000
 V4_BOND_ACTIVE=false
 ```
+
+**Known Phase 2 stop condition:** these stated values are not currently
+executable together. `deployV4Allocations.ts` rejects
+`V4_BOND_AMOUNT_NARA + V4_OPS_AMOUNT_NARA + V4_MIN_TREASURY_FLOAT_NARA`
+above `300,000 NARA`; `200,000 + 0 + 150,000 = 350,000 NARA`. Do not change the
+economics ad hoc and do not run the real allocation deploy until a separate
+human-approved allocation decision resolves this mismatch and the dry run
+passes.
 
 If dry-run passes and allocations are in launch scope, run:
 
@@ -472,11 +574,17 @@ Before public TVL:
 Launch-ready means all of these are true:
 
 - Fresh deploy completed.
+- Full 40-character immutable origin commit is recorded.
 - Canonical deploy log exists.
+- Every deployed address is new and absent from Stage A and 2026-07-30 manifests.
 - Fresh deployment addresses are exported into `.env`.
 - Preflight passed.
 - Liquidity seeded.
 - `V4_LP_TOKEN_ID` points to the fresh LP NFT.
+- The validation-compound transaction hash and receipt block are recorded and
+  its exact-spend/full-range-position accounting reconciles.
+- `vault.compounderFrozen()` is true after the separately reviewed freeze
+  transaction.
 - Smoke test passed.
 - Allocations passed if bonds or NFT positions are in launch scope.
 - Bond terms are inactive until manually opened.
@@ -484,6 +592,12 @@ Launch-ready means all of these are true:
 - Basescan verification is complete for all deployed contracts.
 - Roles and ownership are transferred or explicitly accepted as temporary hot-wallet risk.
 - Frontend config uses fresh v4 addresses.
+- Basket input caps use the lower of configured and live NARA/USDC depth.
+- The planned 300 USDC depth allows small buys while limiting 15% NARA baskets to 60 USDC and CORE to 90 USDC.
+- `withdrawUnderlying` and partial underlying withdrawal are verified as no-swap exits.
+- The collector uses the typed oracle-bounded USDC/WETH route with separate admin, swapper, and route-manager identities.
+- The collector's immutable engine reports the same NARA address, and the NARA deposit path enforces an exact engine pull.
+- Basket holding and raw-withdraw fees are both zero.
 - Docs are updated to reflect the new live addresses.
 - Retired 2026-04-23 addresses remain marked retired.
 
@@ -533,8 +647,17 @@ Stop immediately if:
 - Post-deploy `.env` still points to retired incident-stack defaults.
 - Hook address does not satisfy `0x2088`.
 - Hook pool is not registered.
+- Hook opening price is zero or differs from PoolManager slot0.
+- Hook, vault, or compounder reciprocal bindings differ.
+- Any engine `REWARD_NOTIFIER_ROLE` holder remains in launch scope.
+- Basket collector still exposes arbitrary executor/selector/calldata swaps.
 - Smoke test buy or sell reverts.
 - Seeded LP liquidity is zero after `V4_LP_TOKEN_ID` is updated.
+- The validation compound lacks a confirmed, receipt-pinned accounting
+  reconciliation or `vault.compounderFrozen()` is false.
+- Phase 2 retains `V4_BOND_AMOUNT_NARA=200000` together with
+  `V4_MIN_TREASURY_FLOAT_NARA=150000`; the allocation script rejects that
+  `350,000 NARA` total against its `300,000 NARA` guard.
 - Treasury float is below `V4_MIN_TREASURY_FLOAT_NARA`.
 - Public bond path does not mint position NFTs.
 - Docs still describe the wrong stack as live.
@@ -556,12 +679,19 @@ npm run size
 V4_SKIP_COMPOUNDER=1 npm run deploy:v4:base:usdc   # compounder wired separately below
 npm run v4:env:sync
 npm run v4:env:sync:write
-npm run verify:v4:preflight
-npx tsx scripts/seedV4Liquidity.ts
-npm run v4:env:sync:write
-# Step 4b — close the POL flywheel (needs the vault from core deploy):
 NODE_OPTIONS="--require ./polyfill.cjs" npx hardhat run scripts/deployLiquidityCompounderV4.ts --network base
-# then (vault owner): vault.setCompounder(<compounder>) -> validate one compound -> vault.freezeCompounder()
+# Safe: accept Hook/Vault ownership, then vault.setCompounder(<compounder>); do not freeze yet.
+npm run verify:v4:preseed
+npm run verify:v4:launch-gates:preseed
+npm run build:v4:atomic-pool-launch
+# Human Safe executes the reviewed atomic launch batch exactly once.
+npm run v4:env:sync:write
+npm run verify:v4:preflight
+npm run build:v4:compounder-validation
+# Human Safe executes validation; reconcile its receipt before the separate freeze.
+npm run build:v4:compounder-validation -- --freeze
+# Human Safe executes the reviewed freeze batch, then:
+npm run verify:v4:launch-gates:baskets
 npm run smoke:v4
 ```
 
@@ -574,9 +704,9 @@ Remove-Item Env:V4_ALLOC_DRY_RUN
 ```bash
 npm run deploy:v4:allocations
 npm run verify:v4:allocations
-# Router / lens / bribe layer (deploys Router, DashboardLens, PositionDataLens, ProtocolStatsLens, CirculatingSupply, BribeRouter):
+# Router / lens layer (deploys Router, DashboardLens, PositionDataLens, ProtocolStatsLens, CirculatingSupply):
 ENGINE_V4=<engine> POSITION_NFT_V4=<nft> npm run deploy:v4:router:lens
-# then grant REWARD_NOTIFIER_ROLE to BribeRouterV4 on the engine (see runbook Step 7)
+# BribeRouter is intentionally skipped; REWARD_NOTIFIER_ROLE must remain absent.
 # Optional composability:
 NODE_OPTIONS="--require ./polyfill.cjs" npx hardhat run scripts/deployComposabilityV4.ts --network base
 ```

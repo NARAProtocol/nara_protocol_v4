@@ -3,7 +3,6 @@ import { expect } from "chai";
 import { deployRenderer } from "../helpers/art";
 
 const ONE = 10n ** 18n;
-const USDC = 10n ** 6n;
 
 async function deployFixture() {
   const { ethers } = await hre.network.connect();
@@ -103,17 +102,25 @@ describe("NARAFractionalPositionV4", () => {
     expect(await f.factory.fractionalOf(f.tokenId)).to.not.equal(f.ethers.ZeroAddress);
   });
 
-  it("lets the current NFT owner replace an unbound wrapper registry entry", async () => {
+  it("invalidates a replaced wrapper and binds only the canonical registry entry", async () => {
     const f = await deployFixture();
     await f.factory.connect(f.owner).create(f.tokenId);
     const firstWrapper = await f.factory.fractionalOf(f.tokenId);
+    const first: any = await f.ethers.getContractAt("NARAFractionalPositionV4", firstWrapper);
 
     const buyerAddr = await f.buyer1.getAddress();
     await f.nft.connect(f.owner).transferFrom(await f.owner.getAddress(), buyerAddr, f.tokenId);
     await f.factory.connect(f.buyer1).create(f.tokenId);
     const secondWrapper = await f.factory.fractionalOf(f.tokenId);
+    const second: any = await f.ethers.getContractAt("NARAFractionalPositionV4", secondWrapper);
 
     expect(secondWrapper).to.not.equal(firstWrapper);
+    await expect(first.connect(f.owner).bind(f.tokenId, 1_000n))
+      .to.be.revertedWithCustomError(first, "NotCanonicalFractional");
+
+    await f.nft.connect(f.buyer1).approve(secondWrapper, f.tokenId);
+    await second.connect(f.buyer1).bind(f.tokenId, 1_000n);
+    expect(await second.balanceOf(buyerAddr)).to.equal(1_000n);
   });
 
   it("binds the NFT and mints all fractions to the depositor", async () => {
@@ -125,7 +132,7 @@ describe("NARAFractionalPositionV4", () => {
     expect(await frac.bound()).to.equal(true);
   });
 
-  it("rejects Eternal Genesis NFTs before binding", async () => {
+  it("rejects all Genesis NFTs before binding", async () => {
     const f = await deployFixture();
     const ownerAddr = await f.owner.getAddress();
     await f.nft.setGenesisMinter(ownerAddr, true);
@@ -138,7 +145,7 @@ describe("NARAFractionalPositionV4", () => {
       1,
       1,
       20_000,
-      true,
+      false,
     );
 
     const tokenId = 2n;
@@ -148,7 +155,7 @@ describe("NARAFractionalPositionV4", () => {
     await f.nft.connect(f.owner).approve(fracAddr, tokenId);
 
     await expect(frac.connect(f.owner).bind(tokenId, 1_000n))
-      .to.be.revertedWithCustomError(frac, "UnsupportedEternalGenesis");
+      .to.be.revertedWithCustomError(frac, "UnsupportedGenesisPosition");
     expect(await frac.bound()).to.equal(false);
     expect(await f.nft.ownerOf(tokenId)).to.equal(ownerAddr);
   });
@@ -299,39 +306,4 @@ describe("NARAFractionalPositionV4", () => {
     expect(await f.nara.balanceOf(await frac.getAddress())).to.equal(0n);
   });
 
-  it("accounts Genesis reward tokens received during fractional unlock", async () => {
-    const f = await deployFixture();
-    const ownerAddr = await f.owner.getAddress();
-    await f.nft.setGenesisMinter(ownerAddr, true);
-    await f.nara.connect(f.owner).approve(await f.nft.getAddress(), f.amount);
-    await f.nft.connect(f.owner).mintGenesisAndLockFor(
-      ownerAddr,
-      f.amount,
-      100n,
-      0,
-      1,
-      1,
-      20_000,
-      false,
-    );
-
-    const tokenId = 2n;
-    const positionId = await f.nft.positionIdOf(tokenId);
-    const frac = await createAndBind(f, 1_000n, tokenId);
-    const reward = 100n * USDC;
-    await f.usdc.mint(ownerAddr, reward);
-    await f.usdc.connect(f.owner).approve(await f.genesisDistributor.getAddress(), reward);
-    await f.genesisDistributor.connect(f.owner).notifyTokenRewards(reward);
-
-    const position = await f.engine.positionOf(positionId);
-    await f.engine.setCurrentEpoch(position.unlockEpoch);
-    await frac.unlockPosition();
-
-    const [, pendingUsdc] = await frac.pendingRewards(ownerAddr);
-    expect(pendingUsdc).to.equal(reward);
-    const before = await f.usdc.balanceOf(ownerAddr);
-    await frac.claimRewards(ownerAddr);
-    const after = await f.usdc.balanceOf(ownerAddr);
-    expect(after - before).to.equal(reward);
-  });
 });

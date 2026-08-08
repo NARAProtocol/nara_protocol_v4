@@ -53,6 +53,13 @@ function readAllDeployScripts(): string {
 }
 
 describe("deploy coverage (v4)", () => {
+  it("freezes the fresh-deployment onchain name and symbol as NARA", () => {
+    const source = readFileSync(join(SCRIPTS_ROOT, "deployV4BaseUsdc.ts"), "utf8");
+    expect(source).to.include('const canonicalTokenName = "NARA";');
+    expect(source).to.include('const canonicalTokenSymbol = "NARA";');
+    expect(source).not.to.include('const canonicalTokenName = "NARA Token";');
+  });
+
   it("every deployable v4 contract is referenced by a deploy script (or explicitly excluded)", () => {
     const contracts = listSolFiles(CONTRACTS_ROOT);
     const deployBlob = readAllDeployScripts();

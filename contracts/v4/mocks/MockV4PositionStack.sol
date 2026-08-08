@@ -17,6 +17,9 @@ interface IMockPermit2Pull {
 ///      from the vault, remainder banking, mint-vs-increase, custody — can be asserted deterministically.
 contract MockV4PositionStack is ERC721 {
     address public immutable permit2;
+    address public immutable token;
+    address public immutable base;
+    address public immutable vault;
     address public immutable token0;
     address public immutable token1;
 
@@ -26,10 +29,24 @@ contract MockV4PositionStack is ERC721 {
     uint256 public lastFirstAction;
     uint256 private _nextId = 1;
 
-    constructor(address permit2_, address token0_, address token1_) ERC721("Mock LP", "MLP") {
+    constructor(address permit2_, address token_, address base_, address vault_) ERC721("Mock LP", "MLP") {
         permit2 = permit2_;
-        token0 = token0_;
-        token1 = token1_;
+        token = token_;
+        base = base_;
+        vault = vault_;
+        (token0, token1) = uint160(token_) < uint160(base_) ? (token_, base_) : (base_, token_);
+    }
+
+    function poolManager() external view returns (address) {
+        return address(this);
+    }
+
+    function CANONICAL_POOL_FEE() external pure returns (uint24) {
+        return 3_000;
+    }
+
+    function CANONICAL_TICK_SPACING() external pure returns (int24) {
+        return 60;
     }
 
     function setSqrtPrice(uint160 p) external {

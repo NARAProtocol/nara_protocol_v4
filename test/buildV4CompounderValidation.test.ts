@@ -1,4 +1,6 @@
 import { expect } from "chai";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import {
   compounderFreezeReady,
   validationMinLiquidity,
@@ -23,5 +25,12 @@ describe("v4 compounder validation builder", function () {
     expect(compounderFreezeReady({ ...ready, positionTokenId: 0n })).to.equal(false);
     expect(compounderFreezeReady({ ...ready, positionOwnerMatches: false })).to.equal(false);
     expect(compounderFreezeReady({ ...ready, pendingRecoveryKind: 1n })).to.equal(false);
+  });
+
+  it("keeps full deployment wiring unfrozen until the separate live validation", function () {
+    const deploymentSource = readFileSync(resolve("scripts/deployV4BaseUsdc.ts"), "utf8");
+    expect(deploymentSource).to.contain('waitTx(journal, "vault.setCompounder"');
+    expect(deploymentSource).not.to.contain('waitTx(journal, "vault.freezeCompounder"');
+    expect(deploymentSource).to.contain("intentionally left unfrozen");
   });
 });

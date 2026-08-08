@@ -281,7 +281,9 @@ function allFractionals(uint256 index) external view returns (address);
 
 Current behavior:
 
-- `create(uint256 tokenId)` reverts if a fractional wrapper already exists for that token.
+- `create(uint256 tokenId)` reverts if the registered wrapper is already bound.
+  An unbound stale wrapper may be replaced by the current owner or an approved
+  operator; only the latest `fractionalOf[tokenId]` entry is canonical.
 - Caller must own the NFT or be approved for it.
 - The factory deploys `NARAFractionalPositionV4`.
 - The factory records `fractionalOf[tokenId]`.
@@ -317,7 +319,12 @@ function claimPrincipal(address to) external returns (uint256 naraOut);
 
 Current behavior:
 
-- `bind(uint256 tokenId, uint256 fractions)` transfers the NFT into the fractional contract.
+- `bind(uint256 tokenId, uint256 fractions)` requires this wrapper to equal the
+  factory's current `fractionalOf(tokenId)` entry and transfers the NFT into the
+  fractional contract.
+- Only standard, non-Genesis position NFTs are supported. All Genesis position
+  NFTs are rejected before transfer because their arbitrary reward-token set
+  cannot be enumerated safely by this wrapper.
 - `fractions` must be greater than `0` and no more than `1e12`.
 - The initial binder receives all fraction units.
 - Display metadata is set at bind time:

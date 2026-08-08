@@ -14,12 +14,86 @@ export const DEFAULT_V4_LP_TOKEN_ID = 2187473n;
 export const DEFAULT_V4_POOL_ID = "0x1d291f26281fb2a8dda28c0c35bd79251956dfef110266f4c53e62e65239ba34";
 export const DEFAULT_V4_VAULT = "0x58C3f6E6b005009B775C0912B003D39660D14391";
 export const DEFAULT_V4_ENGINE = "0x9E8cE51805b13a4d75c324F75B06ABc00d9b1E03";
+export const V4_HOOK_FLAG_MASK = 0x3fffn;
+export const REQUIRED_V4_HOOK_FLAGS = 0x2088n;
 export const QUARANTINED_STAGE_A_HOOK = "0x9a01c2DcF713cDB12B8ef4Eb264D5c3203b06088";
 export const QUARANTINED_STAGE_A_POOL_ID =
     "0xbb3287f32b95e96301c9582e8bf7e81fa362e4b9eea00cf016c537cf5970dff3";
 
 const RETIRED_DEFAULTS_FLAG = "V4_ALLOW_RETIRED_DEFAULTS";
 const QUARANTINED_STAGE_A_FLAG = "V4_ALLOW_QUARANTINED_STAGE_A";
+
+export interface V4PoolConfigInput {
+    token: string;
+    base: string;
+    hook: string;
+    fee: number;
+    tickSpacing: number;
+    poolId: string;
+}
+
+export interface CanonicalV4PoolKey {
+    currency0: string;
+    currency1: string;
+    fee: number;
+    tickSpacing: number;
+    hook: string;
+    poolId: string;
+    tokenIsCurrency0: boolean;
+}
+
+export function deriveV4PoolKey(input: Omit<V4PoolConfigInput, "poolId">): CanonicalV4PoolKey {
+    const token = ethers.getAddress(input.token);
+    const base = ethers.getAddress(input.base);
+    const hook = ethers.getAddress(input.hook);
+    if (token === base) throw new Error("V4 token and base must be different currencies");
+
+    const tokenIsCurrency0 = BigInt(token) < BigInt(base);
+    const [currency0, currency1] = tokenIsCurrency0 ? [token, base] : [base, token];
+    const encoded = ethers.AbiCoder.defaultAbiCoder().encode(
+        ["tuple(address currency0,address currency1,uint24 fee,int24 tickSpacing,address hooks)"],
+        [[currency0, currency1, input.fee, input.tickSpacing, hook]],
+    );
+
+    return {
+        currency0,
+        currency1,
+        fee: input.fee,
+        tickSpacing: input.tickSpacing,
+        hook,
+        poolId: ethers.keccak256(encoded),
+        tokenIsCurrency0,
+    };
+}
+
+export function assertCanonicalV4PoolConfig(input: V4PoolConfigInput): CanonicalV4PoolKey {
+    const hook = ethers.getAddress(input.hook);
+    const actualHookFlags = BigInt(hook) & V4_HOOK_FLAG_MASK;
+    if (actualHookFlags !== REQUIRED_V4_HOOK_FLAGS) {
+        throw new Error(
+            `V4_HOOK permission bits must equal 0x2088; received 0x${actualHookFlags.toString(16).padStart(4, "0")}`,
+        );
+    }
+    if (input.fee !== DEFAULT_V4_POOL_FEE) {
+        throw new Error(`V4_POOL_FEE must equal the canonical fee ${DEFAULT_V4_POOL_FEE}; received ${input.fee}`);
+    }
+    if (input.tickSpacing !== DEFAULT_V4_TICK_SPACING) {
+        throw new Error(
+            `V4_TICK_SPACING must equal the canonical spacing ${DEFAULT_V4_TICK_SPACING}; received ${input.tickSpacing}`,
+        );
+    }
+    if (!ethers.isHexString(input.poolId, 32)) {
+        throw new Error(`V4_POOL_ID must be a 32-byte hex value; received ${input.poolId}`);
+    }
+
+    const key = deriveV4PoolKey(input);
+    if (key.poolId.toLowerCase() !== input.poolId.toLowerCase()) {
+        throw new Error(
+            `V4_POOL_ID does not match the configured canonical PoolKey; expected ${key.poolId}, received ${input.poolId}`,
+        );
+    }
+    return key;
+}
 
 function readEnv(name: string): string | undefined {
     const value = process.env[name]?.trim();
@@ -101,6 +175,8 @@ export function currentV4Config() {
         engine: ethers.getAddress(requiredLaunchEnv("V4_ENGINE", DEFAULT_V4_ENGINE)),
     };
 
+    const canonicalPoolKey = assertCanonicalV4PoolConfig(config);
+
     const isQuarantinedStageA =
         config.hook.toLowerCase() === QUARANTINED_STAGE_A_HOOK.toLowerCase() ||
         config.poolId === QUARANTINED_STAGE_A_POOL_ID;
@@ -112,5 +188,5 @@ export function currentV4Config() {
         );
     }
 
-    return config;
+    return { ...config, canonicalPoolKey };
 }

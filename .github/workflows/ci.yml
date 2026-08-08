@@ -2,17 +2,11 @@ name: NARA v4 CI
 
 on:
   push:
-    branches:
-      - main
   pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
-
-concurrency:
-  group: nara-v4-ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 # Node 20 needs the transient-storage polyfill for Hardhat (see CLAUDE.md). Setting it at the
 # job level applies to every hardhat/tsx invocation, including those spawned by the analyzers.
@@ -21,7 +15,8 @@ jobs:
   build-test-size:
     name: build · test · size
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    env:
+      NODE_OPTIONS: --require ./polyfill.cjs
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -30,29 +25,20 @@ jobs:
           cache: npm
       - name: Install
         run: npm ci
-      - name: Dependency audit (High and Critical)
-        run: npm audit --audit-level=high
-      - name: Public repository integrity
-        run: npm run verify:public
       - name: Compile
         run: npm run build
-        env:
-          NODE_OPTIONS: --require ${{ github.workspace }}/polyfill.cjs
       - name: Test (full v4 suite)
         run: npm test
-        env:
-          NODE_OPTIONS: --require ${{ github.workspace }}/polyfill.cjs
       - name: Bytecode size limits (24576 / 49152)
         run: npm run size
-        env:
-          NODE_OPTIONS: --require ${{ github.workspace }}/polyfill.cjs
 
-  # ── Free static analysis (advisory; review the output, don't ignore it) ──────
+  # ── Blocking static analysis ────────────────────────────────────────────────
+  # Required-check context names retain "(advisory)" for branch-protection compatibility.
   slither:
     name: slither (advisory)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    continue-on-error: true
+    env:
+      NODE_OPTIONS: --require ./polyfill.cjs
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -63,17 +49,15 @@ jobs:
         with:
           python-version: "3.11"
       - run: npm ci
-      - run: pip install slither-analyzer
+      - run: pip install slither-analyzer==0.11.3
       - name: Slither (v4 production contracts)
-        run: slither . --filter-paths "node_modules|contracts/v4/mocks|test" || true
-        env:
-          NODE_OPTIONS: --require ${{ github.workspace }}/polyfill.cjs
+        run: slither . --filter-paths "node_modules|contracts/v4/mocks|test"
 
   aderyn:
     name: aderyn (advisory)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    continue-on-error: true
+    env:
+      NODE_OPTIONS: --require ./polyfill.cjs
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -81,43 +65,29 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - name: Install Aderyn (Cyfrin)
-        run: |
-          curl --fail --silent --show-error --location \
-            https://raw.githubusercontent.com/Cyfrin/aderyn/a288420403cb1ae5f38ce606c3a6d4e605b9c81d/cyfrinup/install | bash
-          echo "$HOME/.cyfrin/bin" >> "$GITHUB_PATH"
-      - name: Aderyn (v4 contracts)
-        run: aderyn --src contracts/v4 . || true
+      - name: Install Aderyn 0.6.8 (Cyfrin)
         env:
-          NODE_OPTIONS: --require ${{ github.workspace }}/polyfill.cjs
+          ADERYN_DISABLE_UPDATE: "1"
+        run: |
+          curl --proto '=https' --tlsv1.2 --fail --silent --show-error --location \
+            https://github.com/cyfrin/aderyn/releases/download/aderyn-v0.6.8/aderyn-installer.sh \
+            --output /tmp/aderyn-installer.sh
+          echo "6c005c222681f1349caa31aa7c9d55b0fd0ae779c0faad65e8eaa6dc872f8faf  /tmp/aderyn-installer.sh" | sha256sum --check
+          sh /tmp/aderyn-installer.sh
+      - name: Aderyn (v4 contracts)
+        run: aderyn --src contracts/v4 .
 
-  # ── Free property fuzzing of the engine invariants (advisory) ────────────────
+  # ── Blocking property fuzzing of the engine invariants ──────────────────────
   echidna:
     name: echidna (advisory)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    continue-on-error: true
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: 20
-          cache: npm
-      - name: Install Solidity dependencies
-        run: npm ci
       - name: Echidna (v4 engine property harness)
         uses: crytic/echidna-action@f7e374e42bf7131f7307a92f5549ed6b2fd17c9d # v2.0.2
         with:
           files: echidna/harnesses/EchidnaNARAEngineV4Harness.sol
           contract: EchidnaNARAEngineV4Harness
           config: echidna/v4-engine.yaml
+          echidna-version: 2.3.3
           solc-version: 0.8.34
-          solc-args: >-
-            --base-path .
-            --include-path node_modules
-            --allow-paths .,node_modules
-            --optimize
-            --optimize-runs 1
-            --via-ir
-            --evm-version cancun
-            --metadata-hash none

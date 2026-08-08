@@ -1,55 +1,30 @@
-name: Reproducible bug
-description: Report a non-security defect with a minimal reproduction.
+name: Bug report
+description: Report a reproducible defect that is not security-sensitive.
 title: "bug: "
 labels:
   - bug
 body:
   - type: markdown
     attributes:
-      value: Do not use this form for vulnerabilities. Follow SECURITY.md.
-  - type: input
-    id: commit
-    attributes:
-      label: Commit
-      description: Exact commit SHA where the behavior occurs.
-    validations:
-      required: true
-  - type: dropdown
-    id: surface
-    attributes:
-      label: Surface
-      options:
-        - Contract
-        - Test
-        - Script
-        - Documentation
-        - CI or tooling
-    validations:
-      required: true
+      value: Do not include keys, private RPC URLs, wallet credentials, or undisclosed vulnerabilities.
   - type: textarea
-    id: expected
+    id: summary
     attributes:
-      label: Expected behavior
-    validations:
-      required: true
-  - type: textarea
-    id: actual
-    attributes:
-      label: Actual behavior
+      label: Summary
+      description: What happened, and what did you expect?
     validations:
       required: true
   - type: textarea
     id: reproduction
     attributes:
-      label: Minimal reproduction
-      description: Include complete commands or a minimal test without credentials.
+      label: Reproduction
+      description: Provide the smallest safe reproduction and exact command.
     validations:
       required: true
   - type: textarea
-    id: environment
+    id: evidence
     attributes:
-      label: Environment
-      description: Operating system, Node version, npm version, and relevant tool versions.
+      label: Environment and evidence
+      description: Include commit, tool versions, and sanitized output.
     validations:
       required: true
-

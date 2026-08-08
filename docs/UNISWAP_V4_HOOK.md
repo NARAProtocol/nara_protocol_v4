@@ -3,33 +3,33 @@
 > Source: [`contracts/v4/NARALiquidityGrowthHook.sol`](../contracts/v4/NARALiquidityGrowthHook.sol)
 > · [`contracts/v4/NARALiquidityGrowthVault.sol`](../contracts/v4/NARALiquidityGrowthVault.sol)
 > · [`contracts/v4/utils/Create2HookDeployer.sol`](../contracts/v4/utils/Create2HookDeployer.sol)
-> Verified against code on **2026-06-08**.
+> Verified against code and the real Uniswap v4 PoolManager test on
+> **2026-08-08**.
 
-NARA's liquidity home is a **single custom Uniswap v4 pool** (NARA/USDC). The pool's hook is not a
-neutral fee rail — it is an **asymmetric, anti-gameable buy-pressure tax** that skims a fee from every
-swap into a vault.
+NARA's liquidity home is a **single registered custom Uniswap v4 pool**
+(NARA/USDC). Its hook is not a neutral fee rail: every supported exact-input
+swap through that one canonical registered Hook pool pays the configured
+asymmetric pressure fee into the Vault. Exact-output swaps are rejected. NARA
+ERC-20 transfers and swaps in third-party or unregistered pools are outside this
+Hook and are not universally taxed.
 
 > **READ THIS FIRST — the mechanism is POL-first, not locker-first.** The vault's **default route mode
 > is `Liquidity`** (`NARALiquidityGrowthVault` constructor sets `routeMode = RouteMode.Liquidity`). The
 > skim is designed to **compound back into protocol-owned liquidity (POL) first**, building depth.
-> Redirecting the skim to lockers (`Engine` / `Split` / `Genesis` / `GenesisSplit`) is a **later
-> operator switch**, taken once the book is deep. Do **not** describe the hook as "a tax that funds
-> lockers" — that is a later phase, not the default. (An earlier version of this doc led with the
-> locker framing; it was wrong-ordered and corrected on 2026-06-29.)
+> The replacement vault may later redirect USDC to `Genesis` or
+> `GenesisSplit`. `Engine` and `Split` are legacy enum values that permanently
+> revert because the deployed engine's ERC-20 reward denominator can
+> under-allocate after an active-position extension. Do **not** describe the
+> hook as "a tax that funds lockers."
 >
-> **✅ FLYWHEEL BRICK BUILT + FORK-VALIDATED (2026-06-29) — awaiting deploy only.** The hook and vault
-> were always fully built; the POL stage is intentionally **pluggable** (the vault calls an external
-> `ILiquidityCompounder.compound(...)` adapter, set via `vault.setCompounder`, lockable via
-> `freezeCompounder`, hardened by `CompounderDidNotSpend` + `minLiquidityAdded` slippage guards). The
-> production adapter now exists: **`contracts/v4/NARALiquidityCompounderV4.sol`** — full-range, no-swap,
-> exact-spend, remainder-banking, POL custody, with a **7-day recovery timelock** (propose→wait→execute)
-> so holders always get an exit window. Tested two ways: 8 unit tests through the **real vault**, **and
-> a Base mainnet fork test** (`test/fork/NARALiquidityCompounderV4.fork.test.ts`) that adds real
-> full-range liquidity through the **live** PoolManager + PositionManager + Permit2 — encoding certified
-> end-to-end. **Still required before mainnet value:** deploy via
-> `scripts/deployLiquidityCompounderV4.ts`, then `vault.setCompounder` + `freezeCompounder` (Safe).
-> Until deployed + wired, `Liquidity` mode is still inert (`_compoundUnchecked` reverts with no
-> compounder). `mocks/MockLiquidityCompounder.sol` remains a test-only stub. See §5 and CURRENT_STATE.md.
+> **FRESH FULL-v4 DEPLOYMENT REQUIRED.** Stage A and the 2026-07-30 pool are
+> historical incident/recovery evidence only. The corrected Hook and Vault
+> require fresh addresses in the same new full-v4 manifest. The POL
+> adapter remains intentionally pluggable through
+> `ILiquidityCompounder.compound(...)`, with exact-spend checks, minimum-output
+> protection, remainder banking, POL custody, and a seven-day recovery
+> timelock. Deploy and verify the corrected hook/vault/compounder trio, run the
+> real-pool smoke test, then freeze the compounder before public activation.
 
 This document explains how the hook works and why it is correct.
 
@@ -37,18 +37,15 @@ This document explains how the hook works and why it is correct.
 
 ## 1. Why a hook at all?
 
-In a normal AMM, swap fees go to LPs. NARA redirects that flow to **lockers** (the people committing
-time to the protocol). The hook lets NARA:
+In a normal AMM, swap fees go to LPs. NARA redirects this additional hook fee
+to the protocol fee vault. The hook lets NARA:
 
 1. charge **more on buy pressure than sell pressure** (a deliberate policy, not a neutral fee), and
-2. route the skim to a vault that can compound LP, feed the engine reward rails, or fund Genesis —
-   all without redeploying the core contracts.
+2. route the skim to a vault that can compound LP or fund Genesis without
+   redeploying the token or engine.
 
 ```
-swap ──▶ hook (beforeSwap) ──skim fee in input token──▶ vault ──▶ {LP compound | engine rewards | Genesis}
-                                                                        │
-                                                                        ▼
-                                                                  NARA lockers
+swap ──▶ hook (beforeSwap) ──skim input token──▶ vault ──▶ {LP compound | Genesis}
 ```
 
 ---
@@ -80,32 +77,54 @@ initialization. ✅ Verified consistent.
 ## 3. Hook callbacks
 
 ### `beforeInitialize`
-Restricts which pool may use this hook: it calls `_requireRegisteredPool(key)`, and `_validatePoolKey`
-reverts `UnauthorizedPool` unless `key.hooks == address(this)` and the pool id matches the single
-registered pool. One hook, one pool — no rogue pools can attach.
+Restricts both the pool and its opening price. The one-shot
+`registerPool(key, expectedSqrtPriceX96)` stores a nonzero exact price. The key
+must use this hook, the NARA/USDC pair, fee `3000`, and tick spacing `60`.
+`_beforeInitialize` rejects any different key or price.
+
+The callback intentionally does not require the owner as sender because the
+legitimate PositionManager is the callback sender during seeding. Canonical
+deployment leaves the hook unregistered until the final Safe executes
+`registerPool`, exact `initializePool`, and the first full-range mint in one
+atomic batch. This removes the public pre-seed interval; direct seeding is
+disabled.
 
 ### `beforeSwap` — the fee algorithm
-Called before the AMM math on every swap. Step by step (from the verified source):
+Called before the AMM math on every attempted swap through the registered Hook
+pool. Supported exact-input swaps are charged; exact-output attempts revert.
+Step by step (from the verified source):
 
 1. **Exact-input only.** `params.amountSpecified >= 0` reverts `ExactOutputUnsupported`;
    `type(int256).min` reverts `AmountTooLarge`. The fee model is defined on exact-input swaps.
 2. **Buy vs sell.** The input currency is `base` (USDC) → **buy**, or `token` (NARA) → **sell**; anything
    else reverts `InvalidTokenPair`.
-3. **Depth = `min(liveDepth, protocolDepth)`.** Live depth is probed from the pool
-   (`getLiquidity` + `getSlot0`); protocol depth is an admin-set floor. Taking the **minimum** means a
-   swapper **cannot inflate pool depth in the same block to cheapen their fee**.
-4. **Per-block cumulative flow.** `_recordBlockFlow` accumulates `amountIn` across all swaps in the
-   block and tracks the fee already charged. The fee is computed on **cumulative** pressure minus what
-   was already paid — so **splitting one large swap into many small ones charges the same total**. No
-   tier-gaming.
+3. **Depth = configured `protocolDepth`.** The hook captures the configured
+   input-currency depth on that currency's first swap in a block and reuses the
+   snapshot for the rest of the block. Live depth from `getLiquidity` and
+   `getSlot0` remains available through `probeLiveDepth()` for monitoring only.
+   A trader therefore cannot alter the fee basis by adding narrow liquidity,
+   removing liquidity, or moving the price immediately before a swap.
+4. **Per-block cumulative flow.** `_recordBlockFlow` accumulates `amountIn`
+   across all same-input-currency swaps in the block and tracks the fee already
+   charged. The cumulative fee function is evaluated once conceptually and
+   each swap pays only the new delta. Splitting a gross input across wallets or
+   transactions in one block therefore charges exactly the same aggregate fee,
+   provided the gross input and currency are identical. A new block starts a
+   new pressure horizon; this v4 design does not resist cross-block splitting.
 5. **Tiered fee curve.** `_feeBps(curve, pressureAmountIn, depth)` selects a bps rate from the buy or
    sell curve based on `pressure = amountIn / depth`. The result is capped at the curve's `maxFeeBps`.
 6. **Skim, the v4 way.** `poolManager.take(specified, address(vault), feeAmount)` pulls the fee in the
    **input currency** straight to the vault, and the hook returns
    `toBeforeSwapDelta(int128(feeAmount), 0)` so the PoolManager accounts for the skim. The remaining
    input proceeds into the normal AMM swap.
-7. **Best-effort accounting.** `vault.recordPoolFee(...)` is wrapped in `try/catch` and emits
-   `PoolFeeRecordFailed` on failure — **fee accounting can never block a user's swap**.
+7. **Atomic, fail-closed accounting.** After `poolManager.take(...)`, the Hook calls
+   `vault.recordPoolFee(...)` directly. If the Vault rejects or cannot record the
+   fee, the complete PoolManager callback reverts, including the preceding take;
+   custody and lifetime counters therefore cannot diverge silently. `registerPool`
+   also requires the reciprocal Vault-to-Hook binding before the pool can activate.
+8. **Quote semantics.** `quotePoolFee` returns the terminal marginal tier beside the authoritative
+   integrated fee amount. `quotePoolFeeDetailed` also returns the effective rate derived from that
+   amount. Interfaces must display the effective rate and label the tier only as marginal.
 
 ---
 
@@ -119,10 +138,14 @@ Default tiers (set in the constructor; values shown are the documented defaults)
 | medium | 8% | 7% |
 | high | 12% | 10% |
 | extreme | 20% | 15% |
-| **hard cap** | **25%** | **20%** |
+| **default operational cap** | **20%** | **20%** |
 
-Buyers pay more under pressure than sellers. This is an **intentional buy-pressure tax** that funds
-lockers — it is *not* a neutral AMM fee, and the protocol presents it honestly as policy.
+Buyers pay more under pressure than sellers. This is an intentional asymmetric
+per-block fee policy; it is not a neutral AMM fee or a persistent launch-window tax.
+The constructor caps both default curves at 20%. Governance may propose a different
+curve up to the contract's absolute 50% ceiling, but it cannot activate until the
+seven-day fee-update delay has elapsed. Operational material must therefore report
+the active onchain curve rather than describe 20% as an immutable contract ceiling.
 
 ---
 
@@ -133,42 +156,54 @@ The vault receives every skim and routes it by **mode**:
 | Mode | Behavior |
 |------|----------|
 | `Liquidity` | **default** — compound NARA/USDC back into the LP position via the external compounder adapter to build depth. Production adapter: **`NARALiquidityCompounderV4`** (full-range, no-swap). Still **inert until deployed + `setCompounder`'d**. |
-| `Engine` | route NARA to the engine emission reserve, USDC to the engine ERC-20 reward stream |
-| `Split` | part to engine, part to LP |
+| `Engine` | legacy enum value; `setRouteMode` permanently reverts `EngineTokenRoutingDisabled` |
+| `Split` | legacy enum value; `setRouteMode` permanently reverts `EngineTokenRoutingDisabled` |
 | `Genesis` | route USDC to the Genesis reward distributor |
 | `GenesisSplit` | split USDC between Genesis rewards and LP |
 
-Mode is an operator lever — protocol economics can shift **without redeploying core contracts**.
+The owner can move among the reachable modes, subject to their configuration
+requirements. Engine ERC-20 routing cannot be re-enabled by the owner.
 
 ---
 
 ## 6. How consumers route through the pool
 
-Any swapper interacting with the NARA/USDC pool pays the hook fee automatically. The **NARA Baskets**
+Any swapper interacting with the NARA/USDC pool pays the hook fee automatically. The **NARA basket**
 package (separate Foundry repo) does this through its
 `UniswapV4BasketAdapterV1`, which routes a basket's NARA slice through the pool via the Uniswap
-**Universal Router** (v4 swap commands, exact-input). Result: **every basket buy pays the hook tax →
-funds NARA lockers**. The adapter is a pure consumer; it needs no hook permission bits of its own.
+**Universal Router** (v4 swap commands, exact-input). Every basket buy through
+the canonical pool pays the hook fee into the vault. The adapter is a pure
+consumer; it needs no hook permission bits of its own.
 
 ---
 
-## 7. Verification status (2026-06-08)
+## 7. Verification status (2026-07-28)
 
 - ✅ `getHookPermissions()` = `beforeInitialize + beforeSwap + beforeSwapReturnDelta` → address bits
   `0x2088`, matching the deploy/preflight requirement.
 - ✅ Built on `BaseHook` (Uniswap v4-periphery) — the canonical, audited base.
-- ✅ Exact-input-only, buy/sell detection, `min(liveDepth, protocolDepth)` and per-block
-  cumulative-flow anti-manipulation, `maxFeeBps` caps.
+- ✅ Exact-input-only, buy/sell detection, configured-depth block snapshots,
+  cumulative fee deltas, and `maxFeeBps` caps.
 - ✅ Fee skim via `BeforeSwapDelta` + `poolManager.take()` to the vault; best-effort vault accounting.
 - ✅ Single-pool authorization (`UnauthorizedPool` / `PoolNotRegistered`).
-- ✅ Covered by the Hardhat suite (`NARALiquidityGrowth.v4.test.ts`) and the project's Slither gate.
+- ✅ Exact opening-price binding plus canonical fee/tick validation.
+- ✅ Reciprocal vault/hook/compounder binding checks protect one-shot wiring.
+- ✅ Covered by the focused mock suite and
+  `NARALiquidityGrowth.real-v4.test.ts`, which deploys the actual Uniswap v4
+  PoolManager and official test routers, moves live depth in both directions,
+  and proves single-swap versus meaningful same-block split equality for buys
+  and sells.
+- ✅ Replacement vault prevents the deployed engine's ERC-20 accounting issue
+  from being reached through pool-fee routing.
 
-No correctness issues found in the hook on this pass. As with the rest of the protocol, an independent
-human review is recommended before mainnet value — see [`../SECURITY.md`](../SECURITY.md).
+The canonical record for findings #1–#5 is
+[`NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md`](NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md).
+These internal fixes and tests do not convert the repository into an
+independent audit or remove the operational gates in
+[`CURRENT_STATE.md`](CURRENT_STATE.md).
 
 **Scope of this ✅:** these checks cover the **hook and vault**. The convert-to-liquidity layer
-(`NARALiquidityCompounderV4`) is now built and unit-tested (through the real vault + a faithful
-PositionManager/Permit2 mock), but is **not yet certified end-to-end on mainnet**: it still needs
-deployment, `setCompounder` wiring, and a Base fork test against the real PositionManager. Treat
-"Liquidity mode" as built-and-tested but not-yet-operational until the compounder is deployed,
-fork-validated, reviewed, and `setCompounder`'d.
+(`NARALiquidityCompounderV4`) is deployed and wired on Stage A but not frozen.
+Because the corrected hook and vault require fresh addresses, the replacement
+trio must be deployed, wired, verified, smoke-tested on the initialized pool,
+and only then frozen before public activation.

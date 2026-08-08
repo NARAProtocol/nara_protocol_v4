@@ -129,7 +129,7 @@ contract EchidnaNARAEngineV4Harness {
     function _ensureEngine() internal {
         if (address(engine) != address(0)) return;
 
-        NARAToken deployedToken = new NARAToken(address(this), address(this), "NARA Protocol", "NARA");
+        NARAToken deployedToken = new NARAToken(address(this), address(this), "NARA", "NARA");
         token = deployedToken;
         pendingToken = address(deployedToken);
 

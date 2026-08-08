@@ -1,4 +1,4 @@
-# NARA Token Identity
+# NARA Identity
 
 Status: frozen for the fresh v4 launch.
 
@@ -6,8 +6,8 @@ Status: frozen for the fresh v4 launch.
 
 | Field | Value |
 |---|---|
-| Protocol brand | NARA Protocol |
-| ERC-20 name | `NARA Token` |
+| Public brand | `NARA` |
+| ERC-20 name | `NARA` |
 | ERC-20 symbol | `NARA` |
 | Public ticker notation | `$NARA` |
 | Decimals | `18` |
@@ -36,9 +36,12 @@ manifests, the monitor, baskets, and every application before public use.
 The production deployment script accepts only:
 
 ```text
-V4_TOKEN_NAME=NARA Token
+V4_TOKEN_NAME=NARA
 V4_TOKEN_SYMBOL=NARA
 ```
+
+`$NARA` is presentation notation only. Contracts, ABIs, typed-data clients,
+environment-variable names, and token-list data use the raw `NARA` symbol.
 
 Any alternative metadata fails before a transaction is sent. The generic
 Solidity constructor remains parameterized so its previously reviewed token

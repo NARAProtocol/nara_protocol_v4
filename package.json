@@ -2,24 +2,21 @@
   "name": "nara-protocol-hardhat",
   "private": true,
   "version": "0.2.0",
-  "description": "Experimental NARA v4 position, accounting, liquidity, and integration contracts for Base.",
+  "description": "NARA v4 contracts and operations workspace. v3 stack archived under archive/legacy-v3/.",
   "type": "module",
   "scripts": {
     "build": "hardhat compile",
     "clean": "hardhat clean",
     "test": "hardhat test",
-    "check": "npm run verify:public && npm run build && npm test && npm run size && npm audit --audit-level=high",
-    "verify:public": "node scripts/checkPublicRepo.mjs",
-    "audit:deps": "npm audit --audit-level=high",
     "test:token:v4": "hardhat test test/NARAToken.v4.test.ts",
     "test:engine:v4": "hardhat test test/NARAEngine.v4.test.ts",
-    "test:liquidity:v4": "hardhat test test/NARALiquidityGrowth.v4.test.ts",
+    "test:liquidity:v4": "hardhat test test/NARALiquidityGrowth.v4.test.ts test/NARALiquidityGrowth.real-v4.test.ts",
     "test:bond:v4": "hardhat test test/NARABondV4.test.ts",
     "test:nft:v4": "hardhat test test/NARAPositionNFTV4.test.ts test/NARAPositionDataLensV1.test.ts",
     "test:bond-nft:v4": "hardhat test test/NARABondV4NFT.test.ts",
     "test:invariants:v4": "hardhat test test/NARAInvariantRegression.v4.test.ts",
     "test:composability:v4": "hardhat test test/composability/NARAStakingPool.test.ts test/composability/NARAFractionalPosition.test.ts",
-    "test:v4": "hardhat test test/NARAToken.v4.test.ts && hardhat test test/NARAEngine.v4.test.ts && hardhat test test/NARALiquidityGrowth.v4.test.ts",
+    "test:v4": "hardhat test test/NARAToken.v4.test.ts && hardhat test test/NARAEngine.v4.test.ts && hardhat test test/NARALiquidityGrowth.v4.test.ts test/NARALiquidityGrowth.real-v4.test.ts",
     "size": "tsx scripts/checkBytecodeSizes.ts",
     "slither:v4": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/runSlitherV4.ps1",
     "aderyn:v4": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/runAderynV4.ps1",
@@ -37,9 +34,12 @@
     "build:v4:fee-curve": "tsx scripts/buildV4FeeCurveUpdate.ts",
     "build:v4:compounder-validation": "tsx scripts/buildV4CompounderValidation.ts",
     "build:v4:compound-keeper-auth": "tsx scripts/buildV4CompoundKeeperAuthorization.ts",
+    "build:v4:liquidity-recovery-proposal": "tsx scripts/buildV4LiquidityStackRecoveryProposal.ts",
     "verify:v4:allocations": "hardhat run scripts/verifyV4AllocationsLive.ts --network base",
     "verify:v4:preflight": "tsx scripts/verifyV4Preflight.ts",
     "verify:v4:preseed": "tsx scripts/verifyV4Preflight.ts --pre-seed",
+    "verify:v4:launch-gates:preseed": "tsx scripts/verifyV4LaunchGates.ts --pre-seed --baskets-only",
+    "verify:v4:launch-gates:baskets": "tsx scripts/verifyV4LaunchGates.ts --baskets-only",
     "execute:v4:nara-depth": "tsx scripts/executeV4NaraDepth.ts",
     "verify:v4:launch-gates": "tsx scripts/verifyV4LaunchGates.ts",
     "maintain:v4:epochs": "tsx scripts/maintainV4Epochs.ts",
@@ -50,37 +50,16 @@
     "v4:env:sync:write": "tsx scripts/syncV4FreshEnv.ts --write-dotenv",
     "fund:v4:reserve": "hardhat run scripts/fundEmissionReserveV4.ts --network base"
   },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/NARAProtocol/nara_protocol_v4.git"
-  },
-  "bugs": {
-    "url": "https://github.com/NARAProtocol/nara_protocol_v4/issues"
-  },
-  "homepage": "https://github.com/NARAProtocol/nara_protocol_v4#readme",
-  "keywords": [
-    "solidity",
-    "base",
-    "hardhat",
-    "uniswap-v4",
-    "erc-20",
-    "erc-721",
-    "erc-2612",
-    "erc-3156",
-    "erc-1363"
-  ],
-  "license": "MIT",
-  "engines": {
-    "node": ">=20"
-  },
   "devDependencies": {
     "@nomicfoundation/hardhat-ethers": "4.0.7",
     "@nomicfoundation/hardhat-ethers-chai-matchers": "3.0.4",
     "@nomicfoundation/hardhat-keystore": "3.0.5",
     "@nomicfoundation/hardhat-mocha": "3.0.15",
     "@nomicfoundation/hardhat-network-helpers": "3.0.4",
+    "@nomicfoundation/hardhat-typechain": "3.0.5",
     "@nomicfoundation/hardhat-verify": "3.0.13",
     "@openzeppelin/contracts": "5.6.1",
+    "@typechain/ethers-v6": "0.5.1",
     "@types/chai": "5.2.3",
     "@types/mocha": "10.0.10",
     "@types/node": "25.5.2",
@@ -92,17 +71,24 @@
     "mocha": "11.7.6",
     "ts-node": "10.9.2",
     "tsx": "4.23.1",
+    "typechain": "8.3.2",
     "typescript": "6.0.2"
   },
   "overrides": {
     "hardhat": {
       "adm-zip": "0.6.0"
     },
-    "minimatch": "10.2.6",
-    "brace-expansion": "5.0.8",
-    "diff": "9.0.0",
+    "minimatch@3.1.5": {
+      "brace-expansion": "5.0.9"
+    },
+    "minimatch@9.0.9": {
+      "brace-expansion": "5.0.9"
+    },
     "mocha": {
+      "diff": "8.0.3",
+      "js-yaml": "4.3.1",
       "serialize-javascript": "7.0.5"
-    }
+    },
+    "undici": "6.28.0"
   }
 }

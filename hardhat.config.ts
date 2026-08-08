@@ -2,6 +2,7 @@ import { defineConfig } from "hardhat/config";
 import hardhatMocha from "@nomicfoundation/hardhat-mocha";
 import hardhatEthers from "@nomicfoundation/hardhat-ethers";
 import hardhatEthersChaiMatchers from "@nomicfoundation/hardhat-ethers-chai-matchers";
+import hardhatTypechain from "@nomicfoundation/hardhat-typechain";
 import hardhatVerify from "@nomicfoundation/hardhat-verify";
 import "dotenv/config";
 
@@ -62,6 +63,33 @@ if (BASE_RPC_URL) {
       url: BASE_RPC_URL,
     },
   };
+  // Immutable incident-state fork used only by the end-to-end liquidity
+  // retirement proof. Keep the general Base fork on latest for other suites.
+  optionalNetworks.baseLiquidityRetirementFork = {
+    type: "edr-simulated",
+    chainType: "op",
+    allowUnlimitedContractSize: true,
+    blockGasLimit: 60_000_000,
+    hardfork: "isthmus",
+    forking: {
+      url: BASE_RPC_URL,
+      blockNumber: 49_372_240,
+    },
+  };
+  // Immutable matured pre-execution state for the exact final withdrawal
+  // proof. Latest Base is intentionally post-retirement and must not be used
+  // to regenerate or replay the consumed Safe batch.
+  optionalNetworks.baseLiquidityWithdrawalFork = {
+    type: "edr-simulated",
+    chainType: "op",
+    allowUnlimitedContractSize: true,
+    blockGasLimit: 60_000_000,
+    hardfork: "isthmus",
+    forking: {
+      url: BASE_RPC_URL,
+      blockNumber: 49_715_120,
+    },
+  };
 }
 
 export default defineConfig({
@@ -69,6 +97,7 @@ export default defineConfig({
     hardhatMocha,
     hardhatEthers,
     hardhatEthersChaiMatchers,
+    hardhatTypechain,
     hardhatVerify,
   ],
   solidity: {

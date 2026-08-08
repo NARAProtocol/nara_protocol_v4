@@ -1,7 +1,9 @@
 import { ethers } from "ethers";
 
 export const BPS = 10_000n;
+export const Q96 = 1n << 96n;
 export const Q192 = 1n << 192n;
+export const USDC_PER_NARA_WAD_SCALE = 10n ** 30n;
 export const MIN_SLIPPAGE_BPS = 10n;
 export const MAX_SLIPPAGE_BPS = 1_000n;
 export const DEFAULT_SMOKE_SLIPPAGE_BPS = 500n;
@@ -53,6 +55,39 @@ export async function readSqrtPriceX96(
     throw new Error("Cannot calculate a protected swap minimum: pool is uninitialized");
   }
   return sqrtPriceX96;
+}
+
+export function usdcPerNaraWad(sqrtPriceX96: bigint, naraIsCurrency0: boolean): bigint {
+  if (sqrtPriceX96 <= 0n) throw new Error("sqrtPriceX96 must be positive");
+  const priceX192 = sqrtPriceX96 * sqrtPriceX96;
+  return naraIsCurrency0
+    ? priceX192 * USDC_PER_NARA_WAD_SCALE / Q192
+    : Q192 * USDC_PER_NARA_WAD_SCALE / priceX192;
+}
+
+export function projectConstantLiquidityExactInput(params: {
+  amountIn: bigint;
+  sqrtPriceX96: bigint;
+  liquidity: bigint;
+  inputIsCurrency0: boolean;
+}): { sqrtPriceX96After: bigint; amountOut: bigint } {
+  const { amountIn, sqrtPriceX96, liquidity, inputIsCurrency0 } = params;
+  if (amountIn <= 0n) throw new Error("Projection input must be positive");
+  if (sqrtPriceX96 <= 0n) throw new Error("sqrtPriceX96 must be positive");
+  if (liquidity <= 0n) throw new Error("Pool has no active liquidity");
+
+  if (!inputIsCurrency0) {
+    const sqrtPriceX96After = sqrtPriceX96 + amountIn * Q96 / liquidity;
+    const amountOut = liquidity * Q96 * (sqrtPriceX96After - sqrtPriceX96)
+      / (sqrtPriceX96 * sqrtPriceX96After);
+    return { sqrtPriceX96After, amountOut };
+  }
+
+  const numerator = liquidity * sqrtPriceX96 * Q96;
+  const denominator = liquidity * Q96 + amountIn * sqrtPriceX96;
+  const sqrtPriceX96After = (numerator + denominator - 1n) / denominator;
+  const amountOut = liquidity * (sqrtPriceX96 - sqrtPriceX96After) / Q96;
+  return { sqrtPriceX96After, amountOut };
 }
 
 export function calculateSpotMinimum(params: {
