@@ -2,7 +2,11 @@
 
 Prepared: 2026-07-30
 
-Status: completed and post-action verified
+Status: completed historical Stage A revocation evidence. Do not reuse its
+addresses as current deployment targets. The fresh Engine deployment separately
+renounced the constructor-granted notifier role and the current manifest proves
+that the deployer, production Safe, and fresh Vault do not hold
+`REWARD_NOTIFIER_ROLE`; see [CURRENT_STATE.md](CURRENT_STATE.md).
 
 ## Purpose
 

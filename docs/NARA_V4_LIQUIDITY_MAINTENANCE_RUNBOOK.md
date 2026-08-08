@@ -2,6 +2,12 @@
 
 Change-ID: `NARA-20260731-liquidity-maintainer`
 
+Current stop boundary (2026-08-09): this runbook is inactive. The fresh pool is
+dormant, the Compounder is not deployed or wired, and both v4 operations
+workflows and their repository enable variables are disabled. Do not schedule,
+dispatch, or re-enable maintenance without a new explicit order and
+deployment-specific review.
+
 The hook collects NARA/USDC pool fees into the growth vault during live swaps.
 Those fees do not become liquidity inside the swap transaction. A second,
 restricted `compoundAll()` transaction moves them through the bound compounder,
@@ -43,10 +49,12 @@ unbalanced remainder in the compounder for a later cycle.
 8. Fund the dedicated keeper with a small amount of ETH for Base gas, store its
    key only in the GitHub Actions secret `V4_OPERATIONS_KEEPER_PRIVATE_KEY`, and
    run the workflow manually in read-only mode, then execute mode.
-9. Set repository variables `V4_LIQUIDITY_MAINTAINER_ENABLED=true` and
-   `V4_OPERATIONS_KEEPER_ENABLED=true` only after the manual cycle and
-   post-state verification pass. The combined operations workflow runs every
-   30 minutes; the separate liquidity workflow remains manual-only.
+9. Only after a new explicit authorization, the manual cycle, and post-state
+   verification pass may maintainers consider setting repository variables
+   `V4_LIQUIDITY_MAINTAINER_ENABLED=true` and
+   `V4_OPERATIONS_KEEPER_ENABLED=true`. If later enabled, the combined
+   operations workflow is scheduled every 30 minutes; the separate liquidity
+   workflow remains manual-only. Both are disabled now.
 
 ## Runtime safety
 

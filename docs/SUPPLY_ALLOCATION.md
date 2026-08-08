@@ -1,6 +1,6 @@
 # NARA v4 Supply Allocation
 
-Last updated: 2026-07-27.
+Last updated: 2026-08-09.
 
 This document is the canonical supply-allocation and initial-liquidity reference
 for the active NARA v4 deployment. Code and verified on-chain balances remain
@@ -22,7 +22,7 @@ mint function.
 | Treasury | 40,000 | 4% | Retained treasury allocation |
 | **Total** | **1,000,000** | **100%** | |
 
-The live Stage A balances reconcile with this plan:
+The fresh-core verification readback reconciles with this plan:
 
 - `650,000 NARA` is sealed in `NARARewardReserve`.
 - `350,000 NARA` remains in the treasury before the deferred allocation split.
@@ -52,7 +52,8 @@ price-impact, custody, and transaction review.
 
 ## Execution Guardrails
 
-- The NARA/USDC pool is currently uninitialized and has no liquidity.
+- The NARA/USDC pool is currently unregistered, uninitialized, and unseeded and
+  has no liquidity or LP NFT.
 - Do not use the historical `30 NARA + 300 USDC` seed values; that ratio implies
   `$10` per NARA and a `$10,000,000` FDV.
 - Do not use the superseded `3,000 NARA + 300 USDC` ratio; it implies `$0.10`
@@ -68,7 +69,7 @@ The planned post-allocation disclosure model counts the `70,000 NARA` liquidity
 allocation and `40,000 NARA` treasury allocation as circulating, for a planned
 genesis disclosure of `110,000 NARA`.
 
-That is not a claim about the current Stage A circulating supply. The allocation
-layer and final custody split are deferred. Do not deploy or publish the
+That is not a claim about the current circulating supply. The allocation layer
+and final custody split are deferred. Do not deploy or publish the
 circulating-supply oracle until its excluded-address set matches the verified
 post-allocation custody structure.

@@ -7,11 +7,11 @@ has been deleted. Fresh deployment work is v4-only.**
 
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.34-363636?logo=solidity)](https://soliditylang.org)
 [![Hardhat](https://img.shields.io/badge/Built%20with-Hardhat-fff100)](https://hardhat.org)
-[![Tests](https://img.shields.io/badge/V4-526%20local%20tests-2ea44f)](#-build--test)
+[![Tests](https://img.shields.io/badge/V4-553%20local%20tests-2ea44f)](#-build--test)
 [![Echidna](https://img.shields.io/badge/invariants-13%2F13%20passing-2ea44f)](#-security)
 [![Uniswap v4](https://img.shields.io/badge/Uniswap-v4-ff007a)](docs/UNISWAP_V4_HOOK.md)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
-[![Status](https://img.shields.io/badge/status-V4%20redeploy%20verification-orange)](#-status)
+[![Status](https://img.shields.io/badge/status-core%20deployed%20%C2%B7%20pool%20dormant-orange)](#-status)
 
 <br/>
 
@@ -42,8 +42,10 @@ is intentionally disabled; see [Current State](docs/CURRENT_STATE.md).
 A commitment isn't a database row you can't move — **it's an NFT**. You can sell it, fractionalize it, wrap
 it into a liquid staking token, or borrow against it, all without breaking the underlying commitment.
 
-The v4 market uses a custom Uniswap v4 pool. Its vault is in `Liquidity` mode
-and its generic ERC-20 Engine notifier path is disabled.
+The planned v4 market uses a custom Uniswap v4 pool. The fresh Hook and Vault
+are deployed, but the pool is still unregistered, uninitialized, and unseeded.
+The Vault is in `Liquidity` mode and its generic ERC-20 Engine notifier path is
+disabled.
 
 ```
 NARAToken -> NARAEngine -> positions / bonds
@@ -58,9 +60,9 @@ NARA/USDC pool -> v4 Hook -> v4 Vault -> balanced inventory -> Compounder/POL
 ## Table of contents
 
 - [Status](#-status)
-- [V4 architecture snapshot](#-v4-architecture-snapshot--recoveryhistorical)
+- [V4 architecture snapshot](#-v4-architecture-snapshot)
 - [V4 source pillars](#-v4-source-pillars)
-- [How the deployed V4 engine works](#-how-the-deployed-v4-engine-works--recoveryhistorical)
+- [How the deployed V4 engine works](#%EF%B8%8F-how-the-deployed-v4-engine-works)
 - [Uniswap v4 hook workstreams](#-the-uniswap-v4-hook-workstreams)
 - [V4 positions, Genesis & bonds](#-v4-positions-genesis--bonds)
 - [V4 composability source](#-v4-composability-source)
@@ -75,10 +77,11 @@ NARA/USDC pool -> v4 Hook -> v4 Vault -> balanced inventory -> Compounder/POL
 
 ## 🚦 Status
 
-**Fresh-v4 redeploy verification is in progress; product activation is
-blocked.** Historical Base addresses are incident/recovery evidence, not a
-manifest for the replacement. No transaction or deployment is authorized by
-this repository state. Canonical evidence:
+**The fresh v4 core is deployed and source-verified; product activation is
+blocked.** The NARA/USDC pool is dormant, Hook and Vault Safe ownership
+acceptance is pending, and the Compounder is not deployed or configured.
+Historical Base addresses are incident/recovery evidence, not fallbacks. No
+further transaction is authorized by this repository state. Canonical evidence:
 [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md).
 
 ---
@@ -97,10 +100,10 @@ flowchart TD
       R[NARARewardReserve<br/>sealed emission reserve]
     end
     subgraph LIQ[Liquidity]
-      H[NARALiquidityGrowthHook<br/>retiring V4 · buy-weighted fee]
+      H[NARALiquidityGrowthHook<br/>fresh V4 · buy-weighted fee]
       V[NARALiquidityGrowthVault<br/>Liquidity / Genesis routes only]
-      P((NARA / USDC<br/>retiring V4 pool))
-      LP[Full-range POL]
+      P((NARA / USDC<br/>dormant fresh V4 pool))
+      LP[Planned full-range POL]
     end
     subgraph POS[Positions]
       NFT[NARAPositionNFTV4<br/>a commitment IS an NFT]
@@ -138,13 +141,13 @@ This is the v4 dependency shape. Full v4 layer inventory:
 |--------|-----------|
 | **Token** | `NARAToken` — 1,000,000 fixed supply, minted once. ERC-2612 permit, ERC-1363 (`transferAndCall` to commit in one tx), capped ERC-3156 flash mint, multicall. |
 | **Engine** | `NARAEngine` — the settlement core: JIT epoch advance and weight-based NARA/ETH accounting. Its generic ERC-20 rail exists in immutable code but is disabled for this deployment. |
-| **Liquidity** | The retiring **Uniswap v4** pool and V4 hook/vault/compounder family. The deployed vault routes to POL; V4 ERC-20 Engine notification is prohibited. |
+| **Liquidity** | The fresh **Uniswap v4** Hook/Vault family and planned Compounder. The deployed Vault is configured for POL but remains inert until the Compounder and pool are separately activated; V4 ERC-20 Engine notification is prohibited. |
 | **Positions** | `NARAPositionNFTV4` — a commitment *is* a tradable NFT, with Genesis tiers and a bond intake path. |
 | **Composability** | Tested optional v4 source for `stNARA`, a Pendle SY adapter, and fractional position wrappers; not automatically deployed. |
 
 ---
 
-## ⚙️ How the Deployed V4 Engine Works — Recovery/Historical
+## ⚙️ How the Deployed V4 Engine Works
 
 - **JIT epochs.** Time is divided into fixed (default 15-min) epochs. Epoch advancement is triggered
   *inside* user calls — no keeper cron. A single call bridges up to `MAX_JIT_ADVANCE = 8` epochs; past
@@ -254,7 +257,8 @@ not a Forge setup.)
 
 | Gate | Latest evidence |
 |------|-----------------|
-| V4 Hardhat suite | **526/526** passing on 2026-08-05 after the one-sided fee-bank regression was added |
+| V4 Hardhat suite | **553 passing** on 2026-08-09; 5 Base-fork cases intentionally skipped without their opt-in fork environment |
+| Fresh deployment/receipt/Safe-batch evidence | **12/12** focused tests passing on 2026-08-09 |
 | Focused Hook/Vault/Compounder/atomic batch | **43/43** passing on 2026-08-05 |
 | V4 invariants | **4/4** Hardhat invariant regressions passing on 2026-08-05 |
 | Static review | Slither completed every configured production v4 target; internal critic disposition is recorded in the dated audit run |

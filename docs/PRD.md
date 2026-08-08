@@ -1,11 +1,13 @@
 # NARA Protocol PRD
 
-Last updated: 2026-07-26.
+Last updated: 2026-08-09.
 
-Status: v3 is retired. The fresh v4 Stage A core is already deployed on Base
-mainnet and remains dormant. The current product launch scope is NARA Baskets
-only. Lockboard is deferred; Lotto and Arena are retired. Do not repeat the
-core deployment. See [CURRENT_STATE.md](CURRENT_STATE.md).
+Status: v3 is retired. The fresh v4 core is deployed and source-verified on
+Base mainnet and remains dormant. The pool is unregistered, uninitialized, and
+unseeded; the Compounder and Hook/Vault Safe ownership acceptance are pending.
+The current product launch scope is NARA Baskets only. Lockboard is deferred;
+Lotto and Arena are retired. Do not repeat the core deployment. See
+[CURRENT_STATE.md](CURRENT_STATE.md).
 
 Code and deployment scripts are the source of truth. If this PRD conflicts with Solidity, scripts, or [CURRENT_STATE.md](CURRENT_STATE.md), update this PRD.
 
@@ -56,10 +58,11 @@ In plain terms:
 
 ## 3. Current Scope
 
-Not yet live (awaiting fresh v4 deploy):
+Deployed but not activated:
 
-- Fresh v4 mainnet deploy.
-- Public v4 token address.
+- Fresh v4 core contracts, including the public NARA token address recorded in
+  `CURRENT_STATE.md`.
+- Fresh Hook and Vault, with Safe ownership acceptance still pending.
 
 In repo, ready to deploy:
 
@@ -71,6 +74,7 @@ Not live today:
 
 - Public v4 launch candidate.
 - Fresh v4 NARA/USDC pool.
+- Fresh v4 Compounder.
 - Fresh v4 allocation stack.
 - Public v4 NFT bond market.
 - Deployed v4 composability layer.
@@ -80,9 +84,13 @@ Not live today:
 
 Fresh v4 launch scope:
 
-- Deploy v4 core with `npm run deploy:v4:base:usdc`.
-- Run `npm run verify:v4:preflight`.
-- Seed NARA/USDC liquidity.
+- Treat the fresh core deployment as complete; do not rerun it.
+- Complete Safe Hook/Vault ownership acceptance and fresh Compounder
+  deployment/wiring.
+- Pass pre-seed gates and review the exact atomic Safe batch.
+- Register, initialize, and seed NARA/USDC only in that separately approved
+  atomic batch.
+- Run `npm run verify:v4:preflight` after the seed receipt.
 - Run `npm run smoke:v4`.
 - Deploy allocations with NFT bonds closed.
 - Run `npm run verify:v4:allocations`.
@@ -365,7 +373,8 @@ Fresh v4 launch scope:
 
 - NARA/USDC pool fees are captured by `NARALiquidityGrowthHook`.
 - Fees accrue in `NARALiquidityGrowthVault`.
-- Vault mode determines whether value compounds liquidity, routes to engine rewards, routes to Genesis, or splits.
+- Vault mode may route value to Liquidity or Genesis paths. The Engine and
+  Split ERC-20 routes permanently revert for this deployment.
 
 ---
 
@@ -375,8 +384,10 @@ Fresh v4 launch scope:
 
 - Finish documentation sync to v4 code.
 - Run local verification and static analysis or record an explicit waiver.
-- Deploy fresh v4 core.
-- Run preflight, liquidity seed, and smoke test.
+- Complete Safe ownership acceptance and deploy/verify/wire the fresh
+  Compounder.
+- Run pre-seed gates, the separately approved atomic liquidity launch, and
+  receipt-pinned smoke tests.
 - Deploy allocations with NFT bonds closed.
 - Update docs and frontends only after fresh address verification.
 

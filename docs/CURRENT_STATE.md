@@ -174,7 +174,8 @@ Current local evidence after remediation:
 
 | Gate | Result |
 |---|---|
-| Complete Hardhat suite | 526 passing on 2026-08-05 after the one-sided regression |
+| Complete Hardhat suite | 553 passing on 2026-08-09; 5 opt-in Base-fork cases pending |
+| Fresh deployment/receipt/Safe-batch evidence | 12 focused tests passing on 2026-08-09 |
 | Focused Hook/Vault/Compounder/atomic launch | 43 passing |
 | Hardhat invariant regression | 4 passing |
 | Compiled-size gate | Passed; Engine runtime is 24,554 bytes, only 22 bytes below EIP-170 |
@@ -243,9 +244,10 @@ active liquidity to zero, cleared `pendingRecovery`, and left the sealed
 `321662.875771577338403661 NARA` and `363.781444 USDC`; the exact scoped NARA
 reconciliation differed by one raw unit (`1e-18 NARA`) from integer rounding.
 
-The completed recovery, exact pre/post reads, and future cold-AI procedure are
-recorded in
-[NARA_V4_LIQUIDITY_WITHDRAWAL_RUNBOOK.md](NARA_V4_LIQUIDITY_WITHDRAWAL_RUNBOOK.md).
+The completed recovery is anchored by the transaction and state reads above.
+The operator-local `NARA_V4_LIQUIDITY_WITHDRAWAL_RUNBOOK.md` is not part of this
+protected release and must not be treated as repository authority until it
+enters through its own review.
 Do not replay the consumed Safe batch, restore its pending state, or treat the
 historical addresses or recovered assets as a fresh-v4 manifest. This evidence
 authorizes no further transaction or redeployment.

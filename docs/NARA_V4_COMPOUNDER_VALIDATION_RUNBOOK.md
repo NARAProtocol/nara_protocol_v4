@@ -2,10 +2,14 @@
 
 Change-ID: `NARA-20260731-compounder-validation`
 
-The replacement vault is in `Liquidity` mode and holds collected NARA and USDC
-fees, but its compounder is not frozen. Final launch gates correctly remain
-blocked until one live compound is verified and the Safe performs the separate
-one-way freeze.
+Current stop boundary (2026-08-09): the fresh Vault is empty, its Compounder is
+the zero address, Hook/Vault Safe ownership acceptance is pending, and the pool
+is unregistered, uninitialized, and unseeded. Do not use this runbook yet.
+
+After ownership acceptance, fresh Compounder deployment/wiring, atomic pool
+activation, and receipt verification, final launch gates remain blocked until
+one live compound is verified and the Safe performs the separate one-way
+freeze.
 
 ## Build The Validation Transaction
 

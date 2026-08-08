@@ -1,9 +1,11 @@
 # NARA Roadmap
 
-Last updated: 2026-07-26.
+Last updated: 2026-08-09.
 
-> **Current-state override:** the fresh v4 Stage A core is deployed on Base
-> mainnet and remains dormant. The current product launch scope is NARA
+> **Current-state override:** the fresh v4 core is deployed and source-verified
+> on Base mainnet and remains dormant. The pool is unregistered, uninitialized,
+> and unseeded; Safe ownership acceptance and the Compounder are pending. The
+> current product launch scope is NARA
 > Baskets only. Lockboard is deferred; Lotto and Arena are retired. This file
 > is product direction, not a deployment runbook. See [CURRENT_STATE.md](CURRENT_STATE.md).
 
@@ -37,12 +39,15 @@ The frontend is a launch and education surface. The protocol thesis is the durab
 
 ## Current Starting Point
 
-As of 2026-07-26:
+As of 2026-08-09:
 
 - v3 is **retired**. All v3 mainnet contracts are archived at `archive/legacy-v3/`. See `archive/legacy-v3/README.md` for retired addresses.
 - The 2026-04-23 v4 incident stack is retired for launch purposes.
-- Controlled Stage A is deployed and deliberately dormant.
-- The registered NARA/USDC pool is uninitialized and has no liquidity.
+- Controlled Stage A and the 2026-07-30 pool are historical evidence only.
+- The fresh v4 core is deployed and source-verified from the immutable release
+  commit recorded in `CURRENT_STATE.md`.
+- The fresh NARA/USDC pool is unregistered, uninitialized, and unseeded and has
+  no liquidity or LP NFT.
 - The current product launch scope is the NARA basket app only.
 - Do not repeat the core deployment.
 - Current v4 code uses `NARALiquidityGrowthHook` and `NARALiquidityGrowthVault`.
@@ -50,11 +55,11 @@ As of 2026-07-26:
 - Current public bond path is `NARABondDepositoryV4NFT`.
 - Current composability code is implemented locally but not deployed.
 
-Latest verification — see [CURRENT_STATE.md](CURRENT_STATE.md#verification-status) for the live
-commands and dated stamp. As of 2026-07-29:
+Latest verification — see [CURRENT_STATE.md](CURRENT_STATE.md#verification-evidence) for the
+commands and dated stamp. As of 2026-08-09:
 
-- Full Hardhat suite: 468 passing, 0 failing. This includes the real Uniswap v4
-  split-invariance test and the read-only Stage A quarantine check.
+- Full Hardhat suite: 553 passing, with 5 opt-in Base-fork cases pending.
+- Fresh deployment/receipt/Safe-batch evidence: 12 focused tests passing.
 - The most recent basket verification evidence is recorded separately in
   [CURRENT_STATE.md](CURRENT_STATE.md); rerun it before basket deployment.
 - `npm run size`: passed, all artifacts within EVM limits.
@@ -93,8 +98,8 @@ commands and dated stamp. As of 2026-07-29:
 
 Status: active.
 
-Goal: keep the workspace synchronized while the deployed Stage A stack remains
-dormant and the baskets activation gates are completed.
+Goal: keep the workspace synchronized while the fresh core and pool remain
+dormant and the activation gates are completed.
 
 Deliverables:
 
@@ -114,9 +119,12 @@ Success criteria:
 
 ## Phase 1: Fresh v4 Core Redeploy
 
-Status: next production milestone.
+Status: in progress. Fresh core deployment and source verification are complete;
+Hook/Vault Safe ownership acceptance, Compounder deployment/wiring, atomic pool
+launch, and smoke verification remain pending.
 
-Goal: deploy a fresh v4 core stack on Base using current code.
+Goal: complete the remaining ownership, Compounder, atomic pool, and smoke gates
+for the already deployed fresh v4 core.
 
 Required contracts:
 
@@ -127,10 +135,18 @@ Required contracts:
 - `NARALiquidityGrowthHook`
 - `Create2HookDeployer`
 
-Required command path:
+Completed core-deploy command — **do not rerun**:
 
 ```bash
 npm run deploy:v4:base:usdc
+```
+
+Remaining command path, with the Safe ownership and Compounder steps from the
+launch runbook inserted before the atomic batch:
+
+```bash
+npm run verify:v4:preseed
+npm run verify:v4:launch-gates:preseed
 npm run verify:v4:preflight
 npm run build:v4:atomic-pool-launch
 npm run smoke:v4
@@ -395,12 +411,15 @@ If users do not understand rewards:
 2. Run full local verification.
 3. Run static analysis or record explicit waiver.
 4. Confirm deployment environment variables.
-5. Deploy fresh v4 core.
-6. Run preflight, seed liquidity, and smoke test.
-7. Deploy allocations with NFT bonds closed.
-8. Verify allocations.
-9. Update current-state docs and frontend config with fresh addresses.
-10. Open public lock flow through `NARAPositionNFTV4`.
-11. Open bonds only after terms, capacity, and roles are reviewed.
-12. Deploy composability only after core and allocation verification.
-13. Validate SY before Pendle outreach.
+5. Have the Safe accept fresh Hook/Vault ownership.
+6. Deploy, verify, and Safe-wire the fresh Compounder.
+7. Run pre-seed gates, then separately approve and execute the atomic pool
+   registration/initialization/seed batch.
+8. Run post-seed, Compounder-validation, and receipt-pinned smoke gates.
+9. Deploy and verify allocations with NFT bonds closed.
+10. Update frontend/monitor configuration only through explicit fresh-address
+    handoffs.
+11. Open public lock flow through `NARAPositionNFTV4` only after its gates.
+12. Open bonds only after terms, capacity, and roles are reviewed.
+13. Deploy composability only after core and allocation verification, then
+    validate SY before Pendle outreach.

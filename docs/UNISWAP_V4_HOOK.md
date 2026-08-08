@@ -6,12 +6,13 @@
 > Verified against code and the real Uniswap v4 PoolManager test on
 > **2026-08-08**.
 
-NARA's liquidity home is a **single registered custom Uniswap v4 pool**
-(NARA/USDC). Its hook is not a neutral fee rail: every supported exact-input
-swap through that one canonical registered Hook pool pays the configured
+NARA's planned liquidity home is a **single custom Uniswap v4 pool**
+(NARA/USDC). The fresh canonical Hook is deployed but still unregistered; the
+pool is uninitialized and unseeded. After atomic activation, every supported
+exact-input swap through that one registered Hook pool pays the configured
 asymmetric pressure fee into the Vault. Exact-output swaps are rejected. NARA
-ERC-20 transfers and swaps in third-party or unregistered pools are outside this
-Hook and are not universally taxed.
+ERC-20 transfers and swaps in third-party or unregistered pools are outside
+this Hook and are not universally taxed.
 
 > **READ THIS FIRST — the mechanism is POL-first, not locker-first.** The vault's **default route mode
 > is `Liquidity`** (`NARALiquidityGrowthVault` constructor sets `routeMode = RouteMode.Liquidity`). The
@@ -22,14 +23,14 @@ Hook and are not universally taxed.
 > under-allocate after an active-position extension. Do **not** describe the
 > hook as "a tax that funds lockers."
 >
-> **FRESH FULL-v4 DEPLOYMENT REQUIRED.** Stage A and the 2026-07-30 pool are
-> historical incident/recovery evidence only. The corrected Hook and Vault
-> require fresh addresses in the same new full-v4 manifest. The POL
+> **FRESH FULL-v4 DEPLOYMENT IN PROGRESS.** Stage A and the 2026-07-30 pool are
+> historical incident/recovery evidence only. The corrected Hook and Vault are
+> now deployed at the fresh addresses in the current manifest. The POL
 > adapter remains intentionally pluggable through
 > `ILiquidityCompounder.compound(...)`, with exact-spend checks, minimum-output
 > protection, remainder banking, POL custody, and a seven-day recovery
-> timelock. Deploy and verify the corrected hook/vault/compounder trio, run the
-> real-pool smoke test, then freeze the compounder before public activation.
+> timelock. The Compounder, ownership handoff, atomic pool launch, real-pool
+> smoke test, validation, and final freeze remain pending.
 
 This document explains how the hook works and why it is correct.
 
@@ -177,14 +178,15 @@ consumer; it needs no hook permission bits of its own.
 
 ---
 
-## 7. Verification status (2026-07-28)
+## 7. Verification status (2026-08-09)
 
 - ✅ `getHookPermissions()` = `beforeInitialize + beforeSwap + beforeSwapReturnDelta` → address bits
   `0x2088`, matching the deploy/preflight requirement.
 - ✅ Built on `BaseHook` (Uniswap v4-periphery) — the canonical, audited base.
 - ✅ Exact-input-only, buy/sell detection, configured-depth block snapshots,
   cumulative fee deltas, and `maxFeeBps` caps.
-- ✅ Fee skim via `BeforeSwapDelta` + `poolManager.take()` to the vault; best-effort vault accounting.
+- ✅ Fee skim via `BeforeSwapDelta` + `poolManager.take()` to the vault, followed
+  by direct fail-closed `vault.recordPoolFee(...)` accounting in the same call.
 - ✅ Single-pool authorization (`UnauthorizedPool` / `PoolNotRegistered`).
 - ✅ Exact opening-price binding plus canonical fee/tick validation.
 - ✅ Reciprocal vault/hook/compounder binding checks protect one-shot wiring.
@@ -202,8 +204,8 @@ These internal fixes and tests do not convert the repository into an
 independent audit or remove the operational gates in
 [`CURRENT_STATE.md`](CURRENT_STATE.md).
 
-**Scope of this ✅:** these checks cover the **hook and vault**. The convert-to-liquidity layer
-(`NARALiquidityCompounderV4`) is deployed and wired on Stage A but not frozen.
-Because the corrected hook and vault require fresh addresses, the replacement
-trio must be deployed, wired, verified, smoke-tested on the initialized pool,
-and only then frozen before public activation.
+**Scope of this ✅:** these checks cover the **hook and vault**. The fresh
+convert-to-liquidity layer (`NARALiquidityCompounderV4`) is not deployed or
+wired. It must be deployed, wired, verified, validated against the later
+initialized pool, and only then frozen before public activation. See
+[`NARA_V4_PROJECT_SCOPE.md`](NARA_V4_PROJECT_SCOPE.md).

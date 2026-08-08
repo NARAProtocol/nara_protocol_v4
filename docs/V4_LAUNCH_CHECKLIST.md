@@ -68,9 +68,8 @@ by the tracked supplemental canonical reconciliation artifact.
 4. [NARA_V4_LAUNCH_RUNBOOK.md](NARA_V4_LAUNCH_RUNBOOK.md)
 5. [NARA_V4_COMPOUNDER_VALIDATION_RUNBOOK.md](NARA_V4_COMPOUNDER_VALIDATION_RUNBOOK.md)
 
-Historical context only:
-
-- [V4_INCIDENT_REDEPLOY_2026-04-23.md](V4_INCIDENT_REDEPLOY_2026-04-23.md)
+Historical incident context is summarized in `CURRENT_STATE.md`; no historical
+manifest or missing local runbook is launch authority.
 
 ---
 
@@ -202,7 +201,9 @@ Pass criteria:
 
 Latest known local result:
 
-- Full Hardhat suite (`npm test`): 468 passing as of 2026-07-29.
+- Full Hardhat suite (`npm test`): 553 passing with 5 opt-in Base-fork cases
+  pending as of 2026-08-09.
+- Fresh deployment/receipt/Safe-batch evidence: 12 focused tests passing.
 - Slither v4 scoped run: completed with exit 0 on 2026-07-29.
 - Echidna v4 engine harness: 13/13 properties passed on 2026-06-08; historical
   evidence for the current liquidity correction.

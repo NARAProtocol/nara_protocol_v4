@@ -9,7 +9,7 @@ Before reading an interface, read [`CURRENT_STATE.md`](CURRENT_STATE.md).
 
 NARA has three distinct engineering surfaces:
 
-1. deployed Stage A contracts;
+1. deployed fresh-core contracts and their explicitly dormant liquidity state;
 2. implemented and tested modules that are not deployed;
 3. historical contracts that are not active v4 code.
 
@@ -125,7 +125,8 @@ The compounder does not perform an internal swap. It supplies available token
 amounts to a full-range position and banks remainders. Swap policy is therefore
 not hidden inside the adapter.
 
-The current pool is registered but uninitialized. Do not assume a price,
+The current fresh pool is unregistered, uninitialized, and unseeded. The
+Compounder is not deployed or configured. Do not assume a market price,
 liquidity, an LP NFT, or working swaps.
 
 ## Extend periphery first
