@@ -11,7 +11,7 @@ import hre from "hardhat";
 
 const NARA = "0x65E247AA3aa9C0131b2984b894c3D24c41341D7A";
 const ENGINE = "0xbC2492BA73dE35d1114b5c18d7db633aca8963c9";
-const TREASURY_HOLDER = "0xfe3A8678A9c729438BB11718bD1391E7Ab491E8e";
+const SAFE_HOLDER = "0xd65c0e390Dc187A22c52c03816591CC736C0D755";
 const ONE_NARA = 10n ** 18n;
 
 const ENGINE_ABI = [
@@ -37,17 +37,17 @@ const hasRpc = !!(process.env.BASE_RPC_URL || process.env.BASE_MAINNET_RPC_URL);
   it("clears the live backlog, locks 1 NARA, accrues, and claims", async function () {
     this.timeout(600_000);
     const { ethers } = await hre.network.connect("baseFork");
-    await ethers.provider.send("hardhat_impersonateAccount", [TREASURY_HOLDER]);
+    await ethers.provider.send("hardhat_impersonateAccount", [SAFE_HOLDER]);
     await ethers.provider.send("hardhat_setBalance", [
-      TREASURY_HOLDER,
+      SAFE_HOLDER,
       ethers.toQuantity(ethers.parseEther("1")),
     ]);
-    const treasury = await ethers.getSigner(TREASURY_HOLDER);
-    const engine = new ethers.Contract(ENGINE, ENGINE_ABI, treasury);
-    const nara = new ethers.Contract(NARA, ERC20_ABI, treasury);
+    const holder = await ethers.getSigner(SAFE_HOLDER);
+    const engine = new ethers.Contract(ENGINE, ENGINE_ABI, holder);
+    const nara = new ethers.Contract(NARA, ERC20_ABI, holder);
 
     expect(await engine.rewardReserveAvailable()).to.be.greaterThan(0n);
-    expect(await nara.balanceOf(TREASURY_HOLDER)).to.be.greaterThanOrEqual(ONE_NARA);
+    expect(await nara.balanceOf(SAFE_HOLDER)).to.be.greaterThanOrEqual(ONE_NARA);
 
     let live = await engine.currentEpoch() as bigint;
     let state = await engine.epochState() as { epoch: bigint };
@@ -80,9 +80,9 @@ const hasRpc = !!(process.env.BASE_RPC_URL || process.env.BASE_MAINNET_RPC_URL);
 
     const [claimable] = await engine.claimableRewards(positionId) as [bigint, bigint];
     expect(claimable).to.be.greaterThan(0n);
-    const balanceBefore = await nara.balanceOf(TREASURY_HOLDER) as bigint;
-    await (await engine.claimRewards(positionId, TREASURY_HOLDER)).wait();
-    const balanceAfter = await nara.balanceOf(TREASURY_HOLDER) as bigint;
+    const balanceBefore = await nara.balanceOf(SAFE_HOLDER) as bigint;
+    await (await engine.claimRewards(positionId, SAFE_HOLDER)).wait();
+    const balanceAfter = await nara.balanceOf(SAFE_HOLDER) as bigint;
     expect(balanceAfter - balanceBefore).to.equal(claimable);
   });
 });

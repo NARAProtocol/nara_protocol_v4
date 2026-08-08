@@ -19,6 +19,24 @@ const BASE_CHAIN_ID = 8453n;
 const Q96 = 1n << 96n;
 const DEFAULT_MIN_LIQUIDITY_USDC = "5";
 const DEFAULT_GUARD_BPS = 9_900n;
+const DEFAULT_SQRT_PRICE_GUARD_BPS = 100n;
+const DEFAULT_VALUE_IMBALANCE_BPS = 100n;
+const UINT160_MAX = (1n << 160n) - 1n;
+const UINT256_MAX = (1n << 256n) - 1n;
+
+const COMPOUND_POLICY_ENV_KEYS = [
+  "V4_COMPOUND_REFERENCE_SQRT_PRICE_X96",
+  "V4_COMPOUND_MAX_NARA_USED_RAW",
+  "V4_COMPOUND_MAX_USDC_USED_RAW",
+] as const;
+
+export type CompoundExecutionPolicy = {
+  referenceSqrtPriceX96: bigint;
+  maxNaraUsed: bigint;
+  maxUsdcUsed: bigint;
+  sqrtGuardBps: bigint;
+  maxValueImbalanceBps: bigint;
+};
 
 export const VAULT_ABI = [
   "function owner() view returns (address)",
@@ -36,6 +54,14 @@ export const COMPOUNDER_ABI = [
   "function vault() view returns (address)",
   "function nara() view returns (address)",
   "function usdc() view returns (address)",
+  "function poolManager() view returns (address)",
+  "function positionManager() view returns (address)",
+  "function permit2() view returns (address)",
+  "function hooks() view returns (address)",
+  "function poolFee() view returns (uint24)",
+  "function tickSpacing() view returns (int24)",
+  "function poolId() view returns (bytes32)",
+  "function peripheryBindingsValid() view returns (bool)",
   "function positionTokenId() view returns (uint256)",
   "function totalLiquidityAdded() view returns (uint256)",
   "function totalNaraAdded() view returns (uint256)",
@@ -46,6 +72,8 @@ export const COMPOUNDER_ABI = [
 const POSITION_MANAGER_ABI = [
   "function ownerOf(uint256 tokenId) view returns (address)",
   "function getPositionLiquidity(uint256 tokenId) view returns (uint128)",
+  "function poolManager() view returns (address)",
+  "function permit2() view returns (address)",
 ];
 
 export type LiquidityMaintainerOptions = {
@@ -91,6 +119,148 @@ export function shouldCompound(
   minimumBaseDepth: bigint,
 ): boolean {
   return simulatedLiquidity > 0n && simulatedBaseDepth >= minimumBaseDepth;
+}
+
+function positiveBigInt(label: string, raw: string | undefined, maximum: bigint): bigint {
+  if (!raw?.trim()) throw new Error(`${label} is required`);
+  let value: bigint;
+  try {
+    value = BigInt(raw.trim());
+  } catch {
+    throw new Error(`${label} must be an unsigned integer`);
+  }
+  if (value <= 0n || value > maximum) {
+    throw new Error(`${label} must be within 1..${maximum}`);
+  }
+  return value;
+}
+
+function boundedBps(label: string, raw: string | undefined, fallback: bigint, maximum: bigint): bigint {
+  const value = raw?.trim() ? positiveBigInt(label, raw, maximum) : fallback;
+  if (value > maximum) throw new Error(`${label} must be within 1..${maximum} bps`);
+  return value;
+}
+
+function nonNegativeBps(label: string, raw: string | undefined, fallback: bigint, maximum: bigint): bigint {
+  if (!raw?.trim()) return fallback;
+  let value: bigint;
+  try {
+    value = BigInt(raw.trim());
+  } catch {
+    throw new Error(`${label} must be an unsigned integer`);
+  }
+  if (value < 0n || value > maximum) {
+    throw new Error(`${label} must be within 0..${maximum} bps`);
+  }
+  return value;
+}
+
+/**
+ * Reads an explicit, independently selected compound policy. An entirely absent
+ * policy is allowed only so read-only maintenance can report "blocked" without
+ * inventing a reference from the manipulable pool spot.
+ */
+export function compoundExecutionPolicyFromEnv(
+  values: Readonly<Record<string, string | undefined>>,
+): CompoundExecutionPolicy | undefined {
+  const supplied = COMPOUND_POLICY_ENV_KEYS.filter((key) => Boolean(values[key]?.trim()));
+  if (supplied.length === 0) return undefined;
+  if (supplied.length !== COMPOUND_POLICY_ENV_KEYS.length) {
+    const missing = COMPOUND_POLICY_ENV_KEYS.filter((key) => !values[key]?.trim());
+    throw new Error(`Incomplete compound execution policy; missing ${missing.join(", ")}`);
+  }
+
+  return {
+    referenceSqrtPriceX96: positiveBigInt(
+      "V4_COMPOUND_REFERENCE_SQRT_PRICE_X96",
+      values.V4_COMPOUND_REFERENCE_SQRT_PRICE_X96,
+      UINT160_MAX,
+    ),
+    maxNaraUsed: positiveBigInt(
+      "V4_COMPOUND_MAX_NARA_USED_RAW",
+      values.V4_COMPOUND_MAX_NARA_USED_RAW,
+      UINT256_MAX,
+    ),
+    maxUsdcUsed: positiveBigInt(
+      "V4_COMPOUND_MAX_USDC_USED_RAW",
+      values.V4_COMPOUND_MAX_USDC_USED_RAW,
+      UINT256_MAX,
+    ),
+    sqrtGuardBps: boundedBps(
+      "V4_COMPOUND_SQRT_PRICE_GUARD_BPS",
+      values.V4_COMPOUND_SQRT_PRICE_GUARD_BPS,
+      DEFAULT_SQRT_PRICE_GUARD_BPS,
+      250n,
+    ),
+    maxValueImbalanceBps: nonNegativeBps(
+      "V4_COMPOUND_MAX_VALUE_IMBALANCE_BPS",
+      values.V4_COMPOUND_MAX_VALUE_IMBALANCE_BPS,
+      DEFAULT_VALUE_IMBALANCE_BPS,
+      500n,
+    ),
+  };
+}
+
+export function requireCompoundExecutionPolicy(
+  values: Readonly<Record<string, string | undefined>>,
+): CompoundExecutionPolicy {
+  const policy = compoundExecutionPolicyFromEnv(values);
+  if (!policy) {
+    throw new Error(
+      "Independent compound policy is required: set V4_COMPOUND_REFERENCE_SQRT_PRICE_X96, "
+      + "V4_COMPOUND_MAX_NARA_USED_RAW, and V4_COMPOUND_MAX_USDC_USED_RAW",
+    );
+  }
+  return policy;
+}
+
+export function compoundSqrtPriceBounds(referenceSqrtPriceX96: bigint, sqrtGuardBps: bigint) {
+  if (referenceSqrtPriceX96 <= 0n || referenceSqrtPriceX96 > UINT160_MAX) {
+    throw new Error("Reference sqrt price must be a positive uint160");
+  }
+  if (sqrtGuardBps <= 0n || sqrtGuardBps > 250n) {
+    throw new Error("Sqrt-price guard must be within 1..250 bps");
+  }
+  return {
+    minSqrtPriceX96: referenceSqrtPriceX96 * (10_000n - sqrtGuardBps) / 10_000n,
+    maxSqrtPriceX96: (referenceSqrtPriceX96 * (10_000n + sqrtGuardBps) + 9_999n) / 10_000n,
+  };
+}
+
+export function assertCurrentSqrtPriceWithinPolicy(
+  currentSqrtPriceX96: bigint,
+  policy: CompoundExecutionPolicy,
+): void {
+  const { minSqrtPriceX96, maxSqrtPriceX96 } = compoundSqrtPriceBounds(
+    policy.referenceSqrtPriceX96,
+    policy.sqrtGuardBps,
+  );
+  if (currentSqrtPriceX96 < minSqrtPriceX96 || currentSqrtPriceX96 > maxSqrtPriceX96) {
+    throw new Error(
+      `Current sqrtPriceX96 ${currentSqrtPriceX96} is outside the independent reference band `
+      + `[${minSqrtPriceX96}, ${maxSqrtPriceX96}]`,
+    );
+  }
+}
+
+export function compoundConstraintsData(
+  referenceSqrtPriceX96: bigint,
+  maxNaraUsed: bigint,
+  maxUsdcUsed: bigint,
+  sqrtGuardBps = DEFAULT_SQRT_PRICE_GUARD_BPS,
+  maxValueImbalanceBps = DEFAULT_VALUE_IMBALANCE_BPS,
+): string {
+  if (referenceSqrtPriceX96 <= 0n || maxNaraUsed <= 0n || maxUsdcUsed <= 0n) {
+    throw new Error("Compound constraints require positive price and amount caps");
+  }
+  const { minSqrtPriceX96, maxSqrtPriceX96 } = compoundSqrtPriceBounds(referenceSqrtPriceX96, sqrtGuardBps);
+  if (maxValueImbalanceBps < 0n || maxValueImbalanceBps > 500n) {
+    throw new Error("Reference-value imbalance guard must be within 0..500 bps");
+  }
+  return ethers.AbiCoder.defaultAbiCoder().encode(
+    ["tuple(uint160 referenceSqrtPriceX96,uint160 minSqrtPriceX96,uint160 maxSqrtPriceX96,uint16 maxReferenceValueImbalanceBps,uint256 maxNaraUsed,uint256 maxUsdcUsed)"],
+    [[referenceSqrtPriceX96, minSqrtPriceX96, maxSqrtPriceX96, maxValueImbalanceBps, maxNaraUsed, maxUsdcUsed]],
+  );
 }
 
 type Snapshot = {
@@ -187,7 +357,8 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
     const readVault = new ethers.Contract(config.vault, VAULT_ABI, provider);
     const compounder = new ethers.Contract(compounderAddress, COMPOUNDER_ABI, provider);
     const [owner, boundCompounder, frozen, routeMode, compounderOwner, boundVault,
-      boundNara, boundUsdc, recovery] = await Promise.all([
+      boundNara, boundUsdc, boundPoolManager, boundPositionManager, boundPermit2,
+      boundHook, boundPoolFee, boundTickSpacing, boundPoolId, bindingsValid, recovery] = await Promise.all([
       readVault.owner() as Promise<string>,
       readVault.compounder() as Promise<string>,
       readVault.compounderFrozen() as Promise<boolean>,
@@ -196,6 +367,14 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
       compounder.vault() as Promise<string>,
       compounder.nara() as Promise<string>,
       compounder.usdc() as Promise<string>,
+      compounder.poolManager() as Promise<string>,
+      compounder.positionManager() as Promise<string>,
+      compounder.permit2() as Promise<string>,
+      compounder.hooks() as Promise<string>,
+      compounder.poolFee() as Promise<bigint>,
+      compounder.tickSpacing() as Promise<bigint>,
+      compounder.poolId() as Promise<string>,
+      compounder.peripheryBindingsValid() as Promise<boolean>,
       compounder.pendingRecovery() as Promise<{ kind: bigint; to: string; eta: bigint }>,
     ]);
     for (const [label, actual, expected] of [
@@ -205,10 +384,28 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
       ["compounder vault", boundVault, config.vault],
       ["compounder NARA", boundNara, config.token],
       ["compounder USDC", boundUsdc, config.base],
+      ["compounder PoolManager", boundPoolManager, config.poolManager],
+      ["compounder PositionManager", boundPositionManager, config.positionManager],
+      ["compounder Permit2", boundPermit2, config.permit2],
+      ["compounder Hook", boundHook, config.hook],
     ] as const) {
       if (ethers.getAddress(actual) !== ethers.getAddress(expected)) {
         throw new Error(`${label} mismatch: expected ${expected}, got ${actual}`);
       }
+    }
+    if (!bindingsValid) throw new Error("Compounder reciprocal periphery binding check failed");
+    if (boundPoolFee !== BigInt(config.fee) || boundTickSpacing !== BigInt(config.tickSpacing)) {
+      throw new Error("Compounder pool fee or tick spacing mismatch");
+    }
+    if (boundPoolId.toLowerCase() !== config.poolId.toLowerCase()) throw new Error("Compounder pool ID mismatch");
+    const positionManagerBinding = new ethers.Contract(config.positionManager, POSITION_MANAGER_ABI, provider);
+    const [positionManagerPoolManager, positionManagerPermit2] = await Promise.all([
+      positionManagerBinding.poolManager() as Promise<string>,
+      positionManagerBinding.permit2() as Promise<string>,
+    ]);
+    if (ethers.getAddress(positionManagerPoolManager) !== config.poolManager
+      || ethers.getAddress(positionManagerPermit2) !== config.permit2) {
+      throw new Error("PositionManager reciprocal PoolManager/Permit2 binding mismatch");
     }
     if (routeMode !== 0n) throw new Error(`Vault routeMode must be Liquidity (0), got ${routeMode}`);
     if (recovery.kind !== 0n) throw new Error(`Compounder recovery kind ${recovery.kind} is pending`);
@@ -222,17 +419,31 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
     if (!latest) throw new Error("Latest Base block is unavailable");
     const deadline = BigInt(latest.timestamp + 900);
     const simulationCaller = configuredKeeper && keeperAllowed ? configuredKeeper : expectedSafe;
+    const compoundPolicy = compoundExecutionPolicyFromEnv(process.env);
 
     let simulatedLiquidity = 0n;
     let simulatedBaseDepth = 0n;
-    if (before.vaultNara > 0n && before.vaultUsdc > 0n) {
-      simulatedLiquidity = await readVault.compoundAll.staticCall(1n, deadline, "0x", {
+    let constraintsData = "0x";
+    let currentSqrtPriceX96: bigint | undefined;
+    let blockedReason: string | undefined;
+    if (!compoundPolicy) {
+      blockedReason = "independent compound reference and explicit token-use caps are not configured";
+    } else if (before.vaultNara > 0n && before.vaultUsdc > 0n) {
+      currentSqrtPriceX96 = await readSqrtPriceX96(provider, config.poolManager, config.poolId);
+      assertCurrentSqrtPriceWithinPolicy(currentSqrtPriceX96, compoundPolicy);
+      constraintsData = compoundConstraintsData(
+        compoundPolicy.referenceSqrtPriceX96,
+        compoundPolicy.maxNaraUsed,
+        compoundPolicy.maxUsdcUsed,
+        compoundPolicy.sqrtGuardBps,
+        compoundPolicy.maxValueImbalanceBps,
+      );
+      simulatedLiquidity = await readVault.compoundAll.staticCall(1n, deadline, constraintsData, {
         from: simulationCaller,
       }) as bigint;
-      const sqrtPrice = await readSqrtPriceX96(provider, config.poolManager, config.poolId);
       simulatedBaseDepth = baseDepthForLiquidity(
         simulatedLiquidity,
-        sqrtPrice,
+        currentSqrtPriceX96,
         BigInt(config.token) < BigInt(config.base),
       );
     }
@@ -246,11 +457,17 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
       minimumLiquidityUsdcDepth: ethers.formatUnits(minBaseDepth, 6),
       simulatedLiquidity: simulatedLiquidity.toString(),
       simulatedLiquidityUsdcDepth: ethers.formatUnits(simulatedBaseDepth, 6),
+      independentReferenceSqrtPriceX96: compoundPolicy?.referenceSqrtPriceX96.toString() ?? null,
+      currentSqrtPriceX96: currentSqrtPriceX96?.toString() ?? null,
+      maxNaraUsedRaw: compoundPolicy?.maxNaraUsed.toString() ?? null,
+      maxUsdcUsedRaw: compoundPolicy?.maxUsdcUsed.toString() ?? null,
+      blockedReason: blockedReason ?? null,
       ready,
       ...formatted(before),
     }, null, 2));
     if (!options.execute) return;
 
+    if (!compoundPolicy) throw new Error(blockedReason);
     if (!frozen) throw new Error("Execution blocked until the Safe validates and freezes the compounder");
     if (!configuredKeeper) throw new Error("V4_COMPOUND_KEEPER_ADDRESS is required in execute mode");
     if (!keeperAllowed) throw new Error("Configured compound keeper is not authorized by the vault");
@@ -272,9 +489,9 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
     }
     const vault = readVault.connect(signer) as ethers.Contract;
     const minLiquidityAdded = liquidityMinimum(simulatedLiquidity);
-    await vault.compoundAll.staticCall(minLiquidityAdded, deadline, "0x");
-    const gasEstimate = await vault.compoundAll.estimateGas(minLiquidityAdded, deadline, "0x");
-    const tx = await vault.compoundAll(minLiquidityAdded, deadline, "0x", {
+    await vault.compoundAll.staticCall(minLiquidityAdded, deadline, constraintsData);
+    const gasEstimate = await vault.compoundAll.estimateGas(minLiquidityAdded, deadline, constraintsData);
+    const tx = await vault.compoundAll(minLiquidityAdded, deadline, constraintsData, {
       gasLimit: gasEstimate * 120n / 100n,
     });
     console.log(`compoundAll: ${tx.hash}`);

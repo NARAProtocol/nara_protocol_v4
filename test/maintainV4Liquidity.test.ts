@@ -1,8 +1,11 @@
 import { expect } from "chai";
 import {
+  assertCurrentSqrtPriceWithinPolicy,
   baseDepthForLiquidity,
+  compoundExecutionPolicyFromEnv,
   liquidityMinimum,
   parseLiquidityMaintainerArgs,
+  requireCompoundExecutionPolicy,
   shouldCompound,
 } from "../scripts/maintainV4Liquidity.js";
 
@@ -30,5 +33,32 @@ describe("v4 liquidity maintainer", function () {
     expect(shouldCompound(100n, 5_000_000n, 5_000_000n)).to.equal(true);
     expect(shouldCompound(100n, 4_999_999n, 5_000_000n)).to.equal(false);
     expect(shouldCompound(0n, 5_000_000n, 5_000_000n)).to.equal(false);
+  });
+
+  it("blocks compounding when the independent reference or explicit token caps are missing", function () {
+    expect(compoundExecutionPolicyFromEnv({})).to.equal(undefined);
+    expect(() => requireCompoundExecutionPolicy({}))
+      .to.throw("Independent compound policy is required");
+    expect(() => compoundExecutionPolicyFromEnv({
+      V4_COMPOUND_REFERENCE_SQRT_PRICE_X96: (1n << 96n).toString(),
+    })).to.throw("Incomplete compound execution policy");
+  });
+
+  it("never promotes a manipulated current slot0 into the independent reference", function () {
+    const reference = 1n << 96n;
+    const policy = requireCompoundExecutionPolicy({
+      V4_COMPOUND_REFERENCE_SQRT_PRICE_X96: reference.toString(),
+      V4_COMPOUND_MAX_NARA_USED_RAW: "100000000000000000000",
+      V4_COMPOUND_MAX_USDC_USED_RAW: "100000000",
+      V4_COMPOUND_SQRT_PRICE_GUARD_BPS: "100",
+    });
+    expect(policy.referenceSqrtPriceX96).to.equal(reference);
+    expect(policy.maxNaraUsed).to.equal(100_000_000_000_000_000_000n);
+    expect(policy.maxUsdcUsed).to.equal(100_000_000n);
+
+    const manipulatedCurrent = reference + reference / 50n;
+    expect(() => assertCurrentSqrtPriceWithinPolicy(manipulatedCurrent, policy))
+      .to.throw("outside the independent reference band");
+    expect(policy.referenceSqrtPriceX96).to.equal(reference);
   });
 });

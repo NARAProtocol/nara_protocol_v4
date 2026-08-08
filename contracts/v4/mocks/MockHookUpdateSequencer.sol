@@ -15,12 +15,17 @@ interface IMockV4PoolManagerSequencer {
 }
 
 interface INARAHookUpdates {
+    function acceptOwnership() external;
     function executeFeeCurve(bool isBuyCurve) external;
     function executeProtocolDepth(address currency) external;
 }
 
 /// @dev Test-only owner that interleaves a ready hook update between two same-block flows.
 contract MockHookUpdateSequencer {
+    function acceptHookOwnership(INARAHookUpdates hook) external {
+        hook.acceptOwnership();
+    }
+
     function swapExecuteAndSwap(
         IMockV4PoolManagerSequencer manager,
         IHooks hook,

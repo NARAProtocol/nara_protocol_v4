@@ -1,4 +1,4 @@
-# NARA Baskets — Onboarding, Economics & Funnel Review (Elite)
+# NARA — Basket Onboarding, Economics & Funnel Review
 
 Last updated: 2026-07-01.
 Audience: protocol operator, frontend team, growth, legal review.

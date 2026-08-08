@@ -1,6 +1,21 @@
 import { expect } from "chai";
 import { ethers } from "ethers";
-import { buildAtomicV4PoolLaunch } from "../scripts/lib/v4AtomicPoolLaunch.js";
+import {
+  buildAtomicV4PoolLaunch,
+  encodeSafeMultiSendTransactions,
+} from "../scripts/lib/v4AtomicPoolLaunch.js";
+import {
+  requireApprovedAtomicLaunchFeeCurves,
+  requireAtomicLaunchSafetyState,
+  requireCanonicalBaseLaunchInfrastructure,
+  requireRewardNotifierHistoryAnchor,
+} from "../scripts/buildAtomicV4PoolLaunch.js";
+import {
+  BASE_PERMIT2,
+  BASE_POOL_MANAGER,
+  BASE_POSITION_MANAGER,
+  BASE_USDC,
+} from "../scripts/lib/v4LiveConfig.js";
 
 const NARA = "0x0000000000000000000000000000000000001001";
 const USDC = "0x0000000000000000000000000000000000001002";
@@ -65,6 +80,18 @@ describe("atomic v4 pool launch batch", function () {
       const decoded = erc20.decodeFunctionData("approve", plan.transactions[index].data);
       expect(decoded[1]).to.equal(0n);
     }
+
+    const packed = encodeSafeMultiSendTransactions(plan.transactions);
+    let offset = 0;
+    for (const transaction of plan.transactions) {
+      expect(Number(ethers.dataSlice(packed, offset, offset + 1))).to.equal(0);
+      expect(ethers.getAddress(ethers.dataSlice(packed, offset + 1, offset + 21))).to.equal(transaction.to);
+      expect(BigInt(ethers.dataSlice(packed, offset + 21, offset + 53))).to.equal(BigInt(transaction.value));
+      const length = Number(BigInt(ethers.dataSlice(packed, offset + 53, offset + 85)));
+      expect(ethers.dataSlice(packed, offset + 85, offset + 85 + length)).to.equal(transaction.data);
+      offset += 85 + length;
+    }
+    expect(offset).to.equal(ethers.dataLength(packed));
   });
 
   it("fails closed on zero or Permit2-oversized seed amounts", function () {
@@ -83,5 +110,105 @@ describe("atomic v4 pool launch batch", function () {
       .to.throw("Seed amounts must be positive");
     expect(() => buildAtomicV4PoolLaunch({ ...base, naraAmount: 1n << 160n, usdcAmount: 1n }))
       .to.throw("Permit2 uint160 capacity");
+  });
+
+  it("refuses a non-CALL child operation in the Safe MultiSend payload", function () {
+    expect(() => encodeSafeMultiSendTransactions([{
+      to: NARA,
+      value: "0",
+      data: "0x",
+      operation: 1,
+    }])).to.throw("CALL operation 0");
+  });
+
+  it("fails closed unless Hook, Vault, Engine, and notifier containment are exact", function () {
+    const exact = {
+      hookVault: USDC,
+      expectedVault: USDC,
+      hookPoolManager: BASE_POOL_MANAGER,
+      expectedPoolManager: BASE_POOL_MANAGER,
+      hookToken: NARA,
+      hookBase: BASE_USDC,
+      vaultHook: HOOK,
+      expectedHook: HOOK,
+      engineNara: NARA,
+      expectedNara: NARA,
+      hookOwner: LP_OWNER,
+      vaultOwner: LP_OWNER,
+      expectedOwner: LP_OWNER,
+      activeRewardNotifierHolders: [],
+    };
+    expect(() => requireAtomicLaunchSafetyState(exact)).not.to.throw();
+    expect(() => requireAtomicLaunchSafetyState({ ...exact, hookVault: NARA }))
+      .to.throw("Hook vault binding");
+    expect(() => requireAtomicLaunchSafetyState({ ...exact, hookPoolManager: NARA }))
+      .to.throw("Hook PoolManager binding");
+    expect(() => requireAtomicLaunchSafetyState({ ...exact, hookToken: USDC }))
+      .to.throw("Hook token binding");
+    expect(() => requireAtomicLaunchSafetyState({ ...exact, hookBase: NARA }))
+      .to.throw("Hook base binding");
+    expect(() => requireAtomicLaunchSafetyState({ ...exact, vaultHook: NARA }))
+      .to.throw("Vault hook binding");
+    expect(() => requireAtomicLaunchSafetyState({ ...exact, engineNara: USDC }))
+      .to.throw("Engine NARA binding");
+    expect(() => requireAtomicLaunchSafetyState({ ...exact, hookOwner: NARA }))
+      .to.throw("Hook owner is not V4_ADMIN_ADDRESS");
+    expect(() => requireAtomicLaunchSafetyState({ ...exact, vaultOwner: NARA }))
+      .to.throw("Vault owner is not V4_ADMIN_ADDRESS");
+    expect(() => requireAtomicLaunchSafetyState({ ...exact, activeRewardNotifierHolders: [NARA] }))
+      .to.throw("REWARD_NOTIFIER_ROLE must have no active holder");
+  });
+
+  it("pins the approval targets and base currency to canonical Base deployments", function () {
+    const canonical = {
+      base: BASE_USDC,
+      permit2: BASE_PERMIT2,
+      poolManager: BASE_POOL_MANAGER,
+      positionManager: BASE_POSITION_MANAGER,
+    };
+    expect(() => requireCanonicalBaseLaunchInfrastructure(canonical)).not.to.throw();
+    for (const field of ["base", "permit2", "poolManager", "positionManager"] as const) {
+      expect(() => requireCanonicalBaseLaunchInfrastructure({ ...canonical, [field]: NARA }))
+        .to.throw("canonical Base deployment");
+    }
+  });
+
+  it("requires the exact approved pre-registration fee curves", function () {
+    const buy = [500n, 1_500n, 3_000n, 500n, 800n, 1_200n, 2_000n, 2_000n];
+    const sell = [500n, 1_500n, 3_000n, 500n, 700n, 1_000n, 1_500n, 2_000n];
+    expect(() => requireApprovedAtomicLaunchFeeCurves(buy, sell)).not.to.throw();
+    expect(() => requireApprovedAtomicLaunchFeeCurves([...buy.slice(0, 7), 1_999n], sell))
+      .to.throw("buy fee curve");
+    expect(() => requireApprovedAtomicLaunchFeeCurves(buy, [...sell.slice(0, 6), 1_501n, 2_000n]))
+      .to.throw("sell fee curve");
+  });
+
+  it("rejects empty, behind, or fork-mismatched notifier history", function () {
+    const anchored = {
+      deploymentBlock: 100,
+      latestBlock: 101,
+      mainDeploymentBlockHash: ethers.keccak256(ethers.toUtf8Bytes("base block")),
+      historyDeploymentBlockHash: ethers.keccak256(ethers.toUtf8Bytes("base block")),
+      deploymentTransactionBlock: 100,
+      deploymentTransactionBlockHash: ethers.keccak256(ethers.toUtf8Bytes("base block")),
+      deploymentTransactionSucceeded: true,
+      constructorGrantFound: true,
+      codeAbsentBeforeDeployment: true,
+      codePresentAtDeployment: true,
+      history: [{ kind: "grant" as const, account: NARA }],
+    };
+    expect(() => requireRewardNotifierHistoryAnchor(anchored)).not.to.throw();
+    expect(() => requireRewardNotifierHistoryAnchor({ ...anchored, latestBlock: 99 }))
+      .to.throw("behind V4_ENGINE_DEPLOYMENT_BLOCK");
+    expect(() => requireRewardNotifierHistoryAnchor({ ...anchored, history: [] }))
+      .to.throw("constructor grant");
+    expect(() => requireRewardNotifierHistoryAnchor({ ...anchored, constructorGrantFound: false }))
+      .to.throw("does not prove the constructor notifier grant");
+    expect(() => requireRewardNotifierHistoryAnchor({ ...anchored, deploymentTransactionBlock: 99 }))
+      .to.throw("does not anchor V4_ENGINE_DEPLOYMENT_BLOCK");
+    expect(() => requireRewardNotifierHistoryAnchor({
+      ...anchored,
+      historyDeploymentBlockHash: ethers.keccak256(ethers.toUtf8Bytes("other block")),
+    })).to.throw("does not agree");
   });
 });

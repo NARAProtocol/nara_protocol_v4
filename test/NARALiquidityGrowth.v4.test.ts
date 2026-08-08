@@ -8,7 +8,7 @@ const LOCK_FEE = 10n ** 14n;
 const BPS = 10_000n;
 const SQRT_PRICE_1_1 = 1n << 96n;
 const MAX_UINT64 = (1n << 64n) - 1n;
-const FEE_UPDATE_DELAY = 24 * 60 * 60;
+const FEE_UPDATE_DELAY = 7 * 24 * 60 * 60;
 
 function sameAddress(a: string, b: string) {
     return a.toLowerCase() === b.toLowerCase();
@@ -266,6 +266,104 @@ describe("NARALiquidityGrowth v4 - pool fee", () => {
         expect(await split.hook.flowDepthInBlock(split.baseAddr)).to.equal(10n * ONE);
     });
 
+    it("telescopes same-block flow across different callers", async () => {
+        const f = await deployFixture();
+        const { ethers, owner, alice, attacker, manager, hook, hookAddr, key, exactInParams, baseAddr, vaultAddr } = f;
+        await hook.connect(owner).setProtocolDepth(baseAddr, 10n * ONE);
+        await hook.connect(owner).registerPool(key, SQRT_PRICE_1_1);
+        const firstAmount = 2n * ONE;
+        const secondAmount = ONE;
+        const [, expectedTotalFee] = await hook.quotePoolFee(true, firstAmount + secondAmount);
+
+        await ethers.provider.send("evm_setAutomine", [false]);
+        try {
+            const first = await manager.connect(alice).callBeforeSwap(
+                hookAddr, key, exactInParams(baseAddr, firstAmount), "0x", { gasLimit: 1_000_000n },
+            );
+            const second = await manager.connect(attacker).callBeforeSwap(
+                hookAddr, key, exactInParams(baseAddr, secondAmount), "0x", { gasLimit: 1_000_000n },
+            );
+            await ethers.provider.send("evm_mine", []);
+            const [firstReceipt, secondReceipt] = await Promise.all([first.wait(), second.wait()]);
+            expect(firstReceipt?.blockNumber).to.equal(secondReceipt?.blockNumber);
+        } finally {
+            await ethers.provider.send("evm_setAutomine", [true]);
+        }
+
+        expect(await manager.taken(baseAddr, vaultAddr)).to.equal(expectedTotalFee);
+        expect(await hook.flowAmountInBlock(baseAddr)).to.equal(firstAmount + secondAmount);
+    });
+
+    it("quantifies the per-block reset instead of claiming cross-block split resistance", async () => {
+        const single = await deployFixture();
+        await single.hook.connect(single.owner).setProtocolDepth(single.baseAddr, 10n * ONE);
+        await single.hook.connect(single.owner).registerPool(single.key, SQRT_PRICE_1_1);
+        const total = 3n * ONE;
+        await single.manager.connect(single.alice).callBeforeSwap(
+            single.hookAddr, single.key, single.exactInParams(single.baseAddr, total), "0x",
+        );
+        const singleFee = await single.manager.taken(single.baseAddr, single.vaultAddr);
+
+        const split = await deployFixture();
+        await split.hook.connect(split.owner).setProtocolDepth(split.baseAddr, 10n * ONE);
+        await split.hook.connect(split.owner).registerPool(split.key, SQRT_PRICE_1_1);
+        const piece = total / 10n;
+        for (let i = 0; i < 10; i++) {
+            await split.manager.connect(split.alice).callBeforeSwap(
+                split.hookAddr, split.key, split.exactInParams(split.baseAddr, piece), "0x",
+            );
+        }
+        const splitFee = await split.manager.taken(split.baseAddr, split.vaultAddr);
+
+        expect(singleFee).to.equal(285n * ONE / 1_000n);
+        expect(splitFee).to.equal(150n * ONE / 1_000n);
+        expect((singleFee - splitFee) * BPS / total).to.equal(450n);
+    });
+
+    it("separates the marginal pressure tier from the effective integrated fee rate", async () => {
+        const { owner, hook, key, baseAddr } = await deployFixture();
+        await hook.connect(owner).setProtocolDepth(baseAddr, 10n * ONE);
+        await hook.connect(owner).registerPool(key, SQRT_PRICE_1_1);
+
+        const amountIn = 3n * ONE;
+        const [marginalFeeBps, effectiveFeeBps, feeAmount] =
+            await hook.quotePoolFeeDetailed(true, amountIn);
+        expect(marginalFeeBps).to.equal(2_000n);
+        expect(effectiveFeeBps).to.equal(950n);
+        expect(feeAmount).to.equal(285n * ONE / 1_000n);
+    });
+
+    it("quotes the exact next incremental charge after prior same-block flow at tier boundaries", async () => {
+        for (const isBuy of [true, false]) {
+            const f = await deployFixture();
+            const { owner, alice, manager, hook, hookAddr, key, exactInParams, baseAddr, tokenAddr, vaultAddr } = f;
+            const inputCurrency = isBuy ? baseAddr : tokenAddr;
+            await hook.connect(owner).setProtocolDepth(inputCurrency, 10n * ONE);
+            await hook.connect(owner).registerPool(key, SQRT_PRICE_1_1);
+
+            const firstAmount = ONE / 2n; // exactly mediumAt
+            const secondAmount = ONE; // cumulative flow ends exactly at highAt
+            const expectedMarginal = isBuy ? 1_200 : 1_000;
+            const expectedEffective = isBuy ? 800 : 700;
+            const expectedIncremental = poolFee(secondAmount, BigInt(expectedEffective));
+            const expectedTotal = poolFee(firstAmount, 500n) + expectedIncremental;
+
+            await expect(manager.connect(alice).callBeforeSwapQuoteThenSwap(
+                hookAddr,
+                key,
+                exactInParams(inputCurrency, firstAmount),
+                exactInParams(inputCurrency, secondAmount),
+                isBuy,
+                "0x",
+            )).to.emit(manager, "FeeQuoteObserved")
+                .withArgs(expectedMarginal, expectedEffective, expectedIncremental);
+
+            expect(await manager.taken(inputCurrency, vaultAddr)).to.equal(expectedTotal);
+            const recorded = isBuy ? await f.vault.totalBaseFeeRecorded() : await f.vault.totalTokenFeeRecorded();
+            expect(recorded).to.equal(expectedTotal);
+        }
+    });
+
     it("uses deterministic configured depth while exposing lower live depth as telemetry", async () => {
         const { owner, alice, manager, vault, hook, hookAddr, key, exactInParams, tokenAddr, vaultAddr } =
             await deployFixture();
@@ -328,28 +426,16 @@ describe("NARALiquidityGrowth v4 - pool fee", () => {
         expect(await vault.totalBaseFeeRecorded()).to.equal(expectedFee);
     });
 
-    it("continues the pool-fee path if vault accounting is miswired", async () => {
-        const { owner, alice, manager, vault, hook, hookAddr, key, exactInParams, baseAddr, vaultAddr } =
+    it("fails pool registration closed if vault accounting is miswired", async () => {
+        const { owner, manager, vault, hook, key, baseAddr } =
             await deployFixture({ skipVaultHook: true });
 
         await hook.connect(owner).setProtocolDepth(baseAddr, 10n * ONE);
-        await hook.connect(owner).registerPool(key, SQRT_PRICE_1_1);
-
-        const amountIn = ONE / 10n;
-        const expectedFee = poolFee(amountIn, 500n);
-
-        await expect(
-            manager.connect(alice).callBeforeSwap(hookAddr, key, exactInParams(baseAddr, amountIn), "0x"),
-        )
-            .to.emit(manager, "TakeCalled")
-            .withArgs(baseAddr, vaultAddr, expectedFee)
-            .and.to.emit(hook, "PoolFeeRecordFailed")
-            .withArgs(await hook.registeredPoolId(), alice.address, baseAddr, expectedFee, 500, true)
-            .and.to.emit(hook, "PoolFeeTaken");
-
-        expect(await manager.taken(baseAddr, vaultAddr)).to.equal(expectedFee);
+        await expect(hook.connect(owner).registerPool(key, SQRT_PRICE_1_1))
+            .to.be.revertedWithCustomError(hook, "VaultBindingMismatch");
+        expect(await hook.poolRegistered()).to.equal(false);
+        expect(await manager.taken(baseAddr, await vault.getAddress())).to.equal(0n);
         expect(await vault.totalBaseFeeRecorded()).to.equal(0n);
-        expect(await manager.lastBeforeSwapDelta()).to.equal(packedBeforeSwapDelta(expectedFee));
     });
 
     it("rejects exact-output swaps so the pool fee cannot flip swap semantics", async () => {
@@ -437,6 +523,47 @@ describe("NARALiquidityGrowth v4 - pool fee", () => {
         expect(quotedFee).to.equal(poolFee(quotedAmount, 400n));
     });
 
+    it("lets only the owner cancel pending governance updates without changing active settings", async () => {
+        const { owner, attacker, hook, key, baseAddr } = await deployFixture();
+        const originalCurve = await hook.buyCurve();
+        const originalDepth = await hook.protocolDepth(baseAddr);
+        const replacementCurve = {
+            mediumPressureBps: 100,
+            highPressureBps: 500,
+            extremePressureBps: 1_000,
+            baseFeeBps: 400,
+            mediumFeeBps: 900,
+            highFeeBps: 1_500,
+            extremeFeeBps: 2_000,
+            maxFeeBps: 2_000,
+        };
+
+        await hook.connect(owner).registerPool(key, SQRT_PRICE_1_1);
+        await hook.connect(owner).setFeeCurve(true, replacementCurve);
+        await hook.connect(owner).setProtocolDepth(baseAddr, originalDepth * 2n);
+
+        await expect(hook.connect(attacker).cancelFeeCurve(true))
+            .to.be.revertedWithCustomError(hook, "OwnableUnauthorizedAccount")
+            .withArgs(attacker.address);
+        await expect(hook.connect(attacker).cancelProtocolDepth(baseAddr))
+            .to.be.revertedWithCustomError(hook, "OwnableUnauthorizedAccount")
+            .withArgs(attacker.address);
+
+        await expect(hook.connect(owner).cancelFeeCurve(true))
+            .to.emit(hook, "FeeCurveCancelled")
+            .withArgs(true);
+        await expect(hook.connect(owner).cancelProtocolDepth(baseAddr))
+            .to.emit(hook, "ProtocolDepthCancelled")
+            .withArgs(baseAddr);
+
+        await expect(hook.connect(owner).executeFeeCurve(true))
+            .to.be.revertedWithCustomError(hook, "NoPendingUpdate");
+        await expect(hook.connect(owner).executeProtocolDepth(baseAddr))
+            .to.be.revertedWithCustomError(hook, "NoPendingUpdate");
+        expect(await hook.buyCurve()).to.deep.equal(originalCurve);
+        expect(await hook.protocolDepth(baseAddr)).to.equal(originalDepth);
+    });
+
     it("executes ready updates after a dust flow without changing that block's fee basis", async () => {
         const { ethers, owner, manager, hook, hookAddr, key, baseAddr, vaultAddr, exactInParams } =
             await deployFixture();
@@ -465,6 +592,7 @@ describe("NARALiquidityGrowth v4 - pool fee", () => {
         const sequencer = await ethers.deployContract("MockHookUpdateSequencer", [], owner);
         await sequencer.waitForDeployment();
         await hook.connect(owner).transferOwnership(await sequencer.getAddress());
+        await sequencer.acceptHookOwnership(hookAddr);
 
         await sequencer.swapExecuteAndSwap(
             await manager.getAddress(),
@@ -520,6 +648,33 @@ describe("NARALiquidityGrowth v4 - vault routing", () => {
         await expect(vault.connect(owner).setCompounder(await wrongCompounder.getAddress()))
             .to.be.revertedWithCustomError(vault, "InvalidConfig");
         expect(await vault.compounder()).to.equal(ethers.ZeroAddress);
+    });
+
+    it("delays compounder replacement and makes the verified target permanently freezable", async () => {
+        const { ethers, owner, token, base, vault, vaultAddr } = await deployFixture();
+        const first = await ethers.deployContract(
+            "MockLiquidityCompounder",
+            [await token.getAddress(), await base.getAddress(), vaultAddr],
+            owner,
+        );
+        const replacement = await ethers.deployContract(
+            "MockLiquidityCompounder",
+            [await token.getAddress(), await base.getAddress(), vaultAddr],
+            owner,
+        );
+        await Promise.all([first.waitForDeployment(), replacement.waitForDeployment()]);
+        await vault.connect(owner).setCompounder(await first.getAddress());
+        await vault.connect(owner).proposeCompounder(await replacement.getAddress());
+
+        await expect(vault.connect(owner).executeCompounder())
+            .to.be.revertedWithCustomError(vault, "TargetUpdateNotReady");
+        await increaseTime(ethers, FEE_UPDATE_DELAY + 1);
+        await vault.connect(owner).executeCompounder();
+        expect(await vault.compounder()).to.equal(await replacement.getAddress());
+
+        await vault.connect(owner).freezeCompounder();
+        await expect(vault.connect(owner).proposeCompounder(await first.getAddress()))
+            .to.be.revertedWithCustomError(vault, "CompounderFrozenErr");
     });
 
     it("only accepts pool-fee accounting from the hook", async () => {
@@ -745,7 +900,10 @@ describe("NARALiquidityGrowth v4 - vault routing", () => {
             { value: LOCK_FEE },
         );
 
-        await vault.connect(owner).setGenesisRewardDistributor(await genesisDistributor.getAddress());
+        await vault.connect(owner).proposeGenesisRewardDistributor(await genesisDistributor.getAddress());
+        await increaseTime(ethers, FEE_UPDATE_DELAY + 1);
+        await vault.connect(owner).executeGenesisRewardDistributor();
+        await vault.connect(owner).freezeGenesisRewardDistributor();
         await vault.connect(owner).setRouteMode(3);
         await hook.connect(owner).setProtocolDepth(baseAddr, 10_000n * USDC);
         await hook.connect(owner).registerPool(key, SQRT_PRICE_1_1);
@@ -831,9 +989,13 @@ describe("NARALiquidityGrowth v4 - vault routing", () => {
             false,
             { value: LOCK_FEE },
         );
+        await vault.connect(owner).proposeCompounder(compounderAddr);
+        await vault.connect(owner).proposeGenesisRewardDistributor(await genesisDistributor.getAddress());
+        await increaseTime(ethers, FEE_UPDATE_DELAY + 1);
+        await vault.connect(owner).executeCompounder();
+        await vault.connect(owner).executeGenesisRewardDistributor();
+        await vault.connect(owner).freezeGenesisRewardDistributor();
         await base.mint(vaultAddr, baseAmount);
-        await vault.connect(owner).setCompounder(compounderAddr);
-        await vault.connect(owner).setGenesisRewardDistributor(await genesisDistributor.getAddress());
 
         await expect(vault.connect(owner).setRouteMode(4))
             .to.be.revertedWithCustomError(vault, "InvalidConfig");

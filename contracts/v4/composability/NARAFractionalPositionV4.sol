@@ -35,6 +35,10 @@ interface INARAPositionNFTV4Frac {
     );
 }
 
+interface INARAFractionalPositionFactoryV4 {
+    function fractionalOf(uint256 tokenId) external view returns (address);
+}
+
 /// @title NARAFractionalPositionV4
 /// @notice Fractionalize a single NARAPositionNFTV4 into ERC-20 fraction units.
 ///         Each fraction earns a pro-rata share of NARA emission, USDC, and ETH rewards.
@@ -43,6 +47,8 @@ interface INARAPositionNFTV4Frac {
 /// Lifecycle: deploy via factory → bind(tokenId, fractions) → harvest() periodically
 ///            → unlockPosition() after maturity → claimPrincipal() per holder.
 ///
+/// Genesis positions are deliberately unsupported because their distributor can
+/// pay arbitrary reward tokens that this wrapper cannot safely enumerate.
 /// Last claimer receives remainder principal to prevent dust accumulation.
 /// fractionCount is bounded [1, 1e12] to maintain RAY index precision.
 /// unlockPosition() auto-harvests final rewards before destroying the position.
@@ -120,7 +126,8 @@ contract NARAFractionalPositionV4 is ReentrancyGuardTransient, IERC721Receiver {
     error NotFactory();
     error ExpectedBindingAlreadySet();
     error UnexpectedBinding();
-    error UnsupportedEternalGenesis();
+    error UnsupportedGenesisPosition();
+    error NotCanonicalFractional();
 
     constructor(address nara_, address usdc_, address engine_, address positionNft_) {
         if (nara_ == address(0) || usdc_ == address(0) ||
@@ -151,11 +158,14 @@ contract NARAFractionalPositionV4 is ReentrancyGuardTransient, IERC721Receiver {
     function bind(uint256 tokenId, uint256 fractions) external nonReentrant {
         if (bound) revert AlreadyBound();
         if (fractions == 0 || fractions > MAX_FRACTIONS) revert InvalidFractionCount();
-        if (expectedBindingSet && (tokenId != expectedTokenId || msg.sender != expectedBinder)) {
+        if (!expectedBindingSet || tokenId != expectedTokenId || msg.sender != expectedBinder) {
             revert UnexpectedBinding();
         }
-        (bool isGenesis, bool isEternal,,,,,) = POSITION_NFT.genesisMetadataOf(tokenId);
-        if (isGenesis && isEternal) revert UnsupportedEternalGenesis();
+        if (INARAFractionalPositionFactoryV4(factory).fractionalOf(tokenId) != address(this)) {
+            revert NotCanonicalFractional();
+        }
+        (bool isGenesis,,,,,,) = POSITION_NFT.genesisMetadataOf(tokenId);
+        if (isGenesis) revert UnsupportedGenesisPosition();
 
         IERC721(address(POSITION_NFT)).transferFrom(msg.sender, address(this), tokenId);
 

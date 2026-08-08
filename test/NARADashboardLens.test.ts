@@ -29,7 +29,7 @@ async function deployFixture() {
     const [deployer, alice] = await ethers.getSigners();
 
     const Token = await ethers.getContractFactory("MockERC20Permit", deployer);
-    const nara: any = await Token.deploy("NARA Token", "NARA");
+    const nara: any = await Token.deploy("NARA", "NARA");
     await nara.waitForDeployment();
 
     const Engine = await ethers.getContractFactory("MockEngineForRouter", deployer);

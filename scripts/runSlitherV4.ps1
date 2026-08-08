@@ -113,6 +113,7 @@ if ($Targets.Count -eq 0) {
     "contracts\v4\NARAEngine.sol",
     "contracts\v4\NARAGenesisRewardDistributorV4.sol",
     "contracts\v4\NARALauncher.sol",
+    "contracts\v4\NARALiquidityCompounderV4.sol",
     "contracts\v4\NARALiquidityGrowthHook.sol",
     "contracts\v4\NARALiquidityGrowthVault.sol",
     "contracts\v4\NARAOpsVaultV4.sol",
@@ -131,8 +132,11 @@ if ($Targets.Count -eq 0) {
     "contracts\v4\composability\NARAStakingPoolSYV4.sol",
     "contracts\v4\composability\NARAStakingPoolV4.sol",
     "contracts\v4\router\BribeRouterV4.sol",
+    "contracts\v4\router\NARACirculatingSupplyV1.sol",
     "contracts\v4\router\NARADashboardLens.sol",
+    "contracts\v4\router\NARAEngineOpsRouterV1.sol",
     "contracts\v4\router\NARAPositionDataLensV1.sol",
+    "contracts\v4\router\NARAProtocolStatsLensV1.sol",
     "contracts\v4\router\NARARouter.sol",
     "contracts\v4\utils\Create2HookDeployer.sol"
   )

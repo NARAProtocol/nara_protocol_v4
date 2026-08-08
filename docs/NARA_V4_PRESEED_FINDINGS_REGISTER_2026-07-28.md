@@ -2,7 +2,7 @@
 
 Last verified against source: 2026-07-29
 Scope: replacement NARA/USDC liquidity trio, deployed v4 engine interaction,
-NARA Baskets launch path, and basket fee collector.
+NARA basket launch path, and basket fee collector.
 
 This is the canonical record for the five pre-seed findings. “Source fixed”
 does not mean “fixed on Base.” The corrected hook, vault, compounder, basket

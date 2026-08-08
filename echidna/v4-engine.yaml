@@ -3,6 +3,8 @@ testLimit: 10000
 seqLen: 64
 shrinkLimit: 1000
 workers: 1
+# The standalone pinned Slither gate runs separately; Echidna's bundled adapter cannot parse Hardhat 3 build info.
+disableSlither: true
 maxValue: 0
 balanceContract: 100000000000000000000
 corpusDir: echidna/corpus/v4-engine

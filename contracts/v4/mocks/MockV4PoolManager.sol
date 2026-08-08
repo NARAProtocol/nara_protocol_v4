@@ -8,6 +8,13 @@ import {PoolId} from "@uniswap/v4-periphery/lib/v4-core/src/types/PoolId.sol";
 import {SwapParams} from "@uniswap/v4-periphery/lib/v4-core/src/types/PoolOperation.sol";
 import {BeforeSwapDelta} from "@uniswap/v4-periphery/lib/v4-core/src/types/BeforeSwapDelta.sol";
 
+interface IMockPoolFeeQuote {
+    function quotePoolFeeDetailed(bool isBuy, uint256 amountIn)
+        external
+        view
+        returns (uint16 marginalFeeBps, uint16 effectiveFeeBps, uint256 feeAmount);
+}
+
 contract MockV4PoolManager {
     bytes32 internal constant POOLS_SLOT = bytes32(uint256(6));
     uint256 internal constant LIQUIDITY_OFFSET = 3;
@@ -19,6 +26,7 @@ contract MockV4PoolManager {
     uint24 public lastBeforeSwapFeeOverride;
 
     event TakeCalled(address indexed currency, address indexed to, uint256 amount);
+    event FeeQuoteObserved(uint16 marginalFeeBps, uint16 effectiveFeeBps, uint256 feeAmount);
 
     function callBeforeInitialize(
         IHooks hook,
@@ -60,6 +68,21 @@ contract MockV4PoolManager {
                 ++i;
             }
         }
+    }
+
+    function callBeforeSwapQuoteThenSwap(
+        IHooks hook,
+        PoolKey calldata key,
+        SwapParams calldata first,
+        SwapParams calldata second,
+        bool isBuy,
+        bytes calldata data
+    ) external {
+        hook.beforeSwap(msg.sender, key, first, data);
+        (uint16 marginalFeeBps, uint16 effectiveFeeBps, uint256 feeAmount) =
+            IMockPoolFeeQuote(address(hook)).quotePoolFeeDetailed(isBuy, uint256(-second.amountSpecified));
+        emit FeeQuoteObserved(marginalFeeBps, effectiveFeeBps, feeAmount);
+        hook.beforeSwap(msg.sender, key, second, data);
     }
 
     /// @dev Programs the two Pool.State words read by StateLibrary.

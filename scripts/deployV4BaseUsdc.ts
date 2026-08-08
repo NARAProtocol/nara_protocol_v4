@@ -16,9 +16,12 @@
  *   V4_TOKEN_SYMBOL          ERC-20 symbol for the fresh deploy
  *   V4_INITIAL_NARA_AMOUNT   human NARA amount used for initial pool price/depth
  *   V4_INITIAL_USDC_AMOUNT   human USDC amount used for initial pool price/depth
+ *   V4_RELEASE_COMMIT        reviewed full 40-character commit; must equal HEAD
+ *                            and already be contained in origin/main
  *
  * Recommended:
- *   V4_COMPOUNDER_ADDRESS    production v4 compounder adapter
+ *   V4_COMPOUNDER_ADDRESS    production v4 compounder adapter; wired but left
+ *                            unfrozen until a separate live validation succeeds
  *   V4_COMPOUND_KEEPER_ADDRESS authorized keeper for compound/split routes
  *   TREASURY_PRIVATE_KEY     optional, only for EOA test deployments that auto-fund the sealed reward reserve
  *
@@ -27,15 +30,27 @@
  */
 
 import hre from "hardhat";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { BASE_PERMIT2, BASE_POSITION_MANAGER, BASE_UNIVERSAL_ROUTER } from "./lib/v4LiveConfig.js";
 
 const BASE_CHAIN_ID = 8453n;
 const BASE_USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 const BASE_UNISWAP_V4_POOL_MANAGER = "0x498581ff718922c3f8e6a244956af099b2652b2b";
+const BASE_SAFE_141_SINGLETON = "0x29fcB43b46531BcA003ddC8FCB67FFE91900C762";
+const BASE_SAFE_141_SINGLETON_CODEHASH = "0xb1f926978a0f44a2c0ec8fe822418ae969bd8c3f18d61e5103100339894f81ff";
+const BASE_SAFE_141_PROXY_CODEHASH = "0xd7d408ebcd99b2b70be43e20253d6d92a8ea8fab29bd3be7f55b10032331fb4c";
 const REQUIRED_HOOK_FLAGS = 0x2088n;
 const HOOK_FLAG_MASK = 0x3fffn;
+// 0.001 ETH is the absolute operator-requested floor. The live Base gate below
+// raises it when a 30M-gas deployment budget at twice the sampled fee cap costs
+// more, so the smaller static floor cannot silently authorize a fee spike.
+const MIN_BASE_DEPLOYER_BALANCE_WEI = 1_000_000_000_000_000n;
+const BASE_DEPLOYMENT_GAS_BUDGET = 30_000_000n;
+const BASE_DEPLOYMENT_FEE_SAFETY_MULTIPLIER = 2n;
+const DEPLOYMENT_DIR = "deployments";
+const ACTIVE_BASE_CHECKPOINT = join(DEPLOYMENT_DIR, "v4-base-usdc-in-progress.json");
 
 const ENGINE_CONFIG_TYPE =
   "tuple(uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint64,uint64)";
@@ -69,6 +84,267 @@ interface PoolKeyForScript {
   fee: number;
   tickSpacing: number;
   hooks: string;
+}
+
+interface ReleaseSourceEvidence {
+  releaseCommit: string;
+  headCommit: string;
+  originMainCommit: string;
+  originRemote: string;
+  cleanWorkingTree: true;
+  containedInOriginMain: true;
+}
+
+interface ReceiptEvidence {
+  transactionHash: string;
+  blockNumber: number;
+  blockHash: string | null;
+  status: number;
+  gasUsed: string;
+  contractAddress: string | null;
+}
+
+interface JournalStep {
+  index: number;
+  label: string;
+  kind: "deployment" | "call";
+  state: "prepared" | "submitted" | "confirmed" | "failed";
+  preparedAt: string;
+  transactionHash?: string;
+  submittedAt?: string;
+  receipt?: ReceiptEvidence;
+  confirmedAt?: string;
+  failedAt?: string;
+  expectedContractAddress?: string;
+}
+
+interface DeploymentJournalPayload {
+  schemaVersion: 1;
+  status: "in_progress" | "transactions_complete" | "completed" | "failed_no_resume";
+  retryPolicy: string;
+  startedAt: string;
+  updatedAt: string;
+  network: string;
+  chainId: string;
+  release: ReleaseSourceEvidence | null;
+  deployer: string;
+  finalAdmin: string;
+  treasury: string;
+  steps: JournalStep[];
+  manifest?: string;
+  failure?: {
+    at: string;
+    step: string | null;
+    reason: string;
+  };
+}
+
+function jsonStringify(payload: unknown): string {
+  return JSON.stringify(payload, (_key, value) => (typeof value === "bigint" ? value.toString() : value), 2);
+}
+
+function durableWrite(path: string, contents: string, append = false): void {
+  const fd = openSync(path, append ? "a" : "w");
+  try {
+    writeFileSync(fd, contents);
+    fsyncSync(fd);
+  } finally {
+    closeSync(fd);
+  }
+}
+
+function safeErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : "unknown deployment failure";
+  return message
+    .replace(/https?:\/\/\S+/gi, "[redacted-url]")
+    .replace(/(?:0x)?[0-9a-fA-F]{64,}/g, "[redacted-hex]")
+    .slice(0, 500);
+}
+
+function gitOutput(args: string[]): string {
+  try {
+    return execFileSync("git", args, {
+      cwd: process.cwd(),
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    }).trim();
+  } catch {
+    throw new Error(`Release source check failed: git ${args.join(" ")} did not succeed`);
+  }
+}
+
+function requireReviewedBaseReleaseSource(): ReleaseSourceEvidence {
+  const requested = env("V4_RELEASE_COMMIT").toLowerCase();
+  if (!/^[0-9a-f]{40}$/.test(requested)) {
+    throw new Error("V4_RELEASE_COMMIT must be an explicit full 40-character commit hash");
+  }
+
+  const headCommit = gitOutput(["rev-parse", "HEAD"]).toLowerCase();
+  if (headCommit !== requested) {
+    throw new Error("V4_RELEASE_COMMIT must exactly match the checked-out HEAD");
+  }
+
+  const dirty = gitOutput(["status", "--porcelain=v1", "--untracked-files=all"]);
+  if (dirty !== "") {
+    const entries = dirty.split(/\r?\n/).length;
+    throw new Error(`Refusing Base deployment from a dirty working tree (${entries} changed paths)`);
+  }
+
+  const configuredOriginRemote = gitOutput(["remote", "get-url", "origin"]);
+  if (!/github\.com[/:]NARAProtocol\/nara_protocol_v4(?:\.git)?$/i.test(configuredOriginRemote)) {
+    throw new Error("origin is not the authoritative NARAProtocol/nara_protocol_v4 repository");
+  }
+
+  const originMainCommit = gitOutput(["rev-parse", "--verify", "origin/main"]).toLowerCase();
+  const remoteMainLine = gitOutput(["ls-remote", "origin", "refs/heads/main"]);
+  const remoteMainCommit = remoteMainLine.split(/\s+/)[0]?.toLowerCase();
+  if (!/^[0-9a-f]{40}$/.test(remoteMainCommit ?? "") || remoteMainCommit !== originMainCommit) {
+    throw new Error("Local origin/main is not synchronized with the authoritative remote; fetch before release verification");
+  }
+  try {
+    execFileSync("git", ["merge-base", "--is-ancestor", requested, "origin/main"], {
+      cwd: process.cwd(),
+      stdio: "ignore",
+    });
+  } catch {
+    throw new Error("V4_RELEASE_COMMIT is not contained in the locally fetched origin/main; fetch and verify the protected merge first");
+  }
+
+  return {
+    releaseCommit: requested,
+    headCommit,
+    originMainCommit,
+    originRemote: "NARAProtocol/nara_protocol_v4",
+    cleanWorkingTree: true,
+    containedInOriginMain: true,
+  };
+}
+
+function refuseBlindBaseRetry(): void {
+  if (!existsSync(ACTIVE_BASE_CHECKPOINT)) return;
+  let priorStatus = "unreadable";
+  try {
+    const parsed = JSON.parse(readFileSync(ACTIVE_BASE_CHECKPOINT, "utf8")) as { status?: unknown };
+    if (typeof parsed.status === "string") priorStatus = parsed.status;
+  } catch {
+    // An unreadable checkpoint is itself a stop condition.
+  }
+  throw new Error(
+    `Existing Base deployment checkpoint has status ${priorStatus}. ` +
+    "A true automatic resume is unsupported: reconcile every recorded hash and onchain address, archive the checkpoint, and obtain a fresh human decision before any retry.",
+  );
+}
+
+class DeploymentReceiptJournal {
+  readonly journalPath: string;
+  readonly checkpointPath: string;
+  private readonly payload: DeploymentJournalPayload;
+
+  constructor(input: Omit<DeploymentJournalPayload, "schemaVersion" | "status" | "retryPolicy" | "startedAt" | "updatedAt" | "steps">) {
+    if (!existsSync(DEPLOYMENT_DIR)) mkdirSync(DEPLOYMENT_DIR, { recursive: true });
+    const startedAt = new Date().toISOString();
+    const stamp = startedAt.replace(/[:.]/g, "-");
+    this.journalPath = join(DEPLOYMENT_DIR, `v4-base-usdc-receipt-journal-${stamp}.jsonl`);
+    this.checkpointPath = input.chainId === BASE_CHAIN_ID.toString()
+      ? ACTIVE_BASE_CHECKPOINT
+      : join(DEPLOYMENT_DIR, `v4-base-usdc-${input.chainId}-in-progress.json`);
+    this.payload = {
+      schemaVersion: 1,
+      status: "in_progress",
+      retryPolicy: "NO_BLIND_RETRY: reconcile this journal and all recorded hashes before any fresh deployment attempt.",
+      startedAt,
+      updatedAt: startedAt,
+      ...input,
+      steps: [],
+    };
+    this.persist("journal_started");
+  }
+
+  private persist(event: string): void {
+    this.payload.updatedAt = new Date().toISOString();
+    durableWrite(this.journalPath, `${JSON.stringify({ event, at: this.payload.updatedAt, snapshot: this.payload })}\n`, true);
+    durableWrite(this.checkpointPath, `${jsonStringify(this.payload)}\n`);
+  }
+
+  prepare(label: string, kind: JournalStep["kind"], expectedContractAddress?: string): JournalStep {
+    const step: JournalStep = {
+      index: this.payload.steps.length,
+      label,
+      kind,
+      state: "prepared",
+      preparedAt: new Date().toISOString(),
+      ...(expectedContractAddress ? { expectedContractAddress } : {}),
+    };
+    this.payload.steps.push(step);
+    this.persist("transaction_prepared");
+    return step;
+  }
+
+  submitted(step: JournalStep, transactionHash: string): void {
+    step.state = "submitted";
+    step.transactionHash = transactionHash;
+    step.submittedAt = new Date().toISOString();
+    this.persist("transaction_submitted");
+  }
+
+  confirmed(step: JournalStep, receipt: ReceiptEvidence): void {
+    step.state = "confirmed";
+    step.receipt = receipt;
+    step.confirmedAt = new Date().toISOString();
+    this.persist("transaction_confirmed");
+  }
+
+  failedStep(step: JournalStep): void {
+    step.state = "failed";
+    step.failedAt = new Date().toISOString();
+    this.persist("transaction_failed");
+  }
+
+  transactionsComplete(): void {
+    this.payload.status = "transactions_complete";
+    this.persist("transactions_complete");
+  }
+
+  complete(manifest: string): void {
+    this.payload.status = "completed";
+    this.payload.manifest = manifest;
+    this.persist("manifest_completed");
+  }
+
+  fail(error: unknown): void {
+    if (this.payload.status === "completed") return;
+    const current = [...this.payload.steps].reverse().find((step) => step.state !== "confirmed");
+    this.payload.status = "failed_no_resume";
+    this.payload.failure = {
+      at: new Date().toISOString(),
+      step: current?.label ?? null,
+      reason: safeErrorMessage(error),
+    };
+    this.persist("deployment_failed_no_resume");
+  }
+
+  receipt(label: string): ReceiptEvidence {
+    const step = this.payload.steps.find((candidate) => candidate.label === label && candidate.receipt !== undefined);
+    if (!step?.receipt) throw new Error(`Missing recorded receipt for ${label}`);
+    return step.receipt;
+  }
+
+  manifestEvidence(): Record<string, unknown> {
+    return {
+      status: this.payload.status,
+      retryPolicy: this.payload.retryPolicy,
+      journalPath: this.journalPath,
+      checkpointPath: this.checkpointPath,
+      transactions: this.payload.steps.map((step) => ({
+        index: step.index,
+        label: step.label,
+        kind: step.kind,
+        transactionHash: step.transactionHash ?? null,
+        receipt: step.receipt ?? null,
+        expectedContractAddress: step.expectedContractAddress ?? null,
+      })),
+    };
+  }
 }
 
 function env(name: string, fallback?: string): string {
@@ -169,8 +445,8 @@ function buildEngineConfig(ethers: HardhatEthers): EngineConfig {
     cWad: ethers.parseUnits(env("CORE_C", "0.50"), 18),
     dWad: ethers.parseUnits(env("CORE_D", "0.50"), 18),
     dripSplitWad: ethers.parseUnits(env("CORE_DRIP_SPLIT", "0.85"), 18),
-    durationLinearWad: ethers.parseUnits(env("CORE_DURATION_LINEAR", "0.8"), 18),
-    durationQuadraticWad: ethers.parseUnits(env("CORE_DURATION_QUADRATIC", "1.2"), 18),
+    durationLinearWad: ethers.parseUnits(env("CORE_DURATION_LINEAR", "0.5"), 18),
+    durationQuadraticWad: ethers.parseUnits(env("CORE_DURATION_QUADRATIC", "2.5"), 18),
     growthFactorWad: ethers.parseUnits(env("CORE_GROWTH_FACTOR", "1.000104"), 18),
     minBaseEmission: ethers.parseUnits(env("CORE_MIN_BASE_EMISSION", "0.2"), 18),
     maxBaseEmission: ethers.parseUnits(env("CORE_MAX_BASE_EMISSION", "5"), 18),
@@ -230,37 +506,130 @@ function poolId(ethers: HardhatEthers, key: PoolKeyForScript): string {
   );
 }
 
-async function waitTx(label: string, txPromise: Promise<any>, confirmations = 1) {
-  const tx = await txPromise;
+function receiptEvidence(txHash: string, receipt: any): ReceiptEvidence {
+  return {
+    transactionHash: txHash,
+    blockNumber: Number(receipt.blockNumber),
+    blockHash: typeof receipt.blockHash === "string" ? receipt.blockHash : null,
+    status: Number(receipt.status),
+    gasUsed: receipt.gasUsed?.toString?.() ?? "0",
+    contractAddress: typeof receipt.contractAddress === "string" ? receipt.contractAddress : null,
+  };
+}
+
+async function waitTx(
+  journal: DeploymentReceiptJournal,
+  label: string,
+  txFactory: () => Promise<any>,
+  confirmations = 1,
+  expectedContractAddress?: string,
+): Promise<ReceiptEvidence> {
+  const step = journal.prepare(label, "call", expectedContractAddress);
+  let tx: any;
+  try {
+    tx = await txFactory();
+    journal.submitted(step, tx.hash);
+  } catch (error) {
+    journal.failedStep(step);
+    throw error;
+  }
   console.log(`${label}: ${tx.hash}`);
   const networkName = hre.globalOptions.network ?? "default";
   const effectiveConfirmations = networkName === "base" || networkName === "baseSepolia" ? confirmations : 1;
-  const receipt = await tx.wait(effectiveConfirmations);
-  if (receipt?.status !== 1) throw new Error(`${label} reverted`);
-  return receipt;
+  try {
+    const receipt = await tx.wait(effectiveConfirmations);
+    if (receipt?.status !== 1) throw new Error(`${label} reverted`);
+    const evidence = receiptEvidence(tx.hash, receipt);
+    if (expectedContractAddress) evidence.contractAddress = expectedContractAddress;
+    journal.confirmed(step, evidence);
+    return evidence;
+  } catch (error) {
+    journal.failedStep(step);
+    throw error;
+  }
 }
 
-function writeDeploymentLog(payload: Record<string, unknown>) {
-  const dir = "deployments";
-  if (!existsSync(dir)) mkdirSync(dir);
-  const file = join(dir, `v4-base-usdc-${new Date().toISOString().replace(/[:.]/g, "-")}.json`);
-  writeFileSync(
-    file,
-    JSON.stringify(payload, (_key, value) => (typeof value === "bigint" ? value.toString() : value), 2),
-  );
+async function deployContractRecorded(
+  journal: DeploymentReceiptJournal,
+  label: string,
+  deployFactory: () => Promise<any>,
+  confirmations = 1,
+): Promise<{ contract: any; receipt: ReceiptEvidence }> {
+  const step = journal.prepare(label, "deployment");
+  let contract: any;
+  let transaction: any;
+  try {
+    contract = await deployFactory();
+    transaction = contract.deploymentTransaction();
+    if (!transaction?.hash) throw new Error(`${label} did not expose a deployment transaction`);
+    journal.submitted(step, transaction.hash);
+  } catch (error) {
+    journal.failedStep(step);
+    throw error;
+  }
+
+  console.log(`${label}: ${transaction.hash}`);
+  const networkName = hre.globalOptions.network ?? "default";
+  const effectiveConfirmations = networkName === "base" || networkName === "baseSepolia" ? confirmations : 1;
+  try {
+    const rawReceipt = await transaction.wait(effectiveConfirmations);
+    if (rawReceipt?.status !== 1) throw new Error(`${label} reverted`);
+    const address = await contract.getAddress();
+    const evidence = receiptEvidence(transaction.hash, rawReceipt);
+    evidence.contractAddress = address;
+    step.expectedContractAddress = address;
+    journal.confirmed(step, evidence);
+    return { contract, receipt: evidence };
+  } catch (error) {
+    journal.failedStep(step);
+    throw error;
+  }
+}
+
+async function runtimeCodeEvidence(
+  ethers: HardhatEthers,
+  entries: Record<string, string | null>,
+  verificationBlock: number,
+): Promise<Record<string, { address: string; codeHash: string; codeSizeBytes: number; verifiedAtBlock: number } | null>> {
+  const evidence: Record<string, {
+    address: string;
+    codeHash: string;
+    codeSizeBytes: number;
+    verifiedAtBlock: number;
+  } | null> = {};
+  for (const [label, address] of Object.entries(entries)) {
+    if (address === null) {
+      evidence[label] = null;
+      continue;
+    }
+    const code = await ethers.provider.getCode(address, verificationBlock);
+    if (code === "0x") throw new Error(`${label} has no runtime code while building deployment evidence`);
+    evidence[label] = {
+      address,
+      codeHash: ethers.keccak256(code),
+      codeSizeBytes: (code.length - 2) / 2,
+      verifiedAtBlock: verificationBlock,
+    };
+  }
+  return evidence;
+}
+
+function writeDeploymentLog(payload: Record<string, unknown>): string {
+  if (!existsSync(DEPLOYMENT_DIR)) mkdirSync(DEPLOYMENT_DIR, { recursive: true });
+  const file = join(DEPLOYMENT_DIR, `v4-base-usdc-${new Date().toISOString().replace(/[:.]/g, "-")}.json`);
+  durableWrite(file, `${jsonStringify(payload)}\n`);
   console.log(`Deployment log written: ${file}`);
+  return file;
 }
 
 function writeCanonicalDeploymentPointers(payload: Record<string, unknown>) {
-  const dir = "deployments";
-  if (!existsSync(dir)) mkdirSync(dir);
-  const latestFile = join(dir, "v4-base-usdc-latest.json");
-  writeFileSync(
-    latestFile,
-    JSON.stringify(payload, (_key, value) => (typeof value === "bigint" ? value.toString() : value), 2),
-  );
+  if (!existsSync(DEPLOYMENT_DIR)) mkdirSync(DEPLOYMENT_DIR, { recursive: true });
+  const latestFile = join(DEPLOYMENT_DIR, "v4-base-usdc-latest.json");
+  durableWrite(latestFile, `${jsonStringify(payload)}\n`);
   console.log(`Canonical latest deployment log written: ${latestFile}`);
 }
+
+let activeJournal: DeploymentReceiptJournal | undefined;
 
 async function main() {
   const connection = await hre.network.connect();
@@ -270,9 +639,31 @@ async function main() {
   const chainId = network.chainId;
   const signers = await ethers.getSigners();
   const deployer = signers[0];
+  let baseDeployerFundingGate: Record<string, string> | null = null;
 
   if (chainId !== BASE_CHAIN_ID && !envFlag("V4_ALLOW_NON_BASE")) {
     throw new Error(`Refusing non-Base deployment. Connected chainId=${chainId}.`);
+  }
+
+  let releaseSource: ReleaseSourceEvidence | null = null;
+  if (chainId === BASE_CHAIN_ID) {
+    for (const forbiddenFlag of [
+      "V4_ALLOW_LEGACY_ADDRESS_FALLBACKS",
+      "V4_ALLOW_DEPLOYER_ADMIN",
+      "V4_ALLOW_DEPLOYER_TREASURY",
+    ]) {
+      if (envFlag(forbiddenFlag)) throw new Error(`${forbiddenFlag} is forbidden on Base`);
+    }
+    releaseSource = requireReviewedBaseReleaseSource();
+    refuseBlindBaseRetry();
+    if (envFlag("V4_SKIP_DEPLOYMENT_LOG")) {
+      throw new Error("V4_SKIP_DEPLOYMENT_LOG is forbidden on Base; durable receipt evidence is mandatory");
+    }
+    if (optionalEnv("V4_EXISTING_LAUNCHER") !== undefined) {
+      throw new Error(
+        "V4_EXISTING_LAUNCHER resume is forbidden on Base. Reconcile the prior receipt journal; do not blindly retry a partial deployment.",
+      );
+    }
   }
 
   const poolManagerAddress = ethers.getAddress(env("V4_POOL_MANAGER_BASE", BASE_UNISWAP_V4_POOL_MANAGER));
@@ -295,12 +686,28 @@ async function main() {
   requireNotDeployerOnBase("V4_ADMIN_ADDRESS", finalAdmin, deployer.address, chainId, "V4_ALLOW_DEPLOYER_ADMIN");
   requireNotDeployerOnBase("V4_TREASURY_ADDRESS", treasury, deployer.address, chainId, "V4_ALLOW_DEPLOYER_TREASURY");
 
+  let treasurySigner: any = null;
+  const treasuryKey = optionalEnv("TREASURY_PRIVATE_KEY");
+  if (treasuryKey !== undefined) {
+    try {
+      treasurySigner = new ethers.Wallet(treasuryKey, ethers.provider);
+    } catch {
+      throw new Error("TREASURY_PRIVATE_KEY is invalid");
+    }
+    if (treasurySigner.address.toLowerCase() !== treasury.toLowerCase()) {
+      throw new Error("TREASURY_PRIVATE_KEY does not match V4_TREASURY_ADDRESS");
+    }
+  }
+  if (chainId === BASE_CHAIN_ID && poolManagerAddress !== ethers.getAddress(BASE_UNISWAP_V4_POOL_MANAGER)) {
+    throw new Error("V4_POOL_MANAGER_BASE must be the canonical Base Uniswap v4 PoolManager");
+  }
+
   const poolFee = envNumber("V4_POOL_FEE", "3000");
   const tickSpacing = envNumber("V4_TICK_SPACING", "60");
   const epochLengthSeconds = BigInt(envNumber("EPOCH_LENGTH_SECONDS", "900"));
   const configChangeDelaySeconds = BigInt(envNumber("CONFIG_CHANGE_DELAY_SECONDS", "86400"));
   const initialBaseEmission = envBigInt("INITIAL_BASE_EMISSION", "500000000000000000");
-  const canonicalTokenName = "NARA Token";
+  const canonicalTokenName = "NARA";
   const canonicalTokenSymbol = "NARA";
   const tokenName = env("V4_TOKEN_NAME", canonicalTokenName);
   const tokenSymbol = env("V4_TOKEN_SYMBOL", canonicalTokenSymbol);
@@ -319,6 +726,9 @@ async function main() {
   }
   if (poolFee <= 0 || poolFee >= 1_000_000) throw new Error("V4_POOL_FEE must be between 1 and 999999");
   if (tickSpacing <= 0 || tickSpacing > 32767) throw new Error("V4_TICK_SPACING must be between 1 and 32767");
+  if (chainId === BASE_CHAIN_ID && (poolFee !== 3_000 || tickSpacing !== 60)) {
+    throw new Error("Base launch requires canonical pool fee 3000 and tick spacing 60");
+  }
   if (initialNaraAmount <= 0n || initialUsdcAmount <= 0n) {
     throw new Error("V4_INITIAL_NARA_AMOUNT and V4_INITIAL_USDC_AMOUNT must be positive");
   }
@@ -345,31 +755,111 @@ async function main() {
   console.log("");
 
   if (chainId === BASE_CHAIN_ID) {
-    for (const [label, address] of [["PoolManager", poolManagerAddress], ["USDC", usdcAddress]] as const) {
+    for (const [label, address] of [
+      ["PoolManager", poolManagerAddress],
+      ["USDC", usdcAddress],
+      ["final admin Safe", finalAdmin],
+      ["Safe 1.4.1 singleton", BASE_SAFE_141_SINGLETON],
+    ] as const) {
       const code = await ethers.provider.getCode(address);
       if (code === "0x") throw new Error(`${label} has no code at ${address}`);
+    }
+    const safeInterface = new ethers.Interface([
+      "function masterCopy() view returns (address)",
+      "function VERSION() view returns (string)",
+      "function getThreshold() view returns (uint256)",
+      "function getOwners() view returns (address[])",
+    ]);
+    const safeContract = new ethers.Contract(finalAdmin, safeInterface, ethers.provider);
+    const [safeProxyCode, safeSingletonCode, safeMasterCopy, safeVersion, safeThreshold, safeOwners] = await Promise.all([
+      ethers.provider.getCode(finalAdmin),
+      ethers.provider.getCode(BASE_SAFE_141_SINGLETON),
+      safeContract.masterCopy() as Promise<string>,
+      safeContract.VERSION() as Promise<string>,
+      safeContract.getThreshold() as Promise<bigint>,
+      safeContract.getOwners() as Promise<string[]>,
+    ]);
+    if (ethers.keccak256(safeProxyCode).toLowerCase() !== BASE_SAFE_141_PROXY_CODEHASH) {
+      throw new Error("Final admin Safe proxy runtime hash is not the approved Safe 1.4.1 proxy hash");
+    }
+    if (
+      ethers.getAddress(safeMasterCopy) !== ethers.getAddress(BASE_SAFE_141_SINGLETON) ||
+      ethers.keccak256(safeSingletonCode).toLowerCase() !== BASE_SAFE_141_SINGLETON_CODEHASH
+    ) {
+      throw new Error("Final admin Safe is not bound to the approved Base Safe 1.4.1 singleton");
+    }
+    if (safeVersion !== "1.4.1" || safeThreshold !== 2n || safeOwners.length !== 3) {
+      throw new Error("Final admin custody must be the approved Safe v1.4.1 2-of-3 configuration");
+    }
+    const [deployerBalance, feeData] = await Promise.all([
+      ethers.provider.getBalance(deployer.address),
+      ethers.provider.getFeeData(),
+    ]);
+    const gasPrice = BigInt(feeData.gasPrice ?? 0n);
+    const maxFeePerGas = BigInt(feeData.maxFeePerGas ?? 0n);
+    const sampledFeePerGasWei = gasPrice > maxFeePerGas ? gasPrice : maxFeePerGas;
+    if (sampledFeePerGasWei <= 0n) {
+      throw new Error("Base RPC did not return a positive gas price for the deployer funding gate");
+    }
+    const feeBasedMinimumWei =
+      BASE_DEPLOYMENT_GAS_BUDGET * sampledFeePerGasWei * BASE_DEPLOYMENT_FEE_SAFETY_MULTIPLIER;
+    const requiredDeployerBalanceWei = feeBasedMinimumWei > MIN_BASE_DEPLOYER_BALANCE_WEI
+      ? feeBasedMinimumWei
+      : MIN_BASE_DEPLOYER_BALANCE_WEI;
+    baseDeployerFundingGate = {
+      staticMinimumWei: MIN_BASE_DEPLOYER_BALANCE_WEI.toString(),
+      gasBudget: BASE_DEPLOYMENT_GAS_BUDGET.toString(),
+      feeSafetyMultiplier: BASE_DEPLOYMENT_FEE_SAFETY_MULTIPLIER.toString(),
+      sampledFeePerGasWei: sampledFeePerGasWei.toString(),
+      feeBasedMinimumWei: feeBasedMinimumWei.toString(),
+      requiredBalanceWei: requiredDeployerBalanceWei.toString(),
+      observedBalanceWei: deployerBalance.toString(),
+    };
+    if (deployerBalance < requiredDeployerBalanceWei) {
+      throw new Error(
+        `Base deployer requires at least ${ethers.formatEther(requiredDeployerBalanceWei)} ETH ` +
+        `(0.001 ETH static floor plus live-fee safety check) before the first deployment transaction`,
+      );
     }
   }
 
   const cfg = buildEngineConfig(ethers);
+  activeJournal = new DeploymentReceiptJournal({
+    network: networkName,
+    chainId: chainId.toString(),
+    release: releaseSource,
+    deployer: deployer.address,
+    finalAdmin,
+    treasury,
+  });
+  const journal = activeJournal;
 
   const existingLauncher = optionalEnv("V4_EXISTING_LAUNCHER");
   console.log(existingLauncher ? "Step 1: resume with existing launcher" : "Step 1: deploy launcher");
-  const launcher = existingLauncher
-    ? await ethers.getContractAt(
+  let launcherDeploymentReceipt: ReceiptEvidence | null = null;
+  let launcher: any;
+  if (existingLauncher) {
+    launcher = await ethers.getContractAt(
         "contracts/v4/NARALauncher.sol:NARALauncher",
         ethers.getAddress(existingLauncher),
         deployer,
-      )
-    : await ethers.deployContract(
+      );
+    if ((await ethers.provider.getCode(await launcher.getAddress())) === "0x") {
+      throw new Error(`V4_EXISTING_LAUNCHER has no code: ${existingLauncher}`);
+    }
+  } else {
+    const deployed = await deployContractRecorded(
+      journal,
+      "deploy.NARALauncher",
+      () => ethers.deployContract(
         "contracts/v4/NARALauncher.sol:NARALauncher",
         [deployer.address],
         deployer,
-      );
-  if (!existingLauncher) {
-    await launcher.waitForDeployment();
-  } else if ((await ethers.provider.getCode(await launcher.getAddress())) === "0x") {
-    throw new Error(`V4_EXISTING_LAUNCHER has no code: ${existingLauncher}`);
+      ),
+      2,
+    );
+    launcher = deployed.contract;
+    launcherDeploymentReceipt = deployed.receipt;
   }
   const launcherAddress = await launcher.getAddress();
   const launcherAdmin = await launcher.launcherAdmin();
@@ -388,7 +878,12 @@ async function main() {
     initialBaseEmission,
     cfg,
   );
-  await waitTx("launcher.launch", launcher.launch(treasury, engineCreationCode, engineSalt, tokenName, tokenSymbol), 2);
+  const launchReceipt = await waitTx(
+    journal,
+    "launcher.launch",
+    () => launcher.launch(treasury, engineCreationCode, engineSalt, tokenName, tokenSymbol),
+    2,
+  );
 
   const tokenAddress = await launcher.deployedToken();
   const engineAddress = await launcher.deployedEngine();
@@ -408,33 +903,42 @@ async function main() {
 
   console.log("Step 3: deploy and wire sealed reward reserve");
   let rewardReserveAddress: string | null = null;
+  let rewardReserveDeploymentReceipt: ReceiptEvidence | null = null;
 
   if (emissionReserveAmount > 0n) {
-    const rewardReserve = await ethers.deployContract(
-      "NARARewardReserve",
-      [deployer.address, emissionReserveAmount],
-      deployer,
+    const deployed = await deployContractRecorded(
+      journal,
+      "deploy.NARARewardReserve",
+      () => ethers.deployContract(
+        "NARARewardReserve",
+        [deployer.address, emissionReserveAmount],
+        deployer,
+      ),
+      2,
     );
-    await rewardReserve.waitForDeployment();
+    const rewardReserve = deployed.contract;
+    rewardReserveDeploymentReceipt = deployed.receipt;
     rewardReserveAddress = await rewardReserve.getAddress();
     console.log("NARARewardReserve:", rewardReserveAddress);
 
-    await waitTx("rewardReserve.setNara", rewardReserve.setNara(tokenAddress));
-    await waitTx("rewardReserve.setEngine", rewardReserve.setEngine(engineAddress));
-    await waitTx("engine.setRewardReserve", engine.setRewardReserve(rewardReserveAddress));
+    await waitTx(journal, "rewardReserve.setNara", () => rewardReserve.setNara(tokenAddress));
+    await waitTx(journal, "rewardReserve.setEngine", () => rewardReserve.setEngine(engineAddress));
+    await waitTx(journal, "engine.setRewardReserve", () => engine.setRewardReserve(rewardReserveAddress));
 
     const deployerTokenBalance = await token.balanceOf(deployer.address);
     if (deployerTokenBalance >= emissionReserveAmount) {
-      await waitTx("token.transfer(rewardReserve)", token.transfer(rewardReserveAddress, emissionReserveAmount));
+      await waitTx(journal, "token.transfer(rewardReserve)", () => token.transfer(rewardReserveAddress, emissionReserveAmount));
     } else {
-      const treasuryKey = optionalEnv("TREASURY_PRIVATE_KEY");
-      if (treasuryKey) {
-        const treasurySigner = new ethers.Wallet(treasuryKey, ethers.provider);
+      if (treasurySigner !== null) {
         const treasuryBalance = await token.balanceOf(treasurySigner.address);
         if (treasuryBalance >= emissionReserveAmount) {
           console.log("Deployer has no NARA — using TREASURY_PRIVATE_KEY for reward deposit.");
           const tokenAsTreasury = token.connect(treasurySigner);
-          await waitTx("token.transfer(rewardReserve) [treasury]", tokenAsTreasury.transfer(rewardReserveAddress, emissionReserveAmount));
+          await waitTx(
+            journal,
+            "token.transfer(rewardReserve) [treasury]",
+            () => tokenAsTreasury.transfer(rewardReserveAddress, emissionReserveAmount),
+          );
         } else {
           console.log(`Skipping reward deposit: treasury also has insufficient NARA (${ethers.formatUnits(treasuryBalance, 18)}).`);
           if (envFlag("V4_REQUIRE_REWARD_DEPOSIT")) throw new Error("Required reward deposit was not funded");
@@ -457,25 +961,35 @@ async function main() {
   }
 
   console.log("Step 4: set engine treasury");
-  await waitTx("engine.setTreasury", engine.setTreasury(treasury));
+  await waitTx(journal, "engine.setTreasury", () => engine.setTreasury(treasury));
 
   console.log("Step 5: deploy Liquidity Growth vault");
-  const vault = await ethers.deployContract(
-    "contracts/v4/NARALiquidityGrowthVault.sol:NARALiquidityGrowthVault",
-    [deployer.address, tokenAddress, usdcAddress],
-    deployer,
+  const vaultDeployment = await deployContractRecorded(
+    journal,
+    "deploy.NARALiquidityGrowthVault",
+    () => ethers.deployContract(
+      "contracts/v4/NARALiquidityGrowthVault.sol:NARALiquidityGrowthVault",
+      [deployer.address, tokenAddress, usdcAddress],
+      deployer,
+    ),
+    2,
   );
-  await vault.waitForDeployment();
+  const vault = vaultDeployment.contract;
   const vaultAddress = await vault.getAddress();
   console.log("NARALiquidityGrowthVault:", vaultAddress);
 
   console.log("Step 6: deploy CREATE2 hook deployer");
-  const create2Deployer = await ethers.deployContract(
-    "contracts/v4/utils/Create2HookDeployer.sol:Create2HookDeployer",
-    [deployer.address],
-    deployer,
+  const create2Deployment = await deployContractRecorded(
+    journal,
+    "deploy.Create2HookDeployer",
+    () => ethers.deployContract(
+      "contracts/v4/utils/Create2HookDeployer.sol:Create2HookDeployer",
+      [deployer.address],
+      deployer,
+    ),
+    2,
   );
-  await create2Deployer.waitForDeployment();
+  const create2Deployer = create2Deployment.contract;
   const create2DeployerAddress = await create2Deployer.getAddress();
   console.log("Create2HookDeployer:", create2DeployerAddress);
 
@@ -499,7 +1013,13 @@ async function main() {
   console.log("Hook address:  ", mined.address);
   console.log("Salt attempts: ", mined.iterations);
 
-  await waitTx("create2.deploy(hook)", create2Deployer.deploy(mined.salt, hookInitCode, { gasLimit: 7_000_000n }), 2);
+  const hookDeploymentReceipt = await waitTx(
+    journal,
+    "create2.deploy(hook)",
+    () => create2Deployer.deploy(mined.salt, hookInitCode, { gasLimit: 7_000_000n }),
+    2,
+    mined.address,
+  );
   let hookCode = await ethers.provider.getCode(mined.address);
   if (hookCode === "0x") {
     await new Promise(resolve => setTimeout(resolve, 4000));
@@ -514,26 +1034,33 @@ async function main() {
   );
 
   console.log("Step 8: bind vault and hook");
-  await waitTx("vault.setHook", vault.setHook(mined.address));
-  await waitTx("vault.setEngine", vault.setEngine(engineAddress));
+  await waitTx(journal, "vault.setHook", () => vault.setHook(mined.address));
+  await waitTx(journal, "vault.setEngine", () => vault.setEngine(engineAddress));
   console.log(
     "REWARD_NOTIFIER_ROLE intentionally not granted: deployed-engine token rewards remain disabled.",
   );
   if (compounder !== undefined) {
-    await waitTx("vault.setCompounder", vault.setCompounder(ethers.getAddress(compounder)));
-    await waitTx("vault.freezeCompounder", vault.freezeCompounder());
+    await waitTx(journal, "vault.setCompounder", () => vault.setCompounder(ethers.getAddress(compounder)));
+    console.log(
+      "Compounder wired but intentionally left unfrozen. Build and execute the separate live validation, " +
+      "verify its receipt, then build the one-way freeze transaction.",
+    );
   } else {
     console.log("Compounder intentionally left unset. Pool fees will accumulate in the vault.");
   }
 
   if (compoundKeeper !== undefined) {
-    await waitTx("vault.setCompoundKeeper", vault.setCompoundKeeper(ethers.getAddress(compoundKeeper), true));
+    await waitTx(
+      journal,
+      "vault.setCompoundKeeper",
+      () => vault.setCompoundKeeper(ethers.getAddress(compoundKeeper), true),
+    );
   }
 
   const keeperBountyBps = envNumber("V4_KEEPER_BOUNTY_BPS", "0");
   const minCompoundBase = ethers.parseUnits(env("V4_MIN_COMPOUND_BASE_USDC", "0"), 6);
   if (keeperBountyBps !== 0 || minCompoundBase !== 0n) {
-    await waitTx("vault.setKeeperBounty", vault.setKeeperBounty(keeperBountyBps, minCompoundBase));
+    await waitTx(journal, "vault.setKeeperBounty", () => vault.setKeeperBounty(keeperBountyBps, minCompoundBase));
   }
 
   console.log("Step 9: configure NARA/USDC pool for the later atomic Safe launch");
@@ -551,8 +1078,8 @@ async function main() {
   };
   const id = poolId(ethers, key);
 
-  await waitTx("hook.setProtocolDepth(USDC)", hook.setProtocolDepth(usdcAddress, initialUsdcAmount));
-  await waitTx("hook.setProtocolDepth(NARA)", hook.setProtocolDepth(tokenAddress, initialNaraAmount));
+  await waitTx(journal, "hook.setProtocolDepth(USDC)", () => hook.setProtocolDepth(usdcAddress, initialUsdcAmount));
+  await waitTx(journal, "hook.setProtocolDepth(NARA)", () => hook.setProtocolDepth(tokenAddress, initialNaraAmount));
   console.log("Pool registration and initialization intentionally deferred to one atomic Safe batch.");
 
   console.log("Step 10: transfer final admin/owner controls");
@@ -562,40 +1089,161 @@ async function main() {
     const paramRole = ethers.id("PARAM_ROLE");
     const treasuryRole = ethers.id("TREASURY_ROLE");
     for (const role of [defaultAdminRole, paramRole, treasuryRole]) {
-      await waitTx(`engine.grantRole(${role})`, engine.grantRole(role, finalAdmin));
+      await waitTx(journal, `engine.grantRole(${role})`, () => engine.grantRole(role, finalAdmin));
     }
     for (const role of [paramRole, treasuryRole, rewardNotifierRole, defaultAdminRole]) {
-      await waitTx(`engine.renounceRole(${role})`, engine.renounceRole(role, deployer.address));
+      await waitTx(journal, `engine.renounceRole(${role})`, () => engine.renounceRole(role, deployer.address));
     }
     if (rewardReserveAddress !== null) {
       const rewardReserve = await ethers.getContractAt("NARARewardReserve", rewardReserveAddress, deployer);
       const reserveRoles = [ethers.ZeroHash, ethers.id("ADMIN_ROLE"), ethers.id("ENGINE_SETTER_ROLE")];
       for (const role of reserveRoles) {
-        await waitTx(`rewardReserve.grantRole(${role})`, rewardReserve.grantRole(role, finalAdmin));
+        await waitTx(journal, `rewardReserve.grantRole(${role})`, () => rewardReserve.grantRole(role, finalAdmin));
       }
       for (const role of reserveRoles) {
-        await waitTx(`rewardReserve.renounceRole(${role})`, rewardReserve.renounceRole(role, deployer.address));
+        await waitTx(
+          journal,
+          `rewardReserve.renounceRole(${role})`,
+          () => rewardReserve.renounceRole(role, deployer.address),
+        );
       }
     }
-    await waitTx("hook.transferOwnership", hook.transferOwnership(finalAdmin));
-    await waitTx("vault.transferOwnership", vault.transferOwnership(finalAdmin));
-    await waitTx("create2Deployer.transferOwnership", create2Deployer.transferOwnership(finalAdmin));
+    await waitTx(journal, "hook.transferOwnership", () => hook.transferOwnership(finalAdmin));
+    await waitTx(journal, "vault.transferOwnership", () => vault.transferOwnership(finalAdmin));
+    await waitTx(
+      journal,
+      "create2Deployer.transferOwnership",
+      () => create2Deployer.transferOwnership(finalAdmin),
+    );
+    const hookPendingOwner = ethers.getAddress(await hook.pendingOwner());
+    const vaultPendingOwner = ethers.getAddress(await vault.pendingOwner());
+    if (hookPendingOwner !== finalAdmin || vaultPendingOwner !== finalAdmin) {
+      throw new Error("Hook/Vault Ownable2Step pending owner mismatch");
+    }
+    console.log("SAFE ACTION REQUIRED: acceptOwnership() on Hook and Vault before pool registration.");
   } else {
     if (await engine.hasRole(rewardNotifierRole, deployer.address)) {
       await waitTx(
+        journal,
         "engine.renounceRole(REWARD_NOTIFIER_ROLE)",
-        engine.renounceRole(rewardNotifierRole, deployer.address),
+        () => engine.renounceRole(rewardNotifierRole, deployer.address),
       );
     }
     console.log("Final admin is deployer; ownership remains on deployer and token rewards stay disabled.");
   }
 
-  const log = {
+  const engineCreationCodeHash = ethers.keccak256(engineCreationCode);
+  const hookInitCodeHash = ethers.keccak256(hookInitCode);
+  const runtimeEntries: Record<string, string | null> = {
+    launcher: launcherAddress,
+    token: tokenAddress,
+    engine: engineAddress,
+    rewardReserve: rewardReserveAddress,
+    vault: vaultAddress,
+    create2HookDeployer: create2DeployerAddress,
+    hook: mined.address,
+    compounder: compounder === undefined ? null : ethers.getAddress(compounder),
+  };
+  if (chainId === BASE_CHAIN_ID) {
+    Object.assign(runtimeEntries, {
+      safe: finalAdmin,
+      poolManager: poolManagerAddress,
+      usdc: usdcAddress,
+      permit2: BASE_PERMIT2,
+      positionManager: BASE_POSITION_MANAGER,
+      universalRouter: BASE_UNIVERSAL_ROUTER,
+    });
+  }
+  const verificationBlock = await ethers.provider.getBlockNumber();
+  const runtimeCodeHashes = await runtimeCodeEvidence(ethers, runtimeEntries, verificationBlock);
+  const safeCodeHash = runtimeCodeHashes.safe?.codeHash ?? null;
+  if (chainId === BASE_CHAIN_ID && safeCodeHash === null) {
+    throw new Error("Final admin Safe runtime code hash is missing from deployment evidence");
+  }
+  journal.transactionsComplete();
+
+  const deploymentReceipts = {
+    launcher: launcherDeploymentReceipt,
+    token: { ...launchReceipt, contractAddress: tokenAddress },
+    engine: { ...launchReceipt, contractAddress: engineAddress },
+    rewardReserve: rewardReserveDeploymentReceipt,
+    vault: vaultDeployment.receipt,
+    create2HookDeployer: create2Deployment.receipt,
+    hook: hookDeploymentReceipt,
+  };
+  const deploymentBlocks = {
+    launcher: launcherDeploymentReceipt?.blockNumber ?? null,
+    token: launchReceipt.blockNumber,
+    engine: launchReceipt.blockNumber,
+    rewardReserve: rewardReserveDeploymentReceipt?.blockNumber ?? null,
+    vault: vaultDeployment.receipt.blockNumber,
+    create2HookDeployer: create2Deployment.receipt.blockNumber,
+    hook: hookDeploymentReceipt.blockNumber,
+  };
+  const constructorAndInputEvidence = {
+    launcher: {
+      constructor: { admin: deployer.address },
+    },
+    token: {
+      deployment: "NARALauncher.launch",
+      constructor: { treasury, flashFeeSink: engineAddress, tokenName, tokenSymbol },
+    },
+    engine: {
+      deployment: "NARALauncher.launch CREATE2",
+      constructor: {
+        admin: deployer.address,
+        epochLengthSeconds: epochLengthSeconds.toString(),
+        configChangeDelaySeconds: configChangeDelaySeconds.toString(),
+        initialBaseEmission: initialBaseEmission.toString(),
+        config: configAsTuple(cfg),
+      },
+      salt: engineSalt,
+      creationCodeHash: engineCreationCodeHash,
+    },
+    rewardReserve: rewardReserveAddress === null ? null : {
+      constructor: { admin: deployer.address, rewardAllocation: emissionReserveAmount.toString() },
+    },
+    vault: {
+      constructor: { owner: deployer.address, token: tokenAddress, base: usdcAddress },
+    },
+    create2HookDeployer: {
+      constructor: { owner: deployer.address },
+    },
+    hook: {
+      constructor: {
+        poolManager: poolManagerAddress,
+        owner: deployer.address,
+        token: tokenAddress,
+        base: usdcAddress,
+        vault: vaultAddress,
+      },
+      salt: mined.salt,
+      initCodeHash: hookInitCodeHash,
+      requiredAddressFlags: "0x2088",
+    },
+    reviewedPoolInputs: {
+      poolFee,
+      tickSpacing,
+      initialNaraAmount: initialNaraAmount.toString(),
+      initialUsdcAmount: initialUsdcAmount.toString(),
+      sqrtPriceX96: sqrtPriceX96.toString(),
+      poolKey: key,
+      poolId: id,
+    },
+    treasurySignerSuppliedAndMatched: treasurySigner !== null,
+    minimumBaseDeployerBalanceWei: MIN_BASE_DEPLOYER_BALANCE_WEI.toString(),
+    baseDeployerFundingGate,
+  };
+
+  const log: Record<string, unknown> = {
     generatedAt: new Date().toISOString(),
     network: networkName,
     chainId: chainId.toString(),
+    originCommit: releaseSource?.releaseCommit ?? null,
+    releaseSource,
     deployer: deployer.address,
     finalAdmin,
+    safeCodeHash,
     treasury,
     universalRouter: BASE_UNIVERSAL_ROUTER,
     permit2: BASE_PERMIT2,
@@ -607,6 +1255,15 @@ async function main() {
     tokenName,
     tokenSymbol,
     engine: engineAddress,
+    engineDeploymentTransactionHash: launchReceipt.transactionHash,
+    engineDeploymentBlock: launchReceipt.blockNumber,
+    rewardNotifierHistory: {
+      role: rewardNotifierRole,
+      engineDeploymentTransactionHash: launchReceipt.transactionHash,
+      engineDeploymentBlock: launchReceipt.blockNumber,
+      scanFromBlock: launchReceipt.blockNumber,
+    },
+    verificationBlock,
     rewardReserve: rewardReserveAddress,
     vault: vaultAddress,
     create2HookDeployer: create2DeployerAddress,
@@ -629,6 +1286,11 @@ async function main() {
     epochLengthSeconds: epochLengthSeconds.toString(),
     configChangeDelaySeconds: configChangeDelaySeconds.toString(),
     initialBaseEmission: initialBaseEmission.toString(),
+    deploymentBlocks,
+    deploymentReceipts,
+    runtimeCodeHashes,
+    constructorAndInputEvidence,
+    receiptJournal: journal.manifestEvidence(),
     verifierCommands: {
       preflight: "npm run verify:v4:preflight",
       allocations: "npm run verify:v4:allocations",
@@ -644,8 +1306,13 @@ async function main() {
   };
   if (envFlag("V4_SKIP_DEPLOYMENT_LOG")) {
     console.log("Deployment log skipped by V4_SKIP_DEPLOYMENT_LOG=1");
+    journal.complete("skipped outside Base");
   } else {
-    writeDeploymentLog(log);
+    const manifestPath = writeDeploymentLog(log);
+    writeCanonicalDeploymentPointers(log);
+    journal.complete(manifestPath);
+    log.receiptJournal = journal.manifestEvidence();
+    durableWrite(manifestPath, `${jsonStringify(log)}\n`);
     writeCanonicalDeploymentPointers(log);
   }
 
@@ -659,6 +1326,13 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(error);
+  try {
+    activeJournal?.fail(error);
+  } catch {
+    // Preserve the original failure. The append-only journal may still contain
+    // all events written before a checkpoint write failure.
+  }
+  console.error(`Deployment failed safely: ${safeErrorMessage(error)}`);
+  console.error("Do not blindly retry. Reconcile the receipt journal and onchain state first.");
   process.exitCode = 1;
 });

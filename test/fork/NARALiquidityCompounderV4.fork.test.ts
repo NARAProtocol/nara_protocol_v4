@@ -5,9 +5,9 @@
  * `modifyLiquidities` encoding (MINT_POSITION/INCREASE_LIQUIDITY + SETTLE_PAIR) and the
  * compounder -> Permit2 -> PositionManager pull, against the REAL Uniswap v4 contracts on Base.
  *
- * Uses a fresh mock NARA/USDC pair and a HOOKLESS pool: NARA's hook has no liquidity-op permission
- * (only beforeInitialize/beforeSwap), so it never touches modifyLiquidities — a hookless pool
- * faithfully tests the add path. The compounder accepts hooks == address(0).
+ * Uses a fresh mock NARA/USDC pair and a permission-correct production Hook. The Hook has no liquidity-op permission
+ * (only beforeInitialize/beforeSwap), so it never touches modifyLiquidities; the hooked pool
+ * faithfully tests the add path while the Compounder's full immutable binding checks remain active.
  *
  * Requires BASE_RPC_URL or BASE_MAINNET_RPC_URL in env. Skips otherwise.
  *
@@ -22,6 +22,8 @@ const MAX_UINT64 = (1n << 64n) - 1n;
 const SQRT_PRICE_1_1 = 1n << 96n;
 const POOL_FEE = 3000;
 const TICK_SPACING = 60;
+const HOOK_FLAG_MASK = 0x3fffn;
+const REQUIRED_HOOK_FLAGS = 0x2088n;
 
 // Live Base mainnet Uniswap v4 + Permit2 (mirrors scripts/lib/v4LiveConfig.ts).
 const BASE_POOL_MANAGER = "0x498581fF718922c3f8e6A244956aF099B2652b2b";
@@ -64,6 +66,39 @@ function isqrt(n: bigint): bigint {
 
 function sqrtPriceX96FromAmounts(amount0: bigint, amount1: bigint): bigint {
   return isqrt((amount1 * (1n << 192n)) / amount0);
+}
+
+function mineHookSalt(
+  ethers: any,
+  create2Deployer: string,
+  initCode: string,
+): { salt: string; address: string } {
+  const initCodeHash = ethers.keccak256(initCode);
+  const seed = ethers.keccak256(ethers.toUtf8Bytes("NARA-COMPOUNDER-BASE-FORK"));
+
+  for (let i = 0; i < 250_000; i += 1) {
+    const salt = ethers.keccak256(
+      ethers.solidityPacked(["bytes32", "uint256"], [seed, BigInt(i)]),
+    );
+    const candidate = ethers.getCreate2Address(create2Deployer, salt, initCodeHash);
+    if ((BigInt(candidate) & HOOK_FLAG_MASK) === REQUIRED_HOOK_FLAGS) {
+      return { salt, address: candidate };
+    }
+  }
+
+  throw new Error("Unable to mine a valid Hook address");
+}
+
+function encodeCompoundConstraints(
+  ethers: any,
+  sqrtPriceX96: bigint,
+  maxNaraUsed: bigint,
+  maxUsdcUsed: bigint,
+): string {
+  return ethers.AbiCoder.defaultAbiCoder().encode(
+    ["tuple(uint160,uint160,uint160,uint16,uint256,uint256)"],
+    [[sqrtPriceX96, sqrtPriceX96, sqrtPriceX96, 500, maxNaraUsed, maxUsdcUsed]],
+  );
 }
 
 (hasRpc ? describe : describe.skip)("NARALiquidityCompounderV4 — Base fork", () => {
@@ -147,20 +182,47 @@ function sqrtPriceX96FromAmounts(amount0: bigint, amount1: bigint): bigint {
     const naraAddr = await nara.getAddress();
     const usdcAddr = await usdc.getAddress();
 
-    const [currency0, currency1] = sortAddresses(naraAddr, usdcAddr);
-    const key = [currency0, currency1, POOL_FEE, TICK_SPACING, ethers.ZeroAddress] as const;
-
-    // Initialize the hookless pool on the REAL PoolManager.
-    const poolManager = new ethers.Contract(BASE_POOL_MANAGER, POOL_MANAGER_ABI, deployer);
-    await (await poolManager.initialize(key, SQRT_PRICE_1_1)).wait();
-
-    // Vault + compounder wired to the REAL v4 stack.
+    // Vault + permission-correct Hook wired to the REAL v4 stack.
     const vault = await ethers.deployContract(
       "NARALiquidityGrowthVault",
       [deployer.address, naraAddr, usdcAddr],
       deployer,
     );
     await vault.waitForDeployment();
+
+    const create2 = await ethers.deployContract("Create2HookDeployer", [deployer.address], deployer);
+    await create2.waitForDeployment();
+    const Hook = await ethers.getContractFactory("NARALiquidityGrowthHook", deployer);
+    const hookDeployTx = await Hook.getDeployTransaction(
+      BASE_POOL_MANAGER,
+      deployer.address,
+      naraAddr,
+      usdcAddr,
+      await vault.getAddress(),
+    );
+    if (typeof hookDeployTx.data !== "string") throw new Error("Hook init code unavailable");
+    const minedHook = mineHookSalt(ethers, await create2.getAddress(), hookDeployTx.data);
+    await (await create2.deploy(minedHook.salt, hookDeployTx.data)).wait();
+    const hook = await ethers.getContractAt("NARALiquidityGrowthHook", minedHook.address, deployer);
+    await vault.setHook(minedHook.address);
+
+    const [currency0, currency1] = sortAddresses(naraAddr, usdcAddr);
+    const key = [currency0, currency1, POOL_FEE, TICK_SPACING, minedHook.address] as const;
+    await hook.setProtocolDepth(naraAddr, 1_000n * ONE);
+    await hook.setProtocolDepth(usdcAddr, 1_000n * USDC);
+    await hook.registerPool(
+      {
+        currency0,
+        currency1,
+        fee: POOL_FEE,
+        tickSpacing: TICK_SPACING,
+        hooks: minedHook.address,
+      },
+      SQRT_PRICE_1_1,
+    );
+
+    const poolManager = new ethers.Contract(BASE_POOL_MANAGER, POOL_MANAGER_ABI, deployer);
+    await (await poolManager.initialize(key, SQRT_PRICE_1_1)).wait();
     await vault.setCompoundKeeper(keeper.address, true);
 
     const compounder = await ethers.deployContract(
@@ -175,13 +237,14 @@ function sqrtPriceX96FromAmounts(amount0: bigint, amount1: bigint): bigint {
         usdcAddr,
         POOL_FEE,
         TICK_SPACING,
-        ethers.ZeroAddress, // hookless pool
+        minedHook.address,
       ],
       deployer,
     );
     await compounder.waitForDeployment();
     const compounderAddr = await compounder.getAddress();
     await vault.setCompounder(compounderAddr);
+    await vault.freezeCompounder();
 
     // Seed the vault skim balances.
     const naraIn = 1_000n * ONE;
@@ -192,7 +255,8 @@ function sqrtPriceX96FromAmounts(amount0: bigint, amount1: bigint): bigint {
     const pmNaraBefore = (await new ethers.Contract(naraAddr, ERC20_BAL_ABI, deployer).balanceOf(BASE_POOL_MANAGER)) as bigint;
 
     // Compound through the REAL PositionManager.
-    await vault.connect(keeper).compound(naraIn, usdcIn, 1n, MAX_UINT64, "0x");
+    const constraints = encodeCompoundConstraints(ethers, SQRT_PRICE_1_1, naraIn, usdcIn);
+    await vault.connect(keeper).compound(naraIn, usdcIn, 1n, MAX_UINT64, constraints);
 
     // A real position NFT was minted to the compounder.
     const tokenId = await compounder.positionTokenId();
@@ -213,7 +277,7 @@ function sqrtPriceX96FromAmounts(amount0: bigint, amount1: bigint): bigint {
     // Second compound increases the SAME position (no new mint).
     await nara.mint(await vault.getAddress(), naraIn);
     await usdc.mint(await vault.getAddress(), usdcIn);
-    await vault.connect(keeper).compound(naraIn, usdcIn, 1n, MAX_UINT64, "0x");
+    await vault.connect(keeper).compound(naraIn, usdcIn, 1n, MAX_UINT64, constraints);
     expect(await compounder.positionTokenId()).to.equal(tokenId);
     expect(await posMgr.ownerOf(tokenId)).to.equal(compounderAddr);
   });

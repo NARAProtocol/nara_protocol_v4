@@ -32,7 +32,7 @@ async function deployFixture() {
 
     // Deploy a mock NARA token (used as the blocked token guard)
     const Token = await ethers.getContractFactory("MockERC20Permit", deployer);
-    const nara: any = await Token.deploy("NARA Token", "NARA");
+    const nara: any = await Token.deploy("NARA", "NARA");
     await nara.waitForDeployment();
 
     // Deploy a separate ERC-20 for bribes
