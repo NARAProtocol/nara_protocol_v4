@@ -40,7 +40,8 @@ Complete every item before running anything on Base mainnet.
 □ `NARALauncher` constructor admin will be the deployer EOA that calls `launch()`.
 □ V4_ADMIN_ADDRESS is a Safe or cold-wallet — NOT the deployer.
 □ V4_TREASURY_ADDRESS is a Safe or cold-wallet — NOT the deployer.
-□ Deployer wallet has at least 0.05 ETH on Base for gas.
+□ Deployer wallet has at least 0.001 ETH on Base and passes the deployment
+  script's higher live-fee requirement when Base fees demand it.
 □ npm run build passes locally.
 □ npm run test passes locally (468/468 green as of 2026-07-29; run `npm test` for the live count).
 □ npm run size passes (all contract bytecodes under EVM limit).

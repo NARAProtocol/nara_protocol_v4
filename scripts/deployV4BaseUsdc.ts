@@ -43,7 +43,12 @@ const BASE_SAFE_141_SINGLETON_CODEHASH = "0xb1f926978a0f44a2c0ec8fe822418ae969bd
 const BASE_SAFE_141_PROXY_CODEHASH = "0xd7d408ebcd99b2b70be43e20253d6d92a8ea8fab29bd3be7f55b10032331fb4c";
 const REQUIRED_HOOK_FLAGS = 0x2088n;
 const HOOK_FLAG_MASK = 0x3fffn;
-const MIN_BASE_DEPLOYER_BALANCE_WEI = 50_000_000_000_000_000n;
+// 0.001 ETH is the absolute operator-requested floor. The live Base gate below
+// raises it when a 30M-gas deployment budget at twice the sampled fee cap costs
+// more, so the smaller static floor cannot silently authorize a fee spike.
+const MIN_BASE_DEPLOYER_BALANCE_WEI = 1_000_000_000_000_000n;
+const BASE_DEPLOYMENT_GAS_BUDGET = 30_000_000n;
+const BASE_DEPLOYMENT_FEE_SAFETY_MULTIPLIER = 2n;
 const DEPLOYMENT_DIR = "deployments";
 const ACTIVE_BASE_CHECKPOINT = join(DEPLOYMENT_DIR, "v4-base-usdc-in-progress.json");
 
@@ -634,6 +639,7 @@ async function main() {
   const chainId = network.chainId;
   const signers = await ethers.getSigners();
   const deployer = signers[0];
+  let baseDeployerFundingGate: Record<string, string> | null = null;
 
   if (chainId !== BASE_CHAIN_ID && !envFlag("V4_ALLOW_NON_BASE")) {
     throw new Error(`Refusing non-Base deployment. Connected chainId=${chainId}.`);
@@ -785,9 +791,35 @@ async function main() {
     if (safeVersion !== "1.4.1" || safeThreshold !== 2n || safeOwners.length !== 3) {
       throw new Error("Final admin custody must be the approved Safe v1.4.1 2-of-3 configuration");
     }
-    const deployerBalance = await ethers.provider.getBalance(deployer.address);
-    if (deployerBalance < MIN_BASE_DEPLOYER_BALANCE_WEI) {
-      throw new Error("Base deployer must hold at least 0.05 ETH before the first deployment transaction");
+    const [deployerBalance, feeData] = await Promise.all([
+      ethers.provider.getBalance(deployer.address),
+      ethers.provider.getFeeData(),
+    ]);
+    const gasPrice = BigInt(feeData.gasPrice ?? 0n);
+    const maxFeePerGas = BigInt(feeData.maxFeePerGas ?? 0n);
+    const sampledFeePerGasWei = gasPrice > maxFeePerGas ? gasPrice : maxFeePerGas;
+    if (sampledFeePerGasWei <= 0n) {
+      throw new Error("Base RPC did not return a positive gas price for the deployer funding gate");
+    }
+    const feeBasedMinimumWei =
+      BASE_DEPLOYMENT_GAS_BUDGET * sampledFeePerGasWei * BASE_DEPLOYMENT_FEE_SAFETY_MULTIPLIER;
+    const requiredDeployerBalanceWei = feeBasedMinimumWei > MIN_BASE_DEPLOYER_BALANCE_WEI
+      ? feeBasedMinimumWei
+      : MIN_BASE_DEPLOYER_BALANCE_WEI;
+    baseDeployerFundingGate = {
+      staticMinimumWei: MIN_BASE_DEPLOYER_BALANCE_WEI.toString(),
+      gasBudget: BASE_DEPLOYMENT_GAS_BUDGET.toString(),
+      feeSafetyMultiplier: BASE_DEPLOYMENT_FEE_SAFETY_MULTIPLIER.toString(),
+      sampledFeePerGasWei: sampledFeePerGasWei.toString(),
+      feeBasedMinimumWei: feeBasedMinimumWei.toString(),
+      requiredBalanceWei: requiredDeployerBalanceWei.toString(),
+      observedBalanceWei: deployerBalance.toString(),
+    };
+    if (deployerBalance < requiredDeployerBalanceWei) {
+      throw new Error(
+        `Base deployer requires at least ${ethers.formatEther(requiredDeployerBalanceWei)} ETH ` +
+        `(0.001 ETH static floor plus live-fee safety check) before the first deployment transaction`,
+      );
     }
   }
 
@@ -1200,6 +1232,7 @@ async function main() {
     },
     treasurySignerSuppliedAndMatched: treasurySigner !== null,
     minimumBaseDeployerBalanceWei: MIN_BASE_DEPLOYER_BALANCE_WEI.toString(),
+    baseDeployerFundingGate,
   };
 
   const log: Record<string, unknown> = {

@@ -4,6 +4,8 @@ import { resolve } from "node:path";
 
 const SOURCE = readFileSync(resolve("scripts/deployV4BaseUsdc.ts"), "utf8");
 const MAIN = SOURCE.slice(SOURCE.indexOf("async function main()"));
+const SMOKE = readFileSync(resolve("scripts/smokeTestV4Deployment.ts"), "utf8");
+const BUY = readFileSync(resolve("scripts/swapUsdcForNara.ts"), "utf8");
 
 describe("v4 Base deployment evidence hardening", function () {
   it("requires a clean authoritative release commit already contained in origin/main", function () {
@@ -20,11 +22,11 @@ describe("v4 Base deployment evidence hardening", function () {
     expect(SOURCE).to.contain("is forbidden on Base");
   });
 
-  it("runs treasury, source, checkpoint, and 0.05 ETH gates before the first transaction", function () {
+  it("runs treasury, source, checkpoint, and live-fee funding gates before the first transaction", function () {
     const sourceGate = MAIN.indexOf("requireReviewedBaseReleaseSource()");
     const retryGate = MAIN.indexOf("refuseBlindBaseRetry()");
     const treasuryGate = MAIN.indexOf("TREASURY_PRIVATE_KEY does not match V4_TREASURY_ADDRESS");
-    const balanceGate = MAIN.indexOf("deployerBalance < MIN_BASE_DEPLOYER_BALANCE_WEI");
+    const balanceGate = MAIN.indexOf("deployerBalance < requiredDeployerBalanceWei");
     const journalStart = MAIN.indexOf("activeJournal = new DeploymentReceiptJournal");
     const firstDeployment = MAIN.indexOf('"deploy.NARALauncher"');
     for (const position of [sourceGate, retryGate, treasuryGate, balanceGate, journalStart, firstDeployment]) {
@@ -39,6 +41,17 @@ describe("v4 Base deployment evidence hardening", function () {
     expect(MAIN).to.contain("BASE_SAFE_141_SINGLETON_CODEHASH");
     expect(MAIN).to.contain("approved Safe v1.4.1 2-of-3 configuration");
     expect(MAIN).to.contain("canonical Base Uniswap v4 PoolManager");
+    expect(SOURCE).to.contain("const MIN_BASE_DEPLOYER_BALANCE_WEI = 1_000_000_000_000_000n");
+    expect(SOURCE).to.contain("BASE_DEPLOYMENT_GAS_BUDGET * sampledFeePerGasWei * BASE_DEPLOYMENT_FEE_SAFETY_MULTIPLIER");
+    expect(SOURCE).to.contain("feeBasedMinimumWei > MIN_BASE_DEPLOYER_BALANCE_WEI");
+    expect(SOURCE).to.contain("baseDeployerFundingGate");
+  });
+
+  it("binds both smoke swap paths to the reviewed public wallet address", function () {
+    for (const script of [SMOKE, BUY]) {
+      expect(script).to.contain('requiredEnv("SWAP_WALLET_ADDRESS")');
+      expect(script).to.contain("does not match SWAP_WALLET_ADDRESS");
+    }
   });
 
   it("durably checkpoints every prepared, submitted, and confirmed transaction", function () {

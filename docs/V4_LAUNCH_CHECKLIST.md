@@ -424,6 +424,7 @@ Required environment:
 
 ```bash
 BASE_RPC_URL=
+SWAP_WALLET_ADDRESS=
 LIQ_PRIVATE_KEY=
 ```
 
@@ -437,6 +438,9 @@ V4_SMOKE_SELL_NARA=5
 Important behavior:
 
 - `npm run smoke:v4` runs preflight.
+- `SWAP_WALLET_ADDRESS` is the reviewed public address of the smoke/liquidity
+  wallet. `LIQ_PRIVATE_KEY` must resolve to exactly that address; there is no
+  separate smoke-wallet key.
 - It requires the atomic launch batch and final preflight to have completed.
 - It runs a small USDC-to-NARA buy.
 - It runs a small NARA-to-USDC sell.

@@ -22,6 +22,25 @@ reason.
 List every affected file from `docs/REPOSITORY_MAINTENANCE.md` and mark it
 `updated` or `reviewed—no change needed`.
 
+## Cross-repository routing
+
+Change-ID:
+Origin remote:
+Origin commit:
+Evidence state:
+Changed contracts/interfaces:
+Generated artifact or ABI source:
+Deployment manifest:
+Chain and verification block:
+Depends-on:
+Unblocks:
+Downstream repositories reviewed:
+Commands and results:
+Skipped gates:
+Unresolved risks:
+Onchain or production writes:
+Secret scan:
+
 ## Verification
 
 - [ ] `npm ci`

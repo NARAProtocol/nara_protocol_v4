@@ -43,7 +43,6 @@ Hard stops as of 2026-08-08:
 - required CI has not run against the actual candidate;
 - local Aderyn and Echidna cannot start because the registered WSL virtual disks
   are missing;
-- the configured deployer is below the runbook's `0.05 ETH` gas minimum;
 - the current environment still contains historical incident-stack address
   keys and must not be used by post-deploy sync/preflight until a fresh manifest
   is generated and reviewed; and
@@ -56,7 +55,8 @@ explicitly abandon a partial attempt without mixing it with retired state.
 
 The production deployer now enforces that boundary: on Base it requires a clean
 full-length release commit already contained in synchronized `origin/main`, a
-minimum `0.05 ETH` deployer balance, canonical Base infrastructure and pool
+minimum `0.001 ETH` deployer balance plus a 30M-gas, 2x sampled-fee safety
+gate, canonical Base infrastructure and pool
 configuration, the approved Safe v1.4.1 singleton/proxy and 2-of-3 custody
 shape, matched treasury credentials when supplied, and durable prepared →
 submitted → confirmed receipt journaling. Any partial attempt creates a
@@ -183,12 +183,14 @@ Commands and results:
   engine/router/lens/bribe/NFT fixtures, invariants, and deployment identity):
   **253 passing / 0 failing**;
 - deterministic non-fork Hardhat suite on the settled tree, including the new
-  deployment-evidence, fresh-sync, and atomic-artifact regressions: **546
+  funding gate, smoke-wallet binding, deployment-evidence, fresh-sync, and
+  atomic-artifact regressions: **547
   passing / 0 failing**;
 - focused PoolKey/config/preflight/ladder-safety regressions: **19 passing / 0
   failing**;
-- targeted TypeScript compile for the changed config, preflight, ladder,
-  swap-safety, and test files: **passed**. The repository-wide `tsc --noEmit`
+- targeted TypeScript compile for the changed deployment, smoke, config,
+  preflight, ladder, swap-safety, and test files: **passed**. The
+  repository-wide `tsc --noEmit`
   command still reports pre-existing diagnostics in unrelated scripts and
   contract tests; it reported no changed-file diagnostic from this work;
 - `hardhat test test/fork/NARALiquidityCompounderV4.fork.test.ts`: **2 passing /
