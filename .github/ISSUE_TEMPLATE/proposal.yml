@@ -1,5 +1,5 @@
-name: Engineering proposal
-description: Propose a scoped protocol, integration, verification, or documentation improvement.
+name: Change proposal
+description: Propose a scoped protocol, tooling, or documentation change.
 title: "proposal: "
 labels:
   - enhancement
@@ -8,32 +8,20 @@ body:
     id: problem
     attributes:
       label: Problem
-      description: Describe the developer or protocol problem without price or investment framing.
+      description: Describe the concrete problem without assuming a solution.
     validations:
       required: true
   - type: textarea
-    id: current
+    id: scope
     attributes:
-      label: Current behavior and evidence
-      description: Cite exact source, tests, docs, or onchain state.
+      label: Proposed scope
+      description: Name affected contracts, scripts, consumers, and deferred work.
     validations:
       required: true
   - type: textarea
-    id: change
+    id: security
     attributes:
-      label: Proposed change
+      label: Security and deployment impact
+      description: Describe authority, accounting, migration, and rollback considerations.
     validations:
       required: true
-  - type: textarea
-    id: risks
-    attributes:
-      label: Threat-model and compatibility impact
-    validations:
-      required: true
-  - type: textarea
-    id: verification
-    attributes:
-      label: Verification plan
-    validations:
-      required: true
-

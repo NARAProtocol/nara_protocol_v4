@@ -9,6 +9,12 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { currentV4Config, requiredBaseRpcUrl, requiredEnv } from "./lib/v4LiveConfig.js";
+import { readSqrtPriceX96 } from "./lib/v4SwapSafety.js";
+import {
+  assertCurrentSqrtPriceWithinPolicy,
+  compoundConstraintsData,
+  requireCompoundExecutionPolicy,
+} from "./maintainV4Liquidity.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -31,6 +37,14 @@ const COMPOUNDER_ABI = [
   "function vault() view returns (address)",
   "function nara() view returns (address)",
   "function usdc() view returns (address)",
+  "function poolManager() view returns (address)",
+  "function positionManager() view returns (address)",
+  "function permit2() view returns (address)",
+  "function hooks() view returns (address)",
+  "function poolFee() view returns (uint24)",
+  "function tickSpacing() view returns (int24)",
+  "function poolId() view returns (bytes32)",
+  "function peripheryBindingsValid() view returns (bool)",
   "function positionTokenId() view returns (uint256)",
   "function totalLiquidityAdded() view returns (uint256)",
   "function totalNaraAdded() view returns (uint256)",
@@ -41,6 +55,8 @@ const COMPOUNDER_ABI = [
 const POSITION_MANAGER_ABI = [
   "function ownerOf(uint256 tokenId) view returns (address)",
   "function getPositionLiquidity(uint256 tokenId) view returns (uint128)",
+  "function poolManager() view returns (address)",
+  "function permit2() view returns (address)",
 ];
 
 export function validationMinLiquidity(simulatedLiquidity: bigint, guardBps = 9_900n): bigint {
@@ -110,7 +126,9 @@ async function main(): Promise<void> {
     const compounder = new ethers.Contract(compounderAddress, COMPOUNDER_ABI, provider);
     const [vaultOwner, configuredCompounder, frozen, routeMode, balances, totalTokenCompounded,
       totalBaseCompounded, compounderOwner, boundVault, nara, usdc, positionTokenId,
-      totalLiquidityAdded, totalNaraAdded, totalUsdcAdded, banked, pendingRecovery, latestBlock] = await Promise.all([
+      totalLiquidityAdded, totalNaraAdded, totalUsdcAdded, banked, pendingRecovery,
+      boundPoolManager, boundPositionManager, boundPermit2, boundHook, boundPoolFee,
+      boundTickSpacing, boundPoolId, bindingsValid, latestBlock] = await Promise.all([
       vault.owner() as Promise<string>,
       vault.compounder() as Promise<string>,
       vault.compounderFrozen() as Promise<boolean>,
@@ -128,6 +146,14 @@ async function main(): Promise<void> {
       compounder.totalUsdcAdded() as Promise<bigint>,
       compounder.bankedBalances() as Promise<{ naraBanked: bigint; usdcBanked: bigint }>,
       compounder.pendingRecovery() as Promise<{ kind: bigint; to: string; eta: bigint }>,
+      compounder.poolManager() as Promise<string>,
+      compounder.positionManager() as Promise<string>,
+      compounder.permit2() as Promise<string>,
+      compounder.hooks() as Promise<string>,
+      compounder.poolFee() as Promise<bigint>,
+      compounder.tickSpacing() as Promise<bigint>,
+      compounder.poolId() as Promise<string>,
+      compounder.peripheryBindingsValid() as Promise<boolean>,
       provider.getBlock("latest"),
     ]);
     if (!latestBlock) throw new Error("Latest Base block is unavailable");
@@ -138,10 +164,28 @@ async function main(): Promise<void> {
       ["compounder vault", boundVault, config.vault],
       ["compounder NARA", nara, config.token],
       ["compounder USDC", usdc, config.base],
+      ["compounder PoolManager", boundPoolManager, config.poolManager],
+      ["compounder PositionManager", boundPositionManager, config.positionManager],
+      ["compounder Permit2", boundPermit2, config.permit2],
+      ["compounder Hook", boundHook, config.hook],
     ] as const) {
       if (ethers.getAddress(actual) !== ethers.getAddress(expected)) {
         throw new Error(`${label} mismatch: expected ${expected}, got ${actual}`);
       }
+    }
+    if (!bindingsValid) throw new Error("Compounder reciprocal periphery binding check failed");
+    if (boundPoolFee !== BigInt(config.fee) || boundTickSpacing !== BigInt(config.tickSpacing)) {
+      throw new Error("Compounder pool fee or tick spacing mismatch");
+    }
+    if (boundPoolId.toLowerCase() !== config.poolId) throw new Error("Compounder pool ID mismatch");
+    const positionManagerBinding = new ethers.Contract(config.positionManager, POSITION_MANAGER_ABI, provider);
+    const [positionManagerPoolManager, positionManagerPermit2] = await Promise.all([
+      positionManagerBinding.poolManager() as Promise<string>,
+      positionManagerBinding.permit2() as Promise<string>,
+    ]);
+    if (ethers.getAddress(positionManagerPoolManager) !== config.poolManager
+      || ethers.getAddress(positionManagerPermit2) !== config.permit2) {
+      throw new Error("PositionManager reciprocal PoolManager/Permit2 binding mismatch");
     }
     if (routeMode !== 0n) throw new Error(`Vault routeMode must be Liquidity (0), got ${routeMode}`);
     if (pendingRecovery.kind !== 0n) throw new Error(`Compounder recovery kind ${pendingRecovery.kind} is pending`);
@@ -156,11 +200,21 @@ async function main(): Promise<void> {
       if (balances.tokenBalance === 0n || balances.baseBalance === 0n) {
         throw new Error("Validation compound requires nonzero NARA and USDC vault balances");
       }
+      const compoundPolicy = requireCompoundExecutionPolicy(process.env);
       const deadline = BigInt(latestBlock.timestamp) + 3_600n;
-      const simulatedLiquidity = await vault.compoundAll.staticCall(1n, deadline, "0x", { from: safe }) as bigint;
+      const currentSqrtPriceX96 = await readSqrtPriceX96(provider, config.poolManager, config.poolId);
+      assertCurrentSqrtPriceWithinPolicy(currentSqrtPriceX96, compoundPolicy);
+      const constraints = compoundConstraintsData(
+        compoundPolicy.referenceSqrtPriceX96,
+        compoundPolicy.maxNaraUsed,
+        compoundPolicy.maxUsdcUsed,
+        compoundPolicy.sqrtGuardBps,
+        compoundPolicy.maxValueImbalanceBps,
+      );
+      const simulatedLiquidity = await vault.compoundAll.staticCall(1n, deadline, constraints, { from: safe }) as bigint;
       const minLiquidityAdded = validationMinLiquidity(simulatedLiquidity);
-      await vault.compoundAll.staticCall(minLiquidityAdded, deadline, "0x", { from: safe });
-      const data = vault.interface.encodeFunctionData("compoundAll", [minLiquidityAdded, deadline, "0x"]);
+      await vault.compoundAll.staticCall(minLiquidityAdded, deadline, constraints, { from: safe });
+      const data = vault.interface.encodeFunctionData("compoundAll", [minLiquidityAdded, deadline, constraints]);
       outputName = "v4-compounder-validation-batch.json";
       output = builderFile(safe, "Validate NARA v4 liquidity compounder", config.vault, data, {
         changeId: "NARA-20260731-compounder-validation",
@@ -171,6 +225,13 @@ async function main(): Promise<void> {
         vaultUsdcBefore: balances.baseBalance.toString(),
         simulatedLiquidity: simulatedLiquidity.toString(),
         minLiquidityAdded: minLiquidityAdded.toString(),
+        referenceSqrtPriceX96: compoundPolicy.referenceSqrtPriceX96.toString(),
+        currentSqrtPriceX96: currentSqrtPriceX96.toString(),
+        maxNaraUsedRaw: compoundPolicy.maxNaraUsed.toString(),
+        maxUsdcUsedRaw: compoundPolicy.maxUsdcUsed.toString(),
+        sqrtPriceGuardBps: compoundPolicy.sqrtGuardBps.toString(),
+        maxReferenceValueImbalanceBps: compoundPolicy.maxValueImbalanceBps.toString(),
+        constraints,
         deadline: deadline.toString(),
         invariant: "execute and verify this transaction before separately building the one-way freeze",
       });

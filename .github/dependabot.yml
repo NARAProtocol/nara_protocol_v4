@@ -4,18 +4,15 @@ updates:
     directory: /
     schedule:
       interval: weekly
-      day: monday
-      time: "06:00"
-      timezone: Etc/UTC
     open-pull-requests-limit: 5
     groups:
-      hardhat-development:
-        patterns:
-          - "@nomicfoundation/*"
-          - "hardhat"
-          - "mocha"
-      solidity-dependencies:
-        patterns:
-          - "@openzeppelin/*"
-          - "@uniswap/*"
+      npm-production:
+        dependency-type: production
+      npm-development:
+        dependency-type: development
 
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5

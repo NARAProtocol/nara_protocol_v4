@@ -3,7 +3,7 @@ pragma solidity 0.8.34;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 
 interface ILiquidityCompounder {
@@ -20,12 +20,14 @@ interface ILiquidityGrowthHookBinding {
     function token() external view returns (address);
     function base() external view returns (address);
     function vault() external view returns (address);
+    function poolManager() external view returns (address);
 }
 
 interface ILiquidityCompounderBinding {
     function nara() external view returns (address);
     function usdc() external view returns (address);
     function vault() external view returns (address);
+    function peripheryBindingsValid() external view returns (bool);
 }
 
 interface INARAEngineRouting {
@@ -45,11 +47,18 @@ interface INARAGenesisRewardDistributorRouting {
 ///         liquidity or configured Genesis rewards. Engine-token routing modes
 ///         are retained only as unreachable legacy ABI values.
 /// @dev ERC20-only by design. On Base the base asset is native USDC.
-contract NARALiquidityGrowthVault is Ownable, ReentrancyGuardTransient {
+contract NARALiquidityGrowthVault is Ownable2Step, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
 
     uint16 public constant BPS = 10_000;
     uint16 public constant MAX_KEEPER_BOUNTY_BPS = 1_000;
+    uint48 public constant TARGET_UPDATE_DELAY = 7 days;
+
+    struct PendingTarget {
+        address target;
+        uint48 eta;
+        bool exists;
+    }
 
     enum RouteMode {
         Liquidity,
@@ -65,8 +74,11 @@ contract NARALiquidityGrowthVault is Ownable, ReentrancyGuardTransient {
     address public hook;
     address public compounder;
     bool public compounderFrozen;
+    PendingTarget public pendingCompounder;
     address public engine;
     address public genesisRewardDistributor;
+    bool public genesisRewardDistributorFrozen;
+    PendingTarget public pendingGenesisRewardDistributor;
     mapping(address => bool) public compoundKeeper;
     RouteMode public routeMode;
     uint16 public keeperBountyBps;
@@ -84,11 +96,16 @@ contract NARALiquidityGrowthVault is Ownable, ReentrancyGuardTransient {
     uint256 public totalBaseRoutedToGenesis;
 
     event HookSet(address indexed hook);
+    event CompounderProposed(address indexed compounder, uint48 eta);
+    event CompounderProposalCancelled(address indexed compounder);
     event CompounderSet(address indexed compounder);
     event CompounderFrozen(address indexed compounder);
     event CompoundKeeperSet(address indexed keeper, bool allowed);
     event EngineSet(address indexed engine);
+    event GenesisRewardDistributorProposed(address indexed distributor, uint48 eta);
+    event GenesisRewardDistributorProposalCancelled(address indexed distributor);
     event GenesisRewardDistributorSet(address indexed distributor);
+    event GenesisRewardDistributorFrozen(address indexed distributor);
     event RouteModeSet(RouteMode indexed mode);
     event KeeperBountySet(uint16 bountyBps, uint256 minCompoundBase);
     event SplitEngineShareSet(uint16 engineShareBps);
@@ -141,6 +158,9 @@ contract NARALiquidityGrowthVault is Ownable, ReentrancyGuardTransient {
     error UnauthorizedKeeper();
     error CompounderFrozenErr();
     error EngineTokenRoutingDisabled();
+    error GenesisRewardDistributorFrozenErr();
+    error NoPendingTarget();
+    error TargetUpdateNotReady();
 
     modifier onlyHook() {
         if (msg.sender != hook) revert UnauthorizedHook();
@@ -174,23 +194,52 @@ contract NARALiquidityGrowthVault is Ownable, ReentrancyGuardTransient {
         emit HookSet(hook_);
     }
 
+    /// @notice Bootstrap-only convenience. The first verified target may be set
+    ///         immediately only while the Vault has never recorded or received fees.
+    ///         Every later replacement uses the mandatory delayed proposal path.
     function setCompounder(address compounder_) external onlyOwner {
-        if (compounderFrozen) revert CompounderFrozenErr();
-        if (compounder_ == address(0)) revert ZeroAddress();
-        if (compounder_.code.length == 0) revert NotAContract();
         if (
-            ILiquidityCompounderBinding(compounder_).nara() != address(token)
-                || ILiquidityCompounderBinding(compounder_).usdc() != address(base)
-                || ILiquidityCompounderBinding(compounder_).vault() != address(this)
-        ) {
-            revert InvalidConfig();
-        }
+            compounder != address(0)
+                || totalTokenFeeRecorded != 0
+                || totalBaseFeeRecorded != 0
+                || token.balanceOf(address(this)) != 0
+                || base.balanceOf(address(this)) != 0
+        ) revert InvalidConfig();
+        _validateCompounder(compounder_);
         compounder = compounder_;
         emit CompounderSet(compounder_);
     }
 
+    function proposeCompounder(address compounder_) external onlyOwner {
+        if (compounderFrozen) revert CompounderFrozenErr();
+        _validateCompounder(compounder_);
+        uint48 eta = uint48(block.timestamp + TARGET_UPDATE_DELAY);
+        pendingCompounder = PendingTarget({target: compounder_, eta: eta, exists: true});
+        emit CompounderProposed(compounder_, eta);
+    }
+
+    function cancelCompounderProposal() external onlyOwner {
+        PendingTarget memory pending = pendingCompounder;
+        if (!pending.exists) revert NoPendingTarget();
+        delete pendingCompounder;
+        emit CompounderProposalCancelled(pending.target);
+    }
+
+    function executeCompounder() external onlyOwner {
+        if (compounderFrozen) revert CompounderFrozenErr();
+        PendingTarget memory pending = pendingCompounder;
+        if (!pending.exists) revert NoPendingTarget();
+        if (block.timestamp < pending.eta) revert TargetUpdateNotReady();
+        _validateCompounder(pending.target);
+        delete pendingCompounder;
+        compounder = pending.target;
+        emit CompounderSet(pending.target);
+    }
+
     function freezeCompounder() external onlyOwner {
         if (compounder == address(0)) revert ZeroAddress();
+        if (pendingCompounder.exists) revert InvalidConfig();
+        _validateCompounder(compounder);
         compounderFrozen = true;
         emit CompounderFrozen(compounder);
     }
@@ -209,14 +258,53 @@ contract NARALiquidityGrowthVault is Ownable, ReentrancyGuardTransient {
         emit EngineSet(engine_);
     }
 
+    /// @notice Bootstrap-only convenience equivalent to `setCompounder`.
     function setGenesisRewardDistributor(address distributor_) external onlyOwner {
-        if (distributor_ == address(0)) revert ZeroAddress();
-        if (distributor_.code.length == 0) revert NotAContract();
-        if (address(INARAGenesisRewardDistributorRouting(distributor_).rewardToken()) != address(base)) {
-            revert InvalidConfig();
-        }
+        if (
+            genesisRewardDistributor != address(0)
+                || totalTokenFeeRecorded != 0
+                || totalBaseFeeRecorded != 0
+                || token.balanceOf(address(this)) != 0
+                || base.balanceOf(address(this)) != 0
+        ) revert InvalidConfig();
+        _validateGenesisRewardDistributor(distributor_);
         genesisRewardDistributor = distributor_;
         emit GenesisRewardDistributorSet(distributor_);
+    }
+
+    function proposeGenesisRewardDistributor(address distributor_) external onlyOwner {
+        if (genesisRewardDistributorFrozen) revert GenesisRewardDistributorFrozenErr();
+        _validateGenesisRewardDistributor(distributor_);
+        uint48 eta = uint48(block.timestamp + TARGET_UPDATE_DELAY);
+        pendingGenesisRewardDistributor = PendingTarget({target: distributor_, eta: eta, exists: true});
+        emit GenesisRewardDistributorProposed(distributor_, eta);
+    }
+
+    function cancelGenesisRewardDistributorProposal() external onlyOwner {
+        PendingTarget memory pending = pendingGenesisRewardDistributor;
+        if (!pending.exists) revert NoPendingTarget();
+        delete pendingGenesisRewardDistributor;
+        emit GenesisRewardDistributorProposalCancelled(pending.target);
+    }
+
+    function executeGenesisRewardDistributor() external onlyOwner {
+        if (genesisRewardDistributorFrozen) revert GenesisRewardDistributorFrozenErr();
+        PendingTarget memory pending = pendingGenesisRewardDistributor;
+        if (!pending.exists) revert NoPendingTarget();
+        if (block.timestamp < pending.eta) revert TargetUpdateNotReady();
+        _validateGenesisRewardDistributor(pending.target);
+        delete pendingGenesisRewardDistributor;
+        genesisRewardDistributor = pending.target;
+        emit GenesisRewardDistributorSet(pending.target);
+    }
+
+    function freezeGenesisRewardDistributor() external onlyOwner {
+        address target = genesisRewardDistributor;
+        if (target == address(0)) revert ZeroAddress();
+        if (pendingGenesisRewardDistributor.exists) revert InvalidConfig();
+        _validateGenesisRewardDistributor(target);
+        genesisRewardDistributorFrozen = true;
+        emit GenesisRewardDistributorFrozen(target);
     }
 
     function setRouteMode(RouteMode mode_) external onlyOwner {
@@ -227,12 +315,20 @@ contract NARALiquidityGrowthVault is Ownable, ReentrancyGuardTransient {
         if (mode_ == RouteMode.Engine || mode_ == RouteMode.Split) {
             revert EngineTokenRoutingDisabled();
         }
-        if (mode_ == RouteMode.Genesis && genesisRewardDistributor == address(0)) {
+        if (
+            mode_ == RouteMode.Genesis
+                && (genesisRewardDistributor == address(0) || !genesisRewardDistributorFrozen)
+        ) {
             revert InvalidConfig();
         }
         if (
             mode_ == RouteMode.GenesisSplit &&
-            (genesisRewardDistributor == address(0) || splitGenesisShareBps == 0 || splitGenesisShareBps >= BPS)
+            (
+                genesisRewardDistributor == address(0)
+                    || !genesisRewardDistributorFrozen
+                    || splitGenesisShareBps == 0
+                    || splitGenesisShareBps >= BPS
+            )
         ) {
             revert InvalidConfig();
         }
@@ -418,7 +514,7 @@ contract NARALiquidityGrowthVault is Ownable, ReentrancyGuardTransient {
     ) internal returns (uint256 liquidityAdded) {
         if (block.timestamp > deadline) revert DeadlineExpired();
         if (tokenAmount == 0 && baseAmount == 0) revert ZeroValue();
-        if (data.length != 0 || minLiquidityAdded == 0) revert InvalidConfig();
+        if (minLiquidityAdded == 0) revert InvalidConfig();
 
         address target = compounder;
         if (target == address(0)) revert ZeroAddress();
@@ -513,5 +609,25 @@ contract NARALiquidityGrowthVault is Ownable, ReentrancyGuardTransient {
         totalBaseRoutedToGenesis += baseAmount;
 
         emit RoutedToGenesis(msg.sender, baseAmount);
+    }
+
+    function _validateCompounder(address target) internal view {
+        if (target == address(0)) revert ZeroAddress();
+        if (target.code.length == 0) revert NotAContract();
+        if (hook == address(0)) revert InvalidConfig();
+        if (
+            ILiquidityCompounderBinding(target).nara() != address(token)
+                || ILiquidityCompounderBinding(target).usdc() != address(base)
+                || ILiquidityCompounderBinding(target).vault() != address(this)
+                || !ILiquidityCompounderBinding(target).peripheryBindingsValid()
+        ) revert InvalidConfig();
+    }
+
+    function _validateGenesisRewardDistributor(address target) internal view {
+        if (target == address(0)) revert ZeroAddress();
+        if (target.code.length == 0) revert NotAContract();
+        if (address(INARAGenesisRewardDistributorRouting(target).rewardToken()) != address(base)) {
+            revert InvalidConfig();
+        }
     }
 }

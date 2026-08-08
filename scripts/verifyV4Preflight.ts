@@ -9,7 +9,11 @@ import { ethers } from "ethers";
 import * as dotenv from "dotenv";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
-import { currentV4Config, requiredBaseRpcUrl } from "./lib/v4LiveConfig.js";
+import {
+  assertCanonicalV4PoolConfig,
+  currentV4Config,
+  requiredBaseRpcUrl,
+} from "./lib/v4LiveConfig.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -118,6 +122,11 @@ async function main() {
     throw new Error(`Expected Base mainnet chainId 8453, got ${network.chainId}`);
   }
   const config = currentV4Config();
+  // Re-derive the exact PoolKey at the live preflight boundary instead of
+  // trusting an independently supplied poolId. `currentV4Config` performs the
+  // same check so every official script, including direct swap entrypoints,
+  // fails before reading or encoding a mismatched/unhooked pool.
+  const canonicalPoolKey = assertCanonicalV4PoolConfig(config);
   const preSeed = process.argv.includes("--pre-seed");
 
   const hook = new ethers.Contract(config.hook, HOOK_ABI, provider);
@@ -190,7 +199,7 @@ async function main() {
     preSeed,
     poolRegistered,
     registeredPool,
-    config.poolId,
+    canonicalPoolKey.poolId,
     expectedSqrtPriceX96,
   );
 
@@ -199,7 +208,7 @@ async function main() {
   const poolStateSlot = ethers.keccak256(
     ethers.solidityPacked(
       ["bytes32", "bytes32"],
-      [config.poolId, ethers.zeroPadValue("0x06", 32)],
+      [canonicalPoolKey.poolId, ethers.zeroPadValue("0x06", 32)],
     ),
   );
   const rawSlot0 = await poolManager.extsload(poolStateSlot) as string;

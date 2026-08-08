@@ -5,7 +5,8 @@
  * PoolKey and swap path directly.
  *
  * Required env:
- *   BASE_RPC_URL
+ *   BASE_RPC_URL or BASE_MAINNET_RPC_URL
+ *   SWAP_WALLET_ADDRESS
  *   LIQ_PRIVATE_KEY
  *
  * Required env:
@@ -62,7 +63,13 @@ const HOOK_ABI = [
 export async function main() {
   const config = currentV4Config();
   const provider = new ethers.JsonRpcProvider(requiredBaseRpcUrl());
+  const expectedWallet = ethers.getAddress(requiredEnv("SWAP_WALLET_ADDRESS"));
   const wallet = new ethers.Wallet(requiredEnv("LIQ_PRIVATE_KEY"), provider);
+  if (wallet.address.toLowerCase() !== expectedWallet.toLowerCase()) {
+    throw new Error(
+      `LIQ_PRIVATE_KEY signer ${wallet.address} does not match SWAP_WALLET_ADDRESS ${expectedWallet}`,
+    );
+  }
   const network = await provider.getNetwork();
   if (network.chainId !== 8453n) {
     throw new Error(`Expected Base mainnet chainId 8453, got ${network.chainId}`);

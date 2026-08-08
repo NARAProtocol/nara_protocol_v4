@@ -1,15 +1,17 @@
 # Contributing to NARA v4
 
 Contributions are welcome when they improve correctness, verification,
-integrator usability, or technical clarity.
+operational safety, integration clarity, or documentation.
 
 ## Before starting
 
-1. Read [`AGENTS.md`](AGENTS.md), even when you are not using an AI agent.
-2. Read [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md).
-3. Follow [`docs/REPOSITORY_MAINTENANCE.md`](docs/REPOSITORY_MAINTENANCE.md).
-4. Open an issue for a material new feature before implementing it.
-5. Report suspected vulnerabilities privately through [`SECURITY.md`](SECURITY.md).
+1. Read [`AGENTS.md`](AGENTS.md) and [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md).
+2. For cross-repository work, follow
+   [`../docs/NARA_CROSS_REPOSITORY_RELEASE_PROTOCOL.md`](../docs/NARA_CROSS_REPOSITORY_RELEASE_PROTOCOL.md).
+3. Read [`SECURITY.md`](SECURITY.md) and report suspected vulnerabilities
+   privately.
+4. Never use retired v3, incident-stack, or deleted experimental v5 artifacts
+   as deployment authority.
 
 ## Development setup
 
@@ -20,55 +22,45 @@ npm test
 npm run size
 ```
 
-Default unit tests require no wallet or RPC endpoint. Fork tests skip when the
-required Base RPC environment variable is absent.
+Environment-dependent Base fork and production verification commands require a
+private RPC endpoint. Never print or commit it, wallet credentials, signing
+keys, production environment files, or unsanitized deployment outputs.
 
 ## Change requirements
 
-- Keep active code under `contracts/v4/`.
-- Never import archived v3 code into the active compile.
-- Match interfaces, errors, events, constants, and examples to actual source.
-- Add or update tests for every behavior change.
-- Include explicit bounds for new configurable value-bearing parameters.
-- Use checks-effects-interactions and reentrancy protection where external calls
-  and mutable state interact.
-- Document the worst-case authority of every privileged operation.
-- Prefer periphery changes over core-engine changes when the same behavior can
-  be implemented without altering core accounting.
-- Update all affected documentation in the same pull request.
+- `contracts/v4/` is the only active contract source.
+- Do not edit frozen core contracts unless the issue and pull request explicitly
+  name and justify that exact core change.
+- Add focused regressions for every behavior change.
+- Update deployment scripts, verification gates, generated evidence schema, and
+  operational documentation together when an integration fact changes.
+- Preserve exact Hook/PoolKey bindings, receipt-pinned accounting, role
+  separation, and fail-closed launch gates.
+- Do not claim deployment, activation, availability, audit completion, or
+  production readiness without the evidence required by the release protocol.
 
 ## Pull requests
 
-Use a focused branch and a small, reviewable pull request. Complete the pull
-request template with:
+Use a focused branch and the pull-request template. PRs must name the change ID,
+security and deployment impact, exact verification commands, skipped gates,
+unresolved risks, and whether any onchain or production write occurred.
 
-- change class and scope;
-- threat-model impact;
-- exact evidence;
-- tests and analyzers run;
-- current-state and documentation synchronization;
-- confirmation that no credentials or production writes are included.
-
-Pull requests must pass required CI checks. Advisory analyzer output must still
-be reviewed and discussed when relevant.
+Required CI must pass against the current protected base branch. Resolve every
+review conversation. Routine direct or force pushes to the default branch are
+not allowed.
 
 ## Commit style
 
-Use an imperative subject with a clear scope:
+Use focused Conventional Commits, for example:
 
 ```text
-feat(router): add bounded position preview
-fix(engine): preserve reward debt during extension
-test(hook): cover exact-input boundary tier
-docs(protocol): synchronize Stage A state
+fix(v4): bind hook fees to atomic vault accounting
+test(v4): cover same-block cumulative rounding
+docs(release): record fresh deployment prerequisites
+chore(ci): pin analyzer toolchains
 ```
-
-Do not mix unrelated formatting, generated artifacts, deployment operations, and
-contract behavior changes in one commit.
 
 ## Legal
 
-By contributing, you agree that your contribution is licensed under the
-repository's MIT License. Do not submit third-party code or content unless its
-license is compatible and attribution requirements are satisfied.
-
+Contributions are licensed under this repository's MIT License. Do not submit
+third-party code unless its license and attribution requirements are compatible.

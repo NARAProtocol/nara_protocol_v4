@@ -10,6 +10,7 @@
  *
  * Required env:
  *   BASE_RPC_URL or BASE_MAINNET_RPC_URL
+ *   SWAP_WALLET_ADDRESS
  *   LIQ_PRIVATE_KEY
  *
  * Optional env:
@@ -151,7 +152,13 @@ async function sellNara(
 async function main() {
   const config = currentV4Config();
   const provider = new ethers.JsonRpcProvider(requiredBaseRpcUrl());
+  const expectedWallet = ethers.getAddress(requiredEnv("SWAP_WALLET_ADDRESS"));
   const wallet = new ethers.Wallet(requiredEnv("LIQ_PRIVATE_KEY"), provider);
+  if (wallet.address.toLowerCase() !== expectedWallet.toLowerCase()) {
+    throw new Error(
+      `LIQ_PRIVATE_KEY signer ${wallet.address} does not match SWAP_WALLET_ADDRESS ${expectedWallet}`,
+    );
+  }
   const buyUsdc = process.env.V4_SMOKE_BUY_USDC?.trim() || "5";
   const sellNaraAmount = process.env.V4_SMOKE_SELL_NARA?.trim() || "5";
   const slippageBps = boundedSlippageBps(process.env.V4_SMOKE_SLIPPAGE_BPS);

@@ -2,7 +2,8 @@
 
 Date: 2026-07-04
 Scope: NARA v4 Position Card renderer before freeze
-Inputs: local V5 renderer/code audit, delegated market/utility/narrative/technical/red-team agents, and web-source checks.
+Inputs: local audit of the v4 stack's `NARAPositionRendererV5` renderer revision,
+delegated market/utility/narrative/technical/red-team agents, and web-source checks.
 
 Resolution note, 2026-07-04: the production pass addressed the pre-freeze renderer blockers called
 out below: remote SVG font fetches were removed, rare visual predicates were made visible, compact
@@ -30,7 +31,7 @@ Market examples:
 - ERC-4906 is marketplace table stakes for dynamic metadata, not unique differentiation. Sources: [EIP-4906](https://eips.ethereum.org/EIPS/eip-4906), [OpenSea metadata standards](https://docs.opensea.io/docs/metadata-standards).
 
 Local code evidence:
-- V5 composes metadata, core art, Genesis art, and collection art in [NARAPositionRendererV5.sol](../contracts/v4/NARAPositionRendererV5.sol).
+- The v4 renderer revision composes metadata, core art, Genesis art, and collection art in [NARAPositionRendererV5.sol](../contracts/v4/NARAPositionRendererV5.sol).
 - The renderer derives tier, seed, module, claim count, extension count, Genesis flags, and minted provenance in [NARAPositionRendererV5.sol](../contracts/v4/NARAPositionRendererV5.sol).
 - Core art implements the scar, golden sigil, claim phyllotaxis, extension sediment, action ledger, and double-strike wordmark in [NARAArtCorePlateV1.sol](../contracts/v4/NARAArtCorePlateV1.sol).
 - Metadata names tier, core, module, provenance, renderer, plate-spec rares, incision register, claim count, extension count, and Genesis attributes in [NARAArtMetadataV1.sol](../contracts/v4/NARAArtMetadataV1.sol).
@@ -58,7 +59,7 @@ Sorted with pre-freeze irreversible items first.
 | 13 | Claim-state market hygiene missing | Buyers can distrust stale listings unless claim state is obvious outside cached metadata. | Very high for bid depth | Off-chain + optional periphery | Post-launch fixable | Build "claim/refresh/list" helper, stale-listing warnings, and block-tagged listing snapshots. |
 | 14 | Lending/escrow readiness package missing | Blend-style lending accepts arbitrary NFT collateral, but lenders need rules and custody clarity. | High | Off-chain + optional escrow | Post-launch fixable | Publish collateral dossier and optionally build wrapper-aware escrow/claim custody adapter. |
 | 15 | Open remix/IP policy unclear | Nouns/Blitmap/Opepen show cultural spread from open remix surfaces; NARA has on-chain art but no clear reuse policy. | Medium | Docs/legal | Post-launch fixable | Decide and publish art/IP/remix policy. |
-| 16 | Docs drift around V4/V5 and rarity | Several docs still mention Renderer V4/equal-art assumptions while active stack is V5. | Medium | Docs-only | Pre-launch | Replace stale Renderer V4 references and explain V5 rare/evolution system. |
+| 16 | Docs drift around renderer revisions and rarity | Several docs still mention Renderer V4/equal-art assumptions while the active v4 stack uses the `NARAPositionRendererV5` revision. | Medium | Docs-only | Pre-launch | Replace stale renderer references and explain the current rare/evolution system without implying a protocol V5 stack. |
 | 17 | Preview/mock rare tooling drift | Mock script reportedly still brute-forces Golden Sigil at 1/10k while contract uses 1/100k. | Low-medium | Script/docs | Pre-launch | Align all preview/mock scripts with `seed % 100000 == 7777`. |
 
 ## 4. Top 5 Moves

@@ -8,7 +8,7 @@ const MAX_SUPPLY = 1_000_000n * ONE;
 const EPOCH_SECONDS = 900n;
 const CONFIG_DELAY = 3600n;
 const INITIAL_BASE = ONE / 2n;
-const TOKEN_NAME = "NARA Token";
+const TOKEN_NAME = "NARA";
 const TOKEN_SYMBOL = "NARA";
 
 const ENGINE_CONFIG_TYPE =

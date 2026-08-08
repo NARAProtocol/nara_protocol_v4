@@ -1,6 +1,16 @@
 # NARA v4 — Whole-Project Scope (Cold-AI Start Here)
 
-Last updated: 2026-07-27. Produced by a full scope-coherence audit.
+> **2026-08-08 v4-only release correction:** [CURRENT_STATE.md](CURRENT_STATE.md)
+> is the state authority. The experimental protocol V5 proposal and its source,
+> tests, scripts, and plans are deleted and must not be restored. The next
+> candidate must be a fresh, complete v4 deployment from one immutable reviewed
+> origin commit, followed by a new verified manifest and explicit downstream
+> handoffs. Controlled Stage A and the 2026-07-30 pool are historical
+> incident/recovery evidence only; none of their addresses may be reused in the
+> candidate manifest or consumer configuration.
+
+Last updated: 2026-08-08. Produced by a full scope-coherence audit and updated
+for the fixed-v4 relaunch.
 
 **Audience:** any AI (Claude, GPT, Gemini, Cursor, Codex, …) or human starting cold on this workspace.
 Read this first. It is the single end-to-end map: what exists, what state it's in, what's genuinely
@@ -14,20 +24,15 @@ outstanding, and how the pieces fit. It links out to the deeper docs rather than
 
 ## 0. The one-paragraph version
 
-NARA v4 is a fixed-supply (1,000,000) time-preference yield protocol on Base. You lock NARA → get a
-weight → earn NARA + ETH + ERC-20 rewards per 15-min epoch. **A lock *is* an NFT** (`NARAPositionNFTV4`).
-Fees from everything route back to lockers via the engine. The **five pillars** are: **Token, Engine,
+NARA v4 is a fixed-supply (1,000,000) time-preference protocol on Base. You lock NARA → get a
+weight → earn NARA + ETH rewards per epoch. **A lock *is* an NFT** (`NARAPositionNFTV4`).
+Pool fees initially compound protocol-owned liquidity. The **five pillars** are: **Token, Engine,
 Liquidity (the taxed Uniswap v4 pool), the NFT lock layer, and Baskets** (the brand front door).
-Controlled Stage A is deployed on Base: token, engine, reward reserve, hook,
-vault, launcher, and CREATE2 hook deployer. The production liquidity compounder
-and hardened replacement hook/vault were deployed afterward, wired, source
-verified, validation-compounded, and placed under Safe custody. The replacement
-NARA/USDC pool is initialized and seeded; the earlier Stage A pool is
-quarantined. The guarded 30-minute v4 operations workflow is enabled after a
-reviewed epoch recovery, with its 48-hour soak still open. The launch surface
-is Baskets only and remains in preview; Lockboard is deferred, while Lotto and
-Arena are retired. Exact addresses and state evidence live in
-`CURRENT_STATE.md`.
+The source candidate is v4-only. A fresh full-v4 deployment, immutable origin
+commit, verified deployment manifest, receipt-pinned evidence, and downstream
+handoffs do not yet exist. Historical Stage A and 2026-07-30 deployments are
+recovery evidence, not reusable release components. The publishable Baskets app
+remains in preview; Lockboard is deferred, while Lotto and Arena are retired.
 
 ---
 
@@ -35,8 +40,8 @@ Arena are retired. Exact addresses and state evidence live in
 
 | Project | Path | Build system | Binary | Run tests |
 |---|---|---|---|---|
-| **NARA Protocol** (token, engine, NFT, router, composability) | `nara-protocol-hardhat/` | **Hardhat** | `npx hardhat` (Node 20 needs `NODE_OPTIONS="--require ./polyfill.cjs"`) | `NODE_OPTIONS="--require ./polyfill.cjs" npx hardhat test` |
-| **NARA Baskets** (the front door) | `nara-category-baskets-v1/` | **Foundry** | `~/.foundry/bin/forge` (NOT on PATH) | `~/.foundry/bin/forge test --root nara-category-baskets-v1 --no-match-path "test/AerodromeBasketAdapterV1.t.sol"` |
+| **NARA** (token, engine, NFT, router, composability) | `nara-protocol-hardhat/` | **Hardhat** | `npx hardhat` (Node 20 needs `NODE_OPTIONS="--require ./polyfill.cjs"`) | `NODE_OPTIONS="--require ./polyfill.cjs" npx hardhat test` |
+| **NARA basket app and contracts** (the front door) | `nara-category-baskets-v1/` | **Foundry** | `~/.foundry/bin/forge` (NOT on PATH) | `~/.foundry/bin/forge test --root nara-category-baskets-v1 --no-match-path "test/AerodromeBasketAdapterV1.t.sol"` |
 
 `nara-protocol-hardhat/` has **no Foundry** (`remappings.txt`/`echidna/`/`crytic-export/` are
 static-analysis artifacts, not a Forge setup). Do not run `forge` there. Baskets integrate with the
@@ -59,9 +64,10 @@ happen, baskets can't route. It is the foundation everything sits on.
 | Layer | Deploy step / script | Contracts |
 |---|---|---|
 | **Core** | `deploy:v4:base:usdc` (`deployV4BaseUsdc.ts`) | Token, Engine, RewardReserve, LiquidityGrowthHook, LiquidityGrowthVault, Launcher, Create2HookDeployer |
-| **Liquidity** | `seedV4Liquidity.ts` + `smoke:v4` | (no new contract — seeds the NARA/USDC v4 pool) |
+| **Liquidity controls** | `deployLiquidityCompounderV4.ts`, after the fresh core deployment creates the vault | LiquidityCompounder bound only to the fresh Hook/Vault pair |
+| **Liquidity** | `build:v4:atomic-pool-launch` + `smoke:v4` | (no new contract — one Safe batch registers and seeds the NARA/USDC v4 pool) |
 | **Allocation** | `deploy:v4:allocations` (`deployV4Allocations.ts`) | PositionNFT, PositionAccount, **PositionRenderer**, GenesisRewardDistributor, BondVault, BondDepository(NFT + raw), OpsVault |
-| **Router / Lens** | `deploy:v4:router:lens` (`deployRouterLens.ts`) | Router, DashboardLens, **PositionDataLensV1**, **ProtocolStatsLensV1**, BribeRouter, **CirculatingSupplyV1** |
+| **Router / Lens** | `deploy:v4:router:lens` (`deployRouterLens.ts`) | Router, DashboardLens, **PositionDataLensV1**, **ProtocolStatsLensV1**, **CirculatingSupplyV1**; BribeRouter intentionally skipped |
 | **Composability** | `deployComposabilityV4.ts` | StakingPool (stNARA), StakingPoolSY (Pendle), FractionalPosition + Factory |
 | **Baskets** (separate Foundry pkg) | `DeployMainnetReady.s.sol` | 4 immutable basket managers + fee collector + 5 DEX adapters |
 
@@ -69,12 +75,11 @@ happen, baskets can't route. It is the foundation everything sits on.
 
 ## 3. Complete contract inventory + status
 
-Deployment status is not uniform. Controlled Stage A core contracts and
-`NARALiquidityCompounderV4` are deployed; allocation, router/lens,
-composability, and basket contracts are not deployed. See `CURRENT_STATE.md`
-and the deployment manifests for the exact live state. The inventory below
-describes implementation coverage and dependency order, not a claim that every
-listed contract is deployed.
+The inventory below describes source coverage and dependency order, not current
+deployment. Treat every historical Stage A or 2026-07-30 address as
+incident/recovery evidence. A component enters the fresh release only through a
+new verified manifest produced from the immutable v4 origin commit. See
+`CURRENT_STATE.md` for the exact evidence state.
 
 ### Protocol (`nara-protocol-hardhat/contracts/v4/`)
 
@@ -98,11 +103,11 @@ listed contract is deployed.
 | `router/NARADashboardLens` | Router | ✅ `NARADashboardLens.test.ts` | engine, NFT |
 | `router/NARAPositionDataLensV1` | Router | ✅ `NARAPositionDataLensV1.test.ts` | engine, NFT; now incl. weight share / age / countdown / lifetime earned / realized return — see `NARA_V4_POSITION_STATS_AND_CLAIM_FEES.md` |
 | `router/NARAProtocolStatsLensV1` | Router | ✅ `NARAProtocolStatsLensV1.test.ts` | engine; one-call protocol headline stats (all-time ETH distributed, runway, totals). See `NARA_V4_POSITION_STATS_AND_CLAIM_FEES.md` |
-| `router/BribeRouterV4` | Router | ✅ `NARABribeRouterV4.test.ts` | source-only and undeployed; the live engine intentionally has no `REWARD_NOTIFIER_ROLE` holder, so do not grant or describe this route as active without a new authorized security/deployment record |
+| `router/BribeRouterV4` | Dormant reference | ✅ isolated transfer-path tests | Do not deploy or grant `REWARD_NOTIFIER_ROLE` for the deployed engine |
 | `router/NARACirculatingSupplyV1` | Router | ✅ `NARACirculatingSupplyV1.test.ts` (25) | token + the excluded wallet set (reserve/bonds/vesting/dead — treasury stays circulating). Genesis ≈ 110k. See `CIRCULATING_SUPPLY.md` |
 | `composability/NARAStakingPoolV4` (stNARA) | Composability | ✅ `composability/NARAStakingPool.test.ts` | core + allocation + **TVL** |
 | `composability/NARAStakingPoolSYV4` (Pendle SY) | Composability | ✅ (staking pool tests) | stNARA pool |
-| `composability/NARAFractionalPositionV4` + Factory | Composability | ✅ `composability/NARAFractionalPosition.test.ts` | NFT |
+| `composability/NARAFractionalPositionV4` + Factory | Composability | ✅ `composability/NARAFractionalPosition.test.ts` | standard (non-Genesis) NFT; wrapper binding must equal `factory.fractionalOf(positionId)` |
 
 ### Baskets (`nara-category-baskets-v1/src/`)
 
@@ -122,16 +127,16 @@ writing contracts**:
 
 | Item | Type | Why it's not a code task |
 |---|---|---|
-| Execute NARA-depth update | **complete** | Executed after the timelock; active depth verified at 60,000 NARA and pending entry cleared |
-| Initialize and seed NARA/USDC | **ops/capital** | Atomic initial position is 60,000 NARA + 300 USDC; approximately $5,000 implied FDV |
-| Validate and freeze compounder | **ops** | Source is verified; run the live compound smoke and accounting checks, then the one-way freeze |
+| Create immutable v4 origin | **release** | Review and merge the exact source through protected CI; record the full 40-character commit |
+| Deploy and verify fresh full-v4 stack | **ops/capital** | Use human-approved inputs; never reuse Stage A or 2026-07-30 addresses or treat their manifests as defaults |
+| Validate and freeze compounder | **ops** | Use only the compounder bound to the fresh manifest's Hook/Vault pair; run live accounting checks before the one-way freeze |
 | Lock UI rebuilt for v4 | **deferred frontend** | Lockboard is not part of the baskets-only launch |
 | Baskets buy/sell UI | **frontend** | The public front door app |
 | **stNARA AMM pool** for instant exit | **ops/liquidity** | A pool you seed, not a contract. Without it, exit is via the redemption queue (which IS built) |
 | **Pendle PT/YT market** | **external** | Pendle deploys it on top of the already-built SY adapter (`NARAStakingPoolSYV4`) |
 | Market-price/TWAP oracle for stNARA | **ops, later** | Only needed for *lending* integrations, and depends on the AMM pool existing first |
 | Bonds opening | **ops, deliberate** | Needs a market price to discount from; stays closed at launch |
-| **Aderyn + Echidna** | done 2026-06-08 | Re-run on a throwaway Linux box against current code: Echidna invariant suite expanded **3 → 13, all passing** (10,004 calls; supply/principal/NARA+ETH solvency/drip/weight/epoch+index monotonicity); Aderyn **4 High / 18 Low** (heuristic; Highs in bond/router/fractional, not core; H-4 storage/memory in bonds to eyeball before bonds open). Linux-only — can't run on the dev PC (WSL wiped + Docker Desktop hangs it); use a Linux box or CI. See `scripts/run-gates-linux.sh`. |
+| **Aderyn + Echidna** | historical 2026-06-08; current rerun pending | Echidna previously passed 13/13 over 10,004 calls; Aderyn previously reported 4 High / 18 Low heuristic items. Those runs predate the liquidity correction and are historical evidence only. Use a Linux runner or CI and `scripts/run-gates-linux.sh` for the release-source rerun. |
 
 > **The NAV oracle the composability layer needs IS built**: `NARAStakingPoolV4.exchangeRateWad()`
 > (NARA per stNARA share) and `NARAStakingPoolSYV4.exchangeRate()` / `assetInfo()`. The composability
@@ -160,9 +165,9 @@ lockers exist.
 
 ## 6. After launch (in order, each gated on the previous proving out)
 
-1. **Treasury scale-up** — open bonds (discounted NARA for ETH/USDC, delivered as vesting NFT
-   positions; OlympusDAO-style POL), airdrop to real basket users, optionally switch vault `routeMode`
-   to `Split` to send part of the pool tax to lockers as ETH.
+1. **Treasury scale-up** — open bonds only after their separate gates, deliver
+   positions through the documented NFT path, and evaluate `Genesis` or
+   `GenesisSplit` only after review. Engine and Split vault modes stay disabled.
 2. **Composability** — deploy stNARA + SY + fractions, seed the stNARA AMM, then contact Pendle.
 3. **Dormant game lane** (archived v3, need real v4 ports, none scheduled, never gate launch):
    Sponsor Hub, Lotto, BurnRun Arena, MisterMint. A port writes a **new** file under `contracts/v4/`,
@@ -172,12 +177,11 @@ lockers exist.
 
 ## 7. Satellite apps (`apps/`)
 
-`apps/nara-baskets` is the only current launch frontend. It contains the fresh
-v4 launch configuration but remains fail-closed in preview until verified
-basket manager and adapter manifests exist. `nara-lockboard` is deferred.
-`nara-lotto` and `nara-arena` are retired. Other historical or experimental
-apps are not part of the launch scope and must not be presented as active v4
-surfaces.
+The only publishable launch frontend is `../nara-category-baskets-v1/app/`; it
+remains fail-closed in preview until immutable protocol evidence and verified
+basket manager and adapter manifests exist. `../apps/nara-baskets/` is a
+non-publishing historical working copy. Lockboard is deferred. Lotto and Arena
+are retired. Other historical or experimental apps are not active v4 surfaces.
 
 ---
 
@@ -196,7 +200,7 @@ surfaces.
 | Emission model | `EMISSION_MECHANICS.md`, `LOCK_APY_REFERENCE.md` |
 | Security disclosure | `../SECURITY.md` |
 
-The NARA Baskets product lives in its own repository. Some internal planning, strategy, and dated
+The NARA basket app and contracts live in their own repository. Some internal planning, strategy, and dated
 working docs are intentionally kept out of this public repository.
 
 ---
@@ -216,12 +220,11 @@ npm run slither:v4                                           # static analysis
 ~/.foundry/bin/forge test --root nara-category-baskets-v1 --no-match-path "test/AerodromeBasketAdapterV1.t.sol"
 ```
 
-The dated verification stamp and current commands live in
-[`CURRENT_STATE.md`](CURRENT_STATE.md). Do not copy test totals into this scope
-map because they change as coverage grows. Aderyn and Echidna were re-run on
-2026-06-08 against that release line; the Echidna invariant suite expanded 3 → 13,
-all passing (10,004 calls); Aderyn 4 High / 18 Low (heuristic; Highs in bond/router/fractional, not the
-core; triage H-4 before bonds open). Linux-only — run on a Linux box or CI, not the dev PC. See `scripts/run-gates-linux.sh`.
+Do not use this map's historical counts as release evidence. Run the complete
+gates against the exact candidate and record results in the current Change-ID
+handoff. See `CURRENT_STATE.md` for the latest dated evidence and limitations;
+basket verification remains separately owned and must be rerun from the pinned
+protocol origin and verified manifest.
 
 ---
 
@@ -233,8 +236,8 @@ What was stale/wrong before this audit, so a cold AI knows not to trust the old 
    `NARA_V4_ECONOMIC_LAUNCH_ROADMAP.md`). **Wrong.** The NAV oracle + Pendle SY adapter are built and
    tested; what's outstanding is ops (seed a pool) + external (Pendle market). Corrected.
 2. **"568 passing"** (was in `CURRENT_STATE.md` + `ROADMAP.md`). **Stale** — predates the 2026-05-27
-   v4 reset that archived the v3 tests. Live count is 360. Both docs now reference the command + a
-   dated stamp instead of a frozen number.
+   v4 reset that archived the v3 tests. Current dated evidence lives in
+   `CURRENT_STATE.md`; rerun the command instead of trusting an older count.
 3. **Router/lens layer + `NARAPositionRendererV5` missing** from `CURRENT_STATE.md` tables (those docs
    were frozen at 2026-05-27, before the 2026-05-28 router work and 2026-06 NFT-presentation work).
    Added.

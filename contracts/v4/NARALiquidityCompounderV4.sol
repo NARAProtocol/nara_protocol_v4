@@ -7,6 +7,7 @@ import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {IPoolManager} from "@uniswap/v4-periphery/lib/v4-core/src/interfaces/IPoolManager.sol";
 import {StateLibrary} from "@uniswap/v4-periphery/lib/v4-core/src/libraries/StateLibrary.sol";
@@ -36,11 +37,22 @@ interface ILiquidityCompounder {
 interface IPositionManagerMinimal {
     function modifyLiquidities(bytes calldata unlockData, uint256 deadline) external payable;
     function nextTokenId() external view returns (uint256);
+    function poolManager() external view returns (IPoolManager);
+    function permit2() external view returns (address);
 }
 
 /// @dev Minimal Permit2 (AllowanceTransfer) surface used by the v4 PositionManager.
 interface IPermit2Minimal {
     function approve(address token, address spender, uint160 amount, uint48 expiration) external;
+}
+
+interface INARALiquidityHookBinding {
+    function token() external view returns (address);
+    function base() external view returns (address);
+    function vault() external view returns (address);
+    function poolManager() external view returns (IPoolManager);
+    function CANONICAL_POOL_FEE() external view returns (uint24);
+    function CANONICAL_TICK_SPACING() external view returns (int24);
 }
 
 /// @title NARALiquidityCompounderV4
@@ -77,6 +89,11 @@ contract NARALiquidityCompounderV4 is ILiquidityCompounder, Ownable2Step, Reentr
 
     uint48 internal constant PERMIT2_MAX_EXPIRATION = type(uint48).max;
     uint160 internal constant PERMIT2_MAX_AMOUNT = type(uint160).max;
+    uint16 public constant BPS = 10_000;
+    /// @notice Callers may choose tighter bounds, but never wider ones. A 2.5%
+    ///         sqrt-price band bounds the underlying price move to about 5.06%.
+    uint16 public constant MAX_SQRT_PRICE_DEVIATION_BPS = 250;
+    uint16 public constant MAX_REFERENCE_VALUE_IMBALANCE_BPS = 500;
 
     /// @notice Cooldown before any owner POL-removal action can execute. Gives holders a guaranteed
     ///         ≥7-day exit window after a recovery is announced on-chain.
@@ -84,6 +101,15 @@ contract NARALiquidityCompounderV4 is ILiquidityCompounder, Ownable2Step, Reentr
 
     /// @dev The POL-removal actions, all gated behind the RECOVERY_DELAY timelock.
     enum RecoveryKind { None, MigratePosition, RecoverPoolTokens, WindDown }
+
+    struct CompoundConstraints {
+        uint160 referenceSqrtPriceX96;
+        uint160 minSqrtPriceX96;
+        uint160 maxSqrtPriceX96;
+        uint16 maxReferenceValueImbalanceBps;
+        uint256 maxNaraUsed;
+        uint256 maxUsdcUsed;
+    }
 
     error ZeroAddress();
     error NotAContract();
@@ -93,6 +119,11 @@ contract NARALiquidityCompounderV4 is ILiquidityCompounder, Ownable2Step, Reentr
     error InvalidRecoveryKind();
     error NoPendingRecovery();
     error RecoveryNotReady();
+    error InvalidPeripheryBinding();
+    error InvalidCompoundConstraints();
+    error ExecutionPriceOutOfBounds(uint160 currentSqrtPriceX96, uint160 minSqrtPriceX96, uint160 maxSqrtPriceX96);
+    error CompoundAmountExceeded(uint256 naraUsed, uint256 usdcUsed);
+    error ReferenceValueLossExceeded(uint256 imbalanceBps, uint256 maximumBps);
 
     IERC20 public immutable nara;
     IERC20 public immutable usdc;
@@ -106,8 +137,8 @@ contract NARALiquidityCompounderV4 is ILiquidityCompounder, Ownable2Step, Reentr
     Currency internal immutable currency1;
     uint24 public immutable poolFee;
     int24 public immutable tickSpacing;
-    IHooks internal immutable hooks;
-    PoolId internal immutable poolId;
+    IHooks public immutable hooks;
+    PoolId public immutable poolId;
     bool public immutable naraIsCurrency0;
 
     // Full-range ticks, aligned to tickSpacing.
@@ -153,16 +184,17 @@ contract NARALiquidityCompounderV4 is ILiquidityCompounder, Ownable2Step, Reentr
         int24 tickSpacing_,
         address hooks_
     ) Ownable(owner_) {
-        // hooks_ may legitimately be address(0) — a v4 pool can have no hook. In NARA production it
-        // is the 0x2088 liquidity hook; a wrong non-zero hook is no safer than zero (both just point
-        // at the wrong poolId and fail at first compound), so it is not gated here.
+        // The production Compounder is valid only for the registered NARA Hook pool. Rejecting a
+        // zero Hook here prevents an accidentally unhooked PoolKey from becoming an immutable
+        // deployment binding; the reciprocal Hook/token/vault checks below reject other mismatches.
         if (
             vault_ == address(0) ||
             poolManager_ == address(0) ||
             positionManager_ == address(0) ||
             permit2_ == address(0) ||
             nara_ == address(0) ||
-            usdc_ == address(0)
+            usdc_ == address(0) ||
+            hooks_ == address(0)
         ) revert ZeroAddress();
         if (
             vault_.code.length == 0 ||
@@ -170,9 +202,23 @@ contract NARALiquidityCompounderV4 is ILiquidityCompounder, Ownable2Step, Reentr
             positionManager_.code.length == 0 ||
             permit2_.code.length == 0 ||
             nara_.code.length == 0 ||
-            usdc_.code.length == 0
+            usdc_.code.length == 0 ||
+            hooks_.code.length == 0
         ) revert NotAContract();
         if (tickSpacing_ <= 0) revert InvalidTickSpacing();
+
+        IPositionManagerMinimal positionManagerBinding = IPositionManagerMinimal(positionManager_);
+        INARALiquidityHookBinding hookBinding = INARALiquidityHookBinding(hooks_);
+        if (
+            address(positionManagerBinding.poolManager()) != poolManager_
+                || positionManagerBinding.permit2() != permit2_
+                || hookBinding.token() != nara_
+                || hookBinding.base() != usdc_
+                || hookBinding.vault() != vault_
+                || address(hookBinding.poolManager()) != poolManager_
+                || hookBinding.CANONICAL_POOL_FEE() != poolFee_
+                || hookBinding.CANONICAL_TICK_SPACING() != tickSpacing_
+        ) revert InvalidPeripheryBinding();
 
         vault = vault_;
         poolManager = IPoolManager(poolManager_);
@@ -209,18 +255,26 @@ contract NARALiquidityCompounderV4 is ILiquidityCompounder, Ownable2Step, Reentr
     // ─── ILiquidityCompounder ────────────────────────────────────────────────
 
     /// @inheritdoc ILiquidityCompounder
-    /// @dev `data` is always empty (the vault enforces `data.length == 0`). All parameters are
-    ///      computed internally from the live pool price; the vault's `minLiquidityAdded` is the
-    ///      slippage guard. Pulls exactly `tokenAmount` NARA + `baseAmount` USDC from the vault.
+    /// @dev `data` is `abi.encode(CompoundConstraints)`. The transaction binds
+    ///      execution price, maximum token use, and reference-value imbalance.
     function compound(
         address token,
         address base,
         uint256 tokenAmount,
         uint256 baseAmount,
-        bytes calldata /* data */
+        bytes calldata data
     ) external override nonReentrant returns (uint256 liquidityAdded) {
         if (msg.sender != vault) revert NotVault();
         if (token != address(nara) || base != address(usdc)) revert WrongTokens();
+
+        CompoundConstraints memory constraints = abi.decode(data, (CompoundConstraints));
+        _validateConstraints(constraints);
+        (uint160 sqrtPriceX96,,,) = poolManager.getSlot0(poolId);
+        if (sqrtPriceX96 < constraints.minSqrtPriceX96 || sqrtPriceX96 > constraints.maxSqrtPriceX96) {
+            revert ExecutionPriceOutOfBounds(
+                sqrtPriceX96, constraints.minSqrtPriceX96, constraints.maxSqrtPriceX96
+            );
+        }
 
         // 1) Pull exactly the approved amounts from the vault (satisfies CompounderDidNotSpend).
         if (tokenAmount != 0) nara.safeTransferFrom(vault, address(this), tokenAmount);
@@ -236,10 +290,12 @@ contract NARALiquidityCompounderV4 is ILiquidityCompounder, Ownable2Step, Reentr
             return 0;
         }
 
-        (uint256 amount0, uint256 amount1) = naraIsCurrency0 ? (naraBal, usdcBal) : (usdcBal, naraBal);
+        uint256 naraAvailable = naraBal < constraints.maxNaraUsed ? naraBal : constraints.maxNaraUsed;
+        uint256 usdcAvailable = usdcBal < constraints.maxUsdcUsed ? usdcBal : constraints.maxUsdcUsed;
+        (uint256 amount0, uint256 amount1) =
+            naraIsCurrency0 ? (naraAvailable, usdcAvailable) : (usdcAvailable, naraAvailable);
 
-        // 3) Liquidity from the LIVE pool price (never from deposited amounts).
-        (uint160 sqrtPriceX96,,,) = poolManager.getSlot0(poolId);
+        // 3) Liquidity from the bounded live pool price (never from deposited amounts).
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
             TickMath.getSqrtPriceAtTick(tickLower),
@@ -261,6 +317,16 @@ contract NARALiquidityCompounderV4 is ILiquidityCompounder, Ownable2Step, Reentr
 
         uint256 naraUsed = naraBefore - nara.balanceOf(address(this));
         uint256 usdcUsed = usdcBefore - usdc.balanceOf(address(this));
+        if (naraUsed > constraints.maxNaraUsed || usdcUsed > constraints.maxUsdcUsed) {
+            revert CompoundAmountExceeded(naraUsed, usdcUsed);
+        }
+
+        (uint256 used0, uint256 used1) = naraIsCurrency0 ? (naraUsed, usdcUsed) : (usdcUsed, naraUsed);
+        uint256 valueImbalanceBps =
+            _referenceValueImbalanceBps(used0, used1, constraints.referenceSqrtPriceX96);
+        if (valueImbalanceBps > constraints.maxReferenceValueImbalanceBps) {
+            revert ReferenceValueLossExceeded(valueImbalanceBps, constraints.maxReferenceValueImbalanceBps);
+        }
 
         totalNaraAdded += naraUsed;
         totalUsdcAdded += usdcUsed;
@@ -316,6 +382,73 @@ contract NARALiquidityCompounderV4 is ILiquidityCompounder, Ownable2Step, Reentr
             tickSpacing: tickSpacing,
             hooks: hooks
         });
+    }
+
+    /// @notice Re-checks every external immutable binding that can receive token
+    ///         authority. The Vault calls this before selecting and freezing a target.
+    function peripheryBindingsValid() external view returns (bool) {
+        INARALiquidityHookBinding hookBinding = INARALiquidityHookBinding(address(hooks));
+        return address(positionManager.poolManager()) == address(poolManager)
+            && positionManager.permit2() == address(permit2)
+            && hookBinding.token() == address(nara)
+            && hookBinding.base() == address(usdc)
+            && hookBinding.vault() == vault
+            && address(hookBinding.poolManager()) == address(poolManager)
+            && hookBinding.CANONICAL_POOL_FEE() == poolFee
+            && hookBinding.CANONICAL_TICK_SPACING() == tickSpacing;
+    }
+
+    function _validateConstraints(CompoundConstraints memory constraints) internal pure {
+        if (
+            constraints.referenceSqrtPriceX96 == 0
+                || constraints.minSqrtPriceX96 == 0
+                || constraints.minSqrtPriceX96 > constraints.referenceSqrtPriceX96
+                || constraints.referenceSqrtPriceX96 > constraints.maxSqrtPriceX96
+                || constraints.maxReferenceValueImbalanceBps > MAX_REFERENCE_VALUE_IMBALANCE_BPS
+                || constraints.maxNaraUsed == 0
+                || constraints.maxUsdcUsed == 0
+        ) revert InvalidCompoundConstraints();
+
+        uint256 lowerDeviation = Math.mulDiv(
+            uint256(constraints.referenceSqrtPriceX96 - constraints.minSqrtPriceX96),
+            BPS,
+            constraints.referenceSqrtPriceX96,
+            Math.Rounding.Ceil
+        );
+        uint256 upperDeviation = Math.mulDiv(
+            uint256(constraints.maxSqrtPriceX96 - constraints.referenceSqrtPriceX96),
+            BPS,
+            constraints.referenceSqrtPriceX96,
+            Math.Rounding.Ceil
+        );
+        if (
+            lowerDeviation > MAX_SQRT_PRICE_DEVIATION_BPS
+                || upperDeviation > MAX_SQRT_PRICE_DEVIATION_BPS
+        ) revert InvalidCompoundConstraints();
+    }
+
+    /// @dev Values currency0 in currency1 raw units at the independent reference
+    ///      price, then measures the heavier side of the supplied value. Zero is
+    ///      balanced and BPS is fully one-sided.
+    function _referenceValueImbalanceBps(uint256 amount0, uint256 amount1, uint160 sqrtPriceX96)
+        internal
+        pure
+        returns (uint256)
+    {
+        uint256 amount0InCurrency1;
+        if (sqrtPriceX96 <= type(uint128).max) {
+            uint256 priceX192 = uint256(sqrtPriceX96) * uint256(sqrtPriceX96);
+            amount0InCurrency1 = Math.mulDiv(amount0, priceX192, 1 << 192);
+        } else {
+            uint256 priceX128 = Math.mulDiv(uint256(sqrtPriceX96), uint256(sqrtPriceX96), 1 << 64);
+            amount0InCurrency1 = Math.mulDiv(amount0, priceX128, 1 << 128);
+        }
+        uint256 totalValue = amount0InCurrency1 + amount1;
+        if (totalValue == 0) return 0;
+        uint256 difference = amount0InCurrency1 > amount1
+            ? amount0InCurrency1 - amount1
+            : amount1 - amount0InCurrency1;
+        return Math.mulDiv(difference, BPS, totalValue, Math.Rounding.Ceil);
     }
 
     // ─── Owner: POL custody / recovery (recovery-now, permanence-later) ───────────

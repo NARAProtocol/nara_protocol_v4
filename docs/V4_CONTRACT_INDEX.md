@@ -1,6 +1,6 @@
 # NARA v4 Contract Index
 
-Last updated: 2026-06-29.
+Last updated: 2026-08-05.
 **Start here for v4.** Maps every active v4 contract to its purpose, deploy step, and canonical doc.
 Active sources live **only** in `contracts/v4/`. Everything else is archived/retired.
 
@@ -18,13 +18,13 @@ Active sources live **only** in `contracts/v4/`. Everything else is archived/ret
 | Contract | Purpose | Doc |
 |---|---|---|
 | `NARAToken.sol` | Fixed-supply ERC-20 (1,000,000, mints once, no inflation). ERC-2612/1363/3156. | `PRD.md`, `CURRENT_STATE.md` |
-| `NARAEngine.sol` | Core epoch engine: lock → weight → NARA + ETH + ERC-20 rewards per 15-min epoch. JIT epoch advance (`MAX_JIT_ADVANCE = 8`). | `EMISSION_MECHANICS.md`, `LOCK_APY_REFERENCE.md`, `ENGINE_OPS_RUNBOOK.md` |
+| `NARAEngine.sol` | Core epoch engine: lock → weight → NARA + ETH rewards. Contains an ERC-20 reward surface that is disabled for the deployed engine. JIT epoch advance (`MAX_JIT_ADVANCE = 8`). | `EMISSION_MECHANICS.md`, `LOCK_APY_REFERENCE.md`, `ENGINE_OPS_RUNBOOK.md` |
 | `NARAEngineTypes.sol` | Shared structs (`Position`) + errors (`NothingToClaim`). | inline |
 | `NARALauncher.sol` | Atomic CREATE2 deploy of token + engine (no half-wired state). | `NARA_V4_LAUNCH_RUNBOOK.md` |
 | `NARARewardReserve.sol` | Sealed NARA reward reserve; admin cannot sweep, only the engine pulls. | `EMISSION_MECHANICS.md` |
-| `NARALiquidityGrowthHook.sol` | Taxed Uniswap v4 hook (default 5%/5%, cap 25%/20%). Hook address low bits must be `0x2088`. | `research/V4_1K_LIQUIDITY_LAUNCH_PLAN_2026-05-05.md` |
-| `NARALiquidityGrowthVault.sol` | Receives hook tax. `routeMode`: Liquidity (default, compounds LP) / Engine / Split / Genesis / GenesisSplit. POL-first by design. | `UNISWAP_V4_HOOK.md`, `research/V4_1K_LIQUIDITY_LAUNCH_PLAN_2026-05-05.md` |
-| `NARALiquidityCompounderV4.sol` | Production `ILiquidityCompounder`. Adds the vault's NARA/USDC balances to a full-range Uniswap v4 position through PositionManager and Permit2. No-swap, exact-spend, remainder-banking, POL custody. The hardened replacement is deployed, wired, validation-compounded, and permanently frozen; read `CURRENT_STATE.md` for its active address and position evidence. | `CURRENT_STATE.md`, `UNISWAP_V4_HOOK.md` |
+| `NARALiquidityGrowthHook.sol` | Uniswap v4 input-fee hook (default 5%/5%, default operational maximum 20%/20%). Same-input flow accumulates within one block; cross-block flow resets. Hook address low bits must be `0x2088`. | `UNISWAP_V4_HOOK.md` |
+| `NARALiquidityGrowthVault.sol` | Receives hook fees. Reachable routes: Liquidity (default), Genesis, GenesisSplit. Legacy Engine and Split selections permanently revert. | `UNISWAP_V4_HOOK.md`, `research/V4_1K_LIQUIDITY_LAUNCH_PLAN_2026-05-05.md` |
+| `NARALiquidityCompounderV4.sol` | Production `ILiquidityCompounder`. Adds balanced Vault NARA/USDC inventory as a permanent **full-range** Uniswap v4 position (PositionManager + Permit2). One-sided inventory remains banked until matching counterasset exists. No-swap, exact-spend, remainder-banking, POL custody. | `UNISWAP_V4_HOOK.md`, `V4_OPPORTUNITY_GAPS.md` |
 | `utils/Create2HookDeployer.sol` | Mines + deploys the hook at the required `0x2088` address. | `NARA_V4_LAUNCH_RUNBOOK.md` |
 
 ## Engine internals
@@ -52,11 +52,11 @@ Active sources live **only** in `contracts/v4/`. Everything else is archived/ret
 
 | Contract | Purpose | Doc |
 |---|---|---|
-| `router/NARARouter.sol` | Permit + permissionless epoch sync + lock in one transaction. Source-only and undeployed; user-triggered sync does not replace the active recurring operations workflow during dormant periods. | `ROUTER_LENS.md`, `CURRENT_STATE.md` |
+| `router/NARARouter.sol` | Permit + sync + lock in one tx; permissionless `syncEpochs()` (replaces the keeper). | `ROUTER_LENS.md` |
 | `router/NARADashboardLens.sol` | Single-call `getUserState()` for any frontend. | `ROUTER_LENS.md`, `NARA_V4_DASHBOARD_SPEC.md` |
 | `router/NARAPositionDataLensV1.sol` | Typed live position-NFT data for apps; batches capped at 100. Now also returns **weight share, age, time-to-unlock, lifetime earned, realized NARA return (bps)**. | `ROUTER_LENS.md`, `NARA_V4_NFT_POSITIONS.md`, `NARA_V4_POSITION_STATS_AND_CLAIM_FEES.md` |
 | `router/NARAProtocolStatsLensV1.sol` | **One-call protocol headline stats**: all-time ETH distributed to lockers, NARA emitted, total locked, positions, emission runway, treasury. For homepages/aggregators. | `NARA_V4_POSITION_STATS_AND_CLAIM_FEES.md` |
-| `router/BribeRouterV4.sol` | Source-only permissionless notification wrapper. Undeployed; the live engine intentionally has no `REWARD_NOTIFIER_ROLE` holder, so this route is inactive unless a future explicitly authorized release changes that policy. | `ROUTER_LENS.md`, `CURRENT_STATE.md` |
+| `router/BribeRouterV4.sol` | Dormant reference implementation. Do not deploy it for, or grant it a role on, the deployed engine. | `ROUTER_LENS.md` |
 | `router/NARACirculatingSupplyV1.sol` | Trustless **market** circulating-supply oracle for listings (CoinGecko/CMC/DexScreener). `circulatingSupply = cappedTotal − Σ(reserve+bonds+vesting+dead)`; user-locked AND treasury count as circulating (≠ engine's emission free-float). Genesis ≈ 110k. Immutable, ownerless, versioned. `excludedAccounts()` publishes the exact set for listing review. | `CIRCULATING_SUPPLY.md` |
 
 ## Composability (deploy step 8 — code-complete, deploy only with a market + oracle)

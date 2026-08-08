@@ -58,10 +58,19 @@ The maintainer defaults to read-only. Execute mode refuses to run unless:
 - the compounder address is permanently frozen;
 - the signer matches the configured dedicated keeper address;
 - that address is authorized by the vault; and
+- `V4_COMPOUND_REFERENCE_SQRT_PRICE_X96` is an independently selected reference
+  recorded before execution, not copied automatically from current pool `slot0`;
+- `V4_COMPOUND_MAX_NARA_USED_RAW` and `V4_COMPOUND_MAX_USDC_USED_RAW` are explicit
+  per-call raw-unit limits reviewed for the current depth and banked inventory;
+- current `slot0` remains inside the fixed reference band
+  (`V4_COMPOUND_SQRT_PRICE_GUARD_BPS`, default `100`, maximum `250`); and
 - simulated added USDC-side depth meets `V4_COMPOUND_MIN_LIQUIDITY_USDC`
   (default `5`).
 
-It simulates `compoundAll`, applies a 99% minimum-liquidity guard, submits one
+With no independent reference/caps, read-only mode reports compounding as
+blocked and execute mode fails. The script never substitutes current `slot0`
+for the missing reference. When configured, it simulates `compoundAll`, applies
+a 99% minimum-liquidity guard, submits one
 transaction, then verifies the POL NFT custody and nonzero position liquidity.
 The keeper has no vault ownership, configuration, compounder-recovery, or
 arbitrary withdrawal authority. While the live route mode is `Liquidity`, the
