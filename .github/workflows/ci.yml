@@ -108,4 +108,4 @@ jobs:
           config: echidna/v4-engine.yaml
           echidna-version: v2.3.3
           solc-version: 0.8.34
-          solc-args: --base-path . --include-path node_modules
+          solc-args: --base-path . --include-path node_modules --optimize --optimize-runs 1 --via-ir --evm-version cancun --metadata-hash none
