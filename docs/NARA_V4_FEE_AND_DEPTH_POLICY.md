@@ -2,14 +2,17 @@
 
 Change-ID: `NARA-20260731-fee-policy`
 
-Status: implemented as a Safe-batch builder; not active on Base until both
-timelocked Safe batches execute and the post-change readback passes.
+Status: **superseded proposal; do not execute its batches against the fresh
+Hook**. The fresh Hook is deployed with the reviewed asymmetric default curves
+recorded in `deployments/v4-base-usdc-latest.json`, and its pool is dormant.
+Any later curve or depth change requires a new deployment-specific review,
+explicit approval, the Hook's seven-day timelock, and a new evidence artifact.
 
 ## Fee Curve
 
-The active 2026-07-30 hook curve charges a 5% floor and materially rewards
-splitting trades across blocks. The reviewed replacement uses the same curve
-for buys and sells:
+The historical 2026-07-30 hook curve charged a 5% floor and materially rewarded
+splitting trades across blocks. This superseded proposal described the same
+replacement curve for buys and sells:
 
 | Marginal depth band | Fee |
 |---|---:|
@@ -31,13 +34,16 @@ The maximum measured saving from that split is 0.0525 USDC, or roughly 0.055%
 of input, instead of the current 4.95 USDC saving. Price impact and the
 underlying Uniswap pool fee remain separate from the hook fee.
 
-Build the proposal without submitting it:
+Historical builder command, retained for archaeology only and blocked by
+default behind `V4_ALLOW_SUPERSEDED_FEE_POLICY=1`; do not execute its output
+against the fresh Hook:
 
 ```powershell
 npm run build:v4:fee-curve
 ```
 
-After the Safe executes that proposal and the one-day hook delay elapses:
+The corresponding historical finalize command assumed an obsolete one-day
+delay. The current Hook delay is seven days:
 
 ```powershell
 npm run build:v4:fee-curve -- --finalize
@@ -64,7 +70,7 @@ Policy:
    reference by more than 25%.
 4. Cap an upward update at 25% per proposal. A decrease may move directly to
    the conservative reference so fees never assume absent liquidity.
-5. Apply both currency updates through the Safe and the hook's one-day
+5. Apply both currency updates through the Safe and the hook's seven-day
    timelock. Record proposal and execution transaction hashes.
 6. Keep the frontend input cap based on the lower of configured and live depth;
    a depth-policy update must never loosen the app independently of live depth.

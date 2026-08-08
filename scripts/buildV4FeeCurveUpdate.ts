@@ -1,7 +1,8 @@
 /**
  * Builds, but never submits, Safe Transaction Builder batches for the reviewed
- * NARA/USDC fee-curve reduction. Run once to propose and again with --finalize
- * after the hook's one-day timelock.
+ * but superseded NARA/USDC fee-curve reduction. Generation requires an explicit
+ * archaeology acknowledgement. A newly approved policy must use a new change
+ * record; the current Hook enforces a seven-day timelock.
  */
 import { ethers } from "ethers";
 import * as dotenv from "dotenv";
@@ -105,6 +106,15 @@ export function curvesEqual(a: FeeCurve, b: FeeCurve): boolean {
   return curveArray(a).every((value, index) => value === curveArray(b)[index]);
 }
 
+export function assertSupersededFeePolicyAcknowledged(value: string | undefined): void {
+  if (value?.trim() !== "1") {
+    throw new Error(
+      "NARA-20260731-fee-policy is superseded and must not be proposed against the fresh Hook. " +
+      "Set V4_ALLOW_SUPERSEDED_FEE_POLICY=1 only to reproduce an unsigned historical batch for archaeology.",
+    );
+  }
+}
+
 function safeBatch(safe: string, name: string, transactions: { to: string; value: string; data: string }[]) {
   return {
     version: "1.0",
@@ -126,6 +136,7 @@ function safeBatch(safe: string, name: string, transactions: { to: string; value
 }
 
 async function main(): Promise<void> {
+  assertSupersededFeePolicyAcknowledged(process.env.V4_ALLOW_SUPERSEDED_FEE_POLICY);
   const requestedMode = process.env.V4_FEE_CURVE_BUILD_MODE?.trim();
   if (requestedMode && requestedMode !== "propose" && requestedMode !== "finalize") {
     throw new Error("V4_FEE_CURVE_BUILD_MODE must be propose or finalize");
@@ -200,7 +211,7 @@ async function main(): Promise<void> {
         changeId: "NARA-20260731-fee-policy",
         hook: config.hook,
         safe,
-        mode: finalize ? "finalize-after-timelock" : "propose-one-day-timelock",
+        mode: finalize ? "finalize-after-seven-day-timelock" : "propose-seven-day-timelock",
         reviewedCurve: Object.fromEntries(
           Object.entries(REVIEWED_BALANCED_CURVE).map(([key, value]) => [key, value.toString()]),
         ),
@@ -216,7 +227,7 @@ async function main(): Promise<void> {
     console.log(`Safe batch written: ${outputPath}`);
     console.log(finalize
       ? "Finalization calls simulated successfully. Review before Safe execution."
-      : "Proposal calls simulated successfully. Execute through the Safe, then wait one day before --finalize.");
+      : "Historical proposal calls simulated successfully. Do not execute without a new approval; the current Hook delay is seven days.");
   } finally {
     provider.destroy();
   }

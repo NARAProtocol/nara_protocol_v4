@@ -1,5 +1,6 @@
 import { expect } from "chai";
 import {
+  assertSupersededFeePolicyAcknowledged,
   cumulativeFee,
   curvesEqual,
   REVIEWED_BALANCED_CURVE,
@@ -8,6 +9,13 @@ import {
 describe("v4 reviewed balanced fee curve", function () {
   const usdc = 10n ** 6n;
   const depth = 300n * usdc;
+
+  it("fails closed because this fee policy is superseded", function () {
+    expect(() => assertSupersededFeePolicyAcknowledged(undefined)).to.throw(
+      "is superseded and must not be proposed against the fresh Hook",
+    );
+    expect(() => assertSupersededFeePolicyAcknowledged("1")).not.to.throw();
+  });
 
   it("charges a 0.75% floor on ordinary trades", function () {
     expect(cumulativeFee(REVIEWED_BALANCED_CURVE, 1n * usdc, depth)).to.equal(7_500n);
