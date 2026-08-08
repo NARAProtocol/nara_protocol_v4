@@ -24,10 +24,11 @@ configuration is `60,000 NARA` / `300 USDC`, but no pool liquidity exists.
 
 The planned pool is unregistered, uninitialized, and unseeded. Hook and Vault
 ownership acceptance by the production Safe is pending, the Compounder is the
-zero address, and no LP NFT or fresh-pool smoke evidence exists. A supplemental
-canonical receipt reconciliation must also accompany the protected fresh
-manifest because 24 original journal entries stored a zero normalized block
-hash.
+zero address, and no LP NFT or fresh-pool smoke evidence exists. The protected
+fresh manifest is accompanied by a supplemental canonical receipt
+reconciliation because 24 original journal entries stored a zero normalized
+block hash; the supplement reconciles all 31 canonical receipts with no
+mismatch.
 
 Do not repeat the core deployment. Do not deploy or wire the Compounder,
 register or initialize the pool, seed liquidity, run swaps, enable keepers, or

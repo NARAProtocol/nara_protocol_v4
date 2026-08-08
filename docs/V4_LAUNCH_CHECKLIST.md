@@ -37,8 +37,8 @@ and the Vault Compounder is the zero address. The Hook and Vault still require
 the production Safe to execute `acceptOwnership()` separately. The core deploy
 does not authorize either acceptance, a Compounder deploy, pool activation,
 seed, smoke swap, or downstream publication. The receipt-journal block-hash
-normalization gap described in [CURRENT_STATE.md](CURRENT_STATE.md) also
-requires a supplemental canonical reconciliation artifact.
+normalization gap described in [CURRENT_STATE.md](CURRENT_STATE.md) is covered
+by the tracked supplemental canonical reconciliation artifact.
 
 ---
 
@@ -277,8 +277,8 @@ fees and zero token balances. The deployment intentionally used
 `V4_SKIP_COMPOUNDER=1`.
 
 This completed only the core-deploy subsection. The fresh sanitized manifest
-and supplemental canonical receipt reconciliation must enter through protected
-review before downstream consumption. Every later subsection remains pending.
+and supplemental canonical receipt reconciliation are published together by
+the protected core-evidence change. Every later subsection remains pending.
 
 ---
 

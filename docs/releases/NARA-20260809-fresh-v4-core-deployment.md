@@ -91,33 +91,32 @@ reconciliation.
 - Vault balances and recorded lifetime pool fees are zero.
 - The pre-seed wiring/readback gate passed against this dormant state.
 
-## Evidence limitation and required supplement
+## Receipt evidence reconciliation
 
 The deployment journal contains 31 confirmed steps with no failed, prepared,
 submitted, or otherwise unresolved entry. It records transaction hashes,
 status, and block numbers, but 24 normalized receipt entries stored the zero
 block hash even though canonical RPC receipts return nonzero canonical hashes.
 
-Preserve the original journal unchanged. Before a manifest is accepted as
-protected downstream authority, publish a separate reconciliation containing
-the canonical receipt block hash and related receipt fields for all 31 steps,
-and prove zero transaction/status/block mismatches. Until then, the historical
-tracked `deployments/v4-base-usdc-latest.json` must not be interpreted as this
-fresh deployment.
+The original journal was preserved unchanged. The separately tracked
+`deployments/v4-base-usdc-receipt-reconciliation-2026-08-08.json` records all
+31 canonical receipts. Its result is `PASS`: 31/31 receipts reconcile and
+succeeded, all 24 zero hashes are supplemented, all seven recorded nonzero
+hashes match, and there are zero other field mismatches. The timestamped fresh
+manifest and `deployments/v4-base-usdc-latest.json` contain the same sanitized
+fresh-core deployment evidence.
 
 ## Remaining activation gates
 
-1. Publish the sanitized fresh manifest and canonical receipt reconciliation
-   through protected review.
-2. Have the Safe accept Hook and Vault ownership and verify current owners.
-3. Deploy, verify, and Safe-wire the replacement Compounder while the Vault is
+1. Have the Safe accept Hook and Vault ownership and verify current owners.
+2. Deploy, verify, and Safe-wire the replacement Compounder while the Vault is
    empty; keep it unfrozen pending validation.
-4. Pass pre-seed verification and exact atomic-batch simulation.
-5. Atomically register, initialize, and seed the pool only under a separate
+3. Pass pre-seed verification and exact atomic-batch simulation.
+4. Atomically register, initialize, and seed the pool only under a separate
    execution approval; record the LP NFT and canonical receipt.
-6. Validate and reconcile the Compounder, then separately freeze it.
-7. Pass post-seed preflight and receipt-pinned buy/sell smoke tests.
-8. Complete later allocations and downstream handoffs independently.
+5. Validate and reconcile the Compounder, then separately freeze it.
+6. Pass post-seed preflight and receipt-pinned buy/sell smoke tests.
+7. Complete later allocations and downstream handoffs independently.
 
 The GitHub v4 operations and liquidity-maintainer workflows are disabled and
 both repository enable variables are false. No recurring v4 keeper is active.

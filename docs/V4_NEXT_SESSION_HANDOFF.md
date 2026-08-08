@@ -52,10 +52,11 @@ production-readiness claim.
 
 The original 31-step deployment journal records all transaction hashes,
 statuses, and block numbers as confirmed, but its normalization stored a zero
-block hash in 24 entries. Canonical Base RPC receipts matched the successful
-transactions. Preserve the original journal unchanged and publish a separate
-supplemental canonical receipt-reconciliation artifact before treating the
-fresh sanitized manifest as protected downstream authority.
+block hash in 24 entries. The journal was preserved unchanged. The tracked
+supplement at
+`deployments/v4-base-usdc-receipt-reconciliation-2026-08-08.json` reconciles
+31/31 successful canonical Base receipts, supplements all 24 zero hashes,
+matches all seven nonzero hashes, and reports zero other field mismatches.
 
 Controlled Stage A and the 2026-07-30 pool remain historical recovery evidence.
 Do not copy their addresses, manifests, LP state, or role assignments into this
@@ -63,23 +64,21 @@ deployment.
 
 ## Next gated work
 
-1. Publish the fresh sanitized manifest plus canonical receipt reconciliation
-   through the protected review path.
-2. Build and review the two Safe `acceptOwnership()` calls for the Hook and
+1. Build and review the two Safe `acceptOwnership()` calls for the Hook and
    Vault. Human Safe signers execute them; then verify both `owner()` values.
-3. Deploy and source-verify the replacement `NARALiquidityCompounderV4` with
+2. Deploy and source-verify the replacement `NARALiquidityCompounderV4` with
    exact fresh bindings. Have the Safe wire it while the Vault is empty; do not
    freeze it yet.
-4. Run the pre-seed verification and launch-gate commands.
-5. Build and review the atomic pool launch for the separately reviewed
+3. Run the pre-seed verification and launch-gate commands.
+4. Build and review the atomic pool launch for the separately reviewed
    `60,000 NARA + 300 USDC` seed. Do not send it without a fresh explicit
    execution order and Safe approval.
-6. After atomic registration/initialization/first mint, record the receipt and
+5. After atomic registration/initialization/first mint, record the receipt and
    LP NFT ID, then rerun post-seed preflight.
-7. Validate Compounder accounting in its own receipt-pinned transaction; only
+6. Validate Compounder accounting in its own receipt-pinned transaction; only
    after reconciliation may the separate irreversible freeze be executed.
-8. Run receipt-pinned buy and sell smoke tests only after every prior gate.
-9. Keep baskets and public documentation in preview/non-availability state
+7. Run receipt-pinned buy and sell smoke tests only after every prior gate.
+8. Keep baskets and public documentation in preview/non-availability state
    until immutable producer evidence and explicit downstream handoffs exist.
 
 ## Verification commands

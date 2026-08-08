@@ -85,11 +85,13 @@ Current custody and activation state:
 
 The pre-seed wiring/readback gates passed against this dormant state. The
 deployment receipt journal contains complete transaction hashes, statuses, and
-block numbers, but 24 normalized entries stored a zero block hash. Canonical
-RPC receipts matched the successful transactions; a separate immutable receipt
-reconciliation artifact is still required before the fresh manifest is treated
-as protected release evidence. Do not use the historical tracked `latest`
-manifest as authority for this deployment.
+block numbers, but 24 normalized entries stored a zero block hash. The tracked
+supplemental reconciliation at
+`deployments/v4-base-usdc-receipt-reconciliation-2026-08-08.json` preserves the
+journal hash and proves that all 31 canonical Base receipts succeeded, all 24
+zero hashes are supplemented, all seven recorded nonzero hashes match, and no
+other receipt field mismatches. The tracked `latest` manifest now identifies
+this fresh dormant deployment.
 
 The docs-only execution record is
 [NARA-20260809-fresh-v4-core-deployment.md](releases/NARA-20260809-fresh-v4-core-deployment.md).
@@ -253,21 +255,19 @@ authorizes no further transaction or redeployment.
 The core deployment is complete, but the stack is not activated, available, or
 production-ready. Remaining gates include:
 
-1. Publish the sanitized fresh manifest and supplemental canonical receipt
-   reconciliation through the protected review path.
-2. Have the production Safe accept Hook and Vault ownership, then verify both
+1. Have the production Safe accept Hook and Vault ownership, then verify both
    `owner()` values. Pending ownership alone does not pass the gate.
-3. Deploy and source-verify the fresh `NARALiquidityCompounderV4`, wire it from
+2. Deploy and source-verify the fresh `NARALiquidityCompounderV4`, wire it from
    the Safe while the Vault is empty, and keep it unfrozen until its separate
    validation flow passes.
-4. Rerun the pre-seed gates, build the exact atomic Safe batch, and require a
+3. Rerun the pre-seed gates, build the exact atomic Safe batch, and require a
    successful whole-batch simulation before any signature or execution.
-5. Register, initialize, and seed the pool atomically with the separately
+4. Register, initialize, and seed the pool atomically with the separately
    reviewed `60,000 NARA + 300 USDC` seed. Record the receipt and LP NFT ID.
-6. Validate the Compounder, reconcile the receipt-pinned accounting, and only
+5. Validate the Compounder, reconcile the receipt-pinned accounting, and only
    then execute the separate irreversible Compounder freeze.
-7. Pass post-seed preflight and receipt-pinned buy/sell smoke tests.
-8. Resolve the later-phase allocation mismatch and complete any allocations,
+6. Pass post-seed preflight and receipt-pinned buy/sell smoke tests.
+7. Resolve the later-phase allocation mismatch and complete any allocations,
    routers/lenses, baskets, monitoring, and downstream handoffs separately.
 
 The GitHub v4 operations and liquidity-maintainer workflows are disabled and
