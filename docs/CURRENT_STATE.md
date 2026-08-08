@@ -1,15 +1,21 @@
 # Current State
 
-Last updated: 2026-08-08.
+Last updated: 2026-08-09.
 
 This repository is v4-only. `contracts/v4/` is the sole active Solidity source.
 The experimental V5 stack, tests, scripts, and release plans have been deleted
 and must not be restored or used as deployment authority.
 
-No deployment or transaction is authorized by this document. Fresh-v4 source
-verification is in progress; product activation remains blocked until there is
-an immutable reviewed origin commit, a human-approved atomic deployment, a
-verified deployment manifest, and explicit downstream handoffs.
+The fresh v4 core contracts have been deployed and source-verified on Base from
+immutable protected origin commit
+`027af3f06bbe6dea2c187dfd8062e50c228f1c35`. This is a core-deployment state,
+not an activation or availability claim. The NARA/USDC pool is dormant: it is
+not registered, initialized, or seeded, and no LP NFT exists. The Compounder is
+not deployed or configured. Hook and Vault ownership acceptance by the
+production Safe is still pending.
+
+No further deployment, Safe action, pool activation, seed, smoke swap, or
+downstream publication is authorized by this document.
 
 ## Authoritative v4 release policy
 
@@ -38,6 +44,57 @@ verified deployment manifest, and explicit downstream handoffs.
 The modular NFT contract named `NARAPositionRendererV5` is a renderer revision
 inside the v4 stack. It is not the deleted protocol V5 stack. Renaming it would
 change active v4 artifacts and is outside the liquidity remediation.
+
+## Fresh Base v4 core deployment
+
+The core deployment was executed during the 2026-08-08 UTC / 2026-08-09 local
+release session on Base, chain ID `8453`. All seven deployed contracts below
+are source-verified on Basescan. The verification readback was pinned at Base
+block `49719008`.
+
+| Component | Address | Current state |
+|---|---|---|
+| `NARALauncher` | `0xb8CF0274d0Fb2dB2Ba5dC58b0Ab378F3b8f35BA2` | Deployed and source-verified |
+| `NARAToken` | `0xB6333F5D4cEd8dffA80F3F13697D6aA3BB3f19c1` | Deployed and source-verified; name/symbol `NARA` / `NARA` |
+| `NARAEngine` | `0x98ab6406D6B548F37dEF7110961bb45A399e5aFC` | Deployed and source-verified |
+| `NARARewardReserve` | `0x8369CEf28128A4B24Bc5ed52aA6196D92D563F2f` | Deployed, source-verified, and funded with `650,000 NARA` |
+| `NARALiquidityGrowthVault` | `0xD7f7b44BF65EBa3E90fDe0642687ed22A323084D` | Deployed and source-verified; Safe ownership acceptance pending |
+| `Create2HookDeployer` | `0xDE9E3Cac08b7a31Db18c7432d4C45DF4584Fd646` | Deployed and source-verified; owned by the production Safe |
+| `NARALiquidityGrowthHook` | `0x59AEf9799DEA01A7FB7dA73BEA10dfB08858A088` | Deployed and source-verified; permission bits `0x2088`; Safe ownership acceptance pending |
+
+Planned pool ID:
+`0x83edced1f39e6adf7469cd718eeb409824d948959263408d4cfb6e745c8db464`.
+The deployment used the human-approved core configuration of `60,000 NARA`
+token depth and `300 USDC` base depth, corresponding to the later seed target
+of `$0.005/NARA`. These values do not mean liquidity exists.
+
+Current custody and activation state:
+
+- production admin Safe:
+  `0xd65c0e390Dc187A22c52c03816591CC736C0D755`;
+- treasury: `0xfe3A8678A9c729438BB11718bD1391E7Ab491E8e`;
+- Hook and Vault still report the deployment signer as current owner and the
+  production Safe as `pendingOwner()`; the Safe must separately execute
+  `acceptOwnership()` on each before any Compounder wiring or pool launch;
+- `Vault.compounder()` is the zero address and the Liquidity route is inert;
+- `Hook.poolRegistered()` is false, `Hook.expectedSqrtPriceX96()` is zero, and
+  the PoolManager slot0 for the planned pool is zero;
+- the pool has no liquidity and no LP NFT; and
+- Vault token balances, recorded lifetime pool fees, and recorded routed
+  amounts are zero.
+
+The pre-seed wiring/readback gates passed against this dormant state. The
+deployment receipt journal contains complete transaction hashes, statuses, and
+block numbers, but 24 normalized entries stored a zero block hash. The tracked
+supplemental reconciliation at
+`deployments/v4-base-usdc-receipt-reconciliation-2026-08-08.json` preserves the
+journal hash and proves that all 31 canonical Base receipts succeeded, all 24
+zero hashes are supplemented, all seven recorded nonzero hashes match, and no
+other receipt field mismatches. The tracked `latest` manifest now identifies
+this fresh dormant deployment.
+
+The docs-only execution record is
+[NARA-20260809-fresh-v4-core-deployment.md](releases/NARA-20260809-fresh-v4-core-deployment.md).
 
 ## What happened after the 2026-07-30 v4 pool deployment
 
@@ -117,7 +174,8 @@ Current local evidence after remediation:
 
 | Gate | Result |
 |---|---|
-| Complete Hardhat suite | 526 passing on 2026-08-05 after the one-sided regression |
+| Complete Hardhat suite | 553 passing on 2026-08-09; 5 opt-in Base-fork cases pending |
+| Fresh deployment/receipt/Safe-batch evidence | 12 focused tests passing on 2026-08-09 |
 | Focused Hook/Vault/Compounder/atomic launch | 43 passing |
 | Hardhat invariant regression | 4 passing |
 | Compiled-size gate | Passed; Engine runtime is 24,554 bytes, only 22 bytes below EIP-170 |
@@ -186,28 +244,38 @@ active liquidity to zero, cleared `pendingRecovery`, and left the sealed
 `321662.875771577338403661 NARA` and `363.781444 USDC`; the exact scoped NARA
 reconciliation differed by one raw unit (`1e-18 NARA`) from integer rounding.
 
-The completed recovery, exact pre/post reads, and future cold-AI procedure are
-recorded in
-[NARA_V4_LIQUIDITY_WITHDRAWAL_RUNBOOK.md](NARA_V4_LIQUIDITY_WITHDRAWAL_RUNBOOK.md).
+The completed recovery is anchored by the transaction and state reads above.
+The operator-local `NARA_V4_LIQUIDITY_WITHDRAWAL_RUNBOOK.md` is not part of this
+protected release and must not be treated as repository authority until it
+enters through its own review.
 Do not replay the consumed Safe batch, restore its pending state, or treat the
 historical addresses or recovered assets as a fresh-v4 manifest. This evidence
 authorizes no further transaction or redeployment.
 
 ## Release blockers
 
-Fresh-v4 redeploy is not yet authorized. Remaining gates are:
+The core deployment is complete, but the stack is not activated, available, or
+production-ready. Remaining gates include:
 
-1. Restore or replace the missing Aderyn/Echidna environment, or explicitly
-   accept those unexecuted gates; do not report them as passing.
-2. Review the final diff, scan for secrets, and create a focused immutable
-   origin commit through protected CI/PR.
-3. Freeze human-approved addresses, seed amounts, configured depths, opening
-   price, custody roles, and deployment inputs.
-4. Run read-only preflight and exact atomic-batch simulation against those final
-   inputs.
-5. Deploy only with explicit human approval, then verify source and write the
-   receipt-pinned manifest.
-6. Update baskets/monitor only from that immutable commit and verified manifest.
+1. Have the production Safe accept Hook and Vault ownership, then verify both
+   `owner()` values. Pending ownership alone does not pass the gate.
+2. Deploy and source-verify the fresh `NARALiquidityCompounderV4`, wire it from
+   the Safe while the Vault is empty, and keep it unfrozen until its separate
+   validation flow passes.
+3. Rerun the pre-seed gates, build the exact atomic Safe batch, and require a
+   successful whole-batch simulation before any signature or execution.
+4. Register, initialize, and seed the pool atomically with the separately
+   reviewed `60,000 NARA + 300 USDC` seed. Record the receipt and LP NFT ID.
+5. Validate the Compounder, reconcile the receipt-pinned accounting, and only
+   then execute the separate irreversible Compounder freeze.
+6. Pass post-seed preflight and receipt-pinned buy/sell smoke tests.
+7. Resolve the later-phase allocation mismatch and complete any allocations,
+   routers/lenses, baskets, monitoring, and downstream handoffs separately.
+
+The GitHub v4 operations and liquidity-maintainer workflows are disabled and
+their repository enable variables are false. No recurring v4 keeper is active;
+do not re-enable or dispatch either workflow without a new explicit user order
+and deployment-specific review.
 
 ## Active workspace
 

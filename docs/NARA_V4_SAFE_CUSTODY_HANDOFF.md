@@ -2,8 +2,15 @@
 
 Prepared and verified: 2026-07-30
 
-Status: all engine role custody consolidated on the Safe; replacement liquidity
-custody still pending deployment
+Status: the Safe controls the fresh Engine and RewardReserve roles and owns the
+fresh CREATE2 Hook deployer. The fresh Hook and Vault are deployed but still
+require the Safe to accept their pending `Ownable2Step` transfers. The pool is
+dormant and the Compounder is not deployed.
+
+Fresh-core addresses and exact current state are authoritative only in
+[CURRENT_STATE.md](CURRENT_STATE.md). Historical Stage A and 2026-07-30
+addresses later in this handoff remain custody history, not active deployment
+targets.
 
 ## Approved Safe
 

@@ -1,6 +1,6 @@
 # V4 Launch Checklist
 
-Last updated: 2026-08-08.
+Last updated: 2026-08-09.
 
 > **Active fixed-v4 checklist.** The candidate must be a fresh full-v4
 > deployment from one immutable reviewed origin commit. Controlled Stage A and
@@ -9,6 +9,36 @@ Last updated: 2026-08-08.
 > experimental protocol V5 stack is obsolete and deleted.
 
 Use this file when starting cold.
+
+## Current checkpoint — fresh core deployed, pool dormant
+
+Fresh core deployment from protected origin commit
+`027af3f06bbe6dea2c187dfd8062e50c228f1c35` has completed on Base and all
+seven core contracts are source-verified. The approved core configuration is
+`60,000 NARA` / `300 USDC`; it is configured depth and a later seed target, not
+current liquidity.
+
+| Component | Address |
+|---|---|
+| `NARALauncher` | `0xb8CF0274d0Fb2dB2Ba5dC58b0Ab378F3b8f35BA2` |
+| `NARAToken` | `0xB6333F5D4cEd8dffA80F3F13697D6aA3BB3f19c1` |
+| `NARAEngine` | `0x98ab6406D6B548F37dEF7110961bb45A399e5aFC` |
+| `NARARewardReserve` | `0x8369CEf28128A4B24Bc5ed52aA6196D92D563F2f` |
+| `NARALiquidityGrowthVault` | `0xD7f7b44BF65EBa3E90fDe0642687ed22A323084D` |
+| `Create2HookDeployer` | `0xDE9E3Cac08b7a31Db18c7432d4C45DF4584Fd646` |
+| `NARALiquidityGrowthHook` | `0x59AEf9799DEA01A7FB7dA73BEA10dfB08858A088` |
+
+Planned pool ID:
+`0x83edced1f39e6adf7469cd718eeb409824d948959263408d4cfb6e745c8db464`.
+
+Stop at the Compounder/ownership checkpoint. The pool is unregistered,
+uninitialized, and unseeded; PoolManager slot0 is zero, the LP NFT is absent,
+and the Vault Compounder is the zero address. The Hook and Vault still require
+the production Safe to execute `acceptOwnership()` separately. The core deploy
+does not authorize either acceptance, a Compounder deploy, pool activation,
+seed, smoke swap, or downstream publication. The receipt-journal block-hash
+normalization gap described in [CURRENT_STATE.md](CURRENT_STATE.md) is covered
+by the tracked supplemental canonical reconciliation artifact.
 
 ---
 
@@ -38,9 +68,8 @@ Use this file when starting cold.
 4. [NARA_V4_LAUNCH_RUNBOOK.md](NARA_V4_LAUNCH_RUNBOOK.md)
 5. [NARA_V4_COMPOUNDER_VALIDATION_RUNBOOK.md](NARA_V4_COMPOUNDER_VALIDATION_RUNBOOK.md)
 
-Historical context only:
-
-- [V4_INCIDENT_REDEPLOY_2026-04-23.md](V4_INCIDENT_REDEPLOY_2026-04-23.md)
+Historical incident context is summarized in `CURRENT_STATE.md`; no historical
+manifest or missing local runbook is launch authority.
 
 ---
 
@@ -172,7 +201,9 @@ Pass criteria:
 
 Latest known local result:
 
-- Full Hardhat suite (`npm test`): 468 passing as of 2026-07-29.
+- Full Hardhat suite (`npm test`): 553 passing with 5 opt-in Base-fork cases
+  pending as of 2026-08-09.
+- Fresh deployment/receipt/Safe-batch evidence: 12 focused tests passing.
 - Slither v4 scoped run: completed with exit 0 on 2026-07-29.
 - Echidna v4 engine harness: 13/13 properties passed on 2026-06-08; historical
   evidence for the current liquidity correction.
@@ -239,6 +270,17 @@ Record and confirm:
 
 If any value is wrong, stop.
 
+Current result (2026-08-09): the core deploy and source verification passed for
+the addresses in the checkpoint above. Hook permission bits are `0x2088`;
+`Hook.poolRegistered()` is false; expected opening price and PoolManager slot0
+are zero; the RewardReserve holds `650,000 NARA`; the Vault has zero recorded
+fees and zero token balances. The deployment intentionally used
+`V4_SKIP_COMPOUNDER=1`.
+
+This completed only the core-deploy subsection. The fresh sanitized manifest
+and supplemental canonical receipt reconciliation are published together by
+the protected core-evidence change. Every later subsection remains pending.
+
 ---
 
 ## Post-Deploy Env Sync
@@ -279,6 +321,10 @@ npm run v4:env:sync:write
 ---
 
 ## Compounder Deploy And Pre-Seed Gate
+
+Current result: **not started**. `Vault.compounder()` is the zero address. The
+production Safe is only the pending owner of the Hook and Vault and must accept
+both ownership transfers before this section can proceed.
 
 After the fresh Vault exists, deploy `NARALiquidityCompounderV4` with exact
 fresh-manifest bindings and the production Safe as constructor owner. The core
@@ -574,6 +620,12 @@ Before public TVL:
 ---
 
 ## Launch Decision
+
+Current decision (2026-08-09): **not launch-ready**. Core contracts are
+deployed and source-verified, but ownership acceptance, the Compounder,
+protected receipt/manifest evidence, atomic pool launch, LP NFT, validation and
+freeze, post-seed preflight, and smoke tests remain incomplete. No public
+market or active NARA/USDC liquidity exists from this deployment.
 
 Launch-ready means all of these are true:
 

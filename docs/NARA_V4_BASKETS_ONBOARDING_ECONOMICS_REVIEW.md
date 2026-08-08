@@ -5,7 +5,12 @@ Audience: protocol operator, frontend team, growth, legal review.
 Scope: make Baskets the mass-onboarding front door — **noob-friendly, compliant, easy** — with one
 prime directive: **do not lose the customer until he buys.**
 
-Grounded in: the baskets contracts (`nara-category-baskets-v1/src/`), the live frontend
+> **Historical research note:** this review predates the publishable basket app
+> boundary. `apps/nara-baskets/` is a non-publishing historical working copy.
+> Apply any still-valid findings only to `nara-category-baskets-v1/app/` after
+> reviewing that app's `AGENTS.md`, `DESIGN.md`, and the neutral-action rules.
+
+Grounded historically in: the baskets contracts (`nara-category-baskets-v1/src/`) and the old working-copy frontend
 (`apps/nara-baskets/src/app.tsx`, ~3,410 lines; **RainbowKit** `getDefaultConfig` — wallet-list modal,
 no embedded/email-first, no paymaster/on-ramp/batching), the baskets strategy/legal/readiness
 docs, and 2026 onboarding/index-product best practices (sources at the end). This is an internal

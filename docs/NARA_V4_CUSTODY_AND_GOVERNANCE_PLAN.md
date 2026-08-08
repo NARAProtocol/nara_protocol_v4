@@ -1,12 +1,16 @@
 # NARA v4 Custody And Governance Plan
 
-Last updated: 2026-07-28.
-Status: **approved plan, not executed**. No transaction is authorized by this
-document. Executing it produces the custody evidence that closes the
-"custody/recovery acceptance" gate in [CURRENT_STATE.md](CURRENT_STATE.md).
+Last updated: 2026-08-09.
+Status: **historical superseded plan; do not execute**. Its proposed 3-of-5
+topology and Stage A addresses are not the current deployment authority. The
+active production admin is the verified 2-of-3 Safe recorded in
+[CURRENT_STATE.md](CURRENT_STATE.md) and
+[NARA_V4_SAFE_CUSTODY_HANDOFF.md](NARA_V4_SAFE_CUSTODY_HANDOFF.md). No
+transaction is authorized by this document.
 
-Scope: the fresh v4 Stage A stack only. The v3 recovery map lives in
-[NARA_CUSTODY_AND_RECOVERY.md](NARA_CUSTODY_AND_RECOVERY.md) and is historical.
+Scope: historical 2026-07-28 planning context only. The v3 recovery map lives
+in [NARA_CUSTODY_AND_RECOVERY.md](NARA_CUSTODY_AND_RECOVERY.md) and is also
+historical.
 
 Decisions recorded 2026-07-28:
 

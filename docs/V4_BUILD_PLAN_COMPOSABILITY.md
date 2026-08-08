@@ -15,7 +15,7 @@ Canonical references:
 
 ## Status
 
-The composability layer is implemented in the repository. The fresh Stage A v4
+The composability layer is implemented in the repository. The fresh core v4
 core now exists, but these modules remain deliberately undeployed until the core
 market, position-NFT layer, oracle assumptions, and operational gates are ready.
 

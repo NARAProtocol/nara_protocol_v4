@@ -1,0 +1,1291 @@
+{
+  "schemaVersion": 1,
+  "evidenceType": "nara-v4-base-core-deployment-receipt-reconciliation",
+  "statement": "Read-only supplemental evidence. The source deployment journal was not modified. Canonical Base receipts supply real block hashes where the journal stored an all-zero placeholder.",
+  "generatedAt": "2026-08-08T22:30:55.534Z",
+  "chain": {
+    "network": "base",
+    "chainId": "8453",
+    "queriedAtBlock": 49719454
+  },
+  "release": {
+    "originRemote": "NARAProtocol/nara_protocol_v4",
+    "releaseCommit": "027af3f06bbe6dea2c187dfd8062e50c228f1c35",
+    "originMainCommit": "027af3f06bbe6dea2c187dfd8062e50c228f1c35"
+  },
+  "deployment": {
+    "startedAt": "2026-08-08T22:14:56.300Z",
+    "completedAt": "2026-08-08T22:16:06.226Z",
+    "journalFinalEvent": "manifest_completed",
+    "journalFinalEventAt": "2026-08-08T22:16:06.226Z"
+  },
+  "inputs": {
+    "journal": {
+      "path": "deployments/v4-base-usdc-receipt-journal-2026-08-08T22-14-56-300Z.jsonl",
+      "lineCount": 96,
+      "sha256Before": "0xe598cf9fdb1c08aa9f690ce6224254635171475495f7be69b6aafd3512da4839",
+      "sha256AfterRpcQueries": "0xe598cf9fdb1c08aa9f690ce6224254635171475495f7be69b6aafd3512da4839",
+      "preservationVerified": true
+    },
+    "manifest": {
+      "path": "deployments/v4-base-usdc-2026-08-08T22-16-06-220Z.json",
+      "sha256": "0xbcc2e62572afc19a52720c54f4f7faacf2509559bd564d71de515151b9efb25b"
+    }
+  },
+  "summary": {
+    "expectedReceipts": 31,
+    "canonicalReceiptsFound": 31,
+    "successfulCanonicalReceipts": 31,
+    "journalZeroBlockHashes": 24,
+    "supplementedZeroBlockHashes": 24,
+    "journalNonZeroBlockHashes": 7,
+    "matchingNonZeroBlockHashes": 7,
+    "nonZeroBlockHashMismatches": 0,
+    "otherFieldMismatches": 0,
+    "reconciledReceipts": 31,
+    "unreconciledReceipts": 0,
+    "result": "PASS"
+  },
+  "receipts": [
+    {
+      "index": 0,
+      "label": "deploy.NARALauncher",
+      "kind": "deployment",
+      "transactionHash": "0xcce4ab3a2e1b8da44321dc2f6e3f42802416585d46b03b1569c991ca7cfa9d78",
+      "journal": {
+        "transactionHash": "0xcce4ab3a2e1b8da44321dc2f6e3f42802416585d46b03b1569c991ca7cfa9d78",
+        "blockNumber": 49718976,
+        "blockHash": "0x65292e19298e0d43483a9a53b57ff19796977e2d3477efbd78ffd97307ffe32f",
+        "status": 1,
+        "gasUsed": "2242901",
+        "contractAddress": "0xb8CF0274d0Fb2dB2Ba5dC58b0Ab378F3b8f35BA2",
+        "expectedContractAddress": "0xb8CF0274d0Fb2dB2Ba5dC58b0Ab378F3b8f35BA2"
+      },
+      "canonical": {
+        "transactionHash": "0xcce4ab3a2e1b8da44321dc2f6e3f42802416585d46b03b1569c991ca7cfa9d78",
+        "blockNumber": 49718976,
+        "blockHash": "0x65292e19298e0d43483a9a53b57ff19796977e2d3477efbd78ffd97307ffe32f",
+        "transactionIndex": 43,
+        "status": 1,
+        "gasUsed": "2242901",
+        "contractAddress": "0xb8CF0274d0Fb2dB2Ba5dC58b0Ab378F3b8f35BA2",
+        "confirmationsAtQuery": 479
+      },
+      "comparison": {
+        "stepTransactionHashMatchesReceipt": true,
+        "canonicalTransactionHashMatches": true,
+        "blockNumberMatches": true,
+        "journalBlockHashWasZero": false,
+        "journalBlockHashMatchesCanonical": true,
+        "statusMatches": true,
+        "gasUsedMatches": true,
+        "journalContractAddressMatchesExpected": true,
+        "canonicalContractAddressMatchesTransactionKind": true,
+        "contractAddressEvidenceMatches": true,
+        "recordedFieldsMatch": true,
+        "canonicalBlockHashSupplementsZeroPlaceholder": false,
+        "reconciled": true
+      }
+    },
+    {
+      "index": 1,
+      "label": "launcher.launch",
+      "kind": "call",
+      "transactionHash": "0x00955909b2fc299fe010c72ecd9988dc8802ad0569a3964453287e221ff5076c",
+      "journal": {
+        "transactionHash": "0x00955909b2fc299fe010c72ecd9988dc8802ad0569a3964453287e221ff5076c",
+        "blockNumber": 49718979,
+        "blockHash": "0x9108ca9b587933a87e98574433155b1fb9254ff061faf156ac3911cc091aacdd",
+        "status": 1,
+        "gasUsed": "7617918",
+        "contractAddress": null,
+        "expectedContractAddress": null
+      },
+      "canonical": {
+        "transactionHash": "0x00955909b2fc299fe010c72ecd9988dc8802ad0569a3964453287e221ff5076c",
+        "blockNumber": 49718979,
+        "blockHash": "0x9108ca9b587933a87e98574433155b1fb9254ff061faf156ac3911cc091aacdd",
+        "transactionIndex": 17,
+        "status": 1,
+        "gasUsed": "7617918",
+        "contractAddress": null,
+        "confirmationsAtQuery": 476
+      },
+      "comparison": {
+        "stepTransactionHashMatchesReceipt": true,
+        "canonicalTransactionHashMatches": true,
+        "blockNumberMatches": true,
+        "journalBlockHashWasZero": false,
+        "journalBlockHashMatchesCanonical": true,
+        "statusMatches": true,
+        "gasUsedMatches": true,
+        "journalContractAddressMatchesExpected": true,
+        "canonicalContractAddressMatchesTransactionKind": true,
+        "contractAddressEvidenceMatches": true,
+        "recordedFieldsMatch": true,
+        "canonicalBlockHashSupplementsZeroPlaceholder": false,
+        "reconciled": true
+      }
+    },
+    {
+      "index": 2,
+      "label": "deploy.NARARewardReserve",
+      "kind": "deployment",
+      "transactionHash": "0x8406e7905839ba5c126969fb2b006e850b056fa888486eece553a14b562537d4",
+      "journal": {
+        "transactionHash": "0x8406e7905839ba5c126969fb2b006e850b056fa888486eece553a14b562537d4",
+        "blockNumber": 49718982,
+        "blockHash": "0x6867fe4cc3cd918988e9d50cd62b224cfab3fab2a8b752b42fd8bea863df5abd",
+        "status": 1,
+        "gasUsed": "854978",
+        "contractAddress": "0x8369CEf28128A4B24Bc5ed52aA6196D92D563F2f",
+        "expectedContractAddress": "0x8369CEf28128A4B24Bc5ed52aA6196D92D563F2f"
+      },
+      "canonical": {
+        "transactionHash": "0x8406e7905839ba5c126969fb2b006e850b056fa888486eece553a14b562537d4",
+        "blockNumber": 49718982,
+        "blockHash": "0x6867fe4cc3cd918988e9d50cd62b224cfab3fab2a8b752b42fd8bea863df5abd",
+        "transactionIndex": 23,
+        "status": 1,
+        "gasUsed": "854978",
+        "contractAddress": "0x8369CEf28128A4B24Bc5ed52aA6196D92D563F2f",
+        "confirmationsAtQuery": 473
+      },
+      "comparison": {
+        "stepTransactionHashMatchesReceipt": true,
+        "canonicalTransactionHashMatches": true,
+        "blockNumberMatches": true,
+        "journalBlockHashWasZero": false,
+        "journalBlockHashMatchesCanonical": true,
+        "statusMatches": true,
+        "gasUsedMatches": true,
+        "journalContractAddressMatchesExpected": true,
+        "canonicalContractAddressMatchesTransactionKind": true,
+        "contractAddressEvidenceMatches": true,
+        "recordedFieldsMatch": true,
+        "canonicalBlockHashSupplementsZeroPlaceholder": false,
+        "reconciled": true
+      }
+    },
+    {
+      "index": 3,
+      "label": "rewardReserve.setNara",
+      "kind": "call",
+      "transactionHash": "0x36fe154cabcf78fa4f7af39acacfd0e2b35357f39902e89bb3f39b5d3082775d",
+      "journal": {
+        "transactionHash": "0x36fe154cabcf78fa4f7af39acacfd0e2b35357f39902e89bb3f39b5d3082775d",
+        "blockNumber": 49718984,
+        "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "status": 1,
+        "gasUsed": "50184",
+        "contractAddress": null,
+        "expectedContractAddress": null
+      },
+      "canonical": {
+        "transactionHash": "0x36fe154cabcf78fa4f7af39acacfd0e2b35357f39902e89bb3f39b5d3082775d",
+        "blockNumber": 49718984,
+        "blockHash": "0xe006448a4443902dc31fe044bb77d1ec23ea48d54cc90131373dec02d988bf66",
+        "transactionIndex": 87,
+        "status": 1,
+        "gasUsed": "50184",
+        "contractAddress": null,
+        "confirmationsAtQuery": 471
+      },
+      "comparison": {
+        "stepTransactionHashMatchesReceipt": true,
+        "canonicalTransactionHashMatches": true,
+        "blockNumberMatches": true,
+        "journalBlockHashWasZero": true,
+        "journalBlockHashMatchesCanonical": false,
+        "statusMatches": true,
+        "gasUsedMatches": true,
+        "journalContractAddressMatchesExpected": true,
+        "canonicalContractAddressMatchesTransactionKind": true,
+        "contractAddressEvidenceMatches": true,
+        "recordedFieldsMatch": true,
+        "canonicalBlockHashSupplementsZeroPlaceholder": true,
+        "reconciled": true
+      }
+    },
+    {
+      "index": 4,
+      "label": "rewardReserve.setEngine",
+      "kind": "call",
+      "transactionHash": "0x8b47e926f9d12d3534477911ec3caec1e864a3284c2efd05c4ad06df6a3269ae",
+      "journal": {
+        "transactionHash": "0x8b47e926f9d12d3534477911ec3caec1e864a3284c2efd05c4ad06df6a3269ae",
+        "blockNumber": 49718985,
+        "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "status": 1,
+        "gasUsed": "55079",
+        "contractAddress": null,
+        "expectedContractAddress": null
+      },
+      "canonical": {
+        "transactionHash": "0x8b47e926f9d12d3534477911ec3caec1e864a3284c2efd05c4ad06df6a3269ae",
+        "blockNumber": 49718985,
+        "blockHash": "0x9583e0662a04a0e2112043a6108c9bac3be0981ed8a002ec5c4516726b89f74a",
+        "transactionIndex": 44,
+        "status": 1,
+        "gasUsed": "55079",
+        "contractAddress": null,
+        "confirmationsAtQuery": 470
+      },
+      "comparison": {
+        "stepTransactionHashMatchesReceipt": true,
+        "canonicalTransactionHashMatches": true,
+        "blockNumberMatches": true,
+        "journalBlockHashWasZero": true,
+        "journalBlockHashMatchesCanonical": false,
+        "statusMatches": true,
+        "gasUsedMatches": true,
+        "journalContractAddressMatchesExpected": true,
+        "canonicalContractAddressMatchesTransactionKind": true,
+        "contractAddressEvidenceMatches": true,
+        "recordedFieldsMatch": true,
+        "canonicalBlockHashSupplementsZeroPlaceholder": true,
+        "reconciled": true
+      }
+    },
+    {
+      "index": 5,
+      "label": "engine.setRewardReserve",
+      "kind": "call",
+      "transactionHash": "0x81f19eec31d8423702cfe51a148f58dab0bd75740426ebdd52f116485ec12bf3",
+      "journal": {
+        "transactionHash": "0x81f19eec31d8423702cfe51a148f58dab0bd75740426ebdd52f116485ec12bf3",
+        "blockNumber": 49718986,
+        "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "status": 1,
+        "gasUsed": "78002",
+        "contractAddress": null,
+        "expectedContractAddress": null
+      },
+      "canonical": {
+        "transactionHash": "0x81f19eec31d8423702cfe51a148f58dab0bd75740426ebdd52f116485ec12bf3",
+        "blockNumber": 49718986,
+        "blockHash": "0xca89db857f8faa169a3de9c13bf2d8edeed6e003f1935531476cd660a21192d7",
+        "transactionIndex": 30,
+        "status": 1,
+        "gasUsed": "78002",
+        "contractAddress": null,
+        "confirmationsAtQuery": 469
+      },
+      "comparison": {
+        "stepTransactionHashMatchesReceipt": true,
+        "canonicalTransactionHashMatches": true,
+        "blockNumberMatches": true,
+        "journalBlockHashWasZero": true,
+        "journalBlockHashMatchesCanonical": false,
+        "statusMatches": true,
+        "gasUsedMatches": true,
+        "journalContractAddressMatchesExpected": true,
+        "canonicalContractAddressMatchesTransactionKind": true,
+        "contractAddressEvidenceMatches": true,
+        "recordedFieldsMatch": true,
+        "canonicalBlockHashSupplementsZeroPlaceholder": true,
+        "reconciled": true
+      }
+    },
+    {
+      "index": 6,
+      "label": "token.transfer(rewardReserve) [treasury]",
+      "kind": "call",
+      "transactionHash": "0x6cb7bbaabd425e8bf5d95a1a625b2fb6d31a0e8b5139c1284bfcf6469a5f3ab3",
+      "journal": {
+        "transactionHash": "0x6cb7bbaabd425e8bf5d95a1a625b2fb6d31a0e8b5139c1284bfcf6469a5f3ab3",
+        "blockNumber": 49718986,
+        "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "status": 1,
+        "gasUsed": "51506",
+        "contractAddress": null,
+        "expectedContractAddress": null
+      },
+      "canonical": {
+        "transactionHash": "0x6cb7bbaabd425e8bf5d95a1a625b2fb6d31a0e8b5139c1284bfcf6469a5f3ab3",
+        "blockNumber": 49718986,
+        "blockHash": "0xca89db857f8faa169a3de9c13bf2d8edeed6e003f1935531476cd660a21192d7",
+        "transactionIndex": 84,
+        "status": 1,
+        "gasUsed": "51506",
+        "contractAddress": null,
+        "confirmationsAtQuery": 469
+      },
+      "comparison": {
+        "stepTransactionHashMatchesReceipt": true,
+        "canonicalTransactionHashMatches": true,
+        "blockNumberMatches": true,
+        "journalBlockHashWasZero": true,
+        "journalBlockHashMatchesCanonical": false,
+        "statusMatches": true,
+        "gasUsedMatches": true,
+        "journalContractAddressMatchesExpected": true,
+        "canonicalContractAddressMatchesTransactionKind": true,
+        "contractAddressEvidenceMatches": true,
+        "recordedFieldsMatch": true,
+        "canonicalBlockHashSupplementsZeroPlaceholder": true,
+        "reconciled": true
+      }
+    },
+    {
+      "index": 7,
+      "label": "engine.setTreasury",
+      "kind": "call",
+      "transactionHash": "0x1ae33fbba89cdb3894d715c047c9a08422be5cacca904372bdf0d5f7f7cc8dd0",
+      "journal": {
+        "transactionHash": "0x1ae33fbba89cdb3894d715c047c9a08422be5cacca904372bdf0d5f7f7cc8dd0",
+        "blockNumber": 49718987,
+        "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "status": 1,
+        "gasUsed": "49289",
+        "contractAddress": null,
+        "expectedContractAddress": null
+      },
+      "canonical": {
+        "transactionHash": "0x1ae33fbba89cdb3894d715c047c9a08422be5cacca904372bdf0d5f7f7cc8dd0",
+        "blockNumber": 49718987,
+        "blockHash": "0xcbd1282eb4c9da7de8c5c3fb435aea2929ac3165ed7bec8a57a93c2de45b02c5",
+        "transactionIndex": 69,
+        "status": 1,
+        "gasUsed": "49289",
+        "contractAddress": null,
+        "confirmationsAtQuery": 468
+      },
+      "comparison": {
+        "stepTransactionHashMatchesReceipt": true,
+        "canonicalTransactionHashMatches": true,
+        "blockNumberMatches": true,
+        "journalBlockHashWasZero": true,
+        "journalBlockHashMatchesCanonical": false,
+        "statusMatches": true,
+        "gasUsedMatches": true,
+        "journalContractAddressMatchesExpected": true,
+        "canonicalContractAddressMatchesTransactionKind": true,
+        "contractAddressEvidenceMatches": true,
+        "recordedFieldsMatch": true,
+        "canonicalBlockHashSupplementsZeroPlaceholder": true,
+        "reconciled": true
+      }
+    },
+    {
+      "index": 8,
+      "label": "deploy.NARALiquidityGrowthVault",
+      "kind": "deployment",
+      "transactionHash": "0xea9845388d1bd22cd7f31214b7fe518a911e4777d53f3d726650632dd37e4af9",
+      "journal": {
+        "transactionHash": "0xea9845388d1bd22cd7f31214b7fe518a911e4777d53f3d726650632dd37e4af9",
+        "blockNumber": 49718988,
+        "blockHash": "0x0770b1e71c03e8385fa9d86876bbbe5b4feb433d3d9f1f1a73bfe674d4c1a8e9",
+        "status": 1,
+        "gasUsed": "3089277",
+        "contractAddress": "0xD7f7b44BF65EBa3E90fDe0642687ed22A323084D",
+        "expectedContractAddress": "0xD7f7b44BF65EBa3E90fDe0642687ed22A323084D"
+      },
+      "canonical": {
+        "transactionHash": "0xea9845388d1bd22cd7f31214b7fe518a911e4777d53f3d726650632dd37e4af9",
+        "blockNumber": 49718988,
+        "blockHash": "0x0770b1e71c03e8385fa9d86876bbbe5b4feb433d3d9f1f1a73bfe674d4c1a8e9",
+        "transactionIndex": 42,
+        "status": 1,
+        "gasUsed": "3089277",
+        "contractAddress": "0xD7f7b44BF65EBa3E90fDe0642687ed22A323084D",
+        "confirmationsAtQuery": 467
+      },
+      "comparison": {
+        "stepTransactionHashMatchesReceipt": true,
+        "canonicalTransactionHashMatches": true,
+        "blockNumberMatches": true,
+        "journalBlockHashWasZero": false,
+        "journalBlockHashMatchesCanonical": true,
+        "statusMatches": true,
+        "gasUsedMatches": true,
+        "journalContractAddressMatchesExpected": true,
+        "canonicalContractAddressMatchesTransactionKind": true,
+        "contractAddressEvidenceMatches": true,
+        "recordedFieldsMatch": true,
+        "canonicalBlockHashSupplementsZeroPlaceholder": false,
+        "reconciled": true
+      }
+    },
+    {
+      "index": 9,
+      "label": "deploy.Create2HookDeployer",
+      "kind": "deployment",
+      "transactionHash": "0x80d7609555eb895706f9dfd4096edb8cf06fd26a68e508fbc24d0040081c55f3",
+      "journal": {
+        "transactionHash": "0x80d7609555eb895706f9dfd4096edb8cf06fd26a68e508fbc24d0040081c55f3",
+        "blockNumber": 49718990,
+        "blockHash": "0x1b5f70aef748b8b1db0a109885d74e36392d1aac49344fb1467ec36200619570",
+        "status": 1,
+        "gasUsed": "327053",
+        "contractAddress": "0xDE9E3Cac08b7a31Db18c7432d4C45DF4584Fd646",
+        "expectedContractAddress": "0xDE9E3Cac08b7a31Db18c7432d4C45DF4584Fd646"
+      },
+      "canonical": {
+        "transactionHash": "0x80d7609555eb895706f9dfd4096edb8cf06fd26a68e508fbc24d0040081c55f3",
+        "blockNumber": 49718990,
+        "blockHash": "0x1b5f70aef748b8b1db0a109885d74e36392d1aac49344fb1467ec36200619570",
+        "transactionIndex": 82,
+        "status": 1,
+        "gasUsed": "327053",
+        "contractAddress": "0xDE9E3Cac08b7a31Db18c7432d4C45DF4584Fd646",
+        "confirmationsAtQuery": 465
+      },
+      "comparison": {
+        "stepTransactionHashMatchesReceipt": true,
+        "canonicalTransactionHashMatches": true,
+        "blockNumberMatches": true,
+        "journalBlockHashWasZero": false,
+        "journalBlockHashMatchesCanonical": true,
+        "statusMatches": true,
+        "gasUsedMatches": true,
+        "journalContractAddressMatchesExpected": true,
+        "canonicalContractAddressMatchesTransactionKind": true,
+        "contractAddressEvidenceMatches": true,
+        "recordedFieldsMatch": true,
+        "canonicalBlockHashSupplementsZeroPlaceholder": false,
+        "reconciled": true
+      }
+    },
+    {
+      "index": 10,
+      "label": "create2.deploy(hook)",
+      "kind": "call",
+      "transactionHash": "0x233ad46f29b97147ca50079e1eae2b9ae0ce9ae9a3746d697039d9e0e1e7aeae",
+      "journal": {
+        "transactionHash": "0x233ad46f29b97147ca50079e1eae2b9ae0ce9ae9a3746d697039d9e0e1e7aeae",
+        "blockNumber": 49718993,
+        "blockHash": "0xefa6a5bbbf4296e6a65c0375795a96a153704ef5ee103d311bde7fc3e4e0b22b",
+        "status": 1,
+        "gasUsed": "2880268",
+        "contractAddress": "0x59AEf9799DEA01A7FB7dA73BEA10dfB08858A088",
+        "expectedContractAddress": "0x59AEf9799DEA01A7FB7dA73BEA10dfB08858A088"
+      },
+      "canonical": {
+        "transactionHash": "0x233ad46f29b97147ca50079e1eae2b9ae0ce9ae9a3746d697039d9e0e1e7aeae",
+        "blockNumber": 49718993,
+        "blockHash": "0xefa6a5bbbf4296e6a65c0375795a96a153704ef5ee103d311bde7fc3e4e0b22b",
+        "transactionIndex": 28,
+        "status": 1,
+        "gasUsed": "2880268",
+        "contractAddress": null,
+        "confirmationsAtQuery": 462
+      },
+      "comparison": {
+        "stepTransactionHashMatchesReceipt": true,
+        "canonicalTransactionHashMatches": true,
+        "blockNumberMatches": true,
+        "journalBlockHashWasZero": false,
+        "journalBlockHashMatchesCanonical": true,
+        "statusMatches": true,
+        "gasUsedMatches": true,
+        "journalContractAddressMatchesExpected": true,
+        "canonicalContractAddressMatchesTransactionKind": true,
+        "contractAddressEvidenceMatches": true,
+        "recordedFieldsMatch": true,
+        "canonicalBlockHashSupplementsZeroPlaceholder": false,
+        "reconciled": true
+      }
+    },
+    {
+      "index": 11,
+      "label": "vault.setHook",
+      "kind": "call",
+      "transactionHash": "0x2c9957de4c79e64c5b6cf06d048e558e39296cd26b5f9fd4c694f49812136884",
+      "journal": {
+        "transactionHash": "0x2c9957de4c79e64c5b6cf06d048e558e39296cd26b5f9fd4c694f49812136884",
+        "blockNumber": 49718995,
+        "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "status": 1,
+        "gasUsed": "54280",
+        "contractAddress": null,
+        "expectedContractAddress": null
+      },
+      "canonical": {
+        "transactionHash": "0x2c9957de4c79e64c5b6cf06d048e558e39296cd26b5f9fd4c694f49812136884",
+        "blockNumber": 49718995,
+        "blockHash": "0x72d43223ffd772dbd2f0a827e5d28e47961f02b093f9a7f6628882fc1f192864",
+        "transactionIndex": 80,
+        "status": 1,
+        "gasUsed": "54280",
+        "contractAddress": null,
+        "confirmationsAtQuery": 460
+      },
+      "comparison": {
+        "stepTransactionHashMatchesReceipt": true,
+        "canonicalTransactionHashMatches": true,
+        "blockNumberMatches": true,
+        "journalBlockHashWasZero": true,
+        "journalBlockHashMatchesCanonical": false,
+        "statusMatches": true,
+        "gasUsedMatches": true,
+        "journalContractAddressMatchesExpected": true,
+        "canonicalContractAddressMatchesTransactionKind": true,
+        "contractAddressEvidenceMatches": true,
+        "recordedFieldsMatch": true,
+        "canonicalBlockHashSupplementsZeroPlaceholder": true,
+        "reconciled": true
+      }
+    },
+    {
+      "index": 12,
+      "label": "vault.setEngine",
+      "kind": "call",
+      "transactionHash": "0xcdfd0c63291a68e2ca0f2d8b61938c8310377fd2bf61622bcf5135adbf10260b",
+      "journal": {
+        "transactionHash": "0xcdfd0c63291a68e2ca0f2d8b61938c8310377fd2bf61622bcf5135adbf10260b",
+        "blockNumber": 49718996,
+        "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "status": 1,
+        "gasUsed": "51253",
+        "contractAddress": null,
+        "expectedContractAddress": null
+      },
+      "canonical": {
+        "transactionHash": "0xcdfd0c63291a68e2ca0f2d8b61938c8310377fd2bf61622bcf5135adbf10260b",
+        "blockNumber": 49718996,
+        "blockHash": "0xcf55186f5d53ff25a2d745b292364d660cb81284feb43dc609b1df73ce502e63",
+        "transactionIndex": 61,
+        "status": 1,
+        "gasUsed": "51253",
+        "contractAddress": null,
+        "confirmationsAtQuery": 459
+      },
+      "comparison": {
+        "stepTransactionHashMatchesReceipt": true,
+        "canonicalTransactionHashMatches": true,
+        "blockNumberMatches": true,
+        "journalBlockHashWasZero": true,
+        "journalBlockHashMatchesCanonical": false,
+        "statusMatches": true,
+        "gasUsedMatches": true,
+        "journalContractAddressMatchesExpected": true,
+        "canonicalContractAddressMatchesTransactionKind": true,
+        "contractAddressEvidenceMatches": true,
+        "recordedFieldsMatch": true,
+        "canonicalBlockHashSupplementsZeroPlaceholder": true,
+        "reconciled": true
+      }
+    },
+    {
+      "index": 13,
+      "label": "hook.setProtocolDepth(USDC)",
+      "kind": "call",
+      "transactionHash": "0x41c7a9d56912f9eff2e3c52d39fe2fc0c033942bea90a5c9e8ec1ca134925f59",
+      "journal": {
+        "transactionHash": "0x41c7a9d56912f9eff2e3c52d39fe2fc0c033942bea90a5c9e8ec1ca134925f59",
+        "blockNumber": 49718997,
+        "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "status": 1,
+        "gasUsed": "50954",
+        "contractAddress": null,
+        "expectedContractAddress": null
+      },
+      "canonical": {
+        "transactionHash": "0x41c7a9d56912f9eff2e3c52d39fe2fc0c033942bea90a5c9e8ec1ca134925f59",
+        "blockNumber": 49718997,
+        "blockHash": "0x0b26970c461962ecb780b9630daacad1643887cb0403522c2f4ca6ada1049fa0",
+        "transactionIndex": 22,
+        "status": 1,
+        "gasUsed": "50954",
+        "contractAddress": null,
+        "confirmationsAtQuery": 458
+      },
+      "comparison": {
+        "stepTransactionHashMatchesReceipt": true,
+        "canonicalTransactionHashMatches": true,
+        "blockNumberMatches": true,
+        "journalBlockHashWasZero": true,
+        "journalBlockHashMatchesCanonical": false,
+        "statusMatches": true,
+        "gasUsedMatches": true,
+        "journalContractAddressMatchesExpected": true,
+        "canonicalContractAddressMatchesTransactionKind": true,
+        "contractAddressEvidenceMatches": true,
+        "recordedFieldsMatch": true,
+        "canonicalBlockHashSupplementsZeroPlaceholder": true,
+        "reconciled": true
+      }
+    },
+    {
+      "index": 14,
+      "label": "hook.setProtocolDepth(NARA)",
+      "kind": "call",
+      "transactionHash": "0xd08f83749a29147c28674933077f1d2645bfb87c988e7b3ac4a61cccabced57a",
+      "journal": {
+        "transactionHash": "0xd08f83749a29147c28674933077f1d2645bfb87c988e7b3ac4a61cccabced57a",
+        "blockNumber": 49718998,
+        "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "status": 1,
+        "gasUsed": "50970",
+        "contractAddress": null,
+        "expectedContractAddress": null
+      },
+      "canonical": {
+        "transactionHash": "0xd08f83749a29147c28674933077f1d2645bfb87c988e7b3ac4a61cccabced57a",
+        "blockNumber": 49718998,
+        "blockHash": "0x5725a01356808047c0aa5cd44740a82d8d64dd9b9c1b96cefd360c47b27e4240",
+        "transactionIndex": 25,
+        "status": 1,
+        "gasUsed": "50970",
+        "contractAddress": null,
+        "confirmationsAtQuery": 457
+      },
+      "comparison": {
+        "stepTransactionHashMatchesReceipt": true,
+        "canonicalTransactionHashMatches": true,
+        "blockNumberMatches": true,
+        "journalBlockHashWasZero": true,
+        "journalBlockHashMatchesCanonical": false,
+        "statusMatches": true,
+        "gasUsedMatches": true,
+        "journalContractAddressMatchesExpected": true,
+        "canonicalContractAddressMatchesTransactionKind": true,
+        "contractAddressEvidenceMatches": true,
+        "recordedFieldsMatch": true,
+        "canonicalBlockHashSupplementsZeroPlaceholder": true,
+        "reconciled": true
+      }
+    },
+    {
+      "index": 15,
+      "label": "engine.grantRole(0x0000000000000000000000000000000000000000000000000000000000000000)",
+      "kind": "call",
+      "transactionHash": "0x94f32f9fc0f4adf5889b83cc77c4b5bb157ed2ec39a48f9ec2e69a674d19f90e",
+      "journal": {
+        "transactionHash": "0x94f32f9fc0f4adf5889b83cc77c4b5bb157ed2ec39a48f9ec2e69a674d19f90e",
+        "blockNumber": 49718998,
+        "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "status": 1,
+        "gasUsed": "51030",
+        "contractAddress": null,
+        "expectedContractAddress": null
+      },
+      "canonical": {
+        "transactionHash": "0x94f32f9fc0f4adf5889b83cc77c4b5bb157ed2ec39a48f9ec2e69a674d19f90e",
+        "blockNumber": 49718998,
+        "blockHash": "0x5725a01356808047c0aa5cd44740a82d8d64dd9b9c1b96cefd360c47b27e4240",
+        "transactionIndex": 77,
+        "status": 1,
+        "gasUsed": "51030",
+        "contractAddress": null,
+        "confirmationsAtQuery": 457
+      },
+      "comparison": {
+        "stepTransactionHashMatchesReceipt": true,
+        "canonicalTransactionHashMatches": true,
+        "blockNumberMatches": true,
+        "journalBlockHashWasZero": true,
+        "journalBlockHashMatchesCanonical": false,
+        "statusMatches": true,
+        "gasUsedMatches": true,
+        "journalContractAddressMatchesExpected": true,
+        "canonicalContractAddressMatchesTransactionKind": true,
+        "contractAddressEvidenceMatches": true,
+        "recordedFieldsMatch": true,
+        "canonicalBlockHashSupplementsZeroPlaceholder": true,
+        "reconciled": true
+      }
+    },
+    {
+      "index": 16,
+      "label": "engine.grantRole(0x8a4778feaa2fc65ebc9ddd026461f05b6522e206b955ca87f94c0eebfa8bcb2c)",
+      "kind": "call",
+      "transactionHash": "0xda52c215f379edaa3c1e3310b57a39d017750af61e4a381536e748755e1a3889",
+      "journal": {
+        "transactionHash": "0xda52c215f379edaa3c1e3310b57a39d017750af61e4a381536e748755e1a3889",
+        "blockNumber": 49718999,
+        "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "status": 1,
+        "gasUsed": "51414",
+        "contractAddress": null,
+        "expectedContractAddress": null
+      },
+      "canonical": {
+        "transactionHash": "0xda52c215f379edaa3c1e3310b57a39d017750af61e4a381536e748755e1a3889",
+        "blockNumber": 49718999,
+        "blockHash": "0x3f833aea5029094e61067bf4403b66d2ef224c2854ab603011bc2cd722ade2a1",
+        "transactionIndex": 61,
+        "status": 1,
+        "gasUsed": "51414",
+        "contractAddress": null,
+        "confirmationsAtQuery": 456
+      },
+      "comparison": {
+        "stepTransactionHashMatchesReceipt": true,
+        "canonicalTransactionHashMatches": true,
+        "blockNumberMatches": true,
+        "journalBlockHashWasZero": true,
+        "journalBlockHashMatchesCanonical": false,
+        "statusMatches": true,
+        "gasUsedMatches": true,
+        "journalContractAddressMatchesExpected": true,
+        "canonicalContractAddressMatchesTransactionKind": true,
+        "contractAddressEvidenceMatches": true,
+        "recordedFieldsMatch": true,
+        "canonicalBlockHashSupplementsZeroPlaceholder": true,
+        "reconciled": true
+      }
+    },
+    {
+      "index": 17,
+      "label": "engine.grantRole(0xe1dcbdb91df27212a29bc27177c840cf2f819ecf2187432e1fac86c2dd5dfca9)",
+      "kind": "call",
+      "transactionHash": "0x59afe6853abace751fdf13968576dca51a983f40864268103f450d14b2a547f4",
+      "journal": {
+        "transactionHash": "0x59afe6853abace751fdf13968576dca51a983f40864268103f450d14b2a547f4",
+        "blockNumber": 49719000,
+        "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "status": 1,
+        "gasUsed": "51414",
+        "contractAddress": null,
+        "expectedContractAddress": null
+      },
+      "canonical": {
+        "transactionHash": "0x59afe6853abace751fdf13968576dca51a983f40864268103f450d14b2a547f4",
+        "blockNumber": 49719000,
+        "blockHash": "0x297af41b347d58307082848c2711dcd7a78580fbeab2fe95c8429c2549d41ce4",
+        "transactionIndex": 56,
+        "status": 1,
+        "gasUsed": "51414",
+        "contractAddress": null,
+        "confirmationsAtQuery": 455
+      },
+      "comparison": {
+        "stepTransactionHashMatchesReceipt": true,
+        "canonicalTransactionHashMatches": true,
+        "blockNumberMatches": true,
+        "journalBlockHashWasZero": true,
+        "journalBlockHashMatchesCanonical": false,
+        "statusMatches": true,
+        "gasUsedMatches": true,
+        "journalContractAddressMatchesExpected": true,
+        "canonicalContractAddressMatchesTransactionKind": true,
+        "contractAddressEvidenceMatches": true,
+        "recordedFieldsMatch": true,
+        "canonicalBlockHashSupplementsZeroPlaceholder": true,
+        "reconciled": true
+      }
+    },
+    {
+      "index": 18,
+      "label": "engine.renounceRole(0x8a4778feaa2fc65ebc9ddd026461f05b6522e206b955ca87f94c0eebfa8bcb2c)",
+      "kind": "call",
+      "transactionHash": "0x9018c6ef18eca1ad81cb1f8a55f7d9cc9e0f1102c2b8311c2e87c54ac997cd2f",
+      "journal": {
+        "transactionHash": "0x9018c6ef18eca1ad81cb1f8a55f7d9cc9e0f1102c2b8311c2e87c54ac997cd2f",
+        "blockNumber": 49719001,
+        "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "status": 1,
+        "gasUsed": "25114",
+        "contractAddress": null,
+        "expectedContractAddress": null
+      },
+      "canonical": {
+        "transactionHash": "0x9018c6ef18eca1ad81cb1f8a55f7d9cc9e0f1102c2b8311c2e87c54ac997cd2f",
+        "blockNumber": 49719001,
+        "blockHash": "0x3924881d6ba959cdc7c2e01bdbc43b3c867b20db929d735858e90e5b74555cb7",
+        "transactionIndex": 27,
+        "status": 1,
+        "gasUsed": "25114",
+        "contractAddress": null,
+        "confirmationsAtQuery": 454
+      },
+      "comparison": {
+        "stepTransactionHashMatchesReceipt": true,
+        "canonicalTransactionHashMatches": true,
+        "blockNumberMatches": true,
+        "journalBlockHashWasZero": true,
+        "journalBlockHashMatchesCanonical": false,
+        "statusMatches": true,
+        "gasUsedMatches": true,
+        "journalContractAddressMatchesExpected": true,
+        "canonicalContractAddressMatchesTransactionKind": true,
+        "contractAddressEvidenceMatches": true,
+        "recordedFieldsMatch": true,
+        "canonicalBlockHashSupplementsZeroPlaceholder": true,
+        "reconciled": true
+      }
+    },
+    {
+      "index": 19,
+      "label": "engine.renounceRole(0xe1dcbdb91df27212a29bc27177c840cf2f819ecf2187432e1fac86c2dd5dfca9)",
+      "kind": "call",
+      "transactionHash": "0x0be88b3a7272ac0bcda47d2dc095d91f2f7c7e3083e4b18decd3a0048a50d921",
+      "journal": {
+        "transactionHash": "0x0be88b3a7272ac0bcda47d2dc095d91f2f7c7e3083e4b18decd3a0048a50d921",
+        "blockNumber": 49719001,
+        "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "status": 1,
+        "gasUsed": "25114",
+        "contractAddress": null,
+        "expectedContractAddress": null
+      },
+      "canonical": {
+        "transactionHash": "0x0be88b3a7272ac0bcda47d2dc095d91f2f7c7e3083e4b18decd3a0048a50d921",
+        "blockNumber": 49719001,
+        "blockHash": "0x3924881d6ba959cdc7c2e01bdbc43b3c867b20db929d735858e90e5b74555cb7",
+        "transactionIndex": 79,
+        "status": 1,
+        "gasUsed": "25114",
+        "contractAddress": null,
+        "confirmationsAtQuery": 454
+      },
+      "comparison": {
+        "stepTransactionHashMatchesReceipt": true,
+        "canonicalTransactionHashMatches": true,
+        "blockNumberMatches": true,
+        "journalBlockHashWasZero": true,
+        "journalBlockHashMatchesCanonical": false,
+        "statusMatches": true,
+        "gasUsedMatches": true,
+        "journalContractAddressMatchesExpected": true,
+        "canonicalContractAddressMatchesTransactionKind": true,
+        "contractAddressEvidenceMatches": true,
+        "recordedFieldsMatch": true,
+        "canonicalBlockHashSupplementsZeroPlaceholder": true,
+        "reconciled": true
+      }
+    },
+    {
+      "index": 20,
+      "label": "engine.renounceRole(0x76345641021c0e4c51a3e752176a1536de2809b273da674bb2f0ba00ce1f3023)",
+      "kind": "call",
+      "transactionHash": "0x7daff4d12e79a88495739bee2f4958f0fc250c02a0bbe7220c82bf8c1a73db9c",
+      "journal": {
+        "transactionHash": "0x7daff4d12e79a88495739bee2f4958f0fc250c02a0bbe7220c82bf8c1a73db9c",
+        "blockNumber": 49719002,
+        "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "status": 1,
+        "gasUsed": "25102",
+        "contractAddress": null,
+        "expectedContractAddress": null
+      },
+      "canonical": {
+        "transactionHash": "0x7daff4d12e79a88495739bee2f4958f0fc250c02a0bbe7220c82bf8c1a73db9c",
+        "blockNumber": 49719002,
+        "blockHash": "0x5f1f3ce1653e9a70951af74ae34960ad0ae3b16005851c8043324672f21d19f2",
+        "transactionIndex": 46,
+        "status": 1,
+        "gasUsed": "25102",
+        "contractAddress": null,
+        "confirmationsAtQuery": 453
+      },
+      "comparison": {
+        "stepTransactionHashMatchesReceipt": true,
+        "canonicalTransactionHashMatches": true,
+        "blockNumberMatches": true,
+        "journalBlockHashWasZero": true,
+        "journalBlockHashMatchesCanonical": false,
+        "statusMatches": true,
+        "gasUsedMatches": true,
+        "journalContractAddressMatchesExpected": true,
+        "canonicalContractAddressMatchesTransactionKind": true,
+        "contractAddressEvidenceMatches": true,
+        "recordedFieldsMatch": true,
+        "canonicalBlockHashSupplementsZeroPlaceholder": true,
+        "reconciled": true
+      }
+    },
+    {
+      "index": 21,
+      "label": "engine.renounceRole(0x0000000000000000000000000000000000000000000000000000000000000000)",
+      "kind": "call",
+      "transactionHash": "0xca624fa3e442654af073068bd838054da2783c874b9368b42c6c885bcd672e5f",
+      "journal": {
+        "transactionHash": "0xca624fa3e442654af073068bd838054da2783c874b9368b42c6c885bcd672e5f",
+        "blockNumber": 49719002,
+        "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "status": 1,
+        "gasUsed": "24730",
+        "contractAddress": null,
+        "expectedContractAddress": null
+      },
+      "canonical": {
+        "transactionHash": "0xca624fa3e442654af073068bd838054da2783c874b9368b42c6c885bcd672e5f",
+        "blockNumber": 49719002,
+        "blockHash": "0x5f1f3ce1653e9a70951af74ae34960ad0ae3b16005851c8043324672f21d19f2",
+        "transactionIndex": 95,
+        "status": 1,
+        "gasUsed": "24730",
+        "contractAddress": null,
+        "confirmationsAtQuery": 453
+      },
+      "comparison": {
+        "stepTransactionHashMatchesReceipt": true,
+        "canonicalTransactionHashMatches": true,
+        "blockNumberMatches": true,
+        "journalBlockHashWasZero": true,
+        "journalBlockHashMatchesCanonical": false,
+        "statusMatches": true,
+        "gasUsedMatches": true,
+        "journalContractAddressMatchesExpected": true,
+        "canonicalContractAddressMatchesTransactionKind": true,
+        "contractAddressEvidenceMatches": true,
+        "recordedFieldsMatch": true,
+        "canonicalBlockHashSupplementsZeroPlaceholder": true,
+        "reconciled": true
+      }
+    },
+    {
+      "index": 22,
+      "label": "rewardReserve.grantRole(0x0000000000000000000000000000000000000000000000000000000000000000)",
+      "kind": "call",
+      "transactionHash": "0xfb5b333ea026112d50a50c463e9f1b0973c057d772876a5110dfa42085248a41",
+      "journal": {
+        "transactionHash": "0xfb5b333ea026112d50a50c463e9f1b0973c057d772876a5110dfa42085248a41",
+        "blockNumber": 49719003,
+        "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "status": 1,
+        "gasUsed": "50805",
+        "contractAddress": null,
+        "expectedContractAddress": null
+      },
+      "canonical": {
+        "transactionHash": "0xfb5b333ea026112d50a50c463e9f1b0973c057d772876a5110dfa42085248a41",
+        "blockNumber": 49719003,
+        "blockHash": "0x6a9d46b7781839bbc8d0768c321c8bc66e761ad102e4de95f0e047be3b776935",
+        "transactionIndex": 54,
+        "status": 1,
+        "gasUsed": "50805",
+        "contractAddress": null,
+        "confirmationsAtQuery": 452
+      },
+      "comparison": {
+        "stepTransactionHashMatchesReceipt": true,
+        "canonicalTransactionHashMatches": true,
+        "blockNumberMatches": true,
+        "journalBlockHashWasZero": true,
+        "journalBlockHashMatchesCanonical": false,
+        "statusMatches": true,
+        "gasUsedMatches": true,
+        "journalContractAddressMatchesExpected": true,
+        "canonicalContractAddressMatchesTransactionKind": true,
+        "contractAddressEvidenceMatches": true,
+        "recordedFieldsMatch": true,
+        "canonicalBlockHashSupplementsZeroPlaceholder": true,
+        "reconciled": true
+      }
+    },
+    {
+      "index": 23,
+      "label": "rewardReserve.grantRole(0xa49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c21775)",
+      "kind": "call",
+      "transactionHash": "0x48eaca2eee6cd49c6434bd07a43ab71f8b003afc260908d0bee6a69e4f091ca2",
+      "journal": {
+        "transactionHash": "0x48eaca2eee6cd49c6434bd07a43ab71f8b003afc260908d0bee6a69e4f091ca2",
+        "blockNumber": 49719004,
+        "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "status": 1,
+        "gasUsed": "51189",
+        "contractAddress": null,
+        "expectedContractAddress": null
+      },
+      "canonical": {
+        "transactionHash": "0x48eaca2eee6cd49c6434bd07a43ab71f8b003afc260908d0bee6a69e4f091ca2",
+        "blockNumber": 49719004,
+        "blockHash": "0xdca2b969fb0d77ab4e962a85b07317dba09ef0138408bff936263694f78eecb9",
+        "transactionIndex": 23,
+        "status": 1,
+        "gasUsed": "51189",
+        "contractAddress": null,
+        "confirmationsAtQuery": 451
+      },
+      "comparison": {
+        "stepTransactionHashMatchesReceipt": true,
+        "canonicalTransactionHashMatches": true,
+        "blockNumberMatches": true,
+        "journalBlockHashWasZero": true,
+        "journalBlockHashMatchesCanonical": false,
+        "statusMatches": true,
+        "gasUsedMatches": true,
+        "journalContractAddressMatchesExpected": true,
+        "canonicalContractAddressMatchesTransactionKind": true,
+        "contractAddressEvidenceMatches": true,
+        "recordedFieldsMatch": true,
+        "canonicalBlockHashSupplementsZeroPlaceholder": true,
+        "reconciled": true
+      }
+    },
+    {
+      "index": 24,
+      "label": "rewardReserve.grantRole(0x2fea1a28c05b383fc406d9136ae317989418b8e17fadd9583b0ab97c4fa64333)",
+      "kind": "call",
+      "transactionHash": "0x4ae84ac9f91f96fa793e5ae2fa51e284c39f982268d4edc7dc1c821ac358e3a0",
+      "journal": {
+        "transactionHash": "0x4ae84ac9f91f96fa793e5ae2fa51e284c39f982268d4edc7dc1c821ac358e3a0",
+        "blockNumber": 49719004,
+        "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "status": 1,
+        "gasUsed": "51189",
+        "contractAddress": null,
+        "expectedContractAddress": null
+      },
+      "canonical": {
+        "transactionHash": "0x4ae84ac9f91f96fa793e5ae2fa51e284c39f982268d4edc7dc1c821ac358e3a0",
+        "blockNumber": 49719004,
+        "blockHash": "0xdca2b969fb0d77ab4e962a85b07317dba09ef0138408bff936263694f78eecb9",
+        "transactionIndex": 69,
+        "status": 1,
+        "gasUsed": "51189",
+        "contractAddress": null,
+        "confirmationsAtQuery": 451
+      },
+      "comparison": {
+        "stepTransactionHashMatchesReceipt": true,
+        "canonicalTransactionHashMatches": true,
+        "blockNumberMatches": true,
+        "journalBlockHashWasZero": true,
+        "journalBlockHashMatchesCanonical": false,
+        "statusMatches": true,
+        "gasUsedMatches": true,
+        "journalContractAddressMatchesExpected": true,
+        "canonicalContractAddressMatchesTransactionKind": true,
+        "contractAddressEvidenceMatches": true,
+        "recordedFieldsMatch": true,
+        "canonicalBlockHashSupplementsZeroPlaceholder": true,
+        "reconciled": true
+      }
+    },
+    {
+      "index": 25,
+      "label": "rewardReserve.renounceRole(0x0000000000000000000000000000000000000000000000000000000000000000)",
+      "kind": "call",
+      "transactionHash": "0x0262d1d8e055d82d9e78120b33475f1fd386119aeb13387b4a4f714881a97f92",
+      "journal": {
+        "transactionHash": "0x0262d1d8e055d82d9e78120b33475f1fd386119aeb13387b4a4f714881a97f92",
+        "blockNumber": 49719005,
+        "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "status": 1,
+        "gasUsed": "24483",
+        "contractAddress": null,
+        "expectedContractAddress": null
+      },
+      "canonical": {
+        "transactionHash": "0x0262d1d8e055d82d9e78120b33475f1fd386119aeb13387b4a4f714881a97f92",
+        "blockNumber": 49719005,
+        "blockHash": "0xf62cf1c8ae19d84a92b79612727ae5622f083d6693a48b58348eda9b749425dd",
+        "transactionIndex": 28,
+        "status": 1,
+        "gasUsed": "24483",
+        "contractAddress": null,
+        "confirmationsAtQuery": 450
+      },
+      "comparison": {
+        "stepTransactionHashMatchesReceipt": true,
+        "canonicalTransactionHashMatches": true,
+        "blockNumberMatches": true,
+        "journalBlockHashWasZero": true,
+        "journalBlockHashMatchesCanonical": false,
+        "statusMatches": true,
+        "gasUsedMatches": true,
+        "journalContractAddressMatchesExpected": true,
+        "canonicalContractAddressMatchesTransactionKind": true,
+        "contractAddressEvidenceMatches": true,
+        "recordedFieldsMatch": true,
+        "canonicalBlockHashSupplementsZeroPlaceholder": true,
+        "reconciled": true
+      }
+    },
+    {
+      "index": 26,
+      "label": "rewardReserve.renounceRole(0xa49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c21775)",
+      "kind": "call",
+      "transactionHash": "0x2df0f23d58b3a39c100e95e5894db585af99e9ac0183708a2a0a2e9bf5865aa0",
+      "journal": {
+        "transactionHash": "0x2df0f23d58b3a39c100e95e5894db585af99e9ac0183708a2a0a2e9bf5865aa0",
+        "blockNumber": 49719005,
+        "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "status": 1,
+        "gasUsed": "24867",
+        "contractAddress": null,
+        "expectedContractAddress": null
+      },
+      "canonical": {
+        "transactionHash": "0x2df0f23d58b3a39c100e95e5894db585af99e9ac0183708a2a0a2e9bf5865aa0",
+        "blockNumber": 49719005,
+        "blockHash": "0xf62cf1c8ae19d84a92b79612727ae5622f083d6693a48b58348eda9b749425dd",
+        "transactionIndex": 84,
+        "status": 1,
+        "gasUsed": "24867",
+        "contractAddress": null,
+        "confirmationsAtQuery": 450
+      },
+      "comparison": {
+        "stepTransactionHashMatchesReceipt": true,
+        "canonicalTransactionHashMatches": true,
+        "blockNumberMatches": true,
+        "journalBlockHashWasZero": true,
+        "journalBlockHashMatchesCanonical": false,
+        "statusMatches": true,
+        "gasUsedMatches": true,
+        "journalContractAddressMatchesExpected": true,
+        "canonicalContractAddressMatchesTransactionKind": true,
+        "contractAddressEvidenceMatches": true,
+        "recordedFieldsMatch": true,
+        "canonicalBlockHashSupplementsZeroPlaceholder": true,
+        "reconciled": true
+      }
+    },
+    {
+      "index": 27,
+      "label": "rewardReserve.renounceRole(0x2fea1a28c05b383fc406d9136ae317989418b8e17fadd9583b0ab97c4fa64333)",
+      "kind": "call",
+      "transactionHash": "0x8be3588be499cdea9d59e5b7ad5572fd8bbaa459b99e759c00481a9f5feb1ea2",
+      "journal": {
+        "transactionHash": "0x8be3588be499cdea9d59e5b7ad5572fd8bbaa459b99e759c00481a9f5feb1ea2",
+        "blockNumber": 49719006,
+        "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "status": 1,
+        "gasUsed": "24867",
+        "contractAddress": null,
+        "expectedContractAddress": null
+      },
+      "canonical": {
+        "transactionHash": "0x8be3588be499cdea9d59e5b7ad5572fd8bbaa459b99e759c00481a9f5feb1ea2",
+        "blockNumber": 49719006,
+        "blockHash": "0x0cab2fb89bffa5b1a370e43a78d8328529ba9f914fe04a367f4d4891c08c4828",
+        "transactionIndex": 49,
+        "status": 1,
+        "gasUsed": "24867",
+        "contractAddress": null,
+        "confirmationsAtQuery": 449
+      },
+      "comparison": {
+        "stepTransactionHashMatchesReceipt": true,
+        "canonicalTransactionHashMatches": true,
+        "blockNumberMatches": true,
+        "journalBlockHashWasZero": true,
+        "journalBlockHashMatchesCanonical": false,
+        "statusMatches": true,
+        "gasUsedMatches": true,
+        "journalContractAddressMatchesExpected": true,
+        "canonicalContractAddressMatchesTransactionKind": true,
+        "contractAddressEvidenceMatches": true,
+        "recordedFieldsMatch": true,
+        "canonicalBlockHashSupplementsZeroPlaceholder": true,
+        "reconciled": true
+      }
+    },
+    {
+      "index": 28,
+      "label": "hook.transferOwnership",
+      "kind": "call",
+      "transactionHash": "0xb11a143b07ad68add1ee19284e9e762ab4f465fbeccdac4f677f55a31d678580",
+      "journal": {
+        "transactionHash": "0xb11a143b07ad68add1ee19284e9e762ab4f465fbeccdac4f677f55a31d678580",
+        "blockNumber": 49719006,
+        "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "status": 1,
+        "gasUsed": "48569",
+        "contractAddress": null,
+        "expectedContractAddress": null
+      },
+      "canonical": {
+        "transactionHash": "0xb11a143b07ad68add1ee19284e9e762ab4f465fbeccdac4f677f55a31d678580",
+        "blockNumber": 49719006,
+        "blockHash": "0x0cab2fb89bffa5b1a370e43a78d8328529ba9f914fe04a367f4d4891c08c4828",
+        "transactionIndex": 110,
+        "status": 1,
+        "gasUsed": "48569",
+        "contractAddress": null,
+        "confirmationsAtQuery": 449
+      },
+      "comparison": {
+        "stepTransactionHashMatchesReceipt": true,
+        "canonicalTransactionHashMatches": true,
+        "blockNumberMatches": true,
+        "journalBlockHashWasZero": true,
+        "journalBlockHashMatchesCanonical": false,
+        "statusMatches": true,
+        "gasUsedMatches": true,
+        "journalContractAddressMatchesExpected": true,
+        "canonicalContractAddressMatchesTransactionKind": true,
+        "contractAddressEvidenceMatches": true,
+        "recordedFieldsMatch": true,
+        "canonicalBlockHashSupplementsZeroPlaceholder": true,
+        "reconciled": true
+      }
+    },
+    {
+      "index": 29,
+      "label": "vault.transferOwnership",
+      "kind": "call",
+      "transactionHash": "0xe3c461eefcb8f0b868214851988acbab80bbe6b76be42d540ddaa31bc810a735",
+      "journal": {
+        "transactionHash": "0xe3c461eefcb8f0b868214851988acbab80bbe6b76be42d540ddaa31bc810a735",
+        "blockNumber": 49719007,
+        "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "status": 1,
+        "gasUsed": "48767",
+        "contractAddress": null,
+        "expectedContractAddress": null
+      },
+      "canonical": {
+        "transactionHash": "0xe3c461eefcb8f0b868214851988acbab80bbe6b76be42d540ddaa31bc810a735",
+        "blockNumber": 49719007,
+        "blockHash": "0xcf5207dad94f76e8b482fb1e8baf7dfd1d66525d81d4205080f5668a5f879ba3",
+        "transactionIndex": 47,
+        "status": 1,
+        "gasUsed": "48767",
+        "contractAddress": null,
+        "confirmationsAtQuery": 448
+      },
+      "comparison": {
+        "stepTransactionHashMatchesReceipt": true,
+        "canonicalTransactionHashMatches": true,
+        "blockNumberMatches": true,
+        "journalBlockHashWasZero": true,
+        "journalBlockHashMatchesCanonical": false,
+        "statusMatches": true,
+        "gasUsedMatches": true,
+        "journalContractAddressMatchesExpected": true,
+        "canonicalContractAddressMatchesTransactionKind": true,
+        "contractAddressEvidenceMatches": true,
+        "recordedFieldsMatch": true,
+        "canonicalBlockHashSupplementsZeroPlaceholder": true,
+        "reconciled": true
+      }
+    },
+    {
+      "index": 30,
+      "label": "create2Deployer.transferOwnership",
+      "kind": "call",
+      "transactionHash": "0xc8a826cf02f468dbf4d8a70bf743ae5595c94054ffa46b832ff56a479e83f20a",
+      "journal": {
+        "transactionHash": "0xc8a826cf02f468dbf4d8a70bf743ae5595c94054ffa46b832ff56a479e83f20a",
+        "blockNumber": 49719008,
+        "blockHash": "0x927416c5d583e2c25943caca2901b82fcbca7c65aa8b51c754431fa2f90f705f",
+        "status": 1,
+        "gasUsed": "28499",
+        "contractAddress": null,
+        "expectedContractAddress": null
+      },
+      "canonical": {
+        "transactionHash": "0xc8a826cf02f468dbf4d8a70bf743ae5595c94054ffa46b832ff56a479e83f20a",
+        "blockNumber": 49719008,
+        "blockHash": "0x927416c5d583e2c25943caca2901b82fcbca7c65aa8b51c754431fa2f90f705f",
+        "transactionIndex": 16,
+        "status": 1,
+        "gasUsed": "28499",
+        "contractAddress": null,
+        "confirmationsAtQuery": 447
+      },
+      "comparison": {
+        "stepTransactionHashMatchesReceipt": true,
+        "canonicalTransactionHashMatches": true,
+        "blockNumberMatches": true,
+        "journalBlockHashWasZero": false,
+        "journalBlockHashMatchesCanonical": true,
+        "statusMatches": true,
+        "gasUsedMatches": true,
+        "journalContractAddressMatchesExpected": true,
+        "canonicalContractAddressMatchesTransactionKind": true,
+        "contractAddressEvidenceMatches": true,
+        "recordedFieldsMatch": true,
+        "canonicalBlockHashSupplementsZeroPlaceholder": false,
+        "reconciled": true
+      }
+    }
+  ]
+}

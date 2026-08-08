@@ -1,0 +1,60 @@
+{
+  "version": "1.0",
+  "chainId": "8453",
+  "createdAt": 1786228116506,
+  "meta": {
+    "name": "NARA v4 fresh-core Hook and Vault ownership acceptance",
+    "description": "The production 2-of-3 Safe accepts the pending Hook and Vault ownership transfers. Execute both calls as one reviewed Safe batch before compounder deployment or pool registration.",
+    "txBuilderVersion": "1.18.0",
+    "createdFromSafeAddress": "0xd65c0e390Dc187A22c52c03816591CC736C0D755",
+    "createdFromOwnerAddress": ""
+  },
+  "transactions": [
+    {
+      "to": "0x59AEf9799DEA01A7FB7dA73BEA10dfB08858A088",
+      "value": "0",
+      "data": "0x79ba5097",
+      "contractMethod": null,
+      "contractInputsValues": null
+    },
+    {
+      "to": "0xD7f7b44BF65EBa3E90fDe0642687ed22A323084D",
+      "value": "0",
+      "data": "0x79ba5097",
+      "contractMethod": null,
+      "contractInputsValues": null
+    }
+  ],
+  "naraEvidence": {
+    "status": "UNEXECUTED",
+    "originCommit": "027af3f06bbe6dea2c187dfd8062e50c228f1c35",
+    "manifest": "deployments/v4-base-usdc-2026-08-08T22-16-06-220Z.json",
+    "safe": "0xd65c0e390Dc187A22c52c03816591CC736C0D755",
+    "safeThreshold": "2 of 3",
+    "safeCodeHash": "0xd7d408ebcd99b2b70be43e20253d6d92a8ea8fab29bd3be7f55b10032331fb4c",
+    "hook": "0x59AEf9799DEA01A7FB7dA73BEA10dfB08858A088",
+    "vault": "0xD7f7b44BF65EBa3E90fDe0642687ed22A323084D",
+    "acceptOwnershipSelector": "0x79ba5097",
+    "preStateVerifiedAtBlock": 49719370,
+    "preState": {
+      "hookOwner": "0xAE9D1667B45558232BeD9d45DcCA53940F892aB5",
+      "hookPendingOwner": "0xd65c0e390Dc187A22c52c03816591CC736C0D755",
+      "vaultOwner": "0xAE9D1667B45558232BeD9d45DcCA53940F892aB5",
+      "vaultPendingOwner": "0xd65c0e390Dc187A22c52c03816591CC736C0D755",
+      "safeBalanceEth": "0.006828181612837052",
+      "hookAcceptOwnershipEthCallFromSafe": "success",
+      "vaultAcceptOwnershipEthCallFromSafe": "success"
+    },
+    "postExecutionChecks": [
+      "Hook.owner() equals the production Safe",
+      "Hook.pendingOwner() equals the zero address",
+      "Vault.owner() equals the production Safe",
+      "Vault.pendingOwner() equals the zero address",
+      "Hook remains unregistered",
+      "Pool remains uninitialized and unseeded",
+      "Vault.compounder() remains the zero address until the separately reviewed compounder step"
+    ],
+    "invariant": "Ownership acceptance does not register, initialize, or seed the pool and does not configure a compounder.",
+    "operation": "Both transactions are normal CALL operations from the Safe, never DelegateCall."
+  }
+}

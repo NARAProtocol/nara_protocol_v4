@@ -2,10 +2,12 @@
 
 ## Current security posture
 
-NARA v4 has a controlled Stage A deployment on Base. The token, engine, reward
-reserve, liquidity hook, liquidity vault, and compounder are deployed. The
-registered NARA/USDC pool remains uninitialized, official liquidity has not been
-added, and public locking and reward use have not been activated.
+NARA v4 has a fresh core deployment on Base from the immutable release commit
+identified in `docs/CURRENT_STATE.md`. The token, engine, reward reserve,
+liquidity hook, liquidity vault, and CREATE2 Hook deployer are deployed and
+source-verified. The Compounder is not deployed or configured. The NARA/USDC
+pool is unregistered, uninitialized, and unseeded; no official liquidity or LP
+NFT exists, and public locking and reward use have not been activated.
 
 Deployment does not imply activation, audit completion, economic safety, or a
 recommendation to transact. Canonical state and addresses are maintained in
@@ -83,7 +85,8 @@ The repository includes:
 - Slither and Aderyn runners;
 - deployable-bytecode and initcode size enforcement;
 - optional Base-fork tests for Uniswap v4 integration;
-- sanitized Stage A deployment manifests.
+- a sanitized fresh-core deployment manifest and canonical receipt
+  reconciliation.
 
 At the latest publication preparation pass:
 
@@ -100,9 +103,9 @@ formal verification, or a warranty.
 
 ## Operational limitations
 
-The current Stage A administrator and treasury custody must be evaluated
-separately from contract correctness. Current limitations, including dormant
-pool state and custody requirements, are documented in
+The current Safe, pending Hook/Vault ownership acceptance, and treasury custody
+must be evaluated separately from contract correctness. Current limitations,
+including dormant pool state and custody requirements, are documented in
 [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md).
 
 Never:

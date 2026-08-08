@@ -1,15 +1,15 @@
 # NARA v4 — Whole-Project Scope (Cold-AI Start Here)
 
-> **2026-08-08 v4-only release correction:** [CURRENT_STATE.md](CURRENT_STATE.md)
+> **2026-08-09 v4-only release checkpoint:** [CURRENT_STATE.md](CURRENT_STATE.md)
 > is the state authority. The experimental protocol V5 proposal and its source,
-> tests, scripts, and plans are deleted and must not be restored. The next
-> candidate must be a fresh, complete v4 deployment from one immutable reviewed
-> origin commit, followed by a new verified manifest and explicit downstream
-> handoffs. Controlled Stage A and the 2026-07-30 pool are historical
+> tests, scripts, and plans are deleted and must not be restored. The fresh v4
+> core is deployed and source-verified from one immutable reviewed origin
+> commit with a new verified manifest and receipt reconciliation. Pool
+> activation and downstream handoffs remain pending. Controlled Stage A and the 2026-07-30 pool are historical
 > incident/recovery evidence only; none of their addresses may be reused in the
 > candidate manifest or consumer configuration.
 
-Last updated: 2026-08-08. Produced by a full scope-coherence audit and updated
+Last updated: 2026-08-09. Produced by a full scope-coherence audit and updated
 for the fixed-v4 relaunch.
 
 **Audience:** any AI (Claude, GPT, Gemini, Cursor, Codex, …) or human starting cold on this workspace.
@@ -28,11 +28,13 @@ NARA v4 is a fixed-supply (1,000,000) time-preference protocol on Base. You lock
 weight → earn NARA + ETH rewards per epoch. **A lock *is* an NFT** (`NARAPositionNFTV4`).
 Pool fees initially compound protocol-owned liquidity. The **five pillars** are: **Token, Engine,
 Liquidity (the taxed Uniswap v4 pool), the NFT lock layer, and Baskets** (the brand front door).
-The source candidate is v4-only. A fresh full-v4 deployment, immutable origin
-commit, verified deployment manifest, receipt-pinned evidence, and downstream
-handoffs do not yet exist. Historical Stage A and 2026-07-30 deployments are
-recovery evidence, not reusable release components. The publishable Baskets app
-remains in preview; Lockboard is deferred, while Lotto and Arena are retired.
+The source candidate is v4-only. The fresh core deployment, immutable origin
+commit, verified deployment manifest, and receipt reconciliation now exist.
+Hook/Vault ownership acceptance, the Compounder, atomic pool activation, smoke
+evidence, and downstream handoffs do not. Historical Stage A and 2026-07-30
+deployments are recovery evidence, not reusable release components. The
+publishable Baskets app remains in preview; Lockboard is deferred, while Lotto
+and Arena are retired.
 
 ---
 
