@@ -76,6 +76,14 @@ jobs:
             --output /tmp/aderyn-installer.sh
           echo "6c005c222681f1349caa31aa7c9d55b0fd0ae779c0faad65e8eaa6dc872f8faf  /tmp/aderyn-installer.sh" | sha256sum --check
           sh /tmp/aderyn-installer.sh
+      - name: Install pinned Solidity 0.8.34 for Aderyn
+        run: |
+          mkdir -p "$HOME/.svm/0.8.34"
+          curl --proto '=https' --tlsv1.2 --fail --silent --show-error --location \
+            https://binaries.soliditylang.org/linux-amd64/solc-linux-amd64-v0.8.34+commit.80d5c536 \
+            --output "$RUNNER_TEMP/solc-0.8.34"
+          echo "d40adc6f9fdbb22a97d32a02fa05688bf2ee7886affc48c9851b0afd4a726b39  $RUNNER_TEMP/solc-0.8.34" | sha256sum --check
+          install -m 0755 "$RUNNER_TEMP/solc-0.8.34" "$HOME/.svm/0.8.34/solc-0.8.34"
       - name: Aderyn (v4 contracts)
         run: aderyn --src contracts/v4 .
         env:
@@ -87,6 +95,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
       - name: Echidna (v4 engine property harness)
         uses: crytic/echidna-action@f7e374e42bf7131f7307a92f5549ed6b2fd17c9d # v2.0.2
         with:
@@ -95,3 +108,4 @@ jobs:
           config: echidna/v4-engine.yaml
           echidna-version: v2.3.3
           solc-version: 0.8.34
+          solc-args: --base-path . --include-path node_modules
