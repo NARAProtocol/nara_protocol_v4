@@ -1,21 +1,32 @@
 # Locking on NARA v4 — User Guide
 
-Last updated: 2026-07-28.
-Audience: anyone who wants to lock NARA and earn rewards.
+Last updated: 2026-08-09.
+Audience: future users and integrators reviewing the undeployed source design.
+
+> **PREVIEW / SOURCE-DESIGN GUIDE — NOT AN AVAILABLE PRODUCT FLOW.** The fresh
+> allocation layer, Position NFT, router, lens, and Lockboard are not deployed;
+> the Engine lifecycle smoke is pending. Do not follow the transaction steps or
+> send funds based on this document. Any future public flow requires verified
+> deployment evidence, current fee/risk disclosure, monitored exits, and
+> jurisdiction-specific qualified-counsel review.
 
 ---
 
-## What locking does
+## What the locking source is designed to do
 
-You deposit NARA for a fixed duration. You earn NARA emission and ETH rewards on every settled epoch. Your locked position is a tradable NFT — you can sell it without unlocking.
+If the allocation layer is later deployed and activated, source behavior locks
+NARA for a fixed duration and accounts variable NARA emission and contributed
+ETH across active weight. Rewards are not promised and can be zero. The source
+represents the position as an owner-transferable NFT; transferability does not
+guarantee marketplace support, liquidity, a buyer, or an exit.
 
 ---
 
-## Before you lock
+## Future user requirements
 
-- You need NARA tokens on Base.
-- You need a small amount of ETH on Base for gas (and a flat lock fee if enabled).
-- You need a wallet connected to Base (Base Smart Wallet, MetaMask, Coinbase Wallet, etc.).
+If a public flow is later deployed and activated, a user would need NARA on
+Base, ETH for gas and any disclosed fee, and a compatible Base wallet. Verify
+the deployed addresses and transaction review screen before taking any action.
 
 ---
 
@@ -31,21 +42,29 @@ Duration is measured in epochs. Default epoch length: 900 seconds (15 min).
 | 2,880 epochs | 30 days | ~2× |
 | 35,040 epochs | ~1 year | ~3× |
 
-Longer lock = more weight per NARA = more rewards per epoch. The relationship is quadratic, so doubling duration gives more than double the weight.
+Longer duration produces more modeled weight per NARA. That does not guarantee
+more rewards or any return. The source relationship is quadratic, so doubling
+duration produces more than double the modeled weight.
 
-**There is no early exit.** Your NARA is locked until `unlockEpoch`. The NFT representing your position is tradable at any time on any NFT marketplace.
+**The source provides no early principal exit.** NARA remains locked until
+`unlockEpoch`. NFT ownership is transferable, but marketplace availability and
+sale are not guaranteed.
 
 ---
 
 ## Activation delay
 
-After locking, your position is not immediately earning. There is an `activationDelayEpochs` (default: 3 epochs = 45 min) before your weight becomes active. You will see `0` claimable rewards until activation passes. This is expected.
+Source behavior applies `activationDelayEpochs` (configured as 3 epochs in the
+fresh Engine) before weight becomes active. This has not yet completed a
+receipt-pinned public lifecycle smoke.
 
 ---
 
-## How to lock (one-transaction path)
+## Planned one-transaction path (not deployed)
 
-The lockboard uses `NARARouter.syncAndLockWithPermit`. You sign one EIP-712 permit (no separate approve transaction) and the router handles permit + epoch sync + lock in a single transaction.
+The planned Lockboard flow uses `NARARouter.syncAndLockWithPermit`. The router,
+Position NFT, and Lockboard are not available from this release; the steps below
+are product-design notes, not transaction instructions.
 
 1. Open the lockboard.
 2. Enter amount and duration.
@@ -53,65 +72,70 @@ The lockboard uses `NARARouter.syncAndLockWithPermit`. You sign one EIP-712 perm
 4. Sign the permit in your wallet.
 5. Confirm the transaction. One signature, one tx.
 
-Your position NFT appears in your wallet immediately.
+The planned flow would mint a position NFT if every deployment and transaction
+gate succeeds.
 
 ---
 
-## How to lock (manual two-step path, for EOA users without Base Smart Wallet)
+## Source-level manual path (not authorized for production use)
 
 1. Approve `NARAEngine` for your NARA amount (or approve `NARARouter`).
 2. Call `engine.lock(amount, durationEpochs, minWeight)` or `router.syncAndLockWithPermit(...)`.
 
 ---
 
-## Understanding your position
+## Planned position data
 
-Your NFT contains:
+The Position NFT source exposes:
 - `positionId` — global engine ID for the lock.
 - `amount` — NARA locked (after lock fee if any).
-- `weight` — your earning power. Higher = more rewards per epoch.
-- `activationEpoch` — when earning starts.
+- `weight` — the modeled accounting weight; it does not promise rewards.
+- `activationEpoch` — when source accounting can become active.
 - `unlockEpoch` — when you can exit.
 
-Read all of this in one call:
+The undeployed lens source is designed to read this in one call:
 ```
 NARADashboardLens.getUserState(yourAddress, [positionId], [])
 ```
 
 ---
 
-## Claiming rewards
+## Reward-claim source behavior
 
-Rewards accumulate every epoch. You can claim at any time before unlock.
+After activation, the Engine source can account claimable amounts per settled
+epoch. Amounts are variable and can be zero.
 
-Active reward streams:
-- **NARA emission** — protocol distributes from the sealed 650,000 NARA reserve based on your weight share.
-- **ETH rewards** — from bond purchases and external notifiers (`notifyEthRewards()`).
+Source-supported streams:
+
+- **NARA emission** — accounted from the sealed 650,000 NARA reserve by active
+  weight; and
+- **ETH rewards** — accounted only after ETH is actually contributed through
+  the Engine entry point.
 
 The engine's arbitrary ERC-20 reward path is disabled for this deployment. No
 vault, router, Safe, or EOA should hold `REWARD_NOTIFIER_ROLE`.
 
-Claiming does not affect your lock. Your position continues earning after you claim.
+Source claims do not change the principal lock term.
 
 ---
 
-## Extending your lock
+## Extension source behavior
 
-You can extend the duration of an active position before it matures. Extending:
-- Settles all accrued rewards first (you collect what you've earned).
+The source can extend an active position before maturity. Extension:
+
+- settles accrued accounting first;
 - Increases `unlockEpoch` by `additionalEpochs`.
 - Recomputes your weight at the new duration.
 
-Extending settles accumulated rewards and keeps the existing position active.
-It also delays the date when the principal can be unlocked. Review the new
-unlock epoch and weight before confirming; the interface must not present
+Extension delays the date when principal can be unlocked. Any future UI must
+show the new unlock epoch and weight before confirmation and must not present
 extension as a recommended choice.
 
 ---
 
-## Unlocking
+## Unlock source behavior
 
-When `settledEpoch >= unlockEpoch`, your position is matured. Call `unlock()` (or the NFT's `unlockTo()`):
+When `settledEpoch >= unlockEpoch`, source calls `unlock()` or `unlockTo()` can:
 - Returns your NARA principal.
 - Forwards any remaining unclaimed rewards.
 - Burns the NFT.
@@ -119,23 +143,28 @@ When `settledEpoch >= unlockEpoch`, your position is matured. Call `unlock()` (o
 
 ---
 
-## Selling your position NFT
+## Position NFT transferability
 
-If you need liquidity before maturity: list your position NFT on any ERC-721 marketplace (OpenSea, Blur, etc.). The buyer inherits the position and all future rewards. The underlying engine position stays locked — selling the NFT does not unlock the NARA.
+The source makes position-NFT ownership transferable while the underlying
+Engine position remains locked. This is not a recommendation or evidence that
+any marketplace will support the NFT, that a buyer exists, or that a transfer
+provides liquidity or an exit.
 
 ---
 
 ## Epoch stale errors
 
-If the protocol hasn't been used in over 8 epochs (2 hours), user-facing transactions auto-advance up to 8 epochs. If backlog is larger, the lockboard calls `router.syncEpochs()` before your action — silently, in the same batch.
-
-If you see an `EpochStale` error:
-1. The app should handle this automatically via `router.syncEpochs()`.
-2. If it doesn't, manually call `router.syncEpochs()` to clear backlog.
+Engine user writes can auto-advance up to 8 epochs. A larger backlog produces
+an `EpochStale` condition. The undeployed router source exposes `syncEpochs()`,
+but this guide does not authorize manual production calls; follow the current
+operations runbook and deployed interfaces only after activation.
 
 ---
 
-## Fees
+## Source fee parameters
+
+These are source/configuration concepts, not a current transaction quote. A
+future confirmation must read live values and show all fees before signing.
 
 | Fee | Type | Notes |
 |---|---|---|
@@ -147,13 +176,15 @@ All ETH fees go to treasury (not burned). NARA fees reduce your locked amount.
 
 ---
 
-## Key contracts
+## Source contracts and deployment status
 
-| Contract | What you interact with |
+| Contract | Current status |
 |---|---|
-| `NARARouter` | `syncAndLockWithPermit()`, `syncEpochs()` |
-| `NARAEngine` | Underlying lock/claim/unlock (called via router or NFT) |
-| `NARAPositionNFTV4` | Your position NFT; `claimRewards()`, `unlockTo()`, `extend()` |
-| `NARADashboardLens` | `getUserState()`, `getEpochState()`, `previewLock()` |
+| `NARARouter` | Source tested; not deployed |
+| `NARAEngine` | Deployed; public lifecycle smoke pending |
+| `NARAPositionNFTV4` | Source tested; fresh allocation deployment pending |
+| `NARADashboardLens` | Source tested; not deployed |
 
-ABIs: `apps/nara-lockboard/src/shared/nara.ts`.
+ABI authority: generated artifacts under `artifacts/contracts/v4/` from the
+eventual merged origin commit. The deferred Lockboard is not an address or ABI
+authority.

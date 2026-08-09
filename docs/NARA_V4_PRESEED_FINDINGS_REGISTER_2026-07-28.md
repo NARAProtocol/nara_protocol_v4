@@ -9,8 +9,10 @@ pre-seed findings. It is not a current execution checkpoint. The fresh pool was
 later registered, initialized, seeded, and live-tested on 2026-08-09; the
 verified Compounder was deployed and wired. Current authority is
 `CURRENT_STATE.md` and
-`deployments/v4-production-activation-2026-08-09.json`. Compounder validation,
-freeze, Engine epoch recovery, and downstream product gates remain pending.
+`deployments/v4-compounder-activation-2026-08-09.json`. Same-block tax
+evidence, Engine epoch recovery, and Compounder validation/freeze are now
+receipt-pinned. Recurring operations, Engine lifecycle smoke, and downstream
+product gates remain pending.
 
 ## Status Summary
 
