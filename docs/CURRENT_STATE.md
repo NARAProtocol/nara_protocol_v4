@@ -345,9 +345,11 @@ active liquidity to zero, cleared `pendingRecovery`, and left the sealed
 reconciliation differed by one raw unit (`1e-18 NARA`) from integer rounding.
 
 The completed recovery is anchored by the transaction and state reads above.
-The operator-local `NARA_V4_LIQUIDITY_WITHDRAWAL_RUNBOOK.md` is not part of this
-protected release and must not be treated as repository authority until it
-enters through its own review.
+The reviewed
+[NARA_V4_LIQUIDITY_WITHDRAWAL_RUNBOOK.md](NARA_V4_LIQUIDITY_WITHDRAWAL_RUNBOOK.md)
+preserves the historical read-only builder, immutable fork reconciliation, and
+do-not-replay boundary. It is evidence for the retired stack, never a current
+deployment manifest.
 Do not replay the consumed Safe batch, restore its pending state, or treat the
 historical addresses or recovered assets as a fresh-v4 manifest. This evidence
 authorizes no further transaction or redeployment.
