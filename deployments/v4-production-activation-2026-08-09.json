@@ -1,0 +1,421 @@
+{
+  "schemaVersion": "1.0.0",
+  "changeId": "NARA-20260809-v4-production-activation",
+  "status": "POOL_ACTIVE_COMPOUNDER_VALIDATION_PENDING",
+  "network": {
+    "name": "Base",
+    "chainId": 8453
+  },
+  "source": {
+    "repository": "NARAProtocol/nara_protocol_v4",
+    "contractOriginCommit": "027af3f06bbe6dea2c187dfd8062e50c228f1c35",
+    "mergedCoreEvidenceCommit": "2e1ae7049228af1ae32dfd5e61c83506be502abf",
+    "preActivationManifest": "deployments/v4-base-usdc-latest.json",
+    "preActivationManifestStatus": "HISTORICAL_CORE_DEPLOYMENT_CHECKPOINT",
+    "note": "The pre-activation manifest is preserved unchanged. This artifact supersedes its dormant-pool state for current integrations."
+  },
+  "envSync": {
+    "chainId": "8453",
+    "originCommit": "027af3f06bbe6dea2c187dfd8062e50c228f1c35",
+    "deployer": "0xAE9D1667B45558232BeD9d45DcCA53940F892aB5",
+    "finalAdmin": "0xd65c0e390Dc187A22c52c03816591CC736C0D755",
+    "custodySafe": "0xd65c0e390Dc187A22c52c03816591CC736C0D755",
+    "treasury": "0xfe3A8678A9c729438BB11718bD1391E7Ab491E8e",
+    "launcher": "0xb8CF0274d0Fb2dB2Ba5dC58b0Ab378F3b8f35BA2",
+    "token": "0xB6333F5D4cEd8dffA80F3F13697D6aA3BB3f19c1",
+    "engine": "0x98ab6406D6B548F37dEF7110961bb45A399e5aFC",
+    "engineDeploymentBlock": 49718979,
+    "engineDeploymentTransactionHash": "0x00955909b2fc299fe010c72ecd9988dc8802ad0569a3964453287e221ff5076c",
+    "rewardReserve": "0x8369CEf28128A4B24Bc5ed52aA6196D92D563F2f",
+    "vault": "0xD7f7b44BF65EBa3E90fDe0642687ed22A323084D",
+    "create2HookDeployer": "0xDE9E3Cac08b7a31Db18c7432d4C45DF4584Fd646",
+    "hook": "0x59AEf9799DEA01A7FB7dA73BEA10dfB08858A088",
+    "safeCodeHash": "0xd7d408ebcd99b2b70be43e20253d6d92a8ea8fab29bd3be7f55b10032331fb4c",
+    "poolId": "0x83edced1f39e6adf7469cd718eeb409824d948959263408d4cfb6e745c8db464",
+    "poolFee": 3000,
+    "tickSpacing": 60,
+    "lpTokenId": "2898124",
+    "compounder": "0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF",
+    "poolManager": "0x498581fF718922c3f8e6A244956aF099B2652b2b",
+    "positionManager": "0x7C5f5A4bBd8fD63184577525326123B519429bDc",
+    "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+    "universalRouter": "0x6ff5693b99212da76ad316178a184ab56d299b43",
+    "usdc": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    "poolRegistered": true,
+    "poolInitialized": true,
+    "liquiditySeeded": true
+  },
+  "custody": {
+    "productionSafe": "0xd65c0e390Dc187A22c52c03816591CC736C0D755",
+    "safeVersion": "1.4.1",
+    "safeThreshold": 2,
+    "safeOwnerCount": 3,
+    "safeNonceAtReadback": 31,
+    "safeRuntimeCodeHash": "0xd7d408ebcd99b2b70be43e20253d6d92a8ea8fab29bd3be7f55b10032331fb4c",
+    "safeSingleton": "0x29fcB43b46531BcA003ddC8FCB67FFE91900C762",
+    "enabledModuleCount": 0,
+    "treasury": "0xfe3A8678A9c729438BB11718bD1391E7Ab491E8e"
+  },
+  "infrastructure": {
+    "usdc": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    "uniswapV4PoolManager": "0x498581fF718922c3f8e6A244956aF099B2652b2b",
+    "uniswapV4PositionManager": "0x7C5f5A4bBd8fD63184577525326123B519429bDc",
+    "uniswapUniversalRouter": "0x6ff5693b99212da76ad316178a184ab56d299b43",
+    "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+    "officialV4Quoter": "0x0d5e0F971ED27FBfF6c2837bf31316121532048D"
+  },
+  "contracts": {
+    "launcher": {
+      "address": "0xb8CF0274d0Fb2dB2Ba5dC58b0Ab378F3b8f35BA2",
+      "deploymentTransactionHash": "0xcce4ab3a2e1b8da44321dc2f6e3f42802416585d46b03b1569c991ca7cfa9d78",
+      "deploymentBlock": 49718976,
+      "runtimeCodeHash": "0x3b77f1af35a279a8de52e5fb9bd2637d0f163059c9ec5484d307c3ed6c21db27",
+      "sourceVerified": true
+    },
+    "token": {
+      "address": "0xB6333F5D4cEd8dffA80F3F13697D6aA3BB3f19c1",
+      "name": "NARA",
+      "symbol": "NARA",
+      "deploymentTransactionHash": "0x00955909b2fc299fe010c72ecd9988dc8802ad0569a3964453287e221ff5076c",
+      "deploymentBlock": 49718979,
+      "runtimeCodeHash": "0x62ef7f0bc66a248bd2f3ceb829b785ab8a02029b38ed1645dbac19dfd404d5fd",
+      "sourceVerified": true
+    },
+    "engine": {
+      "address": "0x98ab6406D6B548F37dEF7110961bb45A399e5aFC",
+      "deploymentTransactionHash": "0x00955909b2fc299fe010c72ecd9988dc8802ad0569a3964453287e221ff5076c",
+      "deploymentBlock": 49718979,
+      "runtimeCodeHash": "0x82e3d4e4558b2fafb29d3d9ffb9ac78076b9a4bcd03483bea6741d93bfcb11ee",
+      "sourceVerified": true
+    },
+    "rewardReserve": {
+      "address": "0x8369CEf28128A4B24Bc5ed52aA6196D92D563F2f",
+      "deploymentTransactionHash": "0x8406e7905839ba5c126969fb2b006e850b056fa888486eece553a14b562537d4",
+      "deploymentBlock": 49718982,
+      "runtimeCodeHash": "0x849f048990a6be674fa59307936f5171369042c4cbde43a3d4b5f7dae4c17941",
+      "fundedNara": "650000.0",
+      "sourceVerified": true
+    },
+    "liquidityVault": {
+      "address": "0xD7f7b44BF65EBa3E90fDe0642687ed22A323084D",
+      "deploymentTransactionHash": "0xea9845388d1bd22cd7f31214b7fe518a911e4777d53f3d726650632dd37e4af9",
+      "deploymentBlock": 49718988,
+      "runtimeCodeHash": "0x9f99df87819234a0a71b34bc961bb0aec70bb8f9bd1c906cc904c98b6d93fc27",
+      "owner": "0xd65c0e390Dc187A22c52c03816591CC736C0D755",
+      "pendingOwner": "0x0000000000000000000000000000000000000000",
+      "sourceVerified": true
+    },
+    "create2HookDeployer": {
+      "address": "0xDE9E3Cac08b7a31Db18c7432d4C45DF4584Fd646",
+      "deploymentTransactionHash": "0x80d7609555eb895706f9dfd4096edb8cf06fd26a68e508fbc24d0040081c55f3",
+      "deploymentBlock": 49718990,
+      "runtimeCodeHash": "0xf66603d80f8c2d1b32da7767761e2fd10c41290c7224d5632501c2d558468db6",
+      "sourceVerified": true
+    },
+    "liquidityHook": {
+      "address": "0x59AEf9799DEA01A7FB7dA73BEA10dfB08858A088",
+      "deploymentTransactionHash": "0x233ad46f29b97147ca50079e1eae2b9ae0ce9ae9a3746d697039d9e0e1e7aeae",
+      "deploymentBlock": 49718993,
+      "runtimeCodeHash": "0x951a143030ac1137db00219600e3249fc9b6a37f92202a3d0807453d9e63d885",
+      "permissionBits": "0x2088",
+      "owner": "0xd65c0e390Dc187A22c52c03816591CC736C0D755",
+      "pendingOwner": "0x0000000000000000000000000000000000000000",
+      "sourceVerified": true
+    },
+    "liquidityCompounder": {
+      "address": "0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF",
+      "deploymentTransactionHash": "0x8180bc9b7ec6f1e89719cb04cc358ad6e512c664e53aae810cb91abc3c00d461",
+      "deploymentBlock": 49720856,
+      "deploymentBlockHash": "0xb75c8ee32659b45057f18ff4208514cee6b2793e38499d7f1c3d47e1f0e54db5",
+      "runtimeCodeHash": "0x83bf0b0e8751027489245f0979427512578d28923d22b1b4a4260ad3b9e25128",
+      "runtimeCodeBytes": 13893,
+      "owner": "0xd65c0e390Dc187A22c52c03816591CC736C0D755",
+      "sourceVerified": true,
+      "sourceCompiler": "v0.8.34+commit.80d5c536",
+      "positionTokenId": "0",
+      "validated": false
+    }
+  },
+  "safeExecutions": {
+    "seedFunding": {
+      "transactionHash": "0xc44e7f4daabc3f1a0baef5f2c2fc3dc7b6d235f533c403649e1ff71ea9b91059",
+      "blockNumber": 49720389,
+      "blockHash": "0xcd6c5a4b0e7e1f1ef7cd3255923e517a417e45bf1fcd03e5b57f34038bfbe906",
+      "status": 1
+    },
+    "ownershipAcceptance": {
+      "safeNonce": 28,
+      "safeTransactionHash": "0x18c7f45b5521f727da6ccd7065e8bcd408918a016a4adffe5c1f8b82ef404650",
+      "transactionHash": "0x35320c5a5dfa31898d8a66e088038b67d1113bf6b95b82a230eaaf64be6f595d",
+      "blockNumber": 49720700,
+      "blockHash": "0xdc06315a9387829f6a6725e3a573b5599744529fe310a50eea0fefd688abe467",
+      "status": 1,
+      "gasUsed": "93053"
+    },
+    "compounderWiring": {
+      "safeNonce": 29,
+      "safeTransactionHash": "0x0466d7ee5d006d5252ce79444dae60ba69af89f06a38e5b23ecce160667239b4",
+      "transactionHash": "0x29727cf5578989932175bd4e672d193e38b580f50645dd3bfcc173b44b2e70da",
+      "blockNumber": 49721044,
+      "blockHash": "0x1a1a59c7d87dc5cd220aea4821bb431e017a3e13c7aae36c25bdc5ada1609662",
+      "status": 1,
+      "gasUsed": "143076"
+    },
+    "atomicPoolActivation": {
+      "safeNonce": 30,
+      "safeTransactionHash": "0x9c345bebbdb1a429aa13964996de69af3a7af4c913aa2dd90fb95fe4f6dc997f",
+      "transactionHash": "0xaeb7c3365354de633dde977d9b2c951b240f6b8ff8be090cdd989edc4c924799",
+      "blockNumber": 49721188,
+      "blockHash": "0x75c7867cd26113c5b04d603da1195119a664d805f4402995ac29540a91cde5aa",
+      "status": 1,
+      "gasUsed": "685280"
+    }
+  },
+  "pool": {
+    "poolId": "0x83edced1f39e6adf7469cd718eeb409824d948959263408d4cfb6e745c8db464",
+    "currency0": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    "currency1": "0xB6333F5D4cEd8dffA80F3F13697D6aA3BB3f19c1",
+    "fee": 3000,
+    "tickSpacing": 60,
+    "hook": "0x59AEf9799DEA01A7FB7dA73BEA10dfB08858A088",
+    "poolRegistered": true,
+    "poolInitialized": true,
+    "liquiditySeeded": true,
+    "openingSqrtPriceX96": "1120455419495722798374638764549163435",
+    "seedNara": "60000.0",
+    "seedUsdc": "300.0",
+    "lpNftTokenId": "2898124",
+    "lpOwner": "0xd65c0e390Dc187A22c52c03816591CC736C0D755",
+    "initialFullRangeLiquidity": "4242640687119285",
+    "activeLiquidityObservedByLiveMatrices": "4242640687119285"
+  },
+  "hookConfiguration": {
+    "protocolDepthRaw": {
+      "nara": "60000000000000000000000",
+      "usdc": "300000000"
+    },
+    "buyCurve": {
+      "mediumPressureBps": 500,
+      "highPressureBps": 1500,
+      "extremePressureBps": 3000,
+      "baseFeeBps": 500,
+      "mediumFeeBps": 800,
+      "highFeeBps": 1200,
+      "extremeFeeBps": 2000,
+      "maxFeeBps": 2000
+    },
+    "sellCurve": {
+      "mediumPressureBps": 500,
+      "highPressureBps": 1500,
+      "extremePressureBps": 3000,
+      "baseFeeBps": 500,
+      "mediumFeeBps": 700,
+      "highFeeBps": 1000,
+      "extremeFeeBps": 1500,
+      "maxFeeBps": 2000
+    }
+  },
+  "bindingsAndRoles": {
+    "launcherPublishesFreshTokenAndEngine": true,
+    "tokenFlashFeeSink": "0x98ab6406D6B548F37dEF7110961bb45A399e5aFC",
+    "engine": {
+      "nara": "0xB6333F5D4cEd8dffA80F3F13697D6aA3BB3f19c1",
+      "rewardReserve": "0x8369CEf28128A4B24Bc5ed52aA6196D92D563F2f",
+      "treasury": "0xfe3A8678A9c729438BB11718bD1391E7Ab491E8e",
+      "defaultAdminRoleHeldBySafe": true,
+      "paramRoleHeldBySafe": true,
+      "treasuryRoleHeldBySafe": true,
+      "deployerRetainsAnyOfThoseRoles": false,
+      "safeHasRewardNotifierRole": false,
+      "deployerHasRewardNotifierRole": false,
+      "vaultHasRewardNotifierRole": false
+    },
+    "rewardReserve": {
+      "tokenBindingExact": true,
+      "engineBindingExact": true,
+      "operationalRolesHeldBySafe": true,
+      "deployerRetainsOperationalRole": false
+    },
+    "vaultHookReciprocalBindingExact": true,
+    "compounder": {
+      "vault": "0xD7f7b44BF65EBa3E90fDe0642687ed22A323084D",
+      "poolManager": "0x498581fF718922c3f8e6A244956aF099B2652b2b",
+      "positionManager": "0x7C5f5A4bBd8fD63184577525326123B519429bDc",
+      "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+      "nara": "0xB6333F5D4cEd8dffA80F3F13697D6aA3BB3f19c1",
+      "usdc": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "hook": "0x59AEf9799DEA01A7FB7dA73BEA10dfB08858A088",
+      "poolId": "0x83edced1f39e6adf7469cd718eeb409824d948959263408d4cfb6e745c8db464",
+      "poolFee": 3000,
+      "tickSpacing": 60,
+      "peripheryBindingsValid": true,
+      "pendingRecoveryKind": "None"
+    }
+  },
+  "taxEvidence": {
+    "initialLiveFlow": [
+      {
+        "side": "BUY",
+        "transactionHash": "0x60b4a0a0e6dbb388bda3e9a8e5b81ac1983c0eeaa2f530189dd0898263ef019e",
+        "blockNumber": 49721189,
+        "blockHash": "0xa6f08d2149f5bab11c3057c1f2f62bd06b3820036644ab5a447c84b6158a3986",
+        "inputRaw": "94814404",
+        "hookFeeRaw": "9512880",
+        "terminalFeeBps": 2000
+      },
+      {
+        "side": "SELL",
+        "transactionHash": "0x0167bc7f58aa15aec7bc84b593a376102f5d3ea1d3516a74976c67daf287b84e",
+        "blockNumber": 49721262,
+        "blockHash": "0x811065427ef5e543a6ab5428a537c47389853524e9afceb07bb8de90b6f4ebfe",
+        "inputRaw": "13252292425121709957977",
+        "hookFeeRaw": "995229242512170995797",
+        "terminalFeeBps": 1000
+      }
+    ],
+    "buyMatrix": {
+      "status": "PASS",
+      "tradeCount": 20,
+      "amountsUsdc": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+      "totalUsdcSpent": "210.0",
+      "totalNaraReceived": "23232.666582171991724157",
+      "totalHookFeeUsdc": "10.95",
+      "allDistinctBlocks": true,
+      "allHookVaultTransferReconciliationsPassed": true,
+      "allowancesAfter": {
+        "erc20": "0",
+        "permit2": "0"
+      },
+      "trades": [
+        {"sequence": 1, "usdcIn": "1.0", "transactionHash": "0xd60290cb408f7cc00a4a0faece6e25a8c56f0eacd6976027e45e38e190967aca", "blockNumber": 49733325, "hookFeeUsdc": "0.05", "terminalFeeBps": 500},
+        {"sequence": 2, "usdcIn": "2.0", "transactionHash": "0x0088736ec26348b18febd4195ca49f5efb5591191283bb4b7959dd45367e2876", "blockNumber": 49733337, "hookFeeUsdc": "0.1", "terminalFeeBps": 500},
+        {"sequence": 3, "usdcIn": "3.0", "transactionHash": "0xa4440183db9f517dadea8b3fb26ca13b7661869fe7300f7660960d8f5d6e8489", "blockNumber": 49733348, "hookFeeUsdc": "0.15", "terminalFeeBps": 500},
+        {"sequence": 4, "usdcIn": "4.0", "transactionHash": "0x0deccb96e0d095358357a9c9cae807961128ab85583290158061d0be0c1e9e76", "blockNumber": 49733359, "hookFeeUsdc": "0.2", "terminalFeeBps": 500},
+        {"sequence": 5, "usdcIn": "5.0", "transactionHash": "0x8c9438c3f8815e426eb4084b06263452735839d56b3e15bb86d6e40a86e263cd", "blockNumber": 49733371, "hookFeeUsdc": "0.25", "terminalFeeBps": 500},
+        {"sequence": 6, "usdcIn": "6.0", "transactionHash": "0x78b2139f4c9e203b955730ddcff828e8ce7a7319ab1bf0ea8c0257315d4cd83a", "blockNumber": 49733382, "hookFeeUsdc": "0.3", "terminalFeeBps": 500},
+        {"sequence": 7, "usdcIn": "7.0", "transactionHash": "0x04c4f03e9011744efbfd20387d2474212542cc959cec6aec2fd87686b97001c4", "blockNumber": 49733393, "hookFeeUsdc": "0.35", "terminalFeeBps": 500},
+        {"sequence": 8, "usdcIn": "8.0", "transactionHash": "0xee48aa74f67f859a0ed9758282051a91b7c8471da9ad2c1ff1bf854f8ad04012", "blockNumber": 49733404, "hookFeeUsdc": "0.4", "terminalFeeBps": 500},
+        {"sequence": 9, "usdcIn": "9.0", "transactionHash": "0x2e9857b9bdd6b67bb53c3d3697405027b752eb593819e691b10578ebf622874d", "blockNumber": 49733416, "hookFeeUsdc": "0.45", "terminalFeeBps": 500},
+        {"sequence": 10, "usdcIn": "10.0", "transactionHash": "0xbe5c7daf7b72f9ae8ae843deb9a9011f91d66e6d59dda1060e7f069997850058", "blockNumber": 49733427, "hookFeeUsdc": "0.5", "terminalFeeBps": 500},
+        {"sequence": 11, "usdcIn": "11.0", "transactionHash": "0x14b141e8c8d027d38ba761cf0d6c522b4ac37f673ac7c345d6b7f309211b5da5", "blockNumber": 49733438, "hookFeeUsdc": "0.55", "terminalFeeBps": 500},
+        {"sequence": 12, "usdcIn": "12.0", "transactionHash": "0x0d010f64ddfbc7c3dd74c932a1bc6d11e712bec6c0c601b6636c36427a7a34ae", "blockNumber": 49733449, "hookFeeUsdc": "0.6", "terminalFeeBps": 500},
+        {"sequence": 13, "usdcIn": "13.0", "transactionHash": "0x736746b0292ff0494af72c5d55afa6df047fef96b65d4eb012a9db22144a7fba", "blockNumber": 49733461, "hookFeeUsdc": "0.65", "terminalFeeBps": 500},
+        {"sequence": 14, "usdcIn": "14.0", "transactionHash": "0xecb0f9f87b11a8bc727c4313ff4b413ab8ee53de34564caff2e950b20a814632", "blockNumber": 49733474, "hookFeeUsdc": "0.7", "terminalFeeBps": 500},
+        {"sequence": 15, "usdcIn": "15.0", "transactionHash": "0x59c5937c0f58715b049eafad1a1b7cb1b239487f1ee9f46e67194188f7116f83", "blockNumber": 49733485, "hookFeeUsdc": "0.75", "terminalFeeBps": 800},
+        {"sequence": 16, "usdcIn": "16.0", "transactionHash": "0x5d8644f5a85d15375f6e670c3eef946b2c5badce2b0cc911dfc9a93644e683b1", "blockNumber": 49733496, "hookFeeUsdc": "0.83", "terminalFeeBps": 800},
+        {"sequence": 17, "usdcIn": "17.0", "transactionHash": "0x1055623f48d3f53598a3d6211116edb91e6c5632f446384f98b0ed40f09261f1", "blockNumber": 49733508, "hookFeeUsdc": "0.91", "terminalFeeBps": 800},
+        {"sequence": 18, "usdcIn": "18.0", "transactionHash": "0x3f43df8f5bff3d7035f584d466eae39f70b8bf5a7b7a32b1983b904b44fcd740", "blockNumber": 49733521, "hookFeeUsdc": "0.99", "terminalFeeBps": 800},
+        {"sequence": 19, "usdcIn": "19.0", "transactionHash": "0xf3a849cbb03ac53e747e3670a2a57961080205321fdf8a143f82d0bb46fddeea", "blockNumber": 49733532, "hookFeeUsdc": "1.07", "terminalFeeBps": 800},
+        {"sequence": 20, "usdcIn": "20.0", "transactionHash": "0x6fd3814890802b0dcb3d022b8ca6b4d12f1ad91c1a144be8b0bdd43beb12d5b9", "blockNumber": 49733544, "hookFeeUsdc": "1.15", "terminalFeeBps": 800}
+      ]
+    },
+    "sellMatrix": {
+      "status": "PASS",
+      "tradeCount": 10,
+      "naraPerTrade": "1000.0",
+      "totalNaraSold": "10000.0",
+      "totalUsdcReceived": "105.533254",
+      "totalHookFeeNara": "500.0",
+      "allDistinctBlocks": true,
+      "allHookVaultTransferReconciliationsPassed": true,
+      "allowancesAfter": {
+        "erc20": "0",
+        "permit2": "0"
+      },
+      "trades": [
+        {"sequence": 1, "naraIn": "1000.0", "transactionHash": "0xae0b79f0b94154ed466bf5106ba4a41c84d5aaf788855913bda85523ffd73ddc", "blockNumber": 49733851, "hookFeeNara": "50.0", "terminalFeeBps": 500},
+        {"sequence": 2, "naraIn": "1000.0", "transactionHash": "0xf336f1fb74ebf0b7c3c066a41d128faf43c3e391bd6726eb09875c3493c3e0b4", "blockNumber": 49733867, "hookFeeNara": "50.0", "terminalFeeBps": 500},
+        {"sequence": 3, "naraIn": "1000.0", "transactionHash": "0xe6125f6b8b3a7471c3f7124a4beb57d47eeeb4d1b841d8d8b58ce7d541321510", "blockNumber": 49733879, "hookFeeNara": "50.0", "terminalFeeBps": 500},
+        {"sequence": 4, "naraIn": "1000.0", "transactionHash": "0x74ee4ce35b90bb6423cf026a5a09a785063923b56c9c2193ddf0fdd35faaf557", "blockNumber": 49733895, "hookFeeNara": "50.0", "terminalFeeBps": 500},
+        {"sequence": 5, "naraIn": "1000.0", "transactionHash": "0xa396cb066ed17769b1feafb7f998b4d1202fddea19f58de55f5f7dd7ae9acfd2", "blockNumber": 49733907, "hookFeeNara": "50.0", "terminalFeeBps": 500},
+        {"sequence": 6, "naraIn": "1000.0", "transactionHash": "0x6ce79046597a012d214ab8cc6e5f5bb5ed3d09a3fce20ed3355088e6737d601c", "blockNumber": 49733920, "hookFeeNara": "50.0", "terminalFeeBps": 500},
+        {"sequence": 7, "naraIn": "1000.0", "transactionHash": "0x961b7fe4d3598c66b3fdb235d8073845affb5a81508badc2b5fc37fa375b9ca7", "blockNumber": 49733933, "hookFeeNara": "50.0", "terminalFeeBps": 500},
+        {"sequence": 8, "naraIn": "1000.0", "transactionHash": "0x2050bc6ac9cc1954797b5979aba3d2ebcdb655d5526dfc7a60c0eae8383cea44", "blockNumber": 49733948, "hookFeeNara": "50.0", "terminalFeeBps": 500},
+        {"sequence": 9, "naraIn": "1000.0", "transactionHash": "0xdbaa2ef544883ef02e7a5721bc1a337283831e93167d5940c2770fcbf9b3e524", "blockNumber": 49733963, "hookFeeNara": "50.0", "terminalFeeBps": 500},
+        {"sequence": 10, "naraIn": "1000.0", "transactionHash": "0x4c4063c1a80ca39bc98de277e101cb710fb68545ea9d2b5cc8cafd2050b0c20c", "blockNumber": 49733976, "hookFeeNara": "50.0", "terminalFeeBps": 500}
+      ]
+    }
+  },
+  "readback": {
+    "blockNumber": 49734252,
+    "blockHash": "0x697f1827305658b3b7ccd66dacd886760f14bed8bbd4403f44c9bdbeb82083fe",
+    "hook": {
+      "poolRegistered": true,
+      "registeredPoolId": "0x83edced1f39e6adf7469cd718eeb409824d948959263408d4cfb6e745c8db464",
+      "expectedSqrtPriceX96": "1120455419495722798374638764549163435"
+    },
+    "vault": {
+      "routeMode": "Liquidity",
+      "compounder": "0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF",
+      "compounderFrozen": false,
+      "totalTokenFeeRecordedRaw": "1495229242512170995797",
+      "totalBaseFeeRecordedRaw": "20462880",
+      "totalTokenCompoundedRaw": "0",
+      "totalBaseCompoundedRaw": "0",
+      "totalTokenRoutedToEngineRaw": "0",
+      "totalBaseRoutedToEngineRaw": "0",
+      "totalBaseRoutedToGenesisRaw": "0",
+      "naraBalanceRaw": "1495229242512170995797",
+      "usdcBalanceRaw": "20462880",
+      "feeCountersEqualBalances": true
+    },
+    "compounder": {
+      "positionTokenId": "0",
+      "totalNaraAddedRaw": "0",
+      "totalUsdcAddedRaw": "0",
+      "totalLiquidityAddedRaw": "0",
+      "compounderFrozen": false
+    }
+  },
+  "engineOperationsReadback": {
+    "blockNumber": 49734434,
+    "blockHash": "0x85bd4c875516fd7033117cf65a0ac5292c467cba596b3771c4c4fe262ef8f546",
+    "epochLengthSeconds": 900,
+    "currentEpoch": 34,
+    "storedEpoch": 4,
+    "backlogEpochs": 30,
+    "maxJitAdvancePerUserCall": 8,
+    "availabilityImpact": "USER_WRITES_CAN_REVERT_EPOCH_STALE_UNTIL_BACKLOG_IS_ADVANCED",
+    "maintainerWorkflowEnabled": false
+  },
+  "poolMarketReadback": {
+    "blockNumber": 49734313,
+    "blockHash": "0xd88680bc0d46e0e8bdd8bb7833ff3214a00d398acd3415bfec74b25acbd99ca7",
+    "sqrtPriceX96": "844204016952362872747479521205035909",
+    "tick": 323647,
+    "lpFee": 3000,
+    "activeLiquidity": "4242640687119285",
+    "note": "The traded price is expected to differ from the immutable opening-price bound after swaps."
+  },
+  "releaseBoundary": {
+    "poolTrading": "ACTIVE_FOR_SUPPORTED_EXACT_INPUT_NARA_USDC_SWAPS",
+    "taxEvidence": "PASS_FOR_RECORDED_INITIAL_FLOW_AND_20_BUY_PLUS_10_SELL_MATRICES",
+    "compounder": "DEPLOYED_AND_WIRED_BUT_NOT_VALIDATED_OR_FROZEN",
+    "feeInventory": "BANKED_NOT_COMPOUNDED",
+    "baskets": "PREVIEW_ONLY",
+    "monitor": "DOWNSTREAM_HANDOFF_PENDING",
+    "allocationsAndPeriphery": "NOT_EVIDENCED_BY_THIS_MANIFEST",
+    "overallProductionReady": false
+  },
+  "localVerification": {
+    "hardhatPassing": 556,
+    "optInBaseForkPending": 5,
+    "liveConfigAndEnvSyncFocusedPassing": 19,
+    "gitDiffCheckPassed": true,
+    "changedFileSecretScanPassed": true
+  },
+  "remainingGates": [
+    "Advance and receipt-pin the Engine epoch backlog before any user-facing core write path is described as available.",
+    "Execute and receipt-reconcile the separately reviewed Compounder validation flow.",
+    "Only after validation, execute and verify the irreversible Vault Compounder freeze.",
+    "Merge this origin evidence through protected CI before updating downstream address-bearing consumers.",
+    "Reconcile baskets and monitor in release order; keep the basket app preview-only until its own verified deployment manifests exist.",
+    "Complete separately scoped allocations, routers, lenses, monitoring, and public-documentation publication before claiming full protocol availability."
+  ],
+  "privacy": {
+    "containsPrivateKey": false,
+    "containsRpcUrl": false,
+    "containsRpcCredential": false,
+    "containsTestWalletAddress": false
+  }
+}

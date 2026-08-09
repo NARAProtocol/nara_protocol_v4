@@ -2,14 +2,20 @@
 
 Change-ID: `NARA-20260731-compounder-validation`
 
-Current stop boundary (2026-08-09): the fresh Vault is empty, its Compounder is
-the zero address, Hook/Vault Safe ownership acceptance is pending, and the pool
-is unregistered, uninitialized, and unseeded. Do not use this runbook yet.
+Current boundary (2026-08-09): Hook and Vault ownership has been accepted by the
+production Safe; `NARALiquidityCompounderV4` at
+`0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF` is deployed, source-verified,
+wired, and Safe-owned; and the NARA/USDC pool is initialized and seeded. The
+Vault has recorded and banked `1495.229242512170995797 NARA` and
+`20.462880 USDC`. The Compounder remains unvalidated and unfrozen, with
+`positionTokenId == 0` and zero total compounded amounts. This runbook is the
+next gated operation; it does not authorize a transaction or workflow.
 
-After ownership acceptance, fresh Compounder deployment/wiring, atomic pool
-activation, and receipt verification, final launch gates remain blocked until
-one live compound is verified and the Safe performs the separate one-way
-freeze.
+Current activation authority is
+`deployments/v4-production-activation-2026-08-09.json` together with
+`docs/releases/NARA-20260809-v4-production-activation.md`. Final Compounder and
+maintenance gates remain blocked until one live compound is independently
+verified and the Safe performs the separate one-way freeze.
 
 ## Build The Validation Transaction
 

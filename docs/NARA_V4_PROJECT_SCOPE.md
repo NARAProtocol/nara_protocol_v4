@@ -1,13 +1,16 @@
 # NARA v4 — Whole-Project Scope (Cold-AI Start Here)
 
 > **2026-08-09 v4-only release checkpoint:** [CURRENT_STATE.md](CURRENT_STATE.md)
-> is the state authority. The experimental protocol V5 proposal and its source,
+> is the broader workspace state index. The experimental protocol V5 proposal and its source,
 > tests, scripts, and plans are deleted and must not be restored. The fresh v4
 > core is deployed and source-verified from one immutable reviewed origin
 > commit with a new verified manifest and receipt reconciliation. Pool
-> activation and downstream handoffs remain pending. Controlled Stage A and the 2026-07-30 pool are historical
-> incident/recovery evidence only; none of their addresses may be reused in the
-> candidate manifest or consumer configuration.
+> activation is confirmed; Compounder validation/freeze, allocations,
+> Engine epoch recovery, periphery, and downstream handoffs remain pending. Current activation
+> authority is `deployments/v4-production-activation-2026-08-09.json` together
+> with `docs/releases/NARA-20260809-v4-production-activation.md`. Controlled
+> Stage A and the 2026-07-30 pool are historical incident/recovery evidence
+> only; none of their addresses may be reused in consumer configuration.
 
 Last updated: 2026-08-09. Produced by a full scope-coherence audit and updated
 for the fixed-v4 relaunch.
@@ -26,15 +29,18 @@ outstanding, and how the pieces fit. It links out to the deeper docs rather than
 
 NARA v4 is a fixed-supply (1,000,000) time-preference protocol on Base. You lock NARA → get a
 weight → earn NARA + ETH rewards per epoch. **A lock *is* an NFT** (`NARAPositionNFTV4`).
-Pool fees initially compound protocol-owned liquidity. The **five pillars** are: **Token, Engine,
+Pool fees accrue in the Vault; balanced inventory is intended to compound
+protocol-owned liquidity only after Compounder validation. The **five pillars** are: **Token, Engine,
 Liquidity (the taxed Uniswap v4 pool), the NFT lock layer, and Baskets** (the brand front door).
 The source candidate is v4-only. The fresh core deployment, immutable origin
 commit, verified deployment manifest, and receipt reconciliation now exist.
-Hook/Vault ownership acceptance, the Compounder, atomic pool activation, smoke
-evidence, and downstream handoffs do not. Historical Stage A and 2026-07-30
-deployments are recovery evidence, not reusable release components. The
-publishable Baskets app remains in preview; Lockboard is deferred, while Lotto
-and Arena are retired.
+Hook/Vault Safe ownership, the deployed and wired Compounder, atomic pool
+activation, Safe-owned LP NFT `2898124`, and receipt-pinned buy/sell tax
+evidence now exist. The Compounder is still unvalidated and unfrozen with no
+position and zero compounded totals. The Engine is also 30 epochs behind at
+the pinned operations readback, beyond its eight-epoch JIT buffer. Allocations, periphery, and downstream
+handoffs remain separate; the publishable Baskets app remains in preview,
+Lockboard is deferred, and Lotto and Arena are retired.
 
 ---
 
@@ -129,8 +135,8 @@ writing contracts**:
 
 | Item | Type | Why it's not a code task |
 |---|---|---|
-| Create immutable v4 origin | **release** | Review and merge the exact source through protected CI; record the full 40-character commit |
-| Deploy and verify fresh full-v4 stack | **ops/capital** | Use human-approved inputs; never reuse Stage A or 2026-07-30 addresses or treat their manifests as defaults |
+| Publish the activation evidence downstream | **release** | Use only the activation manifest and release record cited at the top; consumer changes require explicit handoff |
+| Deploy allocations and periphery | **ops/capital** | Separate deployment scope; use human-approved inputs and verified manifests |
 | Validate and freeze compounder | **ops** | Use only the compounder bound to the fresh manifest's Hook/Vault pair; run live accounting checks before the one-way freeze |
 | Lock UI rebuilt for v4 | **deferred frontend** | Lockboard is not part of the baskets-only launch |
 | Baskets buy/sell UI | **frontend** | The public front door app |
@@ -151,8 +157,9 @@ writing contracts**:
 
 ```
 basket trades + pool tax
-   → fees route to engine (notifyEthRewards / depositRewards)
-   → lockers earn ETH + NARA
+   → NARA/USDC fees accrue in the LiquidityGrowthVault
+   → balanced inventory compounds LP only after Compounder validation
+   → separate ETH/NARA reward sources can fund lockers
    → demand to buy NARA and lock
    → pool deepens, tax compounds LP
    → baskets route cheaper → more volume → more fees → (loop)

@@ -7,7 +7,14 @@
 > Compounder, pool, role, or manifest addresses. This runbook requires one
 > immutable reviewed v4 origin commit and a new verified full-v4 manifest.
 
-Last updated: 2026-08-08.
+> **2026-08-09 execution boundary:** the fresh core, ownership acceptance,
+> Compounder deployment/wiring, and atomic pool seed described below have
+> already executed. Do not replay Steps 1 through 5. Resume only from the
+> current Engine epoch-recovery and Compounder-validation gates in
+> `CURRENT_STATE.md` and
+> `deployments/v4-production-activation-2026-08-09.json`.
+
+Last updated: 2026-08-09.
 Source of truth: `CURRENT_STATE.md`, `ROADMAP.md`, deploy scripts.  
 This doc turns the roadmap phases into a concrete command-by-command operator sequence.
 
@@ -43,7 +50,7 @@ Complete every item before running anything on Base mainnet.
 □ Deployer wallet has at least 0.001 ETH on Base and passes the deployment
   script's higher live-fee requirement when Base fees demand it.
 □ npm run build passes locally.
-□ npm run test passes locally (553 passing with 5 opt-in Base-fork cases pending
+□ npm run test passes locally (556 passing with 5 opt-in Base-fork cases pending
   as of 2026-08-09; run `npm test` for the live count).
 □ npm run size passes (all contract bytecodes under EVM limit).
 □ npm run slither:v4 passes.
@@ -384,7 +391,8 @@ ENGINE_V4=<engine_address> POSITION_NFT_V4=<nft_address> npm run deploy:v4:route
 **Output:** `deployments/router-lens-8453.json`
 
 **Deploys (five components):**
-- `NARARouter` — permit + sync + lock, permissionless `syncEpochs()`, keeper replacement
+- `NARARouter` — permit + bounded epoch sync + lock; it does not eliminate
+  operations when backlog exceeds the configured call plan
 - `NARADashboardLens` — single-call `getUserState()` for all frontends
 - `NARAPositionDataLensV1` — typed live-data surface for position NFTs
 - `NARAProtocolStatsLensV1` — one-call protocol-wide stats (clock, participation, real-yield, runway)
@@ -398,7 +406,7 @@ engine.
 // apps/nara-lockboard/src/shared/nara.ts
 NARA_ROUTER_ADDRESS = "<deployed>"
 NARA_LENS_ADDRESS   = "<deployed>"
-NARA_BRIBE_ROUTER_ADDRESS = "<deployed>"
+// BribeRouterV4 is intentionally not deployed for this Engine.
 ```
 
 ---

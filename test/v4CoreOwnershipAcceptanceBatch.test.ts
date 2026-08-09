@@ -111,8 +111,9 @@ describe("fresh v4 core ownership-acceptance Safe batch", function () {
     const evidence = loadJson<ReceiptReconciliation>(
       "deployments/v4-base-usdc-receipt-reconciliation-2026-08-08.json",
     );
+    const canonicalManifestBytes = readFileSync(manifestPath, "utf8").replace(/\r\n/g, "\n");
     const manifestHash = `0x${createHash("sha256")
-      .update(readFileSync(manifestPath))
+      .update(canonicalManifestBytes)
       .digest("hex")}`;
 
     expect(evidence.chain.chainId).to.equal(manifest.chainId);

@@ -2,12 +2,16 @@
 
 Last updated: 2026-08-09.
 
-> **Current-state override:** the fresh v4 core is deployed and source-verified
-> on Base mainnet and remains dormant. The pool is unregistered, uninitialized,
-> and unseeded; Safe ownership acceptance and the Compounder are pending. The
-> current product launch scope is NARA
-> Baskets only. Lockboard is deferred; Lotto and Arena are retired. This file
-> is product direction, not a deployment runbook. See [CURRENT_STATE.md](CURRENT_STATE.md).
+> **Current-state override:** the fresh v4 core and Compounder are deployed and
+> source-verified on Base mainnet. Hook/Vault ownership is accepted, and the
+> NARA/USDC pool is initialized and seeded with a Safe-owned LP NFT. Compounder
+> validation/freeze, Engine epoch recovery, allocations, periphery, and downstream handoffs remain
+> separate gates. The current product launch scope is NARA Baskets only;
+> Baskets remain preview-only, Lockboard is deferred, and Lotto and Arena are
+> retired. Current activation authority is
+> `deployments/v4-production-activation-2026-08-09.json` together with
+> `docs/releases/NARA-20260809-v4-production-activation.md`. This file is
+> product direction, not a deployment runbook.
 
 This roadmap is anchored to [CURRENT_STATE.md](CURRENT_STATE.md). Code and deployment scripts are the source of truth. If roadmap language conflicts with code, update the roadmap.
 
@@ -46,8 +50,15 @@ As of 2026-08-09:
 - Controlled Stage A and the 2026-07-30 pool are historical evidence only.
 - The fresh v4 core is deployed and source-verified from the immutable release
   commit recorded in `CURRENT_STATE.md`.
-- The fresh NARA/USDC pool is unregistered, uninitialized, and unseeded and has
-  no liquidity or LP NFT.
+- The fresh NARA/USDC pool is registered, initialized, and seeded with
+  `60,000 NARA + 300 USDC`; LP NFT `2898124` is Safe-owned.
+- Receipt-pinned buy and sell tax tests passed and Vault accounting reconciled.
+- The Vault has recorded and banked `1495.229242512170995797 NARA` and
+  `20.462880 USDC`; the Compounder remains unvalidated and unfrozen with no
+  position and zero compounded totals.
+- At block `49734434`, the Engine was 30 epochs behind, beyond its eight-epoch
+  JIT buffer. User-facing Engine writes remain an operations gate until the
+  backlog is advanced and receipt-pinned.
 - The current product launch scope is the NARA basket app only.
 - Do not repeat the core deployment.
 - Current v4 code uses `NARALiquidityGrowthHook` and `NARALiquidityGrowthVault`.
@@ -58,7 +69,7 @@ As of 2026-08-09:
 Latest verification — see [CURRENT_STATE.md](CURRENT_STATE.md#verification-evidence) for the
 commands and dated stamp. As of 2026-08-09:
 
-- Full Hardhat suite: 553 passing, with 5 opt-in Base-fork cases pending.
+- Full Hardhat suite: 556 passing, with 5 opt-in Base-fork cases pending.
 - Fresh deployment/receipt/Safe-batch evidence: 12 focused tests passing.
 - The most recent basket verification evidence is recorded separately in
   [CURRENT_STATE.md](CURRENT_STATE.md); rerun it before basket deployment.
@@ -98,12 +109,14 @@ commands and dated stamp. As of 2026-08-09:
 
 Status: active.
 
-Goal: keep the workspace synchronized while the fresh core and pool remain
-dormant and the activation gates are completed.
+Goal: keep the workspace synchronized to the activated fresh core and pool
+while the remaining Compounder, allocation, periphery, and downstream gates are
+completed.
 
 Deliverables:
 
-- [CURRENT_STATE.md](CURRENT_STATE.md) reflects v3 retirement, the retired v4 incident stack, and the fresh v4 deployment plan.
+- [CURRENT_STATE.md](CURRENT_STATE.md) reflects v3 retirement, the retired v4
+  incident stack, and the fresh v4 activation evidence and remaining gates.
 - [V4_DEPLOYMENT_HANDOFF.md](V4_DEPLOYMENT_HANDOFF.md) reflects current deploy scripts.
 - [V4_LAUNCH_CHECKLIST.md](V4_LAUNCH_CHECKLIST.md) reflects current launch gates.
 - [V4_REDEPLOY_NO_SURPRISE_PLAN.md](V4_REDEPLOY_NO_SURPRISE_PLAN.md) reflects current allocation and launch sequencing.
@@ -113,18 +126,20 @@ Success criteria:
 
 - No public doc presents retired v4 addresses as current.
 - No launch doc points at retired liquidity tax contracts as current code.
-- No launch doc says v4 is production-live before fresh deployment and verification.
+- No launch doc equates the confirmed core/liquidity activation with complete
+  product production readiness.
 
 ---
 
-## Phase 1: Fresh v4 Core Redeploy
+## Phase 1: Fresh v4 Core and Liquidity Activation
 
-Status: in progress. Fresh core deployment and source verification are complete;
-Hook/Vault Safe ownership acceptance, Compounder deployment/wiring, atomic pool
-launch, and smoke verification remain pending.
+Status: core deployment, source verification, Hook/Vault Safe ownership,
+Compounder deployment/wiring, atomic pool launch, and receipt-pinned buy/sell
+tax verification are complete. Compounder validation and the separate one-way
+freeze remain pending.
 
-Goal: complete the remaining ownership, Compounder, atomic pool, and smoke gates
-for the already deployed fresh v4 core.
+Goal: validate one live compound, reconcile the position and accounting
+evidence, and only then perform the Safe's permanent Compounder freeze.
 
 Required contracts:
 
@@ -133,6 +148,7 @@ Required contracts:
 - `NARAEngine`
 - `NARALiquidityGrowthVault`
 - `NARALiquidityGrowthHook`
+- `NARALiquidityCompounderV4`
 - `Create2HookDeployer`
 
 Completed core-deploy command — **do not rerun**:
@@ -141,33 +157,32 @@ Completed core-deploy command — **do not rerun**:
 npm run deploy:v4:base:usdc
 ```
 
-Remaining command path, with the Safe ownership and Compounder steps from the
-launch runbook inserted before the atomic batch:
+Remaining Compounder validation path; builders do not send transactions:
 
 ```bash
-npm run verify:v4:preseed
-npm run verify:v4:launch-gates:preseed
-npm run verify:v4:preflight
-npm run build:v4:atomic-pool-launch
-npm run smoke:v4
+npm run build:v4:compounder-validation
+npm run build:v4:compounder-validation -- --freeze
 ```
+
+The freeze builder is valid only after the separately executed live compound
+has produced and reconciled a nonzero position. Both operations workflows stay
+disabled until separately authorized.
 
 Success criteria:
 
-- `deployments/v4-base-usdc-latest.json` is written.
-- Fresh addresses are copied into `.env` before post-deploy scripts run.
-- Hook address low bits satisfy `0x2088`.
-- Hook token/base/vault match the fresh deployment.
-- Vault token/base/hook/engine match the fresh deployment.
-- NARA/USDC pool is registered and seeded.
-- Smoke test buy and sell both pass.
-- `NARALiquidityGrowthVault` balance deltas match expected hook-fee behavior.
+- Activation evidence remains pinned to the authoritative manifest and release
+  record cited above.
+- One live compound produces a nonzero Safe-reviewed position with reconciled
+  Vault and Compounder totals.
+- `freezeCompounder()` executes only after that evidence is verified.
+- No workflow is enabled without a new explicit authorization and
+  deployment-specific review.
 
 ---
 
 ## Phase 2: Allocation Layer And NFT Bonds
 
-Status: after fresh core smoke test.
+Status: pending as a separate deployment after the activated-liquidity evidence.
 
 Goal: deploy v4 allocation contracts and keep public bonds closed until reviewed.
 
@@ -217,7 +232,8 @@ Success criteria:
 
 ## Phase 3: Launch UX And State Visibility
 
-Status: after verified v4 addresses exist.
+Status: pending verified allocation/periphery addresses and explicit downstream
+handoff; the basket app remains preview-only.
 
 Goal: make fresh v4 understandable before promoting it.
 
@@ -244,7 +260,9 @@ Success criteria:
 
 ## Phase 4: Liquidity Growth Operations
 
-Status: after fresh core deployment and initial liquidity.
+Status: pool fees are live and banked, but maintenance is inactive pending one
+validated compound, the permanent Compounder freeze, and separate keeper/workflow
+authorization.
 
 Goal: operate `NARALiquidityGrowthVault` deliberately.
 
@@ -258,9 +276,11 @@ The `Engine` and `Split` enum values are unreachable and must remain disabled.
 
 Launch expectation:
 
-- Start in `Liquidity` mode to build depth.
-- Use `V4_SKIP_COMPOUNDER=1` if no reviewed compounder adapter exists.
-- Treat pool fees as parked in the vault until compounder or route-mode changes are reviewed.
+- Keep the current `Liquidity` mode.
+- Treat the wired Compounder as unusable for routine operations until the live
+  validation and permanent freeze gates pass.
+- Treat the recorded Vault fees as banked, not compounded POL, until on-chain
+  Compounder position and totals prove otherwise.
 
 Success criteria:
 
@@ -407,19 +427,18 @@ If users do not understand rewards:
 
 ## Near-Term Build Order
 
-1. Finish one-file-at-a-time documentation sync.
-2. Run full local verification.
-3. Run static analysis or record explicit waiver.
-4. Confirm deployment environment variables.
-5. Have the Safe accept fresh Hook/Vault ownership.
-6. Deploy, verify, and Safe-wire the fresh Compounder.
-7. Run pre-seed gates, then separately approve and execute the atomic pool
-   registration/initialization/seed batch.
-8. Run post-seed, Compounder-validation, and receipt-pinned smoke gates.
-9. Deploy and verify allocations with NFT bonds closed.
-10. Update frontend/monitor configuration only through explicit fresh-address
-    handoffs.
-11. Open public lock flow through `NARAPositionNFTV4` only after its gates.
-12. Open bonds only after terms, capacity, and roles are reviewed.
-13. Deploy composability only after core and allocation verification, then
+1. Finish documentation sync to the activation authority files.
+2. Build and independently review one bounded Compounder validation action.
+3. After Safe execution, reconcile the nonzero position, liquidity, custody,
+   and exact Vault/Compounder accounting.
+4. Only then build, review, and execute the permanent Compounder freeze.
+5. Keep both v4 operations workflows disabled until a new explicit order,
+   dedicated keeper review, and deployment-specific authorization.
+6. Deploy and verify allocations with NFT bonds closed.
+7. Deploy periphery separately and update frontend/monitor configuration only
+   through explicit fresh-address handoffs.
+8. Keep Baskets preview-only until its verified manifests and handoff exist.
+9. Open public lock flow through `NARAPositionNFTV4` only after its gates.
+10. Open bonds only after terms, capacity, and roles are reviewed.
+11. Deploy composability only after core and allocation verification, then
     validate SY before Pendle outreach.

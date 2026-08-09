@@ -6,6 +6,7 @@ import { ethers } from "ethers";
 import {
   buildFreshEnvEntries,
   collectHistoricalManifestValues,
+  envSyncDeployment,
   latestDeploymentFile,
   latestSeedLpTokenId,
   validateFresh,
@@ -73,6 +74,27 @@ function freshManifest(): Record<string, unknown> {
 }
 
 describe("fresh v4 env sync", () => {
+  it("selects the newest post-activation manifest ahead of the core checkpoint", () => {
+    const directory = mkdtempSync(join(tmpdir(), "nara-sync-activation-"));
+    try {
+      const activation = join(directory, "v4-production-activation-2026-08-09.json");
+      writeFileSync(join(directory, "v4-base-usdc-latest.json"), "{}\n");
+      writeFileSync(activation, "{}\n");
+
+      expect(latestDeploymentFile(directory)).to.equal(activation);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("uses the explicit envSync view from a post-activation manifest", () => {
+    const envSync = freshManifest();
+    const activation = { schemaVersion: "1.0.0", envSync };
+
+    expect(envSyncDeployment(activation)).to.equal(envSync);
+    expect(envSyncDeployment(envSync)).to.equal(envSync);
+  });
+
   it("always selects the canonical full-v4 manifest ahead of a replacement manifest", () => {
     const directory = mkdtempSync(join(tmpdir(), "nara-sync-select-"));
     try {
