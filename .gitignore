@@ -21,6 +21,7 @@ deployments/*
 !deployments/v4-pool-launch-2026-07-30.json
 !deployments/v4-production-activation-2026-08-09.json
 !deployments/v4-engine-epoch-recovery-2026-08-09.json
+!deployments/v4-compounder-activation-2026-08-09.json
 slither-reports/
 aderyn-reports/
 crytic-export/

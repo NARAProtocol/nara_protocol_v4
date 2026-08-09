@@ -3,16 +3,16 @@
 Change-ID: `NARA-20260731-liquidity-maintainer`
 
 Current stop boundary (2026-08-09): the fresh pool is initialized and seeded,
-and the Safe-owned Compounder at
-`0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF` is deployed and wired. It remains
-unvalidated and unfrozen, with `positionTokenId == 0` and zero total compounded
-amounts. The Engine also has a 30-epoch backlog at the activation readback,
-beyond its eight-epoch JIT buffer. Both v4 operations workflows and their repository enable variables
-are disabled. Do not schedule, dispatch, execute maintenance, or re-enable a
-workflow until the validation and freeze gates below pass under a new explicit
-order and deployment-specific review. Current activation authority is
+the Engine activation backlog is recovered, and Compounder validation/freeze
+completed under receipt-pinned Safe transactions. LP NFT `2898486` is
+Compounder-owned with liquidity `9455824137787`; unmatched inventory remains
+banked in the Compounder. Both v4 operations workflows and their repository
+enable variables are disabled. Do not schedule, dispatch, execute maintenance,
+or re-enable a workflow without a new explicit order, deployment-specific
+review, and keeper authorization. Current authority is
 `deployments/v4-production-activation-2026-08-09.json` together with
-`docs/releases/NARA-20260809-v4-production-activation.md`.
+`deployments/v4-compounder-activation-2026-08-09.json` and
+`docs/releases/NARA-20260809-v4-compounder-activation.md`.
 
 The hook collects NARA/USDC pool fees into the growth vault during live swaps.
 Those fees do not become liquidity inside the swap transaction. A second,
@@ -20,7 +20,10 @@ restricted `compoundAll()` transaction moves them through the bound compounder,
 adds the balanced portion as full-range protocol-owned liquidity, and banks any
 unbalanced remainder in the compounder for a later cycle.
 
-## Activation order
+## Completed one-time activation order
+
+The following sequence is historical and must not be replayed. It documents
+the separation between the validation and irreversible binding-freeze actions.
 
 1. Generate the validation batch immediately before Safe signing:
 

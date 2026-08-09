@@ -5,12 +5,15 @@ Prepared and verified: 2026-07-30. Current-state annotation: 2026-08-09.
 Status: the production Safe has accepted ownership of the fresh Hook and Vault
 and owns the deployed, source-verified, and wired Compounder at
 `0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF`. The fresh NARA/USDC pool is
-initialized and seeded; LP NFT `2898124` is Safe-owned. The Compounder remains
-unvalidated and unfrozen, with no position and zero compounded totals.
+initialized and seeded; LP NFT `2898124` is Safe-owned. The Compounder passed
+bounded validation, owns LP NFT `2898486` with liquidity `9455824137787`, and
+the Vault binding is permanently frozen to it. Recurring maintenance remains
+disabled.
 
 Current activation authority is
 `deployments/v4-production-activation-2026-08-09.json` together with
-`docs/releases/NARA-20260809-v4-production-activation.md`. Historical Stage A
+`deployments/v4-compounder-activation-2026-08-09.json` and
+`docs/releases/NARA-20260809-v4-compounder-activation.md`. Historical Stage A
 and 2026-07-30 addresses later in this handoff remain custody history, not
 active deployment targets.
 

@@ -11,18 +11,19 @@ immutable protected origin commit
 `027af3f06bbe6dea2c187dfd8062e50c228f1c35`. Human Safe signers subsequently
 accepted Hook/Vault ownership, deployed and wired the verified Compounder, and
 atomically registered, initialized, and seeded the canonical NARA/USDC pool.
-LP NFT `2898124` is Safe-owned. Recorded initial flow plus a 20-buy and 10-sell
-live matrix prove the Hook and Vault charged and reconciled every recorded
-supported exact-input transaction.
+LP NFT `2898124` is Safe-owned. Recorded initial flow, the 20-buy and 10-sell
+distinct-block matrix, and the later same-block 20-action buy plus exact
+20-action reversal prove the Hook and Vault charged and reconciled every
+recorded supported exact-input transaction.
 
-This is a pool-activation checkpoint, not a full protocol-availability or
-production-readiness claim. The Compounder has not been validation-compounded
-or frozen, all fee inventory remains banked, allocations/periphery are not
-evidenced by this release, and baskets remain preview-only. The Engine's
-activation backlog has been recovered, but recurring maintenance remains
-disabled. Canonical sanitized evidence is
-`deployments/v4-production-activation-2026-08-09.json` plus
-`deployments/v4-engine-epoch-recovery-2026-08-09.json`.
+This is a receipt-pinned liquidity activation checkpoint, not a full
+protocol-availability or production-readiness claim. The Compounder validation
+and separate permanent Vault binding freeze succeeded. Allocations/periphery
+are not evidenced by this release, recurring maintenance remains disabled, the
+Engine lifecycle smoke is pending, and baskets remain preview-only. Canonical
+sanitized evidence is `deployments/v4-production-activation-2026-08-09.json`,
+`deployments/v4-engine-epoch-recovery-2026-08-09.json`, and
+`deployments/v4-compounder-activation-2026-08-09.json`.
 
 ## Authoritative v4 release policy
 
@@ -40,9 +41,9 @@ disabled. Canonical sanitized evidence is
 - Same-block splits share one cumulative curve; waiting for another block resets
   pressure. This is an explicit Block-0/per-block policy, not rolling-window
   anti-splitting.
-- Fees are charged in the swap input currency. One-sided fee inventory remains
-  in the Vault until matching counterasset exists. A no-swap Compounder creates
-  POL only from balanced inventory.
+- Fees are charged in the swap input currency. Inventory initially accrues in
+  the Vault; after a compound call, any unmatched remainder is banked in the
+  no-swap Compounder. Only the balanced subset becomes active POL.
 - The v4 Engine ERC-20 notifier is prohibited. Fresh deployment tooling must
   prove `REWARD_NOTIFIER_ROLE` is absent from the custody Safe and fee Vault.
 - Baskets remain preview-only until verified fresh-v4 manifests and handoffs
@@ -55,9 +56,9 @@ change active v4 artifacts and is outside the liquidity remediation.
 ## Fresh Base v4 core deployment
 
 The core deployment was executed during the 2026-08-08 UTC / 2026-08-09 local
-release session on Base, chain ID `8453`. All seven deployed contracts below
-are source-verified on Basescan. The verification readback was pinned at Base
-block `49719008`.
+release session on Base, chain ID `8453`. The seven core contracts and the
+later Compounder listed below are source-verified on Basescan. The core
+verification readback was pinned at Base block `49719008`.
 
 | Component | Address | Current state |
 |---|---|---|
@@ -65,10 +66,10 @@ block `49719008`.
 | `NARAToken` | `0xB6333F5D4cEd8dffA80F3F13697D6aA3BB3f19c1` | Deployed and source-verified; name/symbol `NARA` / `NARA` |
 | `NARAEngine` | `0x98ab6406D6B548F37dEF7110961bb45A399e5aFC` | Deployed and source-verified |
 | `NARARewardReserve` | `0x8369CEf28128A4B24Bc5ed52aA6196D92D563F2f` | Deployed, source-verified, and funded with `650,000 NARA` |
-| `NARALiquidityGrowthVault` | `0xD7f7b44BF65EBa3E90fDe0642687ed22A323084D` | Source-verified; Safe-owned; Compounder wired; fees banked |
+| `NARALiquidityGrowthVault` | `0xD7f7b44BF65EBa3E90fDe0642687ed22A323084D` | Source-verified; Safe-owned; Compounder binding permanently frozen; balance zero at freeze block |
 | `Create2HookDeployer` | `0xDE9E3Cac08b7a31Db18c7432d4C45DF4584Fd646` | Deployed and source-verified; owned by the production Safe |
 | `NARALiquidityGrowthHook` | `0x59AEf9799DEA01A7FB7dA73BEA10dfB08858A088` | Source-verified; permission bits `0x2088`; Safe-owned; canonical pool registered |
-| `NARALiquidityCompounderV4` | `0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF` | Source-verified and Safe-owned; wired but unvalidated and unfrozen |
+| `NARALiquidityCompounderV4` | `0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF` | Source-verified and Safe-owned; validated; owns LP NFT `2898486` |
 
 Canonical pool ID:
 `0x83edced1f39e6adf7469cd718eeb409824d948959263408d4cfb6e745c8db464`.
@@ -96,11 +97,11 @@ Current custody and activation state:
   LP NFT `2898124` to the Safe with liquidity `4242640687119285`;
 - `Hook.poolRegistered()` is true and its registered PoolId matches the
   canonical PoolId above;
-- at readback block `49734252`, the Vault recorded and held exactly
-  `1,495.229242512170995797 NARA` and `20.462880 USDC`; routed and compounded
-  counters remained zero; and
-- the Compounder remained unfrozen with `positionTokenId() == 0`; validation
-  and the separate irreversible freeze are still outstanding.
+- at historical pre-validation readback block `49734252`, the Vault recorded
+  and held exactly `1,495.229242512170995797 NARA` and `20.462880 USDC`; routed
+  and compounded counters were then zero; and
+- the later validation and freeze state is recorded separately below and
+  supersedes that historical inventory snapshot.
 
 The initial live flow included a buy at transaction
 `0x60b4a0a0e6dbb388bda3e9a8e5b81ac1983c0eeaa2f530189dd0898263ef019e`
@@ -111,6 +112,46 @@ The later live matrix executed twenty distinct-block buys from `1` through
 transactions reconciled Hook events, Vault events, token transfers, receipt
 blocks, and zero ending ERC-20/Permit2 allowances. The buy matrix recorded
 `10.95 USDC` of Hook fees; the sell matrix recorded `500 NARA`.
+
+A subsequent live round-trip tested cumulative same-block pressure explicitly.
+One atomic Universal Router transaction executed twenty `3 USDC` buys in block
+`49735413`: `60 USDC` produced `5,476.535036293903312662 NARA` and exactly
+`4.95 USDC` of Hook fees, reaching the 12% terminal marginal buy tier. A second
+atomic transaction sold that exact NARA output through twenty actions in block
+`49735692`: it returned `51.878091 USDC` and charged exactly
+`323.357452540573231886 NARA`, reaching the 7% terminal marginal sell tier.
+For both receipts, twenty Hook events, twenty Vault records, and twenty
+PoolManager-to-Vault transfers reconciled exactly; active liquidity remained
+`4242640687119285`, and temporary ERC-20/Permit2 allowances ended at zero.
+
+The full receipt-pinned calculation, round-trip accounting, and evidence limits
+are documented in
+[NARA-20260809-v4-same-block-tax-round-trip.md](releases/NARA-20260809-v4-same-block-tax-round-trip.md).
+
+The production Safe then executed one bounded Compounder validation in Base
+transaction
+`0xf1ea7e7dfdf8e1021ceebf26a943cba604e0a8c894eec5f527bc01656b5890be`
+at block `49736646`. The transaction minted Compounder-owned LP NFT `2898486`
+with liquidity `9455824137787`, adding
+`99.999999999997037752 NARA + 0.894127 USDC` to active liquidity. The Safe
+executed the separate permanent Vault binding freeze in transaction
+`0xccd73cf07602f18412bea291812f0d171fa5cabd41fcff6b6894029978084ef3`
+at block `49736809`. At that freeze block:
+
+- seed LP NFT `2898124` remained Safe-owned with liquidity
+  `4242640687119285`;
+- total PoolManager active liquidity was `4252096511257072`, exactly the sum of
+  both positions;
+- Vault token balances and Vault-to-Compounder allowances were zero;
+- the Compounder banked the unmatched remainder of
+  `1718.586695052747189931 NARA + 24.518753 USDC`; and
+- `pendingRecovery.kind == 0`.
+
+Vault lifetime-compounded counters describe the full inventory handed to the
+exact-spend Compounder (`1818.586695052744227683 NARA + 25.412880 USDC`). They
+are not the actual LP inputs. The difference remains banked in the Compounder,
+not active liquidity. Full evidence is in
+[NARA-20260809-v4-compounder-activation.md](releases/NARA-20260809-v4-compounder-activation.md).
 
 The original core deployment evidence remains a historical pre-activation
 checkpoint. Its deployment receipt journal contains complete transaction
@@ -207,7 +248,7 @@ Current local evidence after remediation:
 
 | Gate | Result |
 |---|---|
-| Complete Hardhat suite | 556 passing on 2026-08-09; 5 opt-in Base-fork cases pending |
+| Complete Hardhat suite | 556 passing, 7 pending, 0 failing on 2026-08-09; pending cases require opt-in Base-fork environments |
 | Fresh deployment/receipt/Safe-batch evidence | 12 focused tests passing on 2026-08-09 |
 | Live Hook/Vault tax matrix | 20 buys + 10 sells; all receipt/event/transfer/fee proofs passed |
 | Current manifest/env synchronization | 19 focused live-config and env-sync tests passing; fresh Compounder and LP NFT exported |
@@ -289,8 +330,9 @@ authorizes no further transaction or redeployment.
 
 ## Release blockers
 
-The fresh NARA/USDC pool and tested exact-input swap/tax path are active, but
-the whole stack is not production-ready. Remaining gates include:
+The fresh NARA/USDC pool, tested exact-input swap/tax path, and bounded
+Compounder validation/freeze are active or complete as specifically documented,
+but the whole stack is not production-ready. Remaining gates include:
 
 1. Keep the Engine backlog within its eight-epoch JIT buffer and explicitly
    authorize a recurring maintenance path. Recovery transaction
@@ -298,19 +340,21 @@ the whole stack is not production-ready. Remaining gates include:
    advanced epochs `5..35`; at receipt block `49735161`, current and stored
    epochs were both `35`. At later pinned block `49735219`, the state was
    `36 / 35`, a one-epoch JIT-recoverable gap.
-2. Execute the separately reviewed Compounder validation transaction, then
-   reconcile its receipt-pinned exact-spend accounting, Vault counters,
-   remainders, position ownership, and nonzero added liquidity.
-3. Only after gate 2 passes, execute and verify the separate irreversible
-   `vault.freezeCompounder()` transaction. The current value is false.
-4. Merge the activation manifest and handoff through protected CI. Do not
+2. Complete and receipt-pin the Engine lock, activation, claim, and unlock
+   lifecycle smoke before describing public locking or reward use as available.
+3. Merge the activation manifests and handoff through protected CI. Do not
    update a consumer from this uncommitted or unmerged release tree.
-5. Reconcile basket and monitor consumers from the immutable origin evidence,
+4. Reconcile basket and monitor consumers from the immutable origin evidence,
    then publish the public documentation last. Baskets remain preview-only
    until their own verified deployment manifests exist.
-6. Resolve the later-phase allocation mismatch and complete any allocations,
+5. Resolve the later-phase allocation mismatch and complete any allocations,
    routers/lenses, monitoring deployment/indexing, and public availability
    gates separately.
+6. Complete the monitored observation period before any broader availability
+   claim.
+7. Obtain jurisdiction-specific qualified-counsel review of public copy and
+   value-bearing flows; technical evidence and disclaimers do not establish
+   legal compliance.
 
 The GitHub v4 operations and liquidity-maintainer workflows are disabled and
 their repository enable variables are false. No recurring v4 keeper is active;

@@ -10,9 +10,9 @@
 > **2026-08-09 execution boundary:** the fresh core, ownership acceptance,
 > Compounder deployment/wiring, and atomic pool seed described below have
 > already executed. Do not replay Steps 1 through 5. Resume only from the
-> current Engine epoch-recovery and Compounder-validation gates in
+> current Engine lifecycle-smoke and recurring-operations gates in
 > `CURRENT_STATE.md` and
-> `deployments/v4-production-activation-2026-08-09.json`.
+> `deployments/v4-compounder-activation-2026-08-09.json`.
 
 Last updated: 2026-08-09.
 Source of truth: `CURRENT_STATE.md`, `ROADMAP.md`, deploy scripts.  
@@ -50,7 +50,7 @@ Complete every item before running anything on Base mainnet.
 □ Deployer wallet has at least 0.001 ETH on Base and passes the deployment
   script's higher live-fee requirement when Base fees demand it.
 □ npm run build passes locally.
-□ npm run test passes locally (556 passing with 5 opt-in Base-fork cases pending
+□ npm run test passes locally (556 passing with 7 opt-in Base-fork cases pending
   as of 2026-08-09; run `npm test` for the live count).
 □ npm run size passes (all contract bytecodes under EVM limit).
 □ npm run slither:v4 passes.

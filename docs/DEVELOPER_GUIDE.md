@@ -9,8 +9,9 @@ Before reading an interface, read [`CURRENT_STATE.md`](CURRENT_STATE.md).
 
 NARA has three distinct engineering surfaces:
 
-1. deployed fresh-core and activated-liquidity contracts, with Compounder
-   validation/freeze and Engine epoch recovery still gated;
+1. deployed fresh-core and activated-liquidity contracts, with Engine epoch
+   recovery and Compounder validation/freeze receipt-pinned as complete but
+   recurring maintenance and Engine lifecycle smoke still gated;
 2. implemented and tested modules that are not deployed;
 3. historical contracts that are not active v4 code.
 
@@ -125,11 +126,13 @@ not hidden inside the adapter.
 
 The current fresh pool is registered, initialized, and seeded with
 `60,000 NARA + 300 USDC`. LP NFT `2898124` is Safe-owned, and receipt-pinned
-buy and sell tax tests passed. The wired Safe-owned Compounder remains
-unvalidated and unfrozen, with no position and zero compounded totals; do not
-describe fee inventory as compounded POL yet. Current activation authority is
-`deployments/v4-production-activation-2026-08-09.json` together with
-`docs/releases/NARA-20260809-v4-production-activation.md`.
+buy, sell, and same-block round-trip tax tests passed. The wired Safe-owned
+Compounder passed bounded validation and the Vault binding is permanently
+frozen. Compounder-owned LP NFT `2898486` has liquidity `9455824137787`;
+unmatched inventory remains banked in the Compounder and is not active POL.
+Current authority is `deployments/v4-production-activation-2026-08-09.json`
+together with `deployments/v4-compounder-activation-2026-08-09.json` and
+`docs/releases/NARA-20260809-v4-compounder-activation.md`.
 
 ## Extend periphery first
 

@@ -19,16 +19,19 @@ This is a context-loss-safe summary for agents entering the NARA workspace.
   accepted in transaction
   `0x35320c5a5dfa31898d8a66e088038b67d1113bf6b95b82a230eaaf64be6f595d`
   at block `49720700`.
-- The fresh Compounder is deployed at
-  `0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF` and wired to the Vault, but
-  validation, accounting reconciliation, and the irreversible freeze remain
-  pending. `positionTokenId()` is `0`.
+- The fresh Compounder at
+  `0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF` passed its bounded validation
+  in transaction
+  `0xf1ea7e7dfdf8e1021ceebf26a943cba604e0a8c894eec5f527bc01656b5890be`.
+  It owns LP NFT `2898486` with liquidity `9455824137787`; the Vault binding
+  was permanently frozen in transaction
+  `0xccd73cf07602f18412bea291812f0d171fa5cabd41fcff6b6894029978084ef3`.
 - The fresh NARA/USDC pool is registered, initialized, and seeded. Its PoolId is
   `0x83edced1f39e6adf7469cd718eeb409824d948959263408d4cfb6e745c8db464`;
   the initial LP NFT is `2898124` with liquidity `4242640687119285`.
-- Receipt-pinned live buy and sell tax matrices passed. This evidence is not an
-  overall production-readiness claim. Both recurring v4 workflows remain
-  disabled.
+- Receipt-pinned live buy/sell matrices and the same-block round trip passed.
+  This evidence is not an overall production-readiness claim. Both recurring
+  v4 workflows remain disabled, and the Engine lifecycle smoke is pending.
 - The Engine activation backlog was recovered through the Safe in transaction
   `0xcd6e52b319f21b5a6772a36cc076a5c6f8390dcd7326ab1adf822a16f6638493`.
   At receipt block `49735161`, `currentEpoch()` and `epochState.epoch` were both
@@ -48,12 +51,14 @@ inside the v4 contract family. It is not a protocol V5 stack.
 
 1. `AGENTS.md`
 2. `docs/CURRENT_STATE.md`
-3. `deployments/v4-production-activation-2026-08-09.json`
-4. `docs/releases/NARA-20260809-v4-production-activation.md`
-5. `docs/V4_NEXT_SESSION_HANDOFF.md`
-6. `docs/UNISWAP_V4_HOOK.md`
-7. `docs/V4_LAUNCH_CHECKLIST.md`
-8. `docs/NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md`
+3. `deployments/v4-compounder-activation-2026-08-09.json`
+4. `docs/releases/NARA-20260809-v4-compounder-activation.md`
+5. `deployments/v4-production-activation-2026-08-09.json`
+6. `docs/releases/NARA-20260809-v4-same-block-tax-round-trip.md`
+7. `docs/V4_NEXT_SESSION_HANDOFF.md`
+8. `docs/UNISWAP_V4_HOOK.md`
+9. `docs/V4_LAUNCH_CHECKLIST.md`
+10. `docs/NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md`
 
 ## Protocol shape
 
@@ -73,7 +78,8 @@ inside the v4 contract family. It is not a protocol V5 stack.
 - Same-block splits share one cumulative integral; a later block resets it.
 - This is Block-0/per-block pressure policy, not persistent anti-splitting.
 - Fees are taken in the input currency.
-- Buy-only USDC or sell-only NARA remains banked until matching inventory exists.
+- Buy-only USDC or sell-only NARA remains banked in the Vault or Compounder
+  until matching inventory exists.
 - A no-swap Compounder cannot produce active POL from one currency alone.
 - Configured protocol depth is the deterministic fee basis; live depth probing
   is telemetry.
@@ -101,9 +107,11 @@ inside the v4 contract family. It is not a protocol V5 stack.
 - Atomic pool seed transaction:
   `0xaeb7c3365354de633dde977d9b2c951b240f6b8ff8be090cdd989edc4c924799`,
   block `49721188`.
-- The Compounder has not yet minted its own POL position. Do not confuse the
-  initial seed LP NFT `2898124` with `Compounder.positionTokenId()`, which is
-  still `0`.
+- Do not confuse the Safe-owned seed LP NFT `2898124` with the
+  Compounder-owned POL LP NFT `2898486`. At the freeze block, their combined
+  active liquidity was `4252096511257072`. The Compounder separately banked
+  `1718.586695052747189931 NARA` and `24.518753 USDC`; those balances are not
+  active LP.
 
 ## Atomic release requirements
 

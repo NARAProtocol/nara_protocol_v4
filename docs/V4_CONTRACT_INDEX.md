@@ -17,7 +17,7 @@ Active sources live **only** in `contracts/v4/`. Everything else is archived/ret
 
 | Contract | Purpose | Doc |
 |---|---|---|
-| `NARAToken.sol` | Fixed-supply ERC-20 (1,000,000, mints once, no inflation). ERC-2612/1363/3156. | `PRD.md`, `CURRENT_STATE.md` |
+| `NARAToken.sol` | Fixed permanent-supply ERC-20 (1,000,000 minted once) with capped same-transaction ERC-3156 flash minting that must burn before completion. ERC-2612/1363/3156. | `PRD.md`, `CURRENT_STATE.md` |
 | `NARAEngine.sol` | Core epoch engine: lock → weight → NARA + ETH rewards. Contains an ERC-20 reward surface that is disabled for the deployed engine. JIT epoch advance (`MAX_JIT_ADVANCE = 8`). | `EMISSION_MECHANICS.md`, `LOCK_APY_REFERENCE.md`, `ENGINE_OPS_RUNBOOK.md` |
 | `NARAEngineTypes.sol` | Shared structs (`Position`) + errors (`NothingToClaim`). | inline |
 | `NARALauncher.sol` | Atomic CREATE2 deploy of token + engine (no half-wired state). | `NARA_V4_LAUNCH_RUNBOOK.md` |

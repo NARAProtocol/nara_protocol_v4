@@ -51,16 +51,19 @@ block when applicable, test results, and unresolved risks.
   was atomically seeded in Base transaction
   `0xaeb7c3365354de633dde977d9b2c951b240f6b8ff8be090cdd989edc4c924799`;
   Safe-owned LP NFT is `2898124`. Read
-  `deployments/v4-production-activation-2026-08-09.json` before using any
-  address.
-- **Activation boundary:** the pool/tax path is active and thirty sampled live
-  swaps reconciled, but the Compounder is unvalidated and unfrozen with no
-  Compounder LP position. Engine state is 30 epochs behind at the pinned
-  readback, beyond the eight-epoch JIT buffer. Baskets remain preview-only and
-  the operations/maintainer workflows remain disabled. Do not claim whole-stack
-  production readiness.
+  `deployments/v4-production-activation-2026-08-09.json` and
+  `deployments/v4-compounder-activation-2026-08-09.json` before using any
+  address or liquidity state.
+- **Activation boundary:** the pool/tax path is active, the sampled and
+  same-block live tax paths reconciled, and the bounded Compounder validation
+  minted Compounder-owned LP NFT `2898486` with liquidity `9455824137787`.
+  The Vault binding is permanently frozen to the deployed Compounder. Engine
+  backlog recovery succeeded, but recurring Engine and liquidity maintenance
+  are not configured and the Engine lifecycle smoke remains pending. Baskets
+  remain preview-only. Do not claim whole-stack production readiness.
 - **Read-first liquidity state:** read `docs/CURRENT_STATE.md`,
   `docs/releases/NARA-20260809-v4-production-activation.md`,
+  `docs/releases/NARA-20260809-v4-compounder-activation.md`,
   `docs/NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md`,
   `docs/UNISWAP_V4_HOOK.md`, and `docs/V4_LAUNCH_CHECKLIST.md` before pool,
   fee, liquidity, recovery, or basket-activation work. Do not use deleted V5

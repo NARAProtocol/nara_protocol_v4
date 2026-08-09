@@ -5,14 +5,14 @@ Last updated: 2026-08-09.
 Status: v3 is retired. The fresh v4 core and Compounder are deployed and
 source-verified on Base mainnet. Hook/Vault Safe ownership is accepted; the
 NARA/USDC pool is initialized and seeded, LP NFT `2898124` is Safe-owned, and
-receipt-pinned buy/sell tax tests passed. The Compounder remains unvalidated
-and unfrozen with no position and zero compounded totals. The Engine also has
-a 30-epoch backlog beyond its eight-epoch JIT buffer at the activation
-readback, so user-write availability remains gated. The current product
-launch scope is NARA Baskets only; Baskets remain preview-only, Lockboard is
-deferred, and Lotto and Arena are retired. Current activation authority is
-`deployments/v4-production-activation-2026-08-09.json` together with
-`docs/releases/NARA-20260809-v4-production-activation.md`.
+receipt-pinned buy/sell and same-block tax tests passed. The bounded Compounder
+validation minted LP NFT `2898486`, and the separate permanent Vault binding
+freeze succeeded. Engine backlog recovery succeeded, but the Engine lifecycle
+smoke and recurring maintenance remain gated. The current product launch scope
+is NARA Baskets only; Baskets remain preview-only, Lockboard is deferred, and
+Lotto and Arena are retired. Current authority includes
+`deployments/v4-compounder-activation-2026-08-09.json` and
+`docs/releases/NARA-20260809-v4-compounder-activation.md`.
 
 Code and deployment scripts are the source of truth. If this PRD conflicts with Solidity, scripts, or [CURRENT_STATE.md](CURRENT_STATE.md), update this PRD.
 
@@ -42,7 +42,7 @@ The frontend is a launch and education surface. It is not the protocol identity.
 
 NARA rewards committed capital and duration.
 
-The durable promise is a protocol where:
+The design objective is a protocol where:
 
 - Finite NARA emissions flow to active committed weight.
 - ETH and ERC-20 rewards can route to the same active committed weight.
@@ -69,8 +69,11 @@ Deployed and liquidity-activated:
   `CURRENT_STATE.md`.
 - Fresh Safe-owned Hook and Vault, wired Safe-owned Compounder, initialized and
   seeded NARA/USDC pool, and Safe-owned LP NFT `2898124`.
-- Live buy and sell tax tests with reconciled Vault accounting. The Vault has
-  recorded and banked `1495.229242512170995797 NARA` and `20.462880 USDC`.
+- Live buy/sell and same-block tax tests with reconciled Vault accounting.
+- Validated Compounder-owned LP NFT `2898486` with liquidity `9455824137787`.
+  The Compounder banks unmatched `1718.586695052747189931 NARA` and
+  `24.518753 USDC`; the Vault balances and temporary allowances were zero at
+  the freeze block.
 
 In repo, ready to deploy:
 
@@ -81,7 +84,8 @@ In repo, ready to deploy:
 Not live today:
 
 - Full public product launch and production-readiness claim.
-- Validated and permanently frozen Compounder-backed POL maintenance.
+- Authorized recurring Compounder/Engine maintenance.
+- Public lock, activation, claim, and unlock lifecycle availability.
 - Fresh v4 allocation stack.
 - Public v4 NFT bond market.
 - Deployed v4 composability layer.
@@ -92,12 +96,12 @@ Not live today:
 Fresh v4 remaining launch scope:
 
 - Treat core deployment, Safe ownership acceptance, Compounder deployment and
-  wiring, atomic pool activation, and receipt-pinned tax testing as complete;
-  do not rerun them.
-- Validate one live compound, reconcile the position/accounting evidence, and
-  only then execute the Safe's separate one-way Compounder freeze.
+  wiring, atomic pool activation, receipt-pinned tax testing, Engine backlog
+  recovery, and Compounder validation/freeze as complete; do not rerun them.
 - Keep both v4 operations workflows disabled pending new explicit authorization
   and deployment-specific review.
+- Complete and receipt-pin the Engine lock, activation, claim, and unlock
+  lifecycle smoke.
 - Deploy allocations with NFT bonds closed.
 - Run `npm run verify:v4:allocations`.
 - Open public lock flow through `NARAPositionNFTV4`.
@@ -388,11 +392,9 @@ Fresh v4 remaining launch scope:
 
 ### Near-Term
 
-- Finish documentation sync to the activation manifest and release record.
-- Validate one live Compounder transaction and reconcile all Vault,
-  Compounder, position, and custody evidence.
-- Freeze the Compounder only after that validation; keep operations workflows
-  disabled until separately authorized.
+- Merge the receipt-pinned activation evidence through protected CI.
+- Keep operations workflows disabled until separately authorized and reviewed.
+- Complete the Engine lock, activation, claim, and unlock lifecycle smoke.
 - Deploy allocations with NFT bonds closed.
 - Update docs and frontends only after fresh address verification.
 

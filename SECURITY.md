@@ -5,9 +5,11 @@
 NARA v4 has a fresh core deployment on Base from the immutable release commit
 identified in `docs/CURRENT_STATE.md`. The token, engine, reward reserve,
 liquidity hook, liquidity vault, and CREATE2 Hook deployer are deployed and
-source-verified. The Compounder is not deployed or configured. The NARA/USDC
-pool is unregistered, uninitialized, and unseeded; no official liquidity or LP
-NFT exists, and public locking and reward use have not been activated.
+source-verified. The Compounder is deployed, source-verified, live-validated,
+and permanently bound to the Vault. The NARA/USDC pool is registered,
+initialized, seeded, and trading. The Safe owns seed LP NFT `2898124`; the
+Compounder owns validated LP NFT `2898486`. Public locking and reward use have
+not been activated, and recurring maintenance remains disabled.
 
 Deployment does not imply activation, audit completion, economic safety, or a
 recommendation to transact. Canonical state and addresses are maintained in
@@ -86,7 +88,9 @@ The repository includes:
 - deployable-bytecode and initcode size enforcement;
 - optional Base-fork tests for Uniswap v4 integration;
 - a sanitized fresh-core deployment manifest and canonical receipt
-  reconciliation.
+  reconciliation;
+- receipt-pinned live buy/sell and same-block Hook-tax evidence; and
+- receipt-pinned Engine recovery and Compounder validation/freeze evidence.
 
 At the latest publication preparation pass:
 
@@ -103,9 +107,10 @@ formal verification, or a warranty.
 
 ## Operational limitations
 
-The current Safe, pending Hook/Vault ownership acceptance, and treasury custody
+The current Safe, treasury custody, keeper model, and operational procedures
 must be evaluated separately from contract correctness. Current limitations,
-including dormant pool state and custody requirements, are documented in
+including disabled recurring maintenance, pending Engine lifecycle smoke,
+preview-only baskets, and custody requirements, are documented in
 [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md).
 
 Never:

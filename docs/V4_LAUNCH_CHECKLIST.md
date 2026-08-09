@@ -10,7 +10,7 @@ Last updated: 2026-08-09.
 
 Use this file when starting cold.
 
-## Current checkpoint — pool activated, validation and operations gates remain
+## Current checkpoint — pool and Compounder activated; operations gates remain
 
 Fresh core deployment from protected origin commit
 `027af3f06bbe6dea2c187dfd8062e50c228f1c35` has completed on Base and all
@@ -37,13 +37,15 @@ The atomic Safe transaction
 at block `49721188` registered and initialized the pool and minted full-range LP
 NFT `2898124` to the production Safe with liquidity `4242640687119285`.
 Twenty live buys and ten live sells subsequently reconciled their Hook fees,
-Vault accounting, transfers, and receipt blocks.
+Vault accounting, transfers, and receipt blocks. A later same-block 20-action
+buy and exact 20-action reversal also reconciled.
 
-Stop before public product activation. The Compounder is wired but unvalidated
-and unfrozen, its position and lifetime-added totals are zero, and all recorded
-fees are banked. The Engine is also 30 epochs behind at the pinned readback,
-beyond its eight-epoch JIT buffer. Baskets remain preview-only. Current machine
-evidence: `deployments/v4-production-activation-2026-08-09.json`.
+Stop before public product activation. The bounded Compounder validation minted
+LP NFT `2898486` with liquidity `9455824137787`, and the separate permanent
+Vault binding freeze succeeded. Engine backlog recovery also succeeded.
+Recurring maintenance and the Engine lifecycle smoke remain gated, and baskets
+remain preview-only. Current machine evidence:
+`deployments/v4-compounder-activation-2026-08-09.json`.
 
 ---
 
@@ -206,7 +208,7 @@ Pass criteria:
 
 Latest known local result:
 
-- Full Hardhat suite (`npm test`): 556 passing with 5 opt-in Base-fork cases
+- Full Hardhat suite (`npm test`): 556 passing with 7 opt-in Base-fork cases
   pending as of 2026-08-09.
 - Fresh deployment/receipt/Safe-batch evidence: 12 focused tests passing.
 - Slither v4 scoped run: completed with exit 0 on 2026-07-29.
@@ -324,15 +326,17 @@ longer valid for the activated pool.
 
 ---
 
-## Compounder Deploy And Pre-Seed Gate
+## Compounder Deploy And Pre-Seed Gate (completed sequence)
 
-Current result: **completed through wiring**. The Safe accepted both ownership
+Current result: **completed through validation and permanent binding freeze**.
+The Safe accepted both ownership
 transfers in transaction
 `0x35320c5a5dfa31898d8a66e088038b67d1113bf6b95b82a230eaaf64be6f595d`
 at block `49720700`. The Compounder was deployed and source-verified at
 `0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF`, then wired in Safe transaction
 `0x29727cf5578989932175bd4e672d193e38b580f50645dd3bfcc173b44b2e70da`
-at block `49721044`. It correctly remains unfrozen until validation passes.
+at block `49721044`. It later passed validation and the binding was frozen as
+recorded in `deployments/v4-compounder-activation-2026-08-09.json`.
 
 After the fresh Vault exists, deploy `NARALiquidityCompounderV4` with exact
 fresh-manifest bindings and the production Safe as constructor owner. The core
@@ -432,16 +436,19 @@ replay or rebuild this seed as a new launch action.**
 
 ---
 
-## Post-Seed Preflight And Compounder Freeze Gate
+## Post-Seed Preflight And Compounder Freeze Gate (completed history)
 
-After the atomic seed receipt is confirmed and `V4_LP_TOKEN_ID` is synchronized,
-run:
+This one-time sequence completed on 2026-08-09 and must not be replayed. It is
+retained to document the review order and stop conditions.
+
+The completed sequence first synchronized `V4_LP_TOKEN_ID` from the atomic seed
+receipt and ran:
 
 ```bash
 npm run verify:v4:preflight
 ```
 
-Pass criteria:
+Recorded pass criteria:
 
 - Hook token/base/vault and Vault token/base/hook/engine match the fresh manifest.
 - Registered pool id matches `V4_POOL_ID`.
@@ -451,26 +458,26 @@ Pass criteria:
 - Hook, Vault, and Compounder bindings match reciprocally.
 - No stale or retired address mismatch appears.
 
-Before any Compounder validation, freeze, or public product activation, follow
+The completed workflow then followed
 [NARA_V4_COMPOUNDER_VALIDATION_RUNBOOK.md](NARA_V4_COMPOUNDER_VALIDATION_RUNBOOK.md):
 
-1. Build and review the validation batch with an independently reviewed price
-   reference and explicit raw-unit NARA/USDC caps.
-2. Have the Safe execute the validation compound as its own transaction.
-3. Record the confirmed transaction hash and receipt block. Reconcile the exact
+1. Built and reviewed the validation batch with the fixed receipt-pinned price
+   reference recorded in the Safe workflow and explicit raw-unit NARA/USDC
+   caps.
+2. The Safe executed the validation compound as its own transaction.
+3. Recorded the confirmed transaction hash and receipt block and reconciled the exact
    Vault counters, banked remainders, Compounder position ownership, and nonzero
    full-range liquidity against that receipt.
-4. Only after that evidence passes, build the separate freeze batch with
-   `npm run build:v4:compounder-validation -- --freeze`, review its simulation,
-   and have the Safe execute the irreversible `vault.freezeCompounder()` call.
-5. Confirm `vault.compounderFrozen()` is true and run
-   `npm run verify:v4:launch-gates:baskets` successfully.
+4. Only after that evidence passed, built and reviewed the separate freeze
+   batch; the Safe then executed the irreversible `vault.freezeCompounder()`
+   call.
+5. Confirmed `vault.compounderFrozen()` and ran the launch-gate verification.
 
-A missing or unreconciled validation receipt, a failed exact-spend check, a
-pending recovery, or an unfrozen Compounder is a stop condition for product
-activation. Recorded live tax tests already occurred while the Compounder was
-unfrozen; they prove the sampled Hook/Vault swap accounting but do not satisfy
-this Compounder gate.
+During that sequence, a missing or unreconciled validation receipt, failed
+exact-spend check, pending recovery, or unfrozen Compounder was a stop
+condition. Recorded tax tests had occurred before the freeze; they evidenced
+the sampled Hook/Vault swap accounting but did not satisfy the separate
+Compounder gate.
 
 ---
 
@@ -647,13 +654,15 @@ Before public TVL:
 Current decision (2026-08-09): **pool active; whole stack not launch-ready**.
 Core deployment, source verification, Safe ownership acceptance, Compounder
 deployment/wiring, atomic pool activation, LP NFT creation, and sampled live
-buy/sell tax tests are complete. The pool has public trading history.
+buy/sell and same-block tax tests are complete. Engine backlog recovery,
+bounded Compounder validation, and the permanent binding freeze are also
+receipt-pinned as complete. The pool has public trading history.
 
-Still incomplete: Engine epoch recovery, Compounder validation and receipt
-reconciliation, the separate irreversible Compounder freeze, protected merge
-of the post-activation evidence, allocations/periphery, downstream monitor and
-basket reconciliation, and final public documentation. The basket app stays
-preview-only.
+Still incomplete: the Engine lock/activation/claim/unlock lifecycle smoke,
+recurring-maintenance authorization, monitored observation period, protected
+merge of the post-activation evidence, allocations/periphery, downstream
+monitor and basket reconciliation, and final public documentation. The basket
+app stays preview-only.
 
 Launch-ready means all of these are true:
 
@@ -753,8 +762,9 @@ Stop immediately if:
 ## Short Version
 
 The deploy, ownership, wiring, and atomic-seed commands below describe the
-completed release sequence and must not be replayed. Resume from Engine epoch
-recovery and Compounder validation using the current manifest and runbooks.
+completed release sequence and must not be replayed. Engine recovery and the
+Compounder validation/freeze also completed. Resume from the Engine lifecycle
+smoke and remaining operations gates using the current manifest and runbooks.
 
 ```bash
 npm run build
