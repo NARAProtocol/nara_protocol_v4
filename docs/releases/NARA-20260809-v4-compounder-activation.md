@@ -170,6 +170,34 @@ approvals, exits, and risk notice before confirmation.
 7. Update baskets and monitor only from merged origin evidence; publish public
    documentation last.
 
+## Cross-repository handoff checkpoint
+
+```text
+Change-ID: NARA-20260809-v4-compounder-activation
+Origin remote: NARAProtocol/nara_protocol_v4
+Pre-merge evidence commit: ed7c4bcd0e0aa9edd9933518d1a6580358fc19f0
+Compounder manifest Git blob: d4d806997209bb569863de0923a4058f5b24cb68
+Same-block evidence Git blob: 68f3d6c1b13711da3d85038da37143819bd7327f
+Evidence state: configured
+Changed contracts/interfaces: none; evidence, tests, scripts, and documentation only
+Generated artifact or ABI source: contract source commit 027af3f06bbe6dea2c187dfd8062e50c228f1c35
+Deployment manifest: deployments/v4-compounder-activation-2026-08-09.json
+Chain and verification block: Base 8453; freeze block 49736809
+Depends-on: protected fresh-v4 contract source and prior activation/recovery evidence
+Unblocks: consumer review only after the protected origin merge
+Downstream repositories reviewed: none; deliberately merge-gated
+Commands and results: npm run build PASS; npm test 556 passing, 7 pending, 0 failing; npm run size PASS; targeted same-block Base-fork tests 2 passing
+Skipped gates: recurring keeper authorization, Engine lifecycle smoke, monitored observation period, allocation/periphery deployment, downstream deployment/indexing, qualified-counsel review
+Unresolved risks: unmatched inventory remains banked; recurring maintenance is disabled; public locking and baskets are unavailable
+Onchain or production writes: the two named Safe transactions predate this evidence commit; this documentation/test work sent no transaction
+Secret scan: staged added-line heuristic clean; no .env, RPC URL, private key, raw latest report, or batch file tracked
+```
+
+The commit above preserves the pre-merge evidence object. It is not the final
+protected-main origin commit. Downstream work must wait for the pull request to
+pass required CI and be squash-merged, then record that resulting full
+protected-main commit.
+
 ## Evidence boundary
 
 This record proves the two named Safe executions and their receipt-pinned state.
