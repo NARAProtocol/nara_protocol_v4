@@ -2,7 +2,7 @@
 
 This file is read by AI coding assistants that look for `AGENTS.md` on entry (OpenAI Codex, Cursor, DeepSeek, Gemini, and others). The companion file [CLAUDE.md](CLAUDE.md) carries the same context framed for Claude / Anthropic models.
 
-Last updated: 2026-08-08.
+Last updated: 2026-08-09.
 
 ## Cross-Repository Role
 
@@ -41,11 +41,29 @@ block when applicable, test results, and unresolved risks.
   Do not claim persistent cross-block split resistance or instant POL from
   one-sided fees.
 - **Archived:** `archive/legacy-v3/` — frozen v3 legacy code.
-- **Deployed V4 recovery token:** the fresh V4 `NARAToken` is deployed on Base at
-  `0x65E247AA3aa9C0131b2984b894c3D24c41341D7A`. The v3 mainnet token
-  `0xE444de61752bD13D1D37Ee59c31ef4e489bd727C` is **retired**.
+- **Fresh v4 activation:** the canonical Base `NARAToken` is
+  `0xB6333F5D4cEd8dffA80F3F13697D6aA3BB3f19c1`, Engine is
+  `0x98ab6406D6B548F37dEF7110961bb45A399e5aFC`, Vault is
+  `0xD7f7b44BF65EBa3E90fDe0642687ed22A323084D`, Hook is
+  `0x59AEf9799DEA01A7FB7dA73BEA10dfB08858A088`, and wired Compounder is
+  `0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF`. Pool ID
+  `0x83edced1f39e6adf7469cd718eeb409824d948959263408d4cfb6e745c8db464`
+  was atomically seeded in Base transaction
+  `0xaeb7c3365354de633dde977d9b2c951b240f6b8ff8be090cdd989edc4c924799`;
+  Safe-owned LP NFT is `2898124`. Read
+  `deployments/v4-production-activation-2026-08-09.json` and
+  `deployments/v4-compounder-activation-2026-08-09.json` before using any
+  address or liquidity state.
+- **Activation boundary:** the pool/tax path is active, the sampled and
+  same-block live tax paths reconciled, and the bounded Compounder validation
+  minted Compounder-owned LP NFT `2898486` with liquidity `9455824137787`.
+  The Vault binding is permanently frozen to the deployed Compounder. Engine
+  backlog recovery succeeded, but recurring Engine and liquidity maintenance
+  are not configured and the Engine lifecycle smoke remains pending. Baskets
+  remain preview-only. Do not claim whole-stack production readiness.
 - **Read-first liquidity state:** read `docs/CURRENT_STATE.md`,
-  `docs/NARA_V4_LIQUIDITY_WITHDRAWAL_RUNBOOK.md`,
+  `docs/releases/NARA-20260809-v4-production-activation.md`,
+  `docs/releases/NARA-20260809-v4-compounder-activation.md`,
   `docs/NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md`,
   `docs/UNISWAP_V4_HOOK.md`, and `docs/V4_LAUNCH_CHECKLIST.md` before pool,
   fee, liquidity, recovery, or basket-activation work. Do not use deleted V5

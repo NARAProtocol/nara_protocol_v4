@@ -2,12 +2,17 @@
 
 Last updated: 2026-08-09.
 
-Status: v3 is retired. The fresh v4 core is deployed and source-verified on
-Base mainnet and remains dormant. The pool is unregistered, uninitialized, and
-unseeded; the Compounder and Hook/Vault Safe ownership acceptance are pending.
-The current product launch scope is NARA Baskets only. Lockboard is deferred;
-Lotto and Arena are retired. Do not repeat the core deployment. See
-[CURRENT_STATE.md](CURRENT_STATE.md).
+Status: v3 is retired. The fresh v4 core and Compounder are deployed and
+source-verified on Base mainnet. Hook/Vault Safe ownership is accepted; the
+NARA/USDC pool is initialized and seeded, LP NFT `2898124` is Safe-owned, and
+receipt-pinned buy/sell and same-block tax tests passed. The bounded Compounder
+validation minted LP NFT `2898486`, and the separate permanent Vault binding
+freeze succeeded. Engine backlog recovery succeeded, but the Engine lifecycle
+smoke and recurring maintenance remain gated. The current product launch scope
+is NARA Baskets only; Baskets remain preview-only, Lockboard is deferred, and
+Lotto and Arena are retired. Current authority includes
+`deployments/v4-compounder-activation-2026-08-09.json` and
+`docs/releases/NARA-20260809-v4-compounder-activation.md`.
 
 Code and deployment scripts are the source of truth. If this PRD conflicts with Solidity, scripts, or [CURRENT_STATE.md](CURRENT_STATE.md), update this PRD.
 
@@ -37,7 +42,7 @@ The frontend is a launch and education surface. It is not the protocol identity.
 
 NARA rewards committed capital and duration.
 
-The durable promise is a protocol where:
+The design objective is a protocol where:
 
 - Finite NARA emissions flow to active committed weight.
 - ETH and ERC-20 rewards can route to the same active committed weight.
@@ -58,11 +63,17 @@ In plain terms:
 
 ## 3. Current Scope
 
-Deployed but not activated:
+Deployed and liquidity-activated:
 
 - Fresh v4 core contracts, including the public NARA token address recorded in
   `CURRENT_STATE.md`.
-- Fresh Hook and Vault, with Safe ownership acceptance still pending.
+- Fresh Safe-owned Hook and Vault, wired Safe-owned Compounder, initialized and
+  seeded NARA/USDC pool, and Safe-owned LP NFT `2898124`.
+- Live buy/sell and same-block tax tests with reconciled Vault accounting.
+- Validated Compounder-owned LP NFT `2898486` with liquidity `9455824137787`.
+  The Compounder banks unmatched `1718.586695052747189931 NARA` and
+  `24.518753 USDC`; the Vault balances and temporary allowances were zero at
+  the freeze block.
 
 In repo, ready to deploy:
 
@@ -72,9 +83,9 @@ In repo, ready to deploy:
 
 Not live today:
 
-- Public v4 launch candidate.
-- Fresh v4 NARA/USDC pool.
-- Fresh v4 Compounder.
+- Full public product launch and production-readiness claim.
+- Authorized recurring Compounder/Engine maintenance.
+- Public lock, activation, claim, and unlock lifecycle availability.
 - Fresh v4 allocation stack.
 - Public v4 NFT bond market.
 - Deployed v4 composability layer.
@@ -82,16 +93,15 @@ Not live today:
 - NARA/stNARA AMM.
 - v4 sponsor hub.
 
-Fresh v4 launch scope:
+Fresh v4 remaining launch scope:
 
-- Treat the fresh core deployment as complete; do not rerun it.
-- Complete Safe Hook/Vault ownership acceptance and fresh Compounder
-  deployment/wiring.
-- Pass pre-seed gates and review the exact atomic Safe batch.
-- Register, initialize, and seed NARA/USDC only in that separately approved
-  atomic batch.
-- Run `npm run verify:v4:preflight` after the seed receipt.
-- Run `npm run smoke:v4`.
+- Treat core deployment, Safe ownership acceptance, Compounder deployment and
+  wiring, atomic pool activation, receipt-pinned tax testing, Engine backlog
+  recovery, and Compounder validation/freeze as complete; do not rerun them.
+- Keep both v4 operations workflows disabled pending new explicit authorization
+  and deployment-specific review.
+- Complete and receipt-pin the Engine lock, activation, claim, and unlock
+  lifecycle smoke.
 - Deploy allocations with NFT bonds closed.
 - Run `npm run verify:v4:allocations`.
 - Open public lock flow through `NARAPositionNFTV4`.
@@ -382,12 +392,9 @@ Fresh v4 launch scope:
 
 ### Near-Term
 
-- Finish documentation sync to v4 code.
-- Run local verification and static analysis or record an explicit waiver.
-- Complete Safe ownership acceptance and deploy/verify/wire the fresh
-  Compounder.
-- Run pre-seed gates, the separately approved atomic liquidity launch, and
-  receipt-pinned smoke tests.
+- Merge the receipt-pinned activation evidence through protected CI.
+- Keep operations workflows disabled until separately authorized and reviewed.
+- Complete the Engine lock, activation, claim, and unlock lifecycle smoke.
 - Deploy allocations with NFT bonds closed.
 - Update docs and frontends only after fresh address verification.
 

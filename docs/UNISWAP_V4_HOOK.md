@@ -6,9 +6,9 @@
 > Verified against code and the real Uniswap v4 PoolManager test on
 > **2026-08-08**.
 
-NARA's planned liquidity home is a **single custom Uniswap v4 pool**
-(NARA/USDC). The fresh canonical Hook is deployed but still unregistered; the
-pool is uninitialized and unseeded. After atomic activation, every supported
+NARA's canonical liquidity home is a **single custom Uniswap v4 pool**
+(NARA/USDC). The fresh canonical Hook is registered and the pool is initialized
+and seeded. Every supported
 exact-input swap through that one registered Hook pool pays the configured
 asymmetric pressure fee into the Vault. Exact-output swaps are rejected. NARA
 ERC-20 transfers and swaps in third-party or unregistered pools are outside
@@ -23,16 +23,38 @@ this Hook and are not universally taxed.
 > under-allocate after an active-position extension. Do **not** describe the
 > hook as "a tax that funds lockers."
 >
-> **FRESH FULL-v4 DEPLOYMENT IN PROGRESS.** Stage A and the 2026-07-30 pool are
-> historical incident/recovery evidence only. The corrected Hook and Vault are
-> now deployed at the fresh addresses in the current manifest. The POL
+> **FRESH FULL-v4 POOL AND COMPOUNDER ACTIVATED; OPERATIONS GATED.** Stage A and
+> the 2026-07-30 pool are historical incident/recovery evidence only. The
+> corrected Hook and Vault are Safe-owned and the fresh pool is seeded. The POL
 > adapter remains intentionally pluggable through
 > `ILiquidityCompounder.compound(...)`, with exact-spend checks, minimum-output
 > protection, remainder banking, POL custody, and a seven-day recovery
-> timelock. The Compounder, ownership handoff, atomic pool launch, real-pool
-> smoke test, validation, and final freeze remain pending.
+> timelock. The verified Compounder at
+> `0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF` passed bounded validation and
+> owns LP NFT `2898486` with liquidity `9455824137787`. The Vault binding is
+> permanently frozen to that address. Unmatched inventory remains banked in the
+> Compounder and must not be described as active LP.
 
-This document explains how the hook works and why it is correct.
+This document explains the Hook design, observed behavior, verification
+evidence, and remaining limitations.
+
+## Current Base deployment
+
+| Item | Value |
+|---|---|
+| NARA | `0xB6333F5D4cEd8dffA80F3F13697D6aA3BB3f19c1` |
+| Vault | `0xD7f7b44BF65EBa3E90fDe0642687ed22A323084D` |
+| Hook | `0x59AEf9799DEA01A7FB7dA73BEA10dfB08858A088` |
+| Compounder | `0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF` |
+| Pool ID | `0x83edced1f39e6adf7469cd718eeb409824d948959263408d4cfb6e745c8db464` |
+| LP NFT | `2898124`, owned by the production Safe |
+
+Safe transaction
+`0xaeb7c3365354de633dde977d9b2c951b240f6b8ff8be090cdd989edc4c924799`
+registered, initialized, and seeded the pool at block `49721188` with
+`60,000 NARA + 300 USDC`. The sanitized receipt, configuration, address,
+runtime-hash, and 30-transaction matrix evidence is in
+`../deployments/v4-production-activation-2026-08-09.json`.
 
 ---
 
@@ -156,7 +178,7 @@ The vault receives every skim and routes it by **mode**:
 
 | Mode | Behavior |
 |------|----------|
-| `Liquidity` | **default** — compound NARA/USDC back into the LP position via the external compounder adapter to build depth. Production adapter: **`NARALiquidityCompounderV4`** (full-range, no-swap). Still **inert until deployed + `setCompounder`'d**. |
+| `Liquidity` | **default** — compound a balanced NARA/USDC subset into a full-range LP position through the no-swap **`NARALiquidityCompounderV4`**. The production adapter is validated and the Vault binding is permanently frozen. Unmatched inventory remains banked in the Compounder. |
 | `Engine` | legacy enum value; `setRouteMode` permanently reverts `EngineTokenRoutingDisabled` |
 | `Split` | legacy enum value; `setRouteMode` permanently reverts `EngineTokenRoutingDisabled` |
 | `Genesis` | route USDC to the Genesis reward distributor |
@@ -182,7 +204,7 @@ consumer; it needs no hook permission bits of its own.
 
 - ✅ `getHookPermissions()` = `beforeInitialize + beforeSwap + beforeSwapReturnDelta` → address bits
   `0x2088`, matching the deploy/preflight requirement.
-- ✅ Built on `BaseHook` (Uniswap v4-periphery) — the canonical, audited base.
+- ✅ Built on the canonical `BaseHook` from Uniswap v4-periphery.
 - ✅ Exact-input-only, buy/sell detection, configured-depth block snapshots,
   cumulative fee deltas, and `maxFeeBps` caps.
 - ✅ Fee skim via `BeforeSwapDelta` + `poolManager.take()` to the vault, followed
@@ -197,6 +219,16 @@ consumer; it needs no hook permission bits of its own.
   and sells.
 - ✅ Replacement vault prevents the deployed engine's ERC-20 accounting issue
   from being reached through pool-fee routing.
+- ✅ Initial public flow plus twenty distinct-block buys and ten distinct-block
+  sells reconciled Hook fees, Vault counters, ERC-20 transfers, and receipt
+  blocks on Base. The matrices exercised 5%/8% buy tiers and the 5% sell tier;
+  they do not substitute for live coverage of every same-block higher tier.
+- ✅ At freeze block `49736809`, the bounded validation had added
+  `99.999999999997037752 NARA` and `0.894127 USDC` to LP NFT `2898486`, adding
+  liquidity `9455824137787`. The Vault binding freeze is receipt-pinned. Vault
+  balances were zero; unmatched `1718.586695052747189931 NARA` and
+  `24.518753 USDC` were banked in the Compounder. Later balances require a new
+  readback.
 
 The canonical record for findings #1–#5 is
 [`NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md`](NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md).
@@ -204,8 +236,9 @@ These internal fixes and tests do not convert the repository into an
 independent audit or remove the operational gates in
 [`CURRENT_STATE.md`](CURRENT_STATE.md).
 
-**Scope of this ✅:** these checks cover the **hook and vault**. The fresh
-convert-to-liquidity layer (`NARALiquidityCompounderV4`) is not deployed or
-wired. It must be deployed, wired, verified, validated against the later
-initialized pool, and only then frozen before public activation. See
+**Scope of this evidence:** the Hook/Vault tax path is active and the recorded
+initial flow, twenty-buy/ten-sell matrix, and same-block round trip reconciled.
+The fresh convert-to-liquidity layer (`NARALiquidityCompounderV4`) is deployed,
+source-verified, validation-compounded, and permanently bound to the Vault.
+Recurring maintenance and whole-product availability remain gated. See
 [`NARA_V4_PROJECT_SCOPE.md`](NARA_V4_PROJECT_SCOPE.md).

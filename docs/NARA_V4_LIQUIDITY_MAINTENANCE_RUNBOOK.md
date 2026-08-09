@@ -2,11 +2,17 @@
 
 Change-ID: `NARA-20260731-liquidity-maintainer`
 
-Current stop boundary (2026-08-09): this runbook is inactive. The fresh pool is
-dormant, the Compounder is not deployed or wired, and both v4 operations
-workflows and their repository enable variables are disabled. Do not schedule,
-dispatch, or re-enable maintenance without a new explicit order and
-deployment-specific review.
+Current stop boundary (2026-08-09): the fresh pool is initialized and seeded,
+the Engine activation backlog is recovered, and Compounder validation/freeze
+completed under receipt-pinned Safe transactions. LP NFT `2898486` is
+Compounder-owned with liquidity `9455824137787`; unmatched inventory remains
+banked in the Compounder. Both v4 operations workflows and their repository
+enable variables are disabled. Do not schedule, dispatch, execute maintenance,
+or re-enable a workflow without a new explicit order, deployment-specific
+review, and keeper authorization. Current authority is
+`deployments/v4-production-activation-2026-08-09.json` together with
+`deployments/v4-compounder-activation-2026-08-09.json` and
+`docs/releases/NARA-20260809-v4-compounder-activation.md`.
 
 The hook collects NARA/USDC pool fees into the growth vault during live swaps.
 Those fees do not become liquidity inside the swap transaction. A second,
@@ -14,7 +20,10 @@ restricted `compoundAll()` transaction moves them through the bound compounder,
 adds the balanced portion as full-range protocol-owned liquidity, and banks any
 unbalanced remainder in the compounder for a later cycle.
 
-## Activation order
+## Completed one-time activation order
+
+The following sequence is historical and must not be replayed. It documents
+the separation between the validation and irreversible binding-freeze actions.
 
 1. Generate the validation batch immediately before Safe signing:
 

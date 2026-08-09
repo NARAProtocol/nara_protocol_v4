@@ -1,11 +1,11 @@
 import { expect } from "chai";
 import { ethers } from "ethers";
 import {
-  DEFAULT_V4_ENGINE,
-  DEFAULT_V4_HOOK,
-  DEFAULT_V4_NARA,
-  DEFAULT_V4_POOL_ID,
-  DEFAULT_V4_VAULT,
+  RETIRED_INCIDENT_V4_ENGINE,
+  RETIRED_INCIDENT_V4_HOOK,
+  RETIRED_INCIDENT_V4_NARA,
+  RETIRED_INCIDENT_V4_POOL_ID,
+  RETIRED_INCIDENT_V4_VAULT,
   REQUIRED_V4_HOOK_FLAGS,
   V4_HOOK_FLAG_MASK,
   assertCanonicalV4PoolConfig,
@@ -60,11 +60,11 @@ describe("v4 live config launch guards", () => {
 
       const config = currentV4Config();
 
-      expect(config.token).to.equal(ethers.getAddress(DEFAULT_V4_NARA));
-      expect(config.hook).to.equal(ethers.getAddress(DEFAULT_V4_HOOK));
-      expect(config.poolId).to.equal(DEFAULT_V4_POOL_ID);
-      expect(config.vault).to.equal(ethers.getAddress(DEFAULT_V4_VAULT));
-      expect(config.engine).to.equal(ethers.getAddress(DEFAULT_V4_ENGINE));
+      expect(config.token).to.equal(ethers.getAddress(RETIRED_INCIDENT_V4_NARA));
+      expect(config.hook).to.equal(ethers.getAddress(RETIRED_INCIDENT_V4_HOOK));
+      expect(config.poolId).to.equal(RETIRED_INCIDENT_V4_POOL_ID);
+      expect(config.vault).to.equal(ethers.getAddress(RETIRED_INCIDENT_V4_VAULT));
+      expect(config.engine).to.equal(ethers.getAddress(RETIRED_INCIDENT_V4_ENGINE));
     });
   });
 

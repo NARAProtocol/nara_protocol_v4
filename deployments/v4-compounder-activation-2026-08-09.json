@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "changeId": "NARA-20260809-v4-compounder-activation",
+  "releaseType": "POST_ACTIVATION_LIQUIDITY_EVIDENCE",
+  "status": "VALIDATED_AND_FROZEN",
+  "network": {
+    "name": "Base",
+    "chainId": 8453
+  },
+  "origin": {
+    "repository": "NARAProtocol/nara_protocol_v4",
+    "contractSourceCommit": "027af3f06bbe6dea2c187dfd8062e50c228f1c35",
+    "activationEvidenceCommit": "bddacd9336477cdcc12b6b192ea73c1ed116ec53",
+    "activationManifest": "deployments/v4-production-activation-2026-08-09.json",
+    "engineRecoveryManifest": "deployments/v4-engine-epoch-recovery-2026-08-09.json"
+  },
+  "contracts": {
+    "nara": "0xB6333F5D4cEd8dffA80F3F13697D6aA3BB3f19c1",
+    "usdc": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    "vault": "0xD7f7b44BF65EBa3E90fDe0642687ed22A323084D",
+    "hook": "0x59AEf9799DEA01A7FB7dA73BEA10dfB08858A088",
+    "compounder": "0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF",
+    "safe": "0xd65c0e390Dc187A22c52c03816591CC736C0D755",
+    "poolManager": "0x498581fF718922c3f8e6A244956aF099B2652b2b",
+    "positionManager": "0x7C5f5A4bBd8fD63184577525326123B519429bDc"
+  },
+  "pool": {
+    "poolId": "0x83edced1f39e6adf7469cd718eeb409824d948959263408d4cfb6e745c8db464",
+    "seedPosition": {
+      "tokenId": "2898124",
+      "owner": "0xd65c0e390Dc187A22c52c03816591CC736C0D755",
+      "liquidityAtFreezeBlock": "4242640687119285"
+    },
+    "compounderPosition": {
+      "tokenId": "2898486",
+      "owner": "0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF",
+      "liquidityAtFreezeBlock": "9455824137787"
+    },
+    "activeLiquidityBeforeCompound": "4242640687119285",
+    "activeLiquidityAfterCompound": "4252096511257072",
+    "activeLiquidityIncrease": "9455824137787"
+  },
+  "validationPolicy": {
+    "referenceMethod": "MIDPOINT_OF_RECEIPT_PINNED_PRE_BUY_AND_POST_REVERSAL_SQRT_PRICES",
+    "referenceSqrtPriceX96": "841040439224134229852494024897112973",
+    "executionSqrtPriceX96": "837876861495905586957508528589190037",
+    "sqrtPriceGuardBps": 100,
+    "maxReferenceValueImbalanceBps": 100,
+    "maxNaraUsedRaw": "100000000000000000000",
+    "maxUsdcUsedRaw": "1000000",
+    "simulatedLiquidity": "9455824137787",
+    "minLiquidityAdded": "9361265896409"
+  },
+  "validationExecution": {
+    "safeNonce": 32,
+    "safeTxHash": "0x5f52bc00269e368f020c0b72ad0b9ba2ff2b7109ea48121c6b9994da9b6c3325",
+    "transactionHash": "0xf1ea7e7dfdf8e1021ceebf26a943cba604e0a8c894eec5f527bc01656b5890be",
+    "blockNumber": 49736646,
+    "blockHash": "0x6500ebab0b18a044c417aa278064ae4e00a04045c493eace0ccf0dcb7469f6b8",
+    "blockTimestamp": 1786262639,
+    "blockTimestampUtc": "2026-08-09T08:03:59.000Z",
+    "status": 1,
+    "gasUsed": "595833",
+    "vaultInputNaraRaw": "1818586695052744227683",
+    "vaultInputUsdcRaw": "25412880",
+    "baseBountyRaw": "0",
+    "naraAddedRaw": "99999999999997037752",
+    "usdcAddedRaw": "894127",
+    "liquidityAdded": "9455824137787",
+    "naraBankedRaw": "1718586695052747189931",
+    "usdcBankedRaw": "24518753",
+    "vaultNaraAllowanceToCompounderAfter": "0",
+    "vaultUsdcAllowanceToCompounderAfter": "0",
+    "pendingRecoveryKindAfter": 0
+  },
+  "freezeExecution": {
+    "safeNonce": 33,
+    "safeTxHash": "0x9554f43d1160cea56edbd1b3ab78311dfdb942b8f1f20a741f0fee40c7f637ef",
+    "transactionHash": "0xccd73cf07602f18412bea291812f0d171fa5cabd41fcff6b6894029978084ef3",
+    "blockNumber": 49736809,
+    "blockHash": "0xa587de1613fdd59b96d8c077353824d4f97792caca555693f530bf21eb55e065",
+    "blockTimestamp": 1786262965,
+    "blockTimestampUtc": "2026-08-09T08:09:25.000Z",
+    "status": 1,
+    "gasUsed": "100140",
+    "eventCompounder": "0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF",
+    "compounderFrozenAfter": true,
+    "safeNonceAfter": 34
+  },
+  "accountingInterpretation": {
+    "vaultBalancesAfter": {
+      "naraRaw": "0",
+      "usdcRaw": "0"
+    },
+    "vaultLifetimeCompoundedCounters": {
+      "naraRaw": "1818586695052744227683",
+      "usdcRaw": "25412880"
+    },
+    "compounderLifetimeAddedCounters": {
+      "naraRaw": "99999999999997037752",
+      "usdcRaw": "894127",
+      "liquidity": "9455824137787"
+    },
+    "compounderBankedRemainders": {
+      "naraRaw": "1718586695052747189931",
+      "usdcRaw": "24518753"
+    },
+    "note": "Vault compounded counters measure inventory handed to the exact-spend Compounder. Compounder added counters measure the balanced subset placed into the LP position. The difference remains banked in the Compounder."
+  },
+  "releaseBoundary": {
+    "compounderValidation": "PASS",
+    "compounderBinding": "PERMANENTLY_FROZEN",
+    "protocolOwnedLiquidityPosition": "MINTED_AND_COMPOUNDER_OWNED",
+    "recurringLiquidityKeeper": "NOT_CONFIGURED",
+    "engineLifecycleSmoke": "PENDING",
+    "baskets": "PREVIEW_ONLY",
+    "overallProductionReady": false
+  },
+  "privacy": {
+    "containsPrivateKeys": false,
+    "containsRpcUrls": false,
+    "containsPrivateWalletLabels": false
+  }
+}

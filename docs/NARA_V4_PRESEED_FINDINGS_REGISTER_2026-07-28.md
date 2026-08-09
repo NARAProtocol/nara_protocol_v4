@@ -5,22 +5,24 @@ Scope: replacement NARA/USDC liquidity trio, deployed v4 engine interaction,
 NARA basket launch path, and basket fee collector.
 
 This is the historical baseline and canonical disposition record for the five
-pre-seed findings. The corrected fresh Hook and Vault are now deployed and
-source-verified, but the pool remains unregistered, uninitialized, and
-unseeded. Notifier containment is proven on the fresh Engine. The Compounder,
-basket contracts/frontend synchronization, atomic pool activation, and live
-verification remain pending. The later fresh-core deployment is recorded
-separately in `CURRENT_STATE.md` and its manifest.
+pre-seed findings. It is not a current execution checkpoint. The fresh pool was
+later registered, initialized, seeded, and live-tested on 2026-08-09; the
+verified Compounder was deployed and wired. Current authority is
+`CURRENT_STATE.md` and
+`deployments/v4-compounder-activation-2026-08-09.json`. Same-block tax
+evidence, Engine epoch recovery, and Compounder validation/freeze are now
+receipt-pinned. Recurring operations, Engine lifecycle smoke, and downstream
+product gates remain pending.
 
 ## Status Summary
 
 | ID | Severity | Finding | Resolution | On-chain status |
 |---|---|---|---|---|
-| PS-01 | Medium | Same-block split swaps could reduce the aggregate pressure fee | Source fixed and regression-tested | Fresh corrected Hook deployed; pool dormant |
+| PS-01 | Medium | Same-block split swaps could reduce the aggregate pressure fee | Source fixed and regression-tested | Fresh pool activated; sampled live tax matrix reconciled |
 | PS-02 | Medium | ERC-20 rewards notified after position extensions can become permanently unclaimable | Frozen Engine path disabled; deploy-time role history gate added | Fresh deployment containment verified; no active notifier holder |
 | PS-03 | High | Unrestricted basket sizes are incompatible with shallow launch liquidity | Small buys allowed; live depth-based input cap and no-swap exit fallback added | Frontend deployment and live depth required |
 | PS-04 | High | Frozen arbitrary fee-swap routes could strand fees; caller-controlled minimum output could destroy value | Collector redesigned around a typed oracle-bounded USDC/WETH route | Requires first collector deployment |
-| PS-05 | High | Anyone could initialize the registered v4 pool at an arbitrary permanent price | Opening price bound in hook; activation requires one atomic Safe batch | Fresh corrected Hook deployed; pool remains unregistered |
+| PS-05 | High | Anyone could initialize the registered v4 pool at an arbitrary permanent price | Opening price bound in hook; activation requires one atomic Safe batch | Atomic Safe activation succeeded at block `49721188` |
 
 ## PS-01 — Same-Block Split Fee Evasion
 

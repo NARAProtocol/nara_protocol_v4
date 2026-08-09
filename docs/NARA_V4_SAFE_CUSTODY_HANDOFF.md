@@ -1,16 +1,21 @@
 # NARA v4 Safe Custody Handoff
 
-Prepared and verified: 2026-07-30
+Prepared and verified: 2026-07-30. Current-state annotation: 2026-08-09.
 
-Status: the Safe controls the fresh Engine and RewardReserve roles and owns the
-fresh CREATE2 Hook deployer. The fresh Hook and Vault are deployed but still
-require the Safe to accept their pending `Ownable2Step` transfers. The pool is
-dormant and the Compounder is not deployed.
+Status: the production Safe has accepted ownership of the fresh Hook and Vault
+and owns the deployed, source-verified, and wired Compounder at
+`0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF`. The fresh NARA/USDC pool is
+initialized and seeded; LP NFT `2898124` is Safe-owned. The Compounder passed
+bounded validation, owns LP NFT `2898486` with liquidity `9455824137787`, and
+the Vault binding is permanently frozen to it. Recurring maintenance remains
+disabled.
 
-Fresh-core addresses and exact current state are authoritative only in
-[CURRENT_STATE.md](CURRENT_STATE.md). Historical Stage A and 2026-07-30
-addresses later in this handoff remain custody history, not active deployment
-targets.
+Current activation authority is
+`deployments/v4-production-activation-2026-08-09.json` together with
+`deployments/v4-compounder-activation-2026-08-09.json` and
+`docs/releases/NARA-20260809-v4-compounder-activation.md`. Historical Stage A
+and 2026-07-30 addresses later in this handoff remain custody history, not
+active deployment targets.
 
 ## Approved Safe
 
@@ -41,7 +46,13 @@ No private key was requested, read, stored, or used by an agent.
 
 The threshold correction occurred before protocol authority was granted.
 
-## Engine administrator handoff
+## Historical 2026-07-30 Custody Evidence
+
+The remainder of this handoff records the 2026-07-30 custody state and is
+preserved as historical evidence. It is superseded for current addresses and
+activation state by the authority files cited above.
+
+### Engine administrator handoff
 
 Engine:
 
@@ -65,7 +76,7 @@ Post-action state:
 - Safe owners remain the three addresses above.
 - Safe modules remain empty.
 
-## PARAM and TREASURY role consolidation
+### PARAM and TREASURY role consolidation
 
 `DEFAULT_ADMIN_ROLE` alone did not make the Safe the sole engine authority. A
 post-handoff read showed `PARAM_ROLE` and `TREASURY_ROLE` still held solely by
@@ -109,7 +120,7 @@ Independently verified engine role matrix after execution:
 Safe re-verified at the same time: version `1.4.1`, threshold `2`, three owners
 unchanged, modules empty, runtime code hash unchanged.
 
-## Deviation from the approved custody plan
+### Deviation from the approved custody plan
 
 [NARA_V4_CUSTODY_AND_GOVERNANCE_PLAN.md](NARA_V4_CUSTODY_AND_GOVERNANCE_PLAN.md)
 specifies two `3-of-5` Safes — Safe A for protocol admin and Safe B for treasury
@@ -127,7 +138,7 @@ It remains open work, not a closed gate:
 
 Resolve or formally amend the plan before public activation.
 
-## Quarantined Stage A liquidity stack
+### Quarantined Stage A liquidity stack
 
 Do not transfer, initialize, seed, or reuse:
 
@@ -158,7 +169,10 @@ granted to the replacement vault.
 Evidence: `deployments/v4-pool-redeploy-2026-07-30-replacement-trio.json`.
 Gate result: `verify:v4:launch-gates:preseed` — 14 pass, 0 fail, 0 skip.
 
-## Remaining custody work
+### Historical remaining custody work recorded 2026-07-30
+
+The following list is preserved as the work that remained at that historical
+checkpoint; it is not a current execution checklist.
 
 1. Keep the replacement pool unregistered and uninitialized until the reviewed
    atomic launch batch. Registration permanently binds the opening price.

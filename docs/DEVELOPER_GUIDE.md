@@ -9,7 +9,9 @@ Before reading an interface, read [`CURRENT_STATE.md`](CURRENT_STATE.md).
 
 NARA has three distinct engineering surfaces:
 
-1. deployed fresh-core contracts and their explicitly dormant liquidity state;
+1. deployed fresh-core and activated-liquidity contracts, with Engine epoch
+   recovery and Compounder validation/freeze receipt-pinned as complete but
+   recurring maintenance and Engine lifecycle smoke still gated;
 2. implemented and tested modules that are not deployed;
 3. historical contracts that are not active v4 code.
 
@@ -92,13 +94,10 @@ Use it only after its exact deployment address and engine binding are verified.
 
 ### Reward notification
 
-Native ETH enters through `notifyEthRewards()`. Supported non-NARA ERC-20
-distributions enter through `notifyTokenRewards(token, amount)` and require
-`REWARD_NOTIFIER_ROLE`.
-
-`BribeRouterV4` can provide a permissionless funding surface, but only after the
-router itself receives the required engine role. Source existence does not imply
-that role has been granted.
+Native ETH enters through `notifyEthRewards()`. The generic non-NARA ERC-20
+reward rail exists in source but is disabled for this deployment. Do not deploy
+`BribeRouterV4` or grant it `REWARD_NOTIFIER_ROLE`; source existence is not an
+authorization to activate that surface.
 
 ### Position ownership
 
@@ -125,9 +124,15 @@ The compounder does not perform an internal swap. It supplies available token
 amounts to a full-range position and banks remainders. Swap policy is therefore
 not hidden inside the adapter.
 
-The current fresh pool is unregistered, uninitialized, and unseeded. The
-Compounder is not deployed or configured. Do not assume a market price,
-liquidity, an LP NFT, or working swaps.
+The current fresh pool is registered, initialized, and seeded with
+`60,000 NARA + 300 USDC`. LP NFT `2898124` is Safe-owned, and receipt-pinned
+buy, sell, and same-block round-trip tax tests passed. The wired Safe-owned
+Compounder passed bounded validation and the Vault binding is permanently
+frozen. Compounder-owned LP NFT `2898486` has liquidity `9455824137787`;
+unmatched inventory remains banked in the Compounder and is not active POL.
+Current authority is `deployments/v4-production-activation-2026-08-09.json`
+together with `deployments/v4-compounder-activation-2026-08-09.json` and
+`docs/releases/NARA-20260809-v4-compounder-activation.md`.
 
 ## Extend periphery first
 

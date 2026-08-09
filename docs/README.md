@@ -8,13 +8,29 @@ stack and its release plans are deleted and must not be used as instructions.
 
 1. [CURRENT_STATE.md](CURRENT_STATE.md) — canonical state, incident findings,
    remediations, verification evidence, and remaining release blockers.
-2. [NARA-20260808-v4-relaunch-remediation.md](releases/NARA-20260808-v4-relaunch-remediation.md)
-   — current Change-ID handoff and evidence state.
-3. [UNISWAP_V4_HOOK.md](UNISWAP_V4_HOOK.md) — v4 Hook fee and pressure semantics.
-4. [V4_LAUNCH_CHECKLIST.md](V4_LAUNCH_CHECKLIST.md) — fresh-v4 deployment gates.
-5. [NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md](NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md)
+2. [Compounder activation manifest](../deployments/v4-compounder-activation-2026-08-09.json)
+   — current receipt-pinned Compounder validation, accounting, LP, and freeze
+   state.
+3. [NARA-20260809-v4-compounder-activation.md](releases/NARA-20260809-v4-compounder-activation.md)
+   — dated Compounder activation evidence and remaining operational gates.
+4. [Fresh v4 production activation manifest](../deployments/v4-production-activation-2026-08-09.json)
+   — sanitized 2026-08-09 activation addresses, receipts, pool state, and
+   historical activation checkpoint.
+5. [NARA-20260809-v4-production-activation.md](releases/NARA-20260809-v4-production-activation.md)
+   — dated activation handoff and tax-matrix evidence.
+6. [V4_NEXT_SESSION_HANDOFF.md](V4_NEXT_SESSION_HANDOFF.md) — exact current
+   checkpoint: activated pool and Compounder, disabled workflows, pending
+   Engine lifecycle smoke, and preview-only baskets.
+7. [UNISWAP_V4_HOOK.md](UNISWAP_V4_HOOK.md) — v4 Hook fee and pressure semantics.
+8. [V4_LAUNCH_CHECKLIST.md](V4_LAUNCH_CHECKLIST.md) — fresh-v4 deployment gates.
+9. [NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md](NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md)
    — historical v4 findings and remediations.
-6. [V4_CONTRACT_INDEX.md](V4_CONTRACT_INDEX.md) — v4 contract inventory.
+10. [V4_CONTRACT_INDEX.md](V4_CONTRACT_INDEX.md) — v4 contract inventory.
+
+The fresh pool is activated, live tax evidence passed, and Compounder
+validation/reconciliation/freeze is receipt-pinned as complete. This is not an
+overall production-readiness claim: both recurring workflows are disabled, the
+Engine lifecycle smoke is pending, and baskets remain preview-only.
 
 ## Technical references
 
@@ -37,7 +53,6 @@ stack and its release plans are deleted and must not be used as instructions.
 | [COMPOSABILITY_AUDIT_CHECKLIST.md](COMPOSABILITY_AUDIT_CHECKLIST.md) | Composability security checklist |
 | [NARA_CUSTODY_AND_RECOVERY.md](NARA_CUSTODY_AND_RECOVERY.md) | Custody and recovery procedures |
 | [ENGINE_OPS_RUNBOOK.md](ENGINE_OPS_RUNBOOK.md) | Engine operations |
-| [NARA_V4_LIQUIDITY_WITHDRAWAL_RUNBOOK.md](NARA_V4_LIQUIDITY_WITHDRAWAL_RUNBOOK.md) | Completed historical withdrawal evidence, replay guardrails, and future analogous-incident procedure |
 | [REPOSITORY_MAINTENANCE.md](REPOSITORY_MAINTENANCE.md) | Engineering and release procedure |
 | [NARA_V4_LAUNCH_RUNBOOK.md](NARA_V4_LAUNCH_RUNBOOK.md) | Historical launch mechanics; current checklist controls |
 | [V4_LAUNCH_CHECKLIST.md](V4_LAUNCH_CHECKLIST.md) | Active v4 release gates |

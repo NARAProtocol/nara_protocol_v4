@@ -2,14 +2,21 @@
 
 Change-ID: `NARA-20260731-compounder-validation`
 
-Current stop boundary (2026-08-09): the fresh Vault is empty, its Compounder is
-the zero address, Hook/Vault Safe ownership acceptance is pending, and the pool
-is unregistered, uninitialized, and unseeded. Do not use this runbook yet.
+Completed boundary (2026-08-09): the production Safe executed the bounded
+validation in transaction
+`0xf1ea7e7dfdf8e1021ceebf26a943cba604e0a8c894eec5f527bc01656b5890be`,
+minting Compounder-owned LP NFT `2898486` with liquidity `9455824137787`.
+After receipt reconciliation, the Safe permanently froze the Vault binding in
+transaction
+`0xccd73cf07602f18412bea291812f0d171fa5cabd41fcff6b6894029978084ef3`.
+This runbook is retained as the executed verification procedure; it does not
+authorize another transaction or a recurring workflow.
 
-After ownership acceptance, fresh Compounder deployment/wiring, atomic pool
-activation, and receipt verification, final launch gates remain blocked until
-one live compound is verified and the Safe performs the separate one-way
-freeze.
+Current authority is
+`deployments/v4-production-activation-2026-08-09.json` together with
+`deployments/v4-compounder-activation-2026-08-09.json` and
+`docs/releases/NARA-20260809-v4-compounder-activation.md`. Recurring
+maintenance remains blocked pending separate authorization and review.
 
 ## Build The Validation Transaction
 
