@@ -131,9 +131,15 @@ pending in the local environment.
 
 Origin repository: `NARAProtocol/nara_protocol_v4`
 
-Origin evidence commit: assigned after this record and the activation manifest
-are committed. Until that full commit is recorded here and merged through
-protected CI, every downstream address update is blocked.
+Origin evidence commit:
+`c0a7ca7d770016263211822dc1939d2717ee94bb`
+
+Activation-manifest Git blob:
+`3a355a1e8fd8a6d87bc77f21a012e0badf223d05`
+
+Merge state: committed on `release/v4-liquidity-activation-20260809`, not yet
+merged through the protected origin pull-request workflow. Until that commit
+is reviewed, green, and merged, every downstream address update is blocked.
 
 Planned downstream order:
 
