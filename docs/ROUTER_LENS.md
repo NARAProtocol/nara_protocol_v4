@@ -76,9 +76,11 @@ batches, while user-facing engine calls perform at most eight epochs of
 just-in-time advancement. Therefore user activity handles short gaps but is not
 an indefinite maintenance guarantee.
 
-The historical Railway cron is retired. The current production path is the
-guarded `.github/workflows/v4-epoch-maintainer.yml` schedule documented in
-`CURRENT_STATE.md`, plus permissionless/JIT advancement as a safety buffer.
+The historical Railway cron is retired. The later guarded
+`.github/workflows/v4-epoch-maintainer.yml` schedule is also manually disabled
+as recorded in `CURRENT_STATE.md`; no recurring keeper is currently active.
+Permissionless/JIT advancement remains only a safety buffer, not an indefinite
+operations guarantee.
 
 ## Deploy
 

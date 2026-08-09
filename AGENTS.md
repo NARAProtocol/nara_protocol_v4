@@ -75,6 +75,12 @@ block when applicable, test results, and unresolved risks.
   are burned; the recovery is cleared; and the sealed reserve is unchanged.
   Never replay the consumed Safe batch, re-propose its `WindDown`, or use those
   historical addresses as a current manifest.
+- **GitHub operations bots disabled:** on 2026-08-09, workflow IDs `324678194`
+  (`NARA v4 operations keeper`) and `324678196` (`NARA v4 liquidity maintainer`)
+  were set to `disabled_manually`. Repository variables
+  `V4_OPERATIONS_KEEPER_ENABLED` and `V4_LIQUIDITY_MAINTAINER_ENABLED` are both
+  `false`. Do not re-enable or dispatch them without a new explicit user order
+  and current deployment-specific review.
 - **Product scope:** NARA Baskets only after a verified fresh-v4 deployment
   manifest and handoff exist. Baskets remain preview-only today. Lockboard and
   composability are deferred; Lotto and Arena are retired.

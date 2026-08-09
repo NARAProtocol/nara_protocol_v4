@@ -53,6 +53,31 @@ The modular NFT contract named `NARAPositionRendererV5` is a renderer revision
 inside the v4 stack. It is not the deleted protocol V5 stack. Renaming it would
 change active v4 artifacts and is outside the liquidity remediation.
 
+## GitHub operational automation — disabled
+
+At `2026-08-08T22:19Z` (`2026-08-09 01:19` Kyiv), the repository's two
+transaction-capable operational workflows were shut down through GitHub's
+reversible workflow controls:
+
+| Workflow | GitHub workflow ID | Current state |
+|---|---:|---|
+| `NARA v4 operations keeper` | `324678194` | `disabled_manually` |
+| `NARA v4 liquidity maintainer` | `324678196` | `disabled_manually` |
+
+Repository variables `V4_OPERATIONS_KEEPER_ENABLED` and
+`V4_LIQUIDITY_MAINTAINER_ENABLED` are both `false`. A post-change query found
+no running or queued operational run. `NARA v4 CI`, `CodeQL`, and Dependabot
+remain active because they are verification/dependency workflows, not
+transaction bots.
+
+No secret was read, changed, or deleted, and this shutdown sent no on-chain
+transaction. The workflow files remain as historical/reviewable source, but
+GitHub will not schedule or dispatch them while disabled. Do not re-enable or
+dispatch either workflow without a new explicit user order, current verified
+deployment inputs, a reviewed execution credential/role posture, and a
+read-only dry run. See
+[NARA-20260809-disable-github-operations-bots.md](releases/NARA-20260809-disable-github-operations-bots.md).
+
 ## Fresh Base v4 core deployment
 
 The core deployment was executed during the 2026-08-08 UTC / 2026-08-09 local
@@ -169,7 +194,6 @@ The docs-only execution record is
 [NARA-20260809-fresh-v4-core-deployment.md](releases/NARA-20260809-fresh-v4-core-deployment.md).
 The activation execution record is
 [NARA-20260809-v4-production-activation.md](releases/NARA-20260809-v4-production-activation.md).
-
 ## What happened after the 2026-07-30 v4 pool deployment
 
 The historical pool launched atomically with `60,000 NARA + 300 USDC` and an

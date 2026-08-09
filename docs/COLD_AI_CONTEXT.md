@@ -43,6 +43,10 @@ This is a context-loss-safe summary for agents entering the NARA workspace.
   retired by human Safe signers on 2026-08-08. Its Vault and Compounder are
   empty, both LP NFTs are burned, and old pool active liquidity is zero. Never
   replay its Safe batch or re-propose its completed `WindDown`.
+- Both GitHub transaction-capable v4 operational workflows are manually
+  disabled, both enable variables are `false`, and no recurring keeper is
+  active. Do not re-enable or manually dispatch them without a new explicit
+  user order and current deployment-specific review.
 
 `NARAPositionRendererV5` is the historical name of the modular renderer revision
 inside the v4 contract family. It is not a protocol V5 stack.
