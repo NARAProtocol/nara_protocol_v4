@@ -104,8 +104,14 @@ All routed, compounded, and Compounder lifetime-added counters were zero.
 
 ## Remaining release gates
 
-1. Advance and receipt-pin the Engine epoch backlog. At block `49734434`,
-   `currentEpoch() == 34` and `epochState.epoch == 4`, a 30-epoch backlog.
+The Engine backlog gate was cleared after activation. Safe transaction
+`0xcd6e52b319f21b5a6772a36cc076a5c6f8390dcd7326ab1adf822a16f6638493`
+advanced epochs `5..35`; at receipt block `49735161`, both current and stored
+epoch were `35`. See
+`deployments/v4-engine-epoch-recovery-2026-08-09.json`.
+
+1. Explicitly authorize and configure recurring Engine maintenance; it remains
+   disabled even though the activation backlog is recovered.
 2. Execute the reviewed Compounder validation flow and reconcile exact-spend,
    Vault, remainder, LP-position, and liquidity accounting from its receipt.
 3. Only after validation passes, execute and verify the separate irreversible
