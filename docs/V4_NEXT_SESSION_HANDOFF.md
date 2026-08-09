@@ -52,9 +52,11 @@ Core verification readback block: `49719008`.
 - Receipt-pinned live buy and sell tax matrices passed.
 - Compounder validation and accounting reconciliation have not run to
   completion. The Compounder remains unfrozen and `positionTokenId()` is `0`.
-- At block `49734434`, `Engine.currentEpoch()` was `34` and
-  `epochState.epoch` was `4`. This 30-epoch backlog exceeds the eight-epoch JIT
-  buffer and can make user-facing Engine writes revert `EpochStale`.
+- Safe transaction
+  `0xcd6e52b319f21b5a6772a36cc076a5c6f8390dcd7326ab1adf822a16f6638493`
+  recovered the Engine activation backlog. At receipt block `49735161`, current
+  and stored epochs were both `35`; at later pinned block `49735219`, the gap
+  was one epoch (`36 / 35`) and JIT-recoverable.
 - Baskets remain preview-only.
 - No recurring v4 operations or liquidity-maintainer workflow is active.
 
@@ -82,8 +84,8 @@ The dated release handoff is
 
 ## Next gated work
 
-1. Advance and receipt-pin the Engine epoch backlog before describing core
-   user-write paths as available.
+1. Configure and explicitly authorize recurring Engine maintenance, and keep
+   monitoring the backlog so it never again exceeds the eight-epoch JIT buffer.
 2. Validate Compounder accounting in its own receipt-pinned transaction; only
    after reconciliation may the separate irreversible freeze be executed.
 3. Confirm the Compounder mints and owns a nonzero POL position before building

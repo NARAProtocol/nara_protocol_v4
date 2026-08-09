@@ -17,10 +17,12 @@ supported exact-input transaction.
 
 This is a pool-activation checkpoint, not a full protocol-availability or
 production-readiness claim. The Compounder has not been validation-compounded
-or frozen, all fee inventory remains banked, the Engine has a 30-epoch backlog
-at the pinned operations readback, allocations/periphery are not evidenced by
-this release, and baskets remain preview-only. The canonical sanitized evidence
-is `deployments/v4-production-activation-2026-08-09.json`.
+or frozen, all fee inventory remains banked, allocations/periphery are not
+evidenced by this release, and baskets remain preview-only. The Engine's
+activation backlog has been recovered, but recurring maintenance remains
+disabled. Canonical sanitized evidence is
+`deployments/v4-production-activation-2026-08-09.json` plus
+`deployments/v4-engine-epoch-recovery-2026-08-09.json`.
 
 ## Authoritative v4 release policy
 
@@ -290,10 +292,12 @@ authorizes no further transaction or redeployment.
 The fresh NARA/USDC pool and tested exact-input swap/tax path are active, but
 the whole stack is not production-ready. Remaining gates include:
 
-1. Recover the Engine epoch backlog. At block `49734434`, `currentEpoch()` was
-   `34` while `epochState.epoch` was `4`. The 30-epoch gap exceeds the
-   eight-epoch JIT buffer, so user-facing Engine writes can revert
-   `EpochStale` until operators advance and receipt-pin the checkpoints.
+1. Keep the Engine backlog within its eight-epoch JIT buffer and explicitly
+   authorize a recurring maintenance path. Recovery transaction
+   `0xcd6e52b319f21b5a6772a36cc076a5c6f8390dcd7326ab1adf822a16f6638493`
+   advanced epochs `5..35`; at receipt block `49735161`, current and stored
+   epochs were both `35`. At later pinned block `49735219`, the state was
+   `36 / 35`, a one-epoch JIT-recoverable gap.
 2. Execute the separately reviewed Compounder validation transaction, then
    reconcile its receipt-pinned exact-spend accounting, Vault counters,
    remainders, position ownership, and nonzero added liquidity.
