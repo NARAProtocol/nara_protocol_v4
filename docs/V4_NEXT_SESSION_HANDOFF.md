@@ -19,10 +19,10 @@ this table are source-verified:
 | `NARAToken` | `0xB6333F5D4cEd8dffA80F3F13697D6aA3BB3f19c1` | Deployed and verified; `NARA` / `NARA` |
 | `NARAEngine` | `0x98ab6406D6B548F37dEF7110961bb45A399e5aFC` | Deployed and verified |
 | `NARARewardReserve` | `0x8369CEf28128A4B24Bc5ed52aA6196D92D563F2f` | Deployed, verified, sealed with `650,000 NARA` |
-| `NARALiquidityGrowthVault` | `0xD7f7b44BF65EBa3E90fDe0642687ed22A323084D` | Deployed and verified; Safe-owned; Compounder wired |
+| `NARALiquidityGrowthVault` | `0xD7f7b44BF65EBa3E90fDe0642687ed22A323084D` | Deployed and verified; Safe-owned; Compounder binding permanently frozen |
 | `Create2HookDeployer` | `0xDE9E3Cac08b7a31Db18c7432d4C45DF4584Fd646` | Deployed and verified; Safe-owned |
 | `NARALiquidityGrowthHook` | `0x59AEf9799DEA01A7FB7dA73BEA10dfB08858A088` | Deployed and verified; `0x2088`; Safe-owned; pool registered |
-| `NARALiquidityCompounderV4` | `0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF` | Deployed and wired; validation/reconciliation/freeze pending; `positionTokenId=0` |
+| `NARALiquidityCompounderV4` | `0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF` | Validated; owns LP NFT `2898486` with liquidity `9455824137787` |
 
 Activated pool ID:
 `0x83edced1f39e6adf7469cd718eeb409824d948959263408d4cfb6e745c8db464`.
@@ -49,9 +49,13 @@ Core verification readback block: `49719008`.
   `0xaeb7c3365354de633dde977d9b2c951b240f6b8ff8be090cdd989edc4c924799`
   at block `49721188` registered, initialized, and seeded the pool. Initial LP
   NFT `2898124` holds liquidity `4242640687119285`.
-- Receipt-pinned live buy and sell tax matrices passed.
-- Compounder validation and accounting reconciliation have not run to
-  completion. The Compounder remains unfrozen and `positionTokenId()` is `0`.
+- Receipt-pinned live buy/sell and same-block tax evidence passed.
+- Compounder validation transaction
+  `0xf1ea7e7dfdf8e1021ceebf26a943cba604e0a8c894eec5f527bc01656b5890be`
+  minted Compounder-owned LP NFT `2898486` with liquidity `9455824137787`.
+  Separate freeze transaction
+  `0xccd73cf07602f18412bea291812f0d171fa5cabd41fcff6b6894029978084ef3`
+  permanently locked the Vault binding.
 - Safe transaction
   `0xcd6e52b319f21b5a6772a36cc076a5c6f8390dcd7326ab1adf822a16f6638493`
   recovered the Engine activation backlog. At receipt block `49735161`, current
@@ -77,19 +81,18 @@ Controlled Stage A and the 2026-07-30 pool remain historical recovery evidence.
 Do not copy their addresses, manifests, LP state, or role assignments into this
 deployment.
 
-The current sanitized activation record is
-[`deployments/v4-production-activation-2026-08-09.json`](../deployments/v4-production-activation-2026-08-09.json).
+The current sanitized Compounder activation record is
+[`deployments/v4-compounder-activation-2026-08-09.json`](../deployments/v4-compounder-activation-2026-08-09.json).
 The dated release handoff is
-[`docs/releases/NARA-20260809-v4-production-activation.md`](releases/NARA-20260809-v4-production-activation.md).
+[`docs/releases/NARA-20260809-v4-compounder-activation.md`](releases/NARA-20260809-v4-compounder-activation.md).
 
 ## Next gated work
 
 1. Configure and explicitly authorize recurring Engine maintenance, and keep
    monitoring the backlog so it never again exceeds the eight-epoch JIT buffer.
-2. Validate Compounder accounting in its own receipt-pinned transaction; only
-   after reconciliation may the separate irreversible freeze be executed.
-3. Confirm the Compounder mints and owns a nonzero POL position before building
-   the freeze transaction; `positionTokenId=0` is a hard stop for freezing.
+2. Complete and receipt-pin the Engine lock, activation, claim, and unlock
+   lifecycle smoke.
+3. Complete the monitored observation period.
 4. Keep both recurring v4 workflows disabled until a new explicit user order
    and deployment-specific review authorizes an operational path.
 5. Keep baskets in preview/non-availability state until their verified
@@ -103,16 +106,11 @@ Run from `nara-protocol-hardhat/` after the required evidence/environment sync:
 
 ```powershell
 npm run verify:v4:preflight
-npm run build:v4:compounder-validation
+npm run verify:v4:launch-gates:baskets
 ```
 
-The following state-changing steps remain blocked until validation evidence is
-reconciled and a fresh explicit approval exists:
-
-```powershell
-npm run build:v4:compounder-validation -- --freeze
-# recurring workflow dispatches remain disabled
-```
+The one-time validation and freeze builders must not be replayed. Recurring
+workflow dispatches remain blocked until a fresh explicit approval exists.
 
 ## Stop conditions
 

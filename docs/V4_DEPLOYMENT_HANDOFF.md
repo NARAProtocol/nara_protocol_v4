@@ -12,7 +12,7 @@ Continue from:
 1. [CURRENT_STATE.md](CURRENT_STATE.md) for deployed addresses and current
    state.
 2. [V4_NEXT_SESSION_HANDOFF.md](V4_NEXT_SESSION_HANDOFF.md) for the next gated
-   Compounder validation, reconciliation, freeze, and operations sequence.
+   Engine lifecycle-smoke, operations, and downstream sequence.
 3. [V4_LAUNCH_CHECKLIST.md](V4_LAUNCH_CHECKLIST.md) for required pass and stop
    conditions.
 4. [NARA_V4_LAUNCH_RUNBOOK.md](NARA_V4_LAUNCH_RUNBOOK.md) for human-reviewed
@@ -20,6 +20,10 @@ Continue from:
 5. [Fresh v4 production activation manifest](../deployments/v4-production-activation-2026-08-09.json)
    and [dated activation release](releases/NARA-20260809-v4-production-activation.md)
    for the receipt-pinned 2026-08-09 state transition.
+6. [Compounder activation manifest](../deployments/v4-compounder-activation-2026-08-09.json)
+   and [dated Compounder release](releases/NARA-20260809-v4-compounder-activation.md)
+   for the bounded validation, accounting, LP position, and permanent binding
+   freeze.
 
 The fresh Launcher `0xb8CF0274d0Fb2dB2Ba5dC58b0Ab378F3b8f35BA2`, Token
 `0xB6333F5D4cEd8dffA80F3F13697D6aA3BB3f19c1`, Engine
@@ -47,13 +51,14 @@ transaction
 at block `49721188`. Initial LP NFT `2898124` holds liquidity
 `4242640687119285`. Receipt-pinned live buy and sell tax matrices passed.
 
-Do not repeat the core deployment or pool launch. Compounder validation and
-accounting reconciliation remain pending; it is not frozen and
-`positionTokenId=0`. The Engine also has a 30-epoch backlog at the pinned
-readback, beyond its eight-epoch JIT buffer, so epoch recovery is the first
-operations gate. Both recurring v4 workflows remain disabled, baskets are
-preview-only, and downstream availability still requires the explicit handoff
-sequence. This is not an overall production-readiness claim.
+Do not repeat the core deployment, pool launch, Engine recovery, Compounder
+validation, or permanent binding freeze. The Compounder owns LP NFT `2898486`
+with liquidity `9455824137787`; total active liquidity was
+`4252096511257072` at the freeze block. Engine backlog recovery succeeded, but
+the Engine lifecycle smoke and recurring maintenance remain gated. Both
+recurring v4 workflows remain disabled, baskets are preview-only, and
+downstream availability still requires the explicit handoff sequence. This is
+not an overall production-readiness claim.
 
 The earlier protected core manifest remains accompanied by its supplemental
 canonical receipt reconciliation because 24 original journal entries stored a

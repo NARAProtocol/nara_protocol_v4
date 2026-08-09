@@ -119,13 +119,16 @@ notifier path.
 
 ## Current v4 Launch State
 
-The fresh-v4 core and NARA/USDC pool are deployed and the sampled live tax path
-has reconciled. Canonical evidence is recorded in `docs/CURRENT_STATE.md` and
-`deployments/v4-production-activation-2026-08-09.json`. The Compounder remains
-unvalidated/unfrozen and the Engine is beyond its eight-epoch JIT buffer, so do
-not claim whole-stack availability. Do not reuse an old pool-only launch or a
-planned address. Complete the remaining validation, operations, monitoring, and soak
-gates before activation.
+The fresh-v4 core and NARA/USDC pool are deployed, sampled and same-block tax
+paths reconciled, Engine backlog recovery succeeded, and the bounded
+Compounder validation minted LP NFT `2898486`. The Vault binding is permanently
+frozen to Compounder `0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF`.
+Canonical evidence is recorded in `docs/CURRENT_STATE.md`,
+`deployments/v4-production-activation-2026-08-09.json`, and
+`deployments/v4-compounder-activation-2026-08-09.json`. Recurring Engine and
+liquidity maintenance are not configured, the Engine lifecycle smoke remains
+pending, and baskets remain preview-only, so do not claim whole-stack
+availability. Do not reuse an old pool-only launch or a planned address.
 
 Do not use retired v3 addresses for new integrations, UI, scripts, baskets, or
 public copy. The retired v3 address table lives in `archive/legacy-v3/README.md`

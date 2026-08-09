@@ -2,20 +2,21 @@
 
 Change-ID: `NARA-20260731-compounder-validation`
 
-Current boundary (2026-08-09): Hook and Vault ownership has been accepted by the
-production Safe; `NARALiquidityCompounderV4` at
-`0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF` is deployed, source-verified,
-wired, and Safe-owned; and the NARA/USDC pool is initialized and seeded. The
-Vault has recorded and banked `1495.229242512170995797 NARA` and
-`20.462880 USDC`. The Compounder remains unvalidated and unfrozen, with
-`positionTokenId == 0` and zero total compounded amounts. This runbook is the
-next gated operation; it does not authorize a transaction or workflow.
+Completed boundary (2026-08-09): the production Safe executed the bounded
+validation in transaction
+`0xf1ea7e7dfdf8e1021ceebf26a943cba604e0a8c894eec5f527bc01656b5890be`,
+minting Compounder-owned LP NFT `2898486` with liquidity `9455824137787`.
+After receipt reconciliation, the Safe permanently froze the Vault binding in
+transaction
+`0xccd73cf07602f18412bea291812f0d171fa5cabd41fcff6b6894029978084ef3`.
+This runbook is retained as the executed verification procedure; it does not
+authorize another transaction or a recurring workflow.
 
-Current activation authority is
+Current authority is
 `deployments/v4-production-activation-2026-08-09.json` together with
-`docs/releases/NARA-20260809-v4-production-activation.md`. Final Compounder and
-maintenance gates remain blocked until one live compound is independently
-verified and the Safe performs the separate one-way freeze.
+`deployments/v4-compounder-activation-2026-08-09.json` and
+`docs/releases/NARA-20260809-v4-compounder-activation.md`. Recurring
+maintenance remains blocked pending separate authorization and review.
 
 ## Build The Validation Transaction
 

@@ -15,6 +15,12 @@ Merged core-evidence commit:
 Canonical machine-readable evidence:
 `deployments/v4-production-activation-2026-08-09.json`
 
+This file records a historical activation checkpoint; the pinned manifest and
+commit preserve its point-in-time evidence. For current Compounder, LP, and
+freeze state, use
+`deployments/v4-compounder-activation-2026-08-09.json` and
+`docs/releases/NARA-20260809-v4-compounder-activation.md`.
+
 ## Outcome
 
 The fresh v4 NARA/USDC pool is registered, initialized, seeded, and trading.
@@ -104,6 +110,11 @@ All routed, compounded, and Compounder lifetime-added counters were zero.
 
 ## Remaining release gates
 
+The numbered list below records what remained at this activation checkpoint.
+Items 2 and 3 were later cleared by the receipt-pinned Compounder validation
+and freeze documented in `NARA-20260809-v4-compounder-activation.md`; do not use
+this historical list as current state.
+
 The Engine backlog gate was cleared after activation. Safe transaction
 `0xcd6e52b319f21b5a6772a36cc076a5c6f8390dcd7326ab1adf822a16f6638493`
 advanced epochs `5..35`; at receipt block `49735161`, both current and stored
@@ -130,8 +141,10 @@ For this release it exports the fresh Token, Engine, Hook, Vault, Compounder,
 PoolId, and LP NFT `2898124`; it never exports a private key. Retired July
 addresses are named and handled only as retired incident values. The env-sync
 and live-config guard suite passes `19/19` focused tests.
-The full Hardhat suite passes `556` tests with `5` opt-in Base-fork cases
-pending in the local environment.
+At this activation checkpoint, the full Hardhat suite passed `556` tests with
+`5` opt-in Base-fork cases pending in the local environment. The later
+same-block fork additions raised the current pending count to `7` when those
+fork environments are not enabled.
 
 ## Cross-repository handoff
 

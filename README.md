@@ -33,22 +33,28 @@ has been deleted. Fresh deployment work is v4-only.**
 The description below is the v4 protocol thesis and source inventory. It does
 not claim that every optional v4 module is deployed.
 
-NARA is built around commitment. You commit a fixed-supply token for a chosen duration; the longer you
-commit, the more **weight** your position carries; and the protocol distributes its reward streams —
-NARA emissions and contributed ETH across committed weight **every 15-minute epoch**. Rewards are
-variable, never promised, and can be zero. The deployed engine's generic ERC-20 notification surface
-is intentionally disabled; see [Current State](docs/CURRENT_STATE.md).
+The v4 source is built around commitment: a participant can lock a fixed-supply
+token for a chosen duration, and duration affects position weight. The Engine
+source accounts NARA emissions and contributed ETH across active weight in
+15-minute epochs. Rewards are variable, never promised, and can be zero. Public
+locking is not yet available; the production lock/activation/claim/unlock smoke
+and frontend gates remain pending. The deployed Engine's generic ERC-20
+notification surface is intentionally disabled; see
+[Current State](docs/CURRENT_STATE.md).
 
-A commitment isn't a database row you can't move — **it's an NFT**. You can sell it, fractionalize it, wrap
-it into a liquid staking token, or borrow against it, all without breaking the underlying commitment.
+The allocation-layer source represents a commitment as an owner-transferable
+NFT. That layer is not deployed in this release. Fractionalization, wrapping,
+marketplace, and lending integrations are optional undeployed source or future
+integration work; their existence does not guarantee a buyer, market, lender,
+liquidity, or exit.
 
 The fresh v4 market uses a custom Uniswap v4 pool. The Hook and Vault are
 Safe-owned, the Compounder is deployed and wired, and the pool was atomically
 registered, initialized, and seeded on 2026-08-09. Receipt-pinned live buy and
-sell tax matrices passed. Compounder validation, accounting reconciliation, and
-the separate irreversible freeze remain pending; its `positionTokenId` is still
-`0`. The Vault is in `Liquidity` mode and its generic ERC-20 Engine notifier
-path is disabled.
+sell tax matrices and the same-block round trip passed. The bounded Compounder
+validation minted Compounder-owned LP NFT `2898486`, and the separate Vault
+binding freeze succeeded. The Vault is in `Liquidity` mode and its generic
+ERC-20 Engine notifier path is disabled.
 
 ```
 NARAToken -> NARAEngine -> positions / bonds
@@ -84,17 +90,19 @@ NARA/USDC pool -> v4 Hook -> v4 Vault -> balanced inventory -> Compounder/POL
 operational gates still pending.** The production Safe accepted Hook and Vault
 ownership, the Compounder was deployed and wired, and the pool was seeded with
 LP NFT `2898124` and liquidity `4242640687119285`. Both live tax matrices
-passed. Compounder validation/reconciliation/freeze is not complete,
-`positionTokenId=0`, and both recurring v4 workflows are disabled. The Engine's
+passed, including receipt-pinned same-block pressure and reversal evidence.
+Compounder validation/reconciliation/freeze is complete: LP NFT `2898486` is
+Compounder-owned with liquidity `9455824137787`, and total active liquidity was
+`4252096511257072` at the freeze block. Both recurring v4 workflows remain
+disabled. The Engine's
 activation backlog was recovered by Safe transaction
 `0xcd6e52b319f21b5a6772a36cc076a5c6f8390dcd7326ab1adf822a16f6638493`;
 the receipt-block readback was current at epoch `35`. Baskets remain
 preview-only. This is not an overall production-readiness claim.
 Canonical activation evidence:
-[`deployments/v4-production-activation-2026-08-09.json`](deployments/v4-production-activation-2026-08-09.json)
-and [`deployments/v4-engine-epoch-recovery-2026-08-09.json`](deployments/v4-engine-epoch-recovery-2026-08-09.json).
-and
-[`docs/releases/NARA-20260809-v4-production-activation.md`](docs/releases/NARA-20260809-v4-production-activation.md).
+[`deployments/v4-production-activation-2026-08-09.json`](deployments/v4-production-activation-2026-08-09.json),
+[`deployments/v4-engine-epoch-recovery-2026-08-09.json`](deployments/v4-engine-epoch-recovery-2026-08-09.json),
+and [`deployments/v4-compounder-activation-2026-08-09.json`](deployments/v4-compounder-activation-2026-08-09.json).
 
 ---
 
@@ -153,7 +161,7 @@ This is the v4 dependency shape. Full v4 layer inventory:
 |--------|-----------|
 | **Token** | `NARAToken` — 1,000,000 fixed supply, minted once. ERC-2612 permit, ERC-1363 (`transferAndCall` to commit in one tx), capped ERC-3156 flash mint, multicall. |
 | **Engine** | `NARAEngine` — the settlement core: JIT epoch advance and weight-based NARA/ETH accounting. Its generic ERC-20 rail exists in immutable code but is disabled for this deployment. |
-| **Liquidity** | The fresh **Uniswap v4** Hook/Vault/Compounder family and seeded pool. Initial full-range liquidity is active under LP NFT `2898124`; Compounder-created POL is still blocked pending validation, reconciliation, and freeze because `positionTokenId=0`. V4 ERC-20 Engine notification is prohibited. |
+| **Liquidity** | The fresh **Uniswap v4** Hook/Vault/Compounder family and seeded pool. Initial full-range liquidity is active under Safe-owned LP NFT `2898124`; validated Compounder-owned LP NFT `2898486` adds liquidity `9455824137787`. Banked Compounder inventory is not active LP. V4 ERC-20 Engine notification is prohibited. |
 | **Positions** | `NARAPositionNFTV4` — a commitment *is* a tradable NFT, with Genesis tiers and a bond intake path. |
 | **Composability** | Tested optional v4 source for `stNARA`, a Pendle SY adapter, and fractional position wrappers; not automatically deployed. |
 
@@ -221,7 +229,7 @@ The following v4 components are built and tested but optional. They are not
 automatically part of a fresh v4 release:
 
 - **stNARA** (`NARAStakingPoolV4`) — liquid staking token over a pool of max-duration positions;
-  exchange rate rises as rewards compound. First deposit mints dead shares (inflation-attack safe).
+  exchange-rate accounting includes a dead-share mitigation on first deposit.
 - **Pendle SY adapter** (`NARAStakingPoolSYV4`) — implements Pendle's SY (Standardized-Yield) interface
   over stNARA, with two reward streams (USDC + native ETH) and the NAV oracle Pendle needs.
 - **Fractional positions** (`NARAFractionalPositionV4`) — split one committed position into up to 1e12
@@ -273,10 +281,12 @@ not a Forge setup.)
 
 | Gate | Latest evidence |
 |------|-----------------|
-| V4 Hardhat suite | **556 passing** on 2026-08-09; 5 Base-fork cases intentionally skipped without their opt-in fork environment |
+| V4 Hardhat suite | **556 passing, 7 pending, 0 failing** on 2026-08-09; pending cases require opt-in Base-fork environments |
 | Fresh deployment/receipt/Safe-batch evidence | **12/12** focused tests passing on 2026-08-09 |
 | Fresh v4 activation | Safe ownership accepted; Compounder deployed/wired; pool seeded in block `49721188` with LP NFT `2898124` and liquidity `4242640687119285` |
 | Live Hook-tax matrices | Receipt-pinned buy and sell matrices passed on 2026-08-09 |
+| Same-block Hook-tax round trip | 20-action buy and exact 20-action sell reversal reconciled at receipt blocks on 2026-08-09 |
+| Compounder activation | Bounded compound transaction `0xf1ea7e7d...56b5890be` minted LP NFT `2898486`; separate freeze transaction `0xccd73cf0...78084ef3` permanently locked the Vault binding |
 | Focused Hook/Vault/Compounder/atomic batch | **43/43** passing on 2026-08-05 |
 | V4 invariants | **4/4** Hardhat invariant regressions passing on 2026-08-05 |
 | Static review | Slither completed every configured production v4 target; internal critic disposition is recorded in the dated audit run |
@@ -286,9 +296,9 @@ not a Forge setup.)
 | Aderyn | Latest completed run is 2026-06-08; the 2026-07-29 rerun could not start because the binary is unavailable |
 
 These are internal verification results, not an independent audit or a
-production-readiness claim. Compounder validation/reconciliation/freeze,
-recurring-maintenance authorization, soak, basket deployment, and downstream
-integration remain open. Both recurring v4 workflows are disabled. See
+production-readiness claim. Recurring-maintenance authorization, Engine
+lifecycle smoke, soak, basket deployment, and downstream integration remain
+open. Both recurring v4 workflows are disabled. See
 [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md).
 
 > Automated analysis is necessary but not sufficient. Independent review
@@ -300,10 +310,12 @@ integration remain open. Both recurring v4 workflows are disabled. See
 
 ## 🚀 Deployment
 
-The 2026-08-09 activation has receipt-block evidence, but release work is not
-finished. Reconcile and validate the Compounder before separately freezing it;
-keep both recurring workflows disabled; deploy no basket from this repository;
-and update downstream consumers only through the cross-repository handoff.
+The 2026-08-09 activation, Engine recovery, same-block tax round trip, bounded
+Compounder validation, and permanent Vault binding freeze have receipt-block
+evidence, but release work is not finished. Keep both recurring workflows
+disabled; complete the Engine lifecycle smoke and monitored observation period;
+deploy no basket from this repository; and update downstream consumers only
+through the cross-repository handoff.
 Every further production transaction still requires explicit human approval.
 See the activation manifest and release note linked above.
 
@@ -330,11 +342,14 @@ Full index: [`docs/README.md`](docs/README.md).
 
 ## ⚠️ Disclaimer
 
-This repository is software, not financial advice or an offer of any product. NARA is a permissionless,
-non-custodial protocol with no admin over user principal. Tokens and positions can lose **all** value.
-Rewards are variable and are **never promised or guaranteed** — they can be zero. Nothing here is
-investment advice, and no NARA entity manages assets or promises any return. You are solely responsible
-for evaluating the protocol and complying with the laws of your jurisdiction.
+This repository contains software and technical evidence, not financial,
+investment, legal, or tax advice or an offer of any product. Contract roles,
+custody, mutability, and user control vary by deployed component and must be
+verified from the current manifest and onchain state; this README makes no
+legal characterization of them. Tokens and positions can lose all value.
+Rewards are variable, never promised or guaranteed, and can be zero. Public
+copy and value-bearing flows require jurisdiction-specific review by qualified
+counsel, and users should obtain appropriate professional advice.
 Fresh-v4 activation evidence exists, but the basket frontend remains
 preview-only and this repository does not claim that the overall product is
 production-ready.

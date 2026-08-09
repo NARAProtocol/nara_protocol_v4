@@ -5,10 +5,12 @@
 > tests, scripts, and plans are deleted and must not be restored. The fresh v4
 > core is deployed and source-verified from one immutable reviewed origin
 > commit with a new verified manifest and receipt reconciliation. Pool
-> activation is confirmed; Compounder validation/freeze, allocations,
-> Engine epoch recovery, periphery, and downstream handoffs remain pending. Current activation
-> authority is `deployments/v4-production-activation-2026-08-09.json` together
-> with `docs/releases/NARA-20260809-v4-production-activation.md`. Controlled
+> activation, Engine epoch recovery, and Compounder validation/freeze are
+> confirmed. Allocations, periphery, recurring maintenance, the Engine
+> lifecycle smoke, and downstream handoffs remain pending. Current authority is
+> `deployments/v4-production-activation-2026-08-09.json` together with
+> `deployments/v4-compounder-activation-2026-08-09.json` and
+> `docs/releases/NARA-20260809-v4-compounder-activation.md`. Controlled
 > Stage A and the 2026-07-30 pool are historical incident/recovery evidence
 > only; none of their addresses may be reused in consumer configuration.
 
@@ -29,16 +31,15 @@ outstanding, and how the pieces fit. It links out to the deeper docs rather than
 
 NARA v4 is a fixed-supply (1,000,000) time-preference protocol on Base. You lock NARA → get a
 weight → earn NARA + ETH rewards per epoch. **A lock *is* an NFT** (`NARAPositionNFTV4`).
-Pool fees accrue in the Vault; balanced inventory is intended to compound
-protocol-owned liquidity only after Compounder validation. The **five pillars** are: **Token, Engine,
+Pool fees accrue in the Vault; a validated bounded action has compounded the
+first balanced subset into protocol-owned liquidity. The **five pillars** are: **Token, Engine,
 Liquidity (the taxed Uniswap v4 pool), the NFT lock layer, and Baskets** (the brand front door).
 The source candidate is v4-only. The fresh core deployment, immutable origin
 commit, verified deployment manifest, and receipt reconciliation now exist.
-Hook/Vault Safe ownership, the deployed and wired Compounder, atomic pool
-activation, Safe-owned LP NFT `2898124`, and receipt-pinned buy/sell tax
-evidence now exist. The Compounder is still unvalidated and unfrozen with no
-position and zero compounded totals. The Engine is also 30 epochs behind at
-the pinned operations readback, beyond its eight-epoch JIT buffer. Allocations, periphery, and downstream
+Hook/Vault Safe ownership, atomic pool activation, Safe-owned LP NFT `2898124`,
+receipt-pinned buy/sell and same-block tax evidence, Engine backlog recovery,
+and validated/frozen Compounder-owned LP NFT `2898486` now exist. Allocations,
+periphery, recurring maintenance, the Engine lifecycle smoke, and downstream
 handoffs remain separate; the publishable Baskets app remains in preview,
 Lockboard is deferred, and Lotto and Arena are retired.
 
@@ -137,7 +138,7 @@ writing contracts**:
 |---|---|---|
 | Publish the activation evidence downstream | **release** | Use only the activation manifest and release record cited at the top; consumer changes require explicit handoff |
 | Deploy allocations and periphery | **ops/capital** | Separate deployment scope; use human-approved inputs and verified manifests |
-| Validate and freeze compounder | **ops** | Use only the compounder bound to the fresh manifest's Hook/Vault pair; run live accounting checks before the one-way freeze |
+| Validate and freeze compounder | **completed ops evidence** | Receipt-pinned in `deployments/v4-compounder-activation-2026-08-09.json`; do not replay the one-time activation sequence |
 | Lock UI rebuilt for v4 | **deferred frontend** | Lockboard is not part of the baskets-only launch |
 | Baskets buy/sell UI | **frontend** | The public front door app |
 | **stNARA AMM pool** for instant exit | **ops/liquidity** | A pool you seed, not a contract. Without it, exit is via the redemption queue (which IS built) |
@@ -158,7 +159,7 @@ writing contracts**:
 ```
 basket trades + pool tax
    → NARA/USDC fees accrue in the LiquidityGrowthVault
-   → balanced inventory compounds LP only after Compounder validation
+   → a bounded balanced subset compounds into LP; unmatched inventory remains banked
    → separate ETH/NARA reward sources can fund lockers
    → demand to buy NARA and lock
    → pool deepens, tax compounds LP
