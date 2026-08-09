@@ -13,7 +13,26 @@ This is a context-loss-safe summary for agents entering the NARA workspace.
   private keys.
 - Use generated v4 artifacts from an immutable reviewed commit and a verified
   manifest for integrations.
-- The basket frontend remains preview-only until a verified fresh-v4 handoff.
+- The basket frontend remains preview-only until its own verified deployment
+  manifests and the explicit cross-repository handoff exist.
+- The fresh v4 Hook and Vault are owned by the production Safe. Ownership was
+  accepted in transaction
+  `0x35320c5a5dfa31898d8a66e088038b67d1113bf6b95b82a230eaaf64be6f595d`
+  at block `49720700`.
+- The fresh Compounder is deployed at
+  `0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF` and wired to the Vault, but
+  validation, accounting reconciliation, and the irreversible freeze remain
+  pending. `positionTokenId()` is `0`.
+- The fresh NARA/USDC pool is registered, initialized, and seeded. Its PoolId is
+  `0x83edced1f39e6adf7469cd718eeb409824d948959263408d4cfb6e745c8db464`;
+  the initial LP NFT is `2898124` with liquidity `4242640687119285`.
+- Receipt-pinned live buy and sell tax matrices passed. This evidence is not an
+  overall production-readiness claim. Both recurring v4 workflows remain
+  disabled.
+- At Base block `49734434`, `Engine.currentEpoch()` was `34` while
+  `epochState.epoch` was `4`. The 30-epoch backlog exceeds the eight-epoch JIT
+  buffer; treat user-facing Engine writes as unavailable until operators
+  advance and receipt-pin the checkpoints.
 - The historical 2026-07-30 NARA/USDC liquidity stack was fully withdrawn and
   retired by human Safe signers on 2026-08-08. Its Vault and Compounder are
   empty, both LP NFTs are burned, and old pool active liquidity is zero. Never
@@ -26,10 +45,12 @@ inside the v4 contract family. It is not a protocol V5 stack.
 
 1. `AGENTS.md`
 2. `docs/CURRENT_STATE.md`
-3. `docs/NARA_V4_LIQUIDITY_WITHDRAWAL_RUNBOOK.md`
-4. `docs/UNISWAP_V4_HOOK.md`
-5. `docs/V4_LAUNCH_CHECKLIST.md`
-6. `docs/NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md`
+3. `deployments/v4-production-activation-2026-08-09.json`
+4. `docs/releases/NARA-20260809-v4-production-activation.md`
+5. `docs/V4_NEXT_SESSION_HANDOFF.md`
+6. `docs/UNISWAP_V4_HOOK.md`
+7. `docs/V4_LAUNCH_CHECKLIST.md`
+8. `docs/NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md`
 
 ## Protocol shape
 
@@ -57,6 +78,29 @@ inside the v4 contract family. It is not a protocol V5 stack.
   BPS and exact fee amount.
 - The Engine ERC-20 notifier path is prohibited because active extensions can
   strand reward remainder.
+
+## Exact activation receipt facts
+
+- Core addresses:
+  - Launcher: `0xb8CF0274d0Fb2dB2Ba5dC58b0Ab378F3b8f35BA2`
+  - Token: `0xB6333F5D4cEd8dffA80F3F13697D6aA3BB3f19c1`
+  - Engine: `0x98ab6406D6B548F37dEF7110961bb45A399e5aFC`
+  - Reward reserve: `0x8369CEf28128A4B24Bc5ed52aA6196D92D563F2f`
+  - Vault: `0xD7f7b44BF65EBa3E90fDe0642687ed22A323084D`
+  - CREATE2 Hook deployer: `0xDE9E3Cac08b7a31Db18c7432d4C45DF4584Fd646`
+  - Hook: `0x59AEf9799DEA01A7FB7dA73BEA10dfB08858A088`
+- Compounder deployment transaction:
+  `0x8180bc9b7ec6f1e89719cb04cc358ad6e512c664e53aae810cb91abc3c00d461`,
+  block `49720856`.
+- Vault wiring transaction:
+  `0x29727cf5578989932175bd4e672d193e38b580f50645dd3bfcc173b44b2e70da`,
+  block `49721044`.
+- Atomic pool seed transaction:
+  `0xaeb7c3365354de633dde977d9b2c951b240f6b8ff8be090cdd989edc4c924799`,
+  block `49721188`.
+- The Compounder has not yet minted its own POL position. Do not confuse the
+  initial seed LP NFT `2898124` with `Compounder.positionTokenId()`, which is
+  still `0`.
 
 ## Atomic release requirements
 

@@ -8,13 +8,24 @@ stack and its release plans are deleted and must not be used as instructions.
 
 1. [CURRENT_STATE.md](CURRENT_STATE.md) — canonical state, incident findings,
    remediations, verification evidence, and remaining release blockers.
-2. [NARA-20260808-v4-relaunch-remediation.md](releases/NARA-20260808-v4-relaunch-remediation.md)
-   — current Change-ID handoff and evidence state.
-3. [UNISWAP_V4_HOOK.md](UNISWAP_V4_HOOK.md) — v4 Hook fee and pressure semantics.
-4. [V4_LAUNCH_CHECKLIST.md](V4_LAUNCH_CHECKLIST.md) — fresh-v4 deployment gates.
-5. [NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md](NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md)
+2. [Fresh v4 production activation manifest](../deployments/v4-production-activation-2026-08-09.json)
+   — sanitized 2026-08-09 activation addresses, receipts, pool state, and
+   remaining Compounder gates.
+3. [NARA-20260809-v4-production-activation.md](releases/NARA-20260809-v4-production-activation.md)
+   — dated activation handoff and tax-matrix evidence.
+4. [V4_NEXT_SESSION_HANDOFF.md](V4_NEXT_SESSION_HANDOFF.md) — exact current
+   checkpoint: activated pool, pending Compounder validation/freeze, disabled
+   workflows, and preview-only baskets.
+5. [UNISWAP_V4_HOOK.md](UNISWAP_V4_HOOK.md) — v4 Hook fee and pressure semantics.
+6. [V4_LAUNCH_CHECKLIST.md](V4_LAUNCH_CHECKLIST.md) — fresh-v4 deployment gates.
+7. [NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md](NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md)
    — historical v4 findings and remediations.
-6. [V4_CONTRACT_INDEX.md](V4_CONTRACT_INDEX.md) — v4 contract inventory.
+8. [V4_CONTRACT_INDEX.md](V4_CONTRACT_INDEX.md) — v4 contract inventory.
+
+The fresh pool is activated and both live tax matrices passed, but this is not
+an overall production-readiness claim. Compounder validation, reconciliation,
+and freeze remain pending with `positionTokenId=0`; both recurring workflows
+are disabled; baskets remain preview-only.
 
 ## Technical references
 

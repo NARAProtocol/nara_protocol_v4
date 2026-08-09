@@ -2,11 +2,17 @@
 
 Change-ID: `NARA-20260731-liquidity-maintainer`
 
-Current stop boundary (2026-08-09): this runbook is inactive. The fresh pool is
-dormant, the Compounder is not deployed or wired, and both v4 operations
-workflows and their repository enable variables are disabled. Do not schedule,
-dispatch, or re-enable maintenance without a new explicit order and
-deployment-specific review.
+Current stop boundary (2026-08-09): the fresh pool is initialized and seeded,
+and the Safe-owned Compounder at
+`0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF` is deployed and wired. It remains
+unvalidated and unfrozen, with `positionTokenId == 0` and zero total compounded
+amounts. The Engine also has a 30-epoch backlog at the activation readback,
+beyond its eight-epoch JIT buffer. Both v4 operations workflows and their repository enable variables
+are disabled. Do not schedule, dispatch, execute maintenance, or re-enable a
+workflow until the validation and freeze gates below pass under a new explicit
+order and deployment-specific review. Current activation authority is
+`deployments/v4-production-activation-2026-08-09.json` together with
+`docs/releases/NARA-20260809-v4-production-activation.md`.
 
 The hook collects NARA/USDC pool fees into the growth vault during live swaps.
 Those fees do not become liquidity inside the swap transaction. A second,

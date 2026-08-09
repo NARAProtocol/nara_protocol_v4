@@ -8,12 +8,12 @@ import {
   BASE_POOL_MANAGER,
   BASE_UNIVERSAL_ROUTER,
   BASE_USDC,
-  DEFAULT_V4_ENGINE,
-  DEFAULT_V4_HOOK,
-  DEFAULT_V4_LP_TOKEN_ID,
-  DEFAULT_V4_NARA,
-  DEFAULT_V4_POOL_ID,
-  DEFAULT_V4_VAULT,
+  RETIRED_INCIDENT_V4_ENGINE,
+  RETIRED_INCIDENT_V4_HOOK,
+  RETIRED_INCIDENT_V4_LP_TOKEN_ID,
+  RETIRED_INCIDENT_V4_NARA,
+  RETIRED_INCIDENT_V4_POOL_ID,
+  RETIRED_INCIDENT_V4_VAULT,
   QUARANTINED_STAGE_A_HOOK,
   QUARANTINED_STAGE_A_POOL_ID,
   assertCanonicalV4PoolConfig,
@@ -29,7 +29,7 @@ type JsonObject = Record<string, unknown>;
 type RetiredValues = Map<string, Set<string>>;
 
 const HISTORICAL_MANIFEST_PATTERN =
-  /(?:v4-liquidity-replacement|controlled-stage-a|v4-pool-redeploy)/i;
+  /(?:v4-liquidity-replacement|controlled-stage-a|v4-pool-redeploy|v4-pool-launch-2026-07-30|v4-liquidity-compounder-2026-07-26|v4-nara-depth-proposal-2026-07-27)/i;
 const HISTORICAL_STATE_PATTERN =
   /(?:quarantin|retir|histor|incident|recover|wind[- ]?down|withdraw|stage[- ]?a|replacement)/i;
 
@@ -40,31 +40,31 @@ function normalized(value: string): string {
 function knownRetiredValues(): RetiredValues {
   return new Map<string, Set<string>>([
     ["V4_NARA_TOKEN", new Set([
-      normalized(DEFAULT_V4_NARA),
+      normalized(RETIRED_INCIDENT_V4_NARA),
       normalized("0x65E247AA3aa9C0131b2984b894c3D24c41341D7A"),
     ])],
     ["V4_ENGINE", new Set([
-      normalized(DEFAULT_V4_ENGINE),
+      normalized(RETIRED_INCIDENT_V4_ENGINE),
       normalized("0xbC2492BA73dE35d1114b5c18d7db633aca8963c9"),
     ])],
     ["V4_HOOK", new Set([
-      normalized(DEFAULT_V4_HOOK),
+      normalized(RETIRED_INCIDENT_V4_HOOK),
       normalized(QUARANTINED_STAGE_A_HOOK),
       normalized("0xA1c6a86d6F7B83deE32D7bc4aA6D35C14A8e6088"),
     ])],
     ["V4_VAULT", new Set([
-      normalized(DEFAULT_V4_VAULT),
+      normalized(RETIRED_INCIDENT_V4_VAULT),
       normalized("0x2dfE578C4342750Cd8fE618605eeB0E9C00Ba94d"),
     ])],
     ["V4_COMPOUNDER", new Set([
       normalized("0xE28C05cC6ad9f2C48DBB7eCCD44b323370586C98"),
     ])],
     ["V4_POOL_ID", new Set([
-      normalized(DEFAULT_V4_POOL_ID),
+      normalized(RETIRED_INCIDENT_V4_POOL_ID),
       normalized(QUARANTINED_STAGE_A_POOL_ID),
       normalized("0x221d377779f958eadf35122810743a6ba11e9079b0b6bd05234ea9500b227318"),
     ])],
-    ["V4_LP_TOKEN_ID", new Set([DEFAULT_V4_LP_TOKEN_ID.toString()])],
+    ["V4_LP_TOKEN_ID", new Set([RETIRED_INCIDENT_V4_LP_TOKEN_ID.toString()])],
   ]);
 }
 
@@ -111,6 +111,13 @@ function hasFlag(name: string): boolean {
 }
 
 export function latestDeploymentFile(directory = deploymentsDir): string {
+  if (existsSync(directory)) {
+    const activations = readdirSync(directory)
+      .filter((name) => /^v4-production-activation-\d{4}-\d{2}-\d{2}\.json$/.test(name))
+      .sort((a, b) => b.localeCompare(a));
+    if (activations.length > 0) return resolve(directory, activations[0]);
+  }
+
   const canonical = resolve(directory, "v4-base-usdc-latest.json");
   if (existsSync(canonical)) return canonical;
 
@@ -160,6 +167,10 @@ function objectField(source: JsonObject, name: string): JsonObject | undefined {
   return value !== null && typeof value === "object" && !Array.isArray(value)
     ? value as JsonObject
     : undefined;
+}
+
+export function envSyncDeployment(manifest: JsonObject): JsonObject {
+  return objectField(manifest, "envSync") ?? manifest;
 }
 
 function firstOptionalString(...values: unknown[]): string | undefined {
@@ -456,7 +467,8 @@ function main() {
   if (hasFlag("--allow-retired")) {
     throw new Error("--allow-retired is not supported by the fresh launch sync. Use recovery-specific tooling.");
   }
-  const deployment = readJsonFile(sourcePath);
+  const manifest = readJsonFile(sourcePath);
+  const deployment = envSyncDeployment(manifest);
 
   const lpTokenId =
     readArg("--lp-token-id") ??
@@ -467,10 +479,13 @@ function main() {
   const entries = buildFreshEnvEntries(deployment, lpTokenId);
   validateFresh(deployment, entries, sourcePath);
 
+  const lpPlaceholderComment = BigInt(lpTokenId) === 0n
+    ? "# V4_LP_TOKEN_ID=0 is a pre-seed placeholder. Replace it after the confirmed LP NFT mint."
+    : "# V4_LP_TOKEN_ID is receipt-pinned in the post-activation manifest.";
   const body = [
     "# Fresh V4 launch config",
     `# Generated from deployments/${basename(sourcePath)}`,
-    "# V4_LP_TOKEN_ID=0 is a pre-seed placeholder. Replace it after liquidity seed prints the LP NFT token ID.",
+    lpPlaceholderComment,
     ...Object.entries(entries).map(([key, value]) => envLine(key, value)),
     "",
   ].join("\n");
