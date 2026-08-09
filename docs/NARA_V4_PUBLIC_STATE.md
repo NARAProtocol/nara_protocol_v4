@@ -8,9 +8,11 @@ Maintained by: protocol operator. Update every time deployment state changes.
 
 ## One-Sentence State
 
-**The fresh v4 core contracts are deployed and source-verified on Base. The
-NARA/USDC pool is not registered, initialized, or seeded; there is no official
-liquidity, LP NFT, public app, or active market yet.**
+**The fresh v4 core and liquidity stack are deployed and source-verified on
+Base, and the NARA/USDC pool is registered, initialized, seeded, and proven by
+receipt-pinned buy/sell tax tests. Compounder validation/freeze, allocations,
+periphery, Engine epoch recovery, and downstream launch surfaces remain
+separately gated.**
 
 ---
 
@@ -18,20 +20,21 @@ liquidity, LP NFT, public app, or active market yet.**
 
 | Surface | Status | Notes |
 |---|---|---|
-| v4 contracts (code) | Implemented and tested | 553 local tests passing (2026-08-09); internal checks are not an independent audit |
-| v4 mainnet deploy | Fresh core deployed | Seven core contracts source-verified; public activation pending |
+| v4 contracts (code) | Implemented and tested | 556 local tests passing (2026-08-09); internal checks are not an independent audit |
+| v4 mainnet deploy | Liquidity activated | Core and Compounder source-verified; pool activation evidence published; this is not a full production-readiness claim |
 | v3 contracts | Retired 2026-05-27 | Archived, not operational |
-| NARA token | Deployed | Fixed supply minted; no public market yet |
-| NARA/USDC pool | Dormant | Unregistered, uninitialized, unseeded; zero liquidity and no LP NFT |
-| Liquidity compounder | Pending | Not deployed or configured; Vault Compounder is the zero address |
-| NARA protocol depth | Configured only | Hook depths are 60,000 NARA / 300 USDC; these are not active liquidity |
+| NARA token | Deployed | Fixed supply minted; fresh NARA/USDC pool exists |
+| NARA/USDC pool | Seeded | Initialized with 60,000 NARA / 300 USDC; LP NFT 2898124 is Safe-owned; live buy/sell tax tests passed |
+| Liquidity compounder | Validation pending | Deployed, source-verified, wired, and Safe-owned; unfrozen with positionTokenId 0 and zero compounded totals |
+| Engine operations | Recovery required | At block `49734434`, current epoch was `34` and stored epoch was `4`; the 30-epoch backlog exceeds the eight-epoch JIT buffer |
+| NARA protocol depth | Configured and seeded | Hook depths and initial liquidity are 60,000 NARA / 300 USDC |
 | Public launch surface | Preview only | Baskets only; Lockboard deferred; Lotto and Arena retired |
-| Locking | Contract deployed | No approved public frontend yet |
+| Locking | Operations gated | Contract deployed, but epoch recovery and a verified public frontend are still required |
 | Bonds | Closed at launch | Opens separately after verification |
 | stNARA / staking pool | Pending | Deploys in composability phase |
 | Pendle SY adapter | Pending | After stNARA is deployed and validated |
 | fracNARA | Pending | After composability phase |
-| BribeRouterV4 | Pending | Deploys with router/lens; needs role grant |
+| BribeRouterV4 | Dormant / prohibited | Do not deploy or grant the notifier role for this deployment |
 
 ---
 
@@ -42,24 +45,27 @@ The following contracts are deployed:
 1. **NARAToken** — 1,000,000 NARA fixed supply, ERC-20 with EIP-2612 permit, ERC-1363, flash mint.
 2. **NARAEngine** — lock NARA for any duration, earn NARA + ETH rewards each epoch.
 3. **NARARewardReserve** — holds the sealed 650,000 NARA emission reserve.
-4. **NARALiquidityGrowthHook** — bound to the intended NARA/USDC pair, but not
-   registered for a pool.
+4. **NARALiquidityGrowthHook** — bound to and active for the intended NARA/USDC pool.
 5. **NARALiquidityGrowthVault** — deployed and bound to the hook and engine.
+6. **NARALiquidityCompounderV4** — deployed, source-verified, wired, and
+   Safe-owned; live compound validation and permanent freeze remain pending.
 
-The pool is not registered or initialized and no LP position exists. The fresh
-`NARALiquidityCompounderV4` is not deployed or wired. Hook and Vault ownership
-still require acceptance by the production Safe before Compounder wiring or
-pool activation. Position NFT, router, lenses, bonds, and composability
-contracts are not part of the fresh core deployment.
+The pool is registered, initialized, and seeded. LP NFT `2898124` is owned by
+the production Safe, and receipt-pinned buy and sell tax tests passed. Hook and
+Vault ownership has been accepted by the production Safe. Position NFT,
+router, lenses, bonds, and composability contracts are not part of the fresh
+core-and-liquidity activation.
 
 The reviewed initial position is `60,000 NARA + 300 USDC`, which represents an
 opening ratio of `$0.005` per NARA and an implied FDV of approximately `$5,000`
-on the fixed 1,000,000 NARA supply. This is a configuration target, not a live
-market price: the pool remains uninitialized and unseeded.
+on the fixed 1,000,000 NARA supply. The seed is confirmed, but that historical
+opening ratio is not a statement of current market price.
 
 Configured Hook depths are already `60,000 NARA` and `300 USDC` in the fresh
-deployment. Liquidity must not be initialized before the separate ownership,
-Compounder, pre-seed, and atomic-batch gates pass.
+deployment. The Vault has recorded and banked
+`1495.229242512170995797 NARA` and `20.462880 USDC`. These balances have not
+been compounded: the Compounder remains unfrozen and unvalidated with
+`positionTokenId == 0` and zero total compounded amounts.
 
 ---
 
@@ -81,7 +87,7 @@ Compounder, pre-seed, and atomic-batch gates pass.
 
 | Feature | v3 | v4 |
 |---|---|---|
-| Token | `0xE444de61752b...` retired | New address at fresh launch |
+| Token | `0xE444de61752b...` retired | `0xB6333F5D4cEd8dffA80F3F13697D6aA3BB3f19c1` |
 | Epoch advance | Off-chain Railway cron (private key, 15-min cadence) | JIT inside every user call + permissionless `router.syncEpochs()` |
 | Lock path | Approve → lock (two txs) | Permit + sync + lock in one tx via `NARARouter` |
 | LP pair | NARA/WETH on Uniswap v3 | NARA/USDC on Uniswap v4 |
@@ -109,7 +115,7 @@ Compounder, pre-seed, and atomic-batch gates pass.
 
 ## Epoch Model
 
-- **Epoch length:** set at deployment (expected 900s = 15 min on Base).
+- **Epoch length:** deployed at 900 seconds (15 minutes on Base).
 - **Backlog:** if no user writes for 8+ epochs, any write auto-advances up to 8 epochs. Beyond 8, the app calls `router.syncEpochs()`.
 - **Maintenance:** user calls can advance up to eight epochs, but this is a
   bounded buffer rather than indefinite keeperlessness. The guarded v4
@@ -146,25 +152,29 @@ deployed as part of this release.
 | NARAGenesisRewardDistributorV4 | `— pending —` |
 | NARABondVaultV4 | `— pending —` |
 | NARABondDepositoryV4NFT | `— pending —` |
-| NARALiquidityGrowthHook | `0x59AEf9799DEA01A7FB7dA73BEA10dfB08858A088` (unregistered; Safe ownership acceptance pending) |
-| NARALiquidityGrowthVault | `0xD7f7b44BF65EBa3E90fDe0642687ed22A323084D` (Compounder zero; Safe ownership acceptance pending) |
-| NARALiquidityCompounderV4 | `— pending —` |
+| NARALiquidityGrowthHook | `0x59AEf9799DEA01A7FB7dA73BEA10dfB08858A088` (active pool; Safe-owned) |
+| NARALiquidityGrowthVault | `0xD7f7b44BF65EBa3E90fDe0642687ed22A323084D` (wired to Compounder; Safe-owned) |
+| NARALiquidityCompounderV4 | `0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF` (unvalidated and unfrozen) |
 | CREATE2 Hook Deployer | `0xDE9E3Cac08b7a31Db18c7432d4C45DF4584Fd646` (Safe-owned) |
 | NARARouter | `— pending —` |
 | NARADashboardLens | `— pending —` |
-| BribeRouterV4 | `— pending —` |
+| BribeRouterV4 | `— not deployed; prohibited for this deployment —` |
 | NARAStakingPoolV4 (stNARA) | `— pending (composability phase) —` |
 | NARAStakingPoolSYV4 | `— pending (composability phase) —` |
 | NARAFractionalPositionFactoryV4 | `— pending (composability phase) —` |
 
-Planned dormant pool ID:
+Active pool ID:
 `0x83edced1f39e6adf7469cd718eeb409824d948959263408d4cfb6e745c8db464`.
+It was initialized and seeded in transaction
+`0xaeb7c3365354de633dde977d9b2c951b240f6b8ff8be090cdd989edc4c924799`
+at block `49721188`; LP NFT `2898124` is Safe-owned.
 Production admin Safe:
 `0xd65c0e390Dc187A22c52c03816591CC736C0D755` (`2 of 3`).
 
-The fresh-core rows are reconciled to
-`deployments/v4-base-usdc-latest.json`. Add router/lens rows only from their own
-future verified deployment manifest.
+Current activation authority is
+`deployments/v4-production-activation-2026-08-09.json` together with
+`docs/releases/NARA-20260809-v4-production-activation.md`. Add router/lens rows
+only from their own future verified deployment manifest.
 
 ---
 
@@ -190,15 +200,15 @@ or advertise those paths as live.
 **Planned position read after the router/lens phase:** one call —
 `NARADashboardLens.getUserState(user, positionIds[], nftTokenIds[])`.
 
-**Planned bribe flow after BribeRouter deployment and role verification:**
-1. Approve `BribeRouterV4` for your token amount.
-2. Call `BribeRouterV4.notify(yourToken, amount)`.
-3. Active weight holders receive the token pro-rata on the next claim.
+**External ERC-20 bribe flow:** no such flow is authorized for this deployment.
+`BribeRouterV4` remains a dormant source reference and must not receive the
+notifier role.
 
 **ETH reward pipe:** call `NARAEngine.notifyEthRewards{value: amount}()`. Permissionless.
 
 **ABIs:** use generated artifacts from `nara-protocol-hardhat/artifacts/contracts/v4/`,
-but only pair them with addresses recorded as deployed in `CURRENT_STATE.md`.
+but pair them only with addresses in the current activation manifest cited
+above or in a later immutable, verified deployment-specific manifest.
 The only publishable launch frontend currently in scope is the separate
 `nara-category-baskets-v1/app/` project, and it remains preview-only pending
 verified basket deployment manifests and explicit downstream handoff.

@@ -10,13 +10,13 @@ Last updated: 2026-08-09.
 
 Use this file when starting cold.
 
-## Current checkpoint — fresh core deployed, pool dormant
+## Current checkpoint — pool activated, validation and operations gates remain
 
 Fresh core deployment from protected origin commit
 `027af3f06bbe6dea2c187dfd8062e50c228f1c35` has completed on Base and all
-seven core contracts are source-verified. The approved core configuration is
-`60,000 NARA` / `300 USDC`; it is configured depth and a later seed target, not
-current liquidity.
+seven core contracts are source-verified. Human Safe signers accepted
+Hook/Vault ownership, deployed and wired the source-verified Compounder, and
+executed the reviewed atomic `60,000 NARA` / `300 USDC` pool activation.
 
 | Component | Address |
 |---|---|
@@ -27,18 +27,23 @@ current liquidity.
 | `NARALiquidityGrowthVault` | `0xD7f7b44BF65EBa3E90fDe0642687ed22A323084D` |
 | `Create2HookDeployer` | `0xDE9E3Cac08b7a31Db18c7432d4C45DF4584Fd646` |
 | `NARALiquidityGrowthHook` | `0x59AEf9799DEA01A7FB7dA73BEA10dfB08858A088` |
+| `NARALiquidityCompounderV4` | `0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF` |
 
-Planned pool ID:
+Canonical pool ID:
 `0x83edced1f39e6adf7469cd718eeb409824d948959263408d4cfb6e745c8db464`.
 
-Stop at the Compounder/ownership checkpoint. The pool is unregistered,
-uninitialized, and unseeded; PoolManager slot0 is zero, the LP NFT is absent,
-and the Vault Compounder is the zero address. The Hook and Vault still require
-the production Safe to execute `acceptOwnership()` separately. The core deploy
-does not authorize either acceptance, a Compounder deploy, pool activation,
-seed, smoke swap, or downstream publication. The receipt-journal block-hash
-normalization gap described in [CURRENT_STATE.md](CURRENT_STATE.md) is covered
-by the tracked supplemental canonical reconciliation artifact.
+The atomic Safe transaction
+`0xaeb7c3365354de633dde977d9b2c951b240f6b8ff8be090cdd989edc4c924799`
+at block `49721188` registered and initialized the pool and minted full-range LP
+NFT `2898124` to the production Safe with liquidity `4242640687119285`.
+Twenty live buys and ten live sells subsequently reconciled their Hook fees,
+Vault accounting, transfers, and receipt blocks.
+
+Stop before public product activation. The Compounder is wired but unvalidated
+and unfrozen, its position and lifetime-added totals are zero, and all recorded
+fees are banked. The Engine is also 30 epochs behind at the pinned readback,
+beyond its eight-epoch JIT buffer. Baskets remain preview-only. Current machine
+evidence: `deployments/v4-production-activation-2026-08-09.json`.
 
 ---
 
@@ -201,7 +206,7 @@ Pass criteria:
 
 Latest known local result:
 
-- Full Hardhat suite (`npm test`): 553 passing with 5 opt-in Base-fork cases
+- Full Hardhat suite (`npm test`): 556 passing with 5 opt-in Base-fork cases
   pending as of 2026-08-09.
 - Fresh deployment/receipt/Safe-batch evidence: 12 focused tests passing.
 - Slither v4 scoped run: completed with exit 0 on 2026-07-29.
@@ -247,6 +252,7 @@ Immediately read:
 
 ```text
 deployments/v4-base-usdc-latest.json
+deployments/v4-production-activation-2026-08-09.json
 ```
 
 Record and confirm:
@@ -271,15 +277,10 @@ Record and confirm:
 If any value is wrong, stop.
 
 Current result (2026-08-09): the core deploy and source verification passed for
-the addresses in the checkpoint above. Hook permission bits are `0x2088`;
-`Hook.poolRegistered()` is false; expected opening price and PoolManager slot0
-are zero; the RewardReserve holds `650,000 NARA`; the Vault has zero recorded
-fees and zero token balances. The deployment intentionally used
-`V4_SKIP_COMPOUNDER=1`.
-
-This completed only the core-deploy subsection. The fresh sanitized manifest
-and supplemental canonical receipt reconciliation are published together by
-the protected core-evidence change. Every later subsection remains pending.
+the addresses in the checkpoint above. The core manifest intentionally records
+the then-dormant checkpoint and must not be rewritten. The post-activation
+manifest records the later ownership, Compounder, pool, LP, fee, tax-matrix,
+and operations readbacks. Use the newer artifact for current state.
 
 ---
 
@@ -318,13 +319,20 @@ evidence and rerun sync so `.env` gets the real value:
 npm run v4:env:sync:write
 ```
 
+Current production evidence uses `V4_LP_TOKEN_ID=2898124`. A zero value is no
+longer valid for the activated pool.
+
 ---
 
 ## Compounder Deploy And Pre-Seed Gate
 
-Current result: **not started**. `Vault.compounder()` is the zero address. The
-production Safe is only the pending owner of the Hook and Vault and must accept
-both ownership transfers before this section can proceed.
+Current result: **completed through wiring**. The Safe accepted both ownership
+transfers in transaction
+`0x35320c5a5dfa31898d8a66e088038b67d1113bf6b95b82a230eaaf64be6f595d`
+at block `49720700`. The Compounder was deployed and source-verified at
+`0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF`, then wired in Safe transaction
+`0x29727cf5578989932175bd4e672d193e38b580f50645dd3bfcc173b44b2e70da`
+at block `49721044`. It correctly remains unfrozen until validation passes.
 
 After the fresh Vault exists, deploy `NARALiquidityCompounderV4` with exact
 fresh-manifest bindings and the production Safe as constructor owner. The core
@@ -416,6 +424,12 @@ Pass criteria:
 - `V4_LP_TOKEN_ID` is updated to the confirmed LP NFT token ID.
 - Re-running `npm run verify:v4:preflight` shows nonzero LP liquidity for that LP NFT.
 
+Execution result: Safe nonce `30` executed successfully in Base transaction
+`0xaeb7c3365354de633dde977d9b2c951b240f6b8ff8be090cdd989edc4c924799`
+at block `49721188`. It minted LP NFT `2898124` to the Safe with liquidity
+`4242640687119285`. The pool is already registered and initialized. **Do not
+replay or rebuild this seed as a new launch action.**
+
 ---
 
 ## Post-Seed Preflight And Compounder Freeze Gate
@@ -437,7 +451,7 @@ Pass criteria:
 - Hook, Vault, and Compounder bindings match reciprocally.
 - No stale or retired address mismatch appears.
 
-Before any smoke swap, follow
+Before any Compounder validation, freeze, or public product activation, follow
 [NARA_V4_COMPOUNDER_VALIDATION_RUNBOOK.md](NARA_V4_COMPOUNDER_VALIDATION_RUNBOOK.md):
 
 1. Build and review the validation batch with an independently reviewed price
@@ -453,8 +467,10 @@ Before any smoke swap, follow
    `npm run verify:v4:launch-gates:baskets` successfully.
 
 A missing or unreconciled validation receipt, a failed exact-spend check, a
-pending recovery, or an unfrozen Compounder is a stop condition. Do not run the
-smoke test yet.
+pending recovery, or an unfrozen Compounder is a stop condition for product
+activation. Recorded live tax tests already occurred while the Compounder was
+unfrozen; they prove the sampled Hook/Vault swap accounting but do not satisfy
+this Compounder gate.
 
 ---
 
@@ -499,6 +515,13 @@ Pass criteria:
 - Small buy works.
 - Small sell works.
 - Liquidity growth vault balances change in the expected direction.
+
+Current evidence exceeds the two-swap minimum for the tax path: twenty
+distinct-block buys from `1` through `20 USDC` and ten distinct-block sells of
+`1,000 NARA` all succeeded and reconciled. Buy Hook fees totaled `10.95 USDC`;
+sell Hook fees totaled `500 NARA`; all ending allowances were zero. These
+matrices exercised 5%/8% buy tiers and the 5% separate-block sell tier, not
+every possible higher same-block tier.
 
 If smoke fails, do not launch.
 
@@ -621,11 +644,16 @@ Before public TVL:
 
 ## Launch Decision
 
-Current decision (2026-08-09): **not launch-ready**. Core contracts are
-deployed and source-verified, but ownership acceptance, the Compounder,
-protected receipt/manifest evidence, atomic pool launch, LP NFT, validation and
-freeze, post-seed preflight, and smoke tests remain incomplete. No public
-market or active NARA/USDC liquidity exists from this deployment.
+Current decision (2026-08-09): **pool active; whole stack not launch-ready**.
+Core deployment, source verification, Safe ownership acceptance, Compounder
+deployment/wiring, atomic pool activation, LP NFT creation, and sampled live
+buy/sell tax tests are complete. The pool has public trading history.
+
+Still incomplete: Engine epoch recovery, Compounder validation and receipt
+reconciliation, the separate irreversible Compounder freeze, protected merge
+of the post-activation evidence, allocations/periphery, downstream monitor and
+basket reconciliation, and final public documentation. The basket app stays
+preview-only.
 
 Launch-ready means all of these are true:
 
@@ -703,7 +731,9 @@ Stop immediately if:
 - Post-deploy `.env` still points to retired incident-stack defaults.
 - Hook address does not satisfy `0x2088`.
 - Hook pool is not registered.
-- Hook opening price is zero or differs from PoolManager slot0.
+- Hook opening-price bound is zero or the activation receipt's initialization
+  value differs from that bound. Current PoolManager slot0 may differ after
+  trading and must not be compared to the opening value as a stop condition.
 - Hook, vault, or compounder reciprocal bindings differ.
 - Any engine `REWARD_NOTIFIER_ROLE` holder remains in launch scope.
 - Basket collector still exposes arbitrary executor/selector/calldata swaps.
@@ -721,6 +751,10 @@ Stop immediately if:
 ---
 
 ## Short Version
+
+The deploy, ownership, wiring, and atomic-seed commands below describe the
+completed release sequence and must not be replayed. Resume from Engine epoch
+recovery and Compounder validation using the current manifest and runbooks.
 
 ```bash
 npm run build

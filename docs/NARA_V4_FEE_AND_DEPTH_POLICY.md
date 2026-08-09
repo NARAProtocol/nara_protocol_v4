@@ -4,9 +4,11 @@ Change-ID: `NARA-20260731-fee-policy`
 
 Status: **superseded proposal; do not execute its batches against the fresh
 Hook**. The fresh Hook is deployed with the reviewed asymmetric default curves
-recorded in `deployments/v4-base-usdc-latest.json`, and its pool is dormant.
-Any later curve or depth change requires a new deployment-specific review,
-explicit approval, the Hook's seven-day timelock, and a new evidence artifact.
+and is active in the initialized and seeded NARA/USDC pool. Current activation
+authority is `deployments/v4-production-activation-2026-08-09.json` together
+with `docs/releases/NARA-20260809-v4-production-activation.md`. Any later curve
+or depth change requires a new deployment-specific review, explicit approval,
+the Hook's seven-day timelock, and a new evidence artifact.
 
 ## Fee Curve
 

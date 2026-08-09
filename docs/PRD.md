@@ -2,12 +2,17 @@
 
 Last updated: 2026-08-09.
 
-Status: v3 is retired. The fresh v4 core is deployed and source-verified on
-Base mainnet and remains dormant. The pool is unregistered, uninitialized, and
-unseeded; the Compounder and Hook/Vault Safe ownership acceptance are pending.
-The current product launch scope is NARA Baskets only. Lockboard is deferred;
-Lotto and Arena are retired. Do not repeat the core deployment. See
-[CURRENT_STATE.md](CURRENT_STATE.md).
+Status: v3 is retired. The fresh v4 core and Compounder are deployed and
+source-verified on Base mainnet. Hook/Vault Safe ownership is accepted; the
+NARA/USDC pool is initialized and seeded, LP NFT `2898124` is Safe-owned, and
+receipt-pinned buy/sell tax tests passed. The Compounder remains unvalidated
+and unfrozen with no position and zero compounded totals. The Engine also has
+a 30-epoch backlog beyond its eight-epoch JIT buffer at the activation
+readback, so user-write availability remains gated. The current product
+launch scope is NARA Baskets only; Baskets remain preview-only, Lockboard is
+deferred, and Lotto and Arena are retired. Current activation authority is
+`deployments/v4-production-activation-2026-08-09.json` together with
+`docs/releases/NARA-20260809-v4-production-activation.md`.
 
 Code and deployment scripts are the source of truth. If this PRD conflicts with Solidity, scripts, or [CURRENT_STATE.md](CURRENT_STATE.md), update this PRD.
 
@@ -58,11 +63,14 @@ In plain terms:
 
 ## 3. Current Scope
 
-Deployed but not activated:
+Deployed and liquidity-activated:
 
 - Fresh v4 core contracts, including the public NARA token address recorded in
   `CURRENT_STATE.md`.
-- Fresh Hook and Vault, with Safe ownership acceptance still pending.
+- Fresh Safe-owned Hook and Vault, wired Safe-owned Compounder, initialized and
+  seeded NARA/USDC pool, and Safe-owned LP NFT `2898124`.
+- Live buy and sell tax tests with reconciled Vault accounting. The Vault has
+  recorded and banked `1495.229242512170995797 NARA` and `20.462880 USDC`.
 
 In repo, ready to deploy:
 
@@ -72,9 +80,8 @@ In repo, ready to deploy:
 
 Not live today:
 
-- Public v4 launch candidate.
-- Fresh v4 NARA/USDC pool.
-- Fresh v4 Compounder.
+- Full public product launch and production-readiness claim.
+- Validated and permanently frozen Compounder-backed POL maintenance.
 - Fresh v4 allocation stack.
 - Public v4 NFT bond market.
 - Deployed v4 composability layer.
@@ -82,16 +89,15 @@ Not live today:
 - NARA/stNARA AMM.
 - v4 sponsor hub.
 
-Fresh v4 launch scope:
+Fresh v4 remaining launch scope:
 
-- Treat the fresh core deployment as complete; do not rerun it.
-- Complete Safe Hook/Vault ownership acceptance and fresh Compounder
-  deployment/wiring.
-- Pass pre-seed gates and review the exact atomic Safe batch.
-- Register, initialize, and seed NARA/USDC only in that separately approved
-  atomic batch.
-- Run `npm run verify:v4:preflight` after the seed receipt.
-- Run `npm run smoke:v4`.
+- Treat core deployment, Safe ownership acceptance, Compounder deployment and
+  wiring, atomic pool activation, and receipt-pinned tax testing as complete;
+  do not rerun them.
+- Validate one live compound, reconcile the position/accounting evidence, and
+  only then execute the Safe's separate one-way Compounder freeze.
+- Keep both v4 operations workflows disabled pending new explicit authorization
+  and deployment-specific review.
 - Deploy allocations with NFT bonds closed.
 - Run `npm run verify:v4:allocations`.
 - Open public lock flow through `NARAPositionNFTV4`.
@@ -382,12 +388,11 @@ Fresh v4 launch scope:
 
 ### Near-Term
 
-- Finish documentation sync to v4 code.
-- Run local verification and static analysis or record an explicit waiver.
-- Complete Safe ownership acceptance and deploy/verify/wire the fresh
-  Compounder.
-- Run pre-seed gates, the separately approved atomic liquidity launch, and
-  receipt-pinned smoke tests.
+- Finish documentation sync to the activation manifest and release record.
+- Validate one live Compounder transaction and reconcile all Vault,
+  Compounder, position, and custody evidence.
+- Freeze the Compounder only after that validation; keep operations workflows
+  disabled until separately authorized.
 - Deploy allocations with NFT bonds closed.
 - Update docs and frontends only after fresh address verification.
 

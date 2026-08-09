@@ -48,7 +48,7 @@ surface a retired v3 address as live or use deleted V5 material as authority.
 
 ## v4 Router + Lens (BribeRouter disabled on deployed engine)
 
-- `contracts/v4/router/NARARouter.sol` — permit + sync + lock in one tx, plus permissionless `syncEpochs()` (kills the keeper).
+- `contracts/v4/router/NARARouter.sol` — permit + bounded epoch sync + lock in one tx. It does not eliminate operations: the Engine advances at most eight epochs per user call and can still require explicit backlog recovery.
 - `contracts/v4/router/NARADashboardLens.sol` — single-call `getUserState(user, positionIds[], nftTokenIds[])` for any frontend.
 - `contracts/v4/router/BribeRouterV4.sol` is a dormant reference implementation.
   Do not deploy it for, or grant `REWARD_NOTIFIER_ROLE` on, the deployed v4
@@ -119,10 +119,12 @@ notifier path.
 
 ## Current v4 Launch State
 
-The fresh-v4 replacement is source work only until it has an immutable reviewed
-origin and a verified deployment manifest. Canonical evidence is recorded in
-`docs/CURRENT_STATE.md`. Do not reuse an old pool-only launch or a planned
-address. Run the complete v4 deployment, preflight, smoke, monitoring, and soak
+The fresh-v4 core and NARA/USDC pool are deployed and the sampled live tax path
+has reconciled. Canonical evidence is recorded in `docs/CURRENT_STATE.md` and
+`deployments/v4-production-activation-2026-08-09.json`. The Compounder remains
+unvalidated/unfrozen and the Engine is beyond its eight-epoch JIT buffer, so do
+not claim whole-stack availability. Do not reuse an old pool-only launch or a
+planned address. Complete the remaining validation, operations, monitoring, and soak
 gates before activation.
 
 Do not use retired v3 addresses for new integrations, UI, scripts, baskets, or
@@ -238,7 +240,10 @@ function setFee(uint256 _fee) external onlyOwner {
 - Check `docs/ROADMAP.md` before pitching product direction.
 - Treat the report as directionally useful but subordinate to verified live state.
 - Do not reintroduce legacy FIELD names, archived env vars, or retired UI paths into active work.
-- If a fact may have changed, rerun `npm run check:nara:live` rather than trusting markdown.
+- If a fact may have changed, rerun the deployment-specific read-only commands
+  documented in `docs/CURRENT_STATE.md`, such as `npm run verify:v4:preflight`
+  and the relevant `verify:v4:launch-gates:*` command. There is no
+  `check:nara:live` script in this repository.
 - For v4 NFT position work, always read `docs/NARA_V4_NFT_POSITIONS.md` first — it is the canonical v4 spec (`NARAPositionNFTV4` + `NARAPositionAccountV4`). The old `NFT_WRAPPER_BUILD_PLAN.md` is **v3-only** and lives in `archive/legacy-v3/docs/` — do not use it for v4.
 - Run all tests with `NODE_OPTIONS="--require ./polyfill.cjs" npx hardhat test` — the polyfill is mandatory on Node 20.
 - **Before any new contract deployment, verify the Protocol Safety Standards checklist above is fully satisfied.**
