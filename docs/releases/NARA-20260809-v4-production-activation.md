@@ -143,9 +143,16 @@ Origin evidence commit:
 Activation-manifest Git blob:
 `3a355a1e8fd8a6d87bc77f21a012e0badf223d05`
 
+Engine-recovery evidence commit:
+`6ed852d4dc7689f90eb6163adcc3ba1ab2d6961e`
+
+Engine-recovery manifest Git blob:
+`b2f4c4c68e9fb802ffb21c45f731bfbeddfad188`
+
 Merge state: committed on `release/v4-liquidity-activation-20260809`, not yet
-merged through the protected origin pull-request workflow. Until that commit
-is reviewed, green, and merged, every downstream address update is blocked.
+merged through the protected origin pull-request workflow. Until the complete
+origin evidence chain is reviewed, green, and merged, every downstream address
+update is blocked.
 
 Planned downstream order:
 
