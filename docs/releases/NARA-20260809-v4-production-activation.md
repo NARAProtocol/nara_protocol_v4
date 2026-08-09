@@ -162,16 +162,16 @@ Engine-recovery evidence commit:
 Engine-recovery manifest Git blob:
 `b2f4c4c68e9fb802ffb21c45f731bfbeddfad188`
 
-Merge state: committed on `release/v4-liquidity-activation-20260809`, not yet
+Merge state: committed on `chore/v4-liquidity-activation-20260809`, not yet
 merged through the protected origin pull-request workflow. Until the complete
 origin evidence chain is reviewed, green, and merged, every downstream address
 update is blocked.
 
 Planned downstream order:
 
-1. `NARAProtocol/nara-category-baskets-v1`
+1. `NARAProtocol/nara_protocol_v4_baskets`
 2. `NARAProtocol/nara-swarm-monitor`
-3. `NARAProtocol/nara_protocol_public`
+3. `NARAProtocol/nara_protocol`
 
 Merge-gated consumer work identified by the audit:
 
