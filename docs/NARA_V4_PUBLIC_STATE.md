@@ -11,8 +11,8 @@ Maintained by: protocol operator. Update every time deployment state changes.
 **The fresh v4 core and liquidity stack are deployed and source-verified on
 Base, and the NARA/USDC pool is registered, initialized, seeded, and proven by
 receipt-pinned buy/sell tax tests. Compounder validation/freeze, allocations,
-periphery, Engine epoch recovery, and downstream launch surfaces remain
-separately gated.**
+periphery, recurring operations, and downstream launch surfaces remain
+separately gated. The Engine activation backlog is receipt-pinned as recovered.**
 
 ---
 
@@ -26,10 +26,10 @@ separately gated.**
 | NARA token | Deployed | Fixed supply minted; fresh NARA/USDC pool exists |
 | NARA/USDC pool | Seeded | Initialized with 60,000 NARA / 300 USDC; LP NFT 2898124 is Safe-owned; live buy/sell tax tests passed |
 | Liquidity compounder | Validation pending | Deployed, source-verified, wired, and Safe-owned; unfrozen with positionTokenId 0 and zero compounded totals |
-| Engine operations | Recovery required | At block `49734434`, current epoch was `34` and stored epoch was `4`; the 30-epoch backlog exceeds the eight-epoch JIT buffer |
+| Engine operations | Backlog recovered; recurring maintenance disabled | Safe transaction `0xcd6e52b3...638493` advanced epochs 5 through 35; receipt block `49735161` read current/stored epoch as `35 / 35` |
 | NARA protocol depth | Configured and seeded | Hook depths and initial liquidity are 60,000 NARA / 300 USDC |
 | Public launch surface | Preview only | Baskets only; Lockboard deferred; Lotto and Arena retired |
-| Locking | Operations gated | Contract deployed, but epoch recovery and a verified public frontend are still required |
+| Locking | Operations gated | Contract deployed and the activation backlog is recovered; a receipt-pinned production lock smoke test and verified public frontend are still required |
 | Bonds | Closed at launch | Opens separately after verification |
 | stNARA / staking pool | Pending | Deploys in composability phase |
 | Pendle SY adapter | Pending | After stNARA is deployed and validated |

@@ -29,10 +29,13 @@ This is a context-loss-safe summary for agents entering the NARA workspace.
 - Receipt-pinned live buy and sell tax matrices passed. This evidence is not an
   overall production-readiness claim. Both recurring v4 workflows remain
   disabled.
-- At Base block `49734434`, `Engine.currentEpoch()` was `34` while
-  `epochState.epoch` was `4`. The 30-epoch backlog exceeds the eight-epoch JIT
-  buffer; treat user-facing Engine writes as unavailable until operators
-  advance and receipt-pin the checkpoints.
+- The Engine activation backlog was recovered through the Safe in transaction
+  `0xcd6e52b319f21b5a6772a36cc076a5c6f8390dcd7326ab1adf822a16f6638493`.
+  At receipt block `49735161`, `currentEpoch()` and `epochState.epoch` were both
+  `35`; 31 `EpochAdvanced` events covered epochs `5..35`. The later pinned
+  block `49735219` was `36 / 35`, a one-epoch JIT-recoverable gap, not a
+  write-blocking backlog. Recurring maintenance remains disabled; use
+  `deployments/v4-engine-epoch-recovery-2026-08-09.json` as the evidence.
 - The historical 2026-07-30 NARA/USDC liquidity stack was fully withdrawn and
   retired by human Safe signers on 2026-08-08. Its Vault and Compounder are
   empty, both LP NFTs are burned, and old pool active liquidity is zero. Never

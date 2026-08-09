@@ -85,12 +85,14 @@ operational gates still pending.** The production Safe accepted Hook and Vault
 ownership, the Compounder was deployed and wired, and the pool was seeded with
 LP NFT `2898124` and liquidity `4242640687119285`. Both live tax matrices
 passed. Compounder validation/reconciliation/freeze is not complete,
-`positionTokenId=0`, and the Engine has a 30-epoch backlog beyond its
-eight-epoch JIT buffer at the activation readback. Baskets remain preview-only
-and both recurring v4 workflows are disabled. This is not an overall
-production-readiness claim.
+`positionTokenId=0`, and both recurring v4 workflows are disabled. The Engine's
+activation backlog was recovered by Safe transaction
+`0xcd6e52b319f21b5a6772a36cc076a5c6f8390dcd7326ab1adf822a16f6638493`;
+the receipt-block readback was current at epoch `35`. Baskets remain
+preview-only. This is not an overall production-readiness claim.
 Canonical activation evidence:
 [`deployments/v4-production-activation-2026-08-09.json`](deployments/v4-production-activation-2026-08-09.json)
+and [`deployments/v4-engine-epoch-recovery-2026-08-09.json`](deployments/v4-engine-epoch-recovery-2026-08-09.json).
 and
 [`docs/releases/NARA-20260809-v4-production-activation.md`](docs/releases/NARA-20260809-v4-production-activation.md).
 
@@ -163,9 +165,10 @@ This is the v4 dependency shape. Full v4 layer inventory:
   *inside* user calls — no keeper cron. A single call bridges up to `MAX_JIT_ADVANCE = 8` epochs; past
   that, writes revert `EpochStale` until anyone calls `poke()` / `advanceEpochs()`. (Better failure
   shape than a cron dependency — but frontends must surface backlog.)
-  At Base block `49734434`, the deployed Engine's current epoch was `34` while
-  stored epoch was `4`; user-facing writes can revert until that backlog is
-  explicitly advanced and receipt-pinned.
+  The activation backlog was receipt-pinned as recovered at Base block
+  `49735161`: both current and stored epoch were `35`. The next readback was
+  `36 / 35`, a normal one-epoch JIT-recoverable gap. Recurring maintenance is
+  still disabled, so operators must continue monitoring this invariant.
 - **Weight = committed time.** `weight = amount × (1 + linearWad·r + quadraticWad·r²)`, where
   `r = duration / maxDuration`. Longer commitments receive a structurally higher weight (the curve
   accelerates with duration).
@@ -283,9 +286,9 @@ not a Forge setup.)
 | Aderyn | Latest completed run is 2026-06-08; the 2026-07-29 rerun could not start because the binary is unavailable |
 
 These are internal verification results, not an independent audit or a
-production-readiness claim. Engine epoch recovery, Compounder validation/reconciliation/freeze,
-operational authorization, soak, basket deployment, and downstream integration
-remain open. Both recurring v4 workflows are disabled. See
+production-readiness claim. Compounder validation/reconciliation/freeze,
+recurring-maintenance authorization, soak, basket deployment, and downstream
+integration remain open. Both recurring v4 workflows are disabled. See
 [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md).
 
 > Automated analysis is necessary but not sufficient. Independent review
