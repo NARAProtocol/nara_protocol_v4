@@ -55,6 +55,7 @@ Engine lifecycle smoke is pending, and baskets remain preview-only.
 | [ENGINE_OPS_RUNBOOK.md](ENGINE_OPS_RUNBOOK.md) | Engine operations |
 | [REPOSITORY_MAINTENANCE.md](REPOSITORY_MAINTENANCE.md) | Engineering and release procedure |
 | [NARA_V4_LAUNCH_RUNBOOK.md](NARA_V4_LAUNCH_RUNBOOK.md) | Historical launch mechanics; current checklist controls |
+| [NARA_V4_LIQUIDITY_WITHDRAWAL_RUNBOOK.md](NARA_V4_LIQUIDITY_WITHDRAWAL_RUNBOOK.md) | Completed historical stack withdrawal evidence; never a current manifest |
 | [V4_LAUNCH_CHECKLIST.md](V4_LAUNCH_CHECKLIST.md) | Active v4 release gates |
 | [NARA_V4_BOND_OPENING_CRITERIA.md](NARA_V4_BOND_OPENING_CRITERIA.md) | Bond-opening operator checks |
 | [LOCAL_TESTING.md](LOCAL_TESTING.md) | Local toolchain setup |

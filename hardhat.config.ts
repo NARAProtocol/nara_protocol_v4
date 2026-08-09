@@ -8,7 +8,7 @@ import "dotenv/config";
 
 const PRIVATE_KEY = process.env.PRIVATE_KEY ?? "";
 const BASE_SEPOLIA_RPC_URL = process.env.BASE_SEPOLIA_RPC_URL ?? "";
-const BASE_RPC_URL = process.env.BASE_RPC_URL ?? process.env.BASE_MAINNET_RPC_URL ?? "";
+const BASE_RPC_URL = process.env.BASE_MAINNET_RPC_URL ?? process.env.BASE_RPC_URL ?? "";
 
 const networks = {
   default: {

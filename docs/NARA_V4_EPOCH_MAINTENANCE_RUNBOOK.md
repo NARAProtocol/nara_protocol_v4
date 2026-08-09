@@ -77,8 +77,16 @@ stops if progress is not observed, and fails if any backlog remains.
 
 ## Recurring Maintenance
 
+> **Disabled 2026-08-09:** GitHub workflow `NARA v4 operations keeper`
+> (workflow ID `324678194`) is `disabled_manually`, and repository variable
+> `V4_OPERATIONS_KEEPER_ENABLED` is `false`. The standalone liquidity workflow
+> is also disabled and its enable variable is `false`. The configuration below
+> is retained as historical/review material, not an active operating path. Do
+> not re-enable or dispatch it without a new explicit user order and current
+> deployment-specific review.
+
 `.github/workflows/v4-epoch-maintainer.yml` runs the combined operations cycle
-every 30 minutes only after a
+every 30 minutes only if GitHub re-enables the workflow and a
 maintainer deliberately configures:
 
 - repository variable `V4_OPERATIONS_KEEPER_ENABLED=true`;
