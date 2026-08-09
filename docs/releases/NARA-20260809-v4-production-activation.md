@@ -151,16 +151,16 @@ fork environments are not enabled.
 Origin repository: `NARAProtocol/nara_protocol_v4`
 
 Origin evidence commit:
-`c0a7ca7d770016263211822dc1939d2717ee94bb`
+`bddacd9336477cdcc12b6b192ea73c1ed116ec53`
 
 Activation-manifest Git blob:
 `3a355a1e8fd8a6d87bc77f21a012e0badf223d05`
 
 Engine-recovery evidence commit:
-`6ed852d4dc7689f90eb6163adcc3ba1ab2d6961e`
+`cc2d855b47eaff8e144c51257333f5a84a369710`
 
 Engine-recovery manifest Git blob:
-`b2f4c4c68e9fb802ffb21c45f731bfbeddfad188`
+`48fc626bc16b41ce3b92a706622a3529fee7da86`
 
 Merge state: committed on `chore/v4-liquidity-activation-20260809`, not yet
 merged through the protected origin pull-request workflow. Until the complete

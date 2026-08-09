@@ -175,8 +175,8 @@ approvals, exits, and risk notice before confirmation.
 ```text
 Change-ID: NARA-20260809-v4-compounder-activation
 Origin remote: NARAProtocol/nara_protocol_v4
-Pre-merge evidence commit: ed7c4bcd0e0aa9edd9933518d1a6580358fc19f0
-Compounder manifest Git blob: d4d806997209bb569863de0923a4058f5b24cb68
+Pre-merge evidence commit: e515fa6b1057ca4e1f61e97065fcaeb802b14c61
+Compounder manifest Git blob: 349e7a29d1be994a625ef8fad22bc66c3784ea7c
 Same-block evidence Git blob: 68f3d6c1b13711da3d85038da37143819bd7327f
 Evidence state: configured
 Changed contracts/interfaces: none; evidence, tests, scripts, and documentation only

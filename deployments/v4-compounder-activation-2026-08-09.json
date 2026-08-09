@@ -10,7 +10,7 @@
   "origin": {
     "repository": "NARAProtocol/nara_protocol_v4",
     "contractSourceCommit": "027af3f06bbe6dea2c187dfd8062e50c228f1c35",
-    "activationEvidenceCommit": "c0a7ca7d770016263211822dc1939d2717ee94bb",
+    "activationEvidenceCommit": "bddacd9336477cdcc12b6b192ea73c1ed116ec53",
     "activationManifest": "deployments/v4-production-activation-2026-08-09.json",
     "engineRecoveryManifest": "deployments/v4-engine-epoch-recovery-2026-08-09.json"
   },
