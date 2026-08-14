@@ -53,6 +53,11 @@
 import hre from "hardhat";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import {
+  assertProductionV4Runtime,
+  currentV4Config,
+  productionV4RuntimeBanner,
+} from "./lib/v4LiveConfig.js";
 
 const BASE_CHAIN_ID = 8453n;
 const DEFAULT_BASE_USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
@@ -293,6 +298,10 @@ async function main() {
 
   if (chainId !== BASE_CHAIN_ID && !envFlag("V4_ALLOC_ALLOW_NON_BASE")) {
     throw new Error(`Refusing non-Base allocation deploy. Connected chainId=${chainId}.`);
+  }
+  if (chainId === BASE_CHAIN_ID) {
+    const deployment = await assertProductionV4Runtime(ethers.provider, currentV4Config());
+    console.log(`Production runtime guard: ${productionV4RuntimeBanner(deployment)}`);
   }
 
   const latestCore = latestCoreDeployment();

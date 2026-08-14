@@ -17,6 +17,11 @@ There is no required privileged epoch keeper.
 
 ## Read-only health review
 
+First run `npm run verify:v4:runtime-config`. Every active Engine operation is
+anchored to the pinned production manifest and runtime code hashes. A command
+must stop if `.env` points to a retired or merely internally consistent older
+deployment.
+
 Check:
 
 | Read | Expected interpretation |

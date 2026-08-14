@@ -42,12 +42,16 @@
     "verify:v4:launch-gates:baskets": "tsx scripts/verifyV4LaunchGates.ts --baskets-only",
     "execute:v4:nara-depth": "tsx scripts/executeV4NaraDepth.ts",
     "verify:v4:launch-gates": "tsx scripts/verifyV4LaunchGates.ts",
+    "verify:v4:runtime-config": "tsx scripts/verifyV4RuntimeConfig.ts",
     "maintain:v4:epochs": "tsx scripts/maintainV4Epochs.ts",
+    "maintain:v4:epochs:routine:check": "tsx scripts/maintainV4Epochs.ts --batch-size 8 --max-batches 2 --max-backlog 8",
+    "maintain:v4:epochs:routine": "tsx scripts/maintainV4Epochs.ts --execute --batch-size 8 --max-batches 2 --max-backlog 8",
     "maintain:v4:liquidity": "tsx scripts/maintainV4Liquidity.ts",
     "swap:v4:nara-for-usdc": "tsx scripts/swapNaraForUsdc.ts",
     "smoke:v4": "tsx scripts/smokeTestV4Deployment.ts",
     "v4:env:sync": "tsx scripts/syncV4FreshEnv.ts",
     "v4:env:sync:write": "tsx scripts/syncV4FreshEnv.ts --write-dotenv",
+    "v4:env:production:write": "tsx scripts/syncV4FreshEnv.ts --source deployments/v4-production-activation-2026-08-09.json --write-dotenv",
     "fund:v4:reserve": "hardhat run scripts/fundEmissionReserveV4.ts --network base"
   },
   "devDependencies": {

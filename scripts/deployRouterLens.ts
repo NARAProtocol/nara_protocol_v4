@@ -27,6 +27,11 @@
 import hre from "hardhat";
 import { mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
+import {
+  assertProductionV4Runtime,
+  currentV4Config,
+  productionV4RuntimeBanner,
+} from "./lib/v4LiveConfig.js";
 
 const BASE_CHAIN_ID = 8453n;
 
@@ -50,6 +55,10 @@ async function main() {
   const [deployer] = await ethers.getSigners();
   const network = await ethers.provider.getNetwork();
   const isMainnet = network.chainId === BASE_CHAIN_ID;
+  const production = isMainnet
+    ? await assertProductionV4Runtime(ethers.provider, currentV4Config())
+    : undefined;
+  if (production) console.log(`Production runtime guard: ${productionV4RuntimeBanner(production)}`);
 
   const engineAddress = process.env.ENGINE_V4
     ? ethers.getAddress(process.env.ENGINE_V4)
@@ -59,6 +68,9 @@ async function main() {
     : undefined;
   if (!engineAddress || !nftAddress) {
     throw new Error("Set ENGINE_V4 and POSITION_NFT_V4 in env");
+  }
+  if (production && engineAddress !== production.engine) {
+    throw new Error(`ENGINE_V4 must match production Engine ${production.engine}; received ${engineAddress}`);
   }
 
   console.log("Chain:   ", network.chainId.toString());

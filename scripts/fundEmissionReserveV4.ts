@@ -15,23 +15,25 @@
  */
 
 import hre from "hardhat";
-
-function requiredEnv(name: string): string {
-  const value = process.env[name]?.trim();
-  if (!value) throw new Error(`Missing env: ${name}`);
-  return value;
-}
+import {
+  assertProductionV4Runtime,
+  currentV4Config,
+  productionV4RuntimeBanner,
+} from "./lib/v4LiveConfig.js";
 
 async function main() {
+  const connection = await hre.network.connect();
+  const { ethers } = connection as any;
+  const config = currentV4Config();
+  const deployment = await assertProductionV4Runtime(ethers.provider, config);
+  console.log(`Production runtime guard: ${productionV4RuntimeBanner(deployment)}`);
+
   const treasuryKey = process.env.TREASURY_PRIVATE_KEY;
   if (!treasuryKey) throw new Error("Missing TREASURY_PRIVATE_KEY");
 
-  const connection = await hre.network.connect();
-  const { ethers } = connection as any;
-
   const treasurySigner = new ethers.Wallet(treasuryKey, ethers.provider);
-  const tokenAddress  = ethers.getAddress(requiredEnv("V4_NARA_TOKEN"));
-  const engineAddress = ethers.getAddress(requiredEnv("V4_ENGINE"));
+  const tokenAddress = config.token;
+  const engineAddress = config.engine;
   const amount = ethers.parseUnits(process.env.V4_EMISSION_RESERVE_NARA ?? "650000", 18);
 
   console.log("Fund emission reserve");
