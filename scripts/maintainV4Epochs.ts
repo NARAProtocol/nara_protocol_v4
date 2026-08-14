@@ -9,7 +9,13 @@ import { ethers } from "ethers";
 import * as dotenv from "dotenv";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { requiredBaseRpcUrl, requiredEnv } from "./lib/v4LiveConfig.js";
+import {
+  assertProductionV4Runtime,
+  currentV4Config,
+  productionV4RuntimeBanner,
+  requiredBaseRpcUrl,
+  requiredEnv,
+} from "./lib/v4LiveConfig.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -53,7 +59,9 @@ export type MaintainerOptions = {
   execute: boolean;
   batchSize: number;
   maxBatches: number;
+  maxBacklog?: number;
   confirmations: number;
+  syncUntrackedReserve: boolean;
 };
 
 export function positiveInteger(
@@ -83,7 +91,11 @@ export function parseMaintainerArgs(args: readonly string[]): MaintainerOptions 
     execute: args.includes("--execute"),
     batchSize: positiveInteger(valueAfter("--batch-size"), "--batch-size", DEFAULT_BATCH_SIZE, MAX_BATCH_SIZE),
     maxBatches: positiveInteger(valueAfter("--max-batches"), "--max-batches", DEFAULT_MAX_BATCHES, MAX_BATCHES),
+    maxBacklog: args.includes("--max-backlog")
+      ? positiveInteger(valueAfter("--max-backlog"), "--max-backlog", 1, MAX_BATCH_SIZE * MAX_BATCHES)
+      : undefined,
     confirmations: positiveInteger(valueAfter("--confirmations"), "--confirmations", DEFAULT_CONFIRMATIONS, 20),
+    syncUntrackedReserve: args.includes("--sync-untracked-reserve"),
   };
 }
 
@@ -216,8 +228,9 @@ async function sendWithMargin(
 
 export async function main(args = process.argv.slice(2)): Promise<void> {
   const options = parseMaintainerArgs(args);
-  const engineAddress = ethers.getAddress(requiredEnv("V4_ENGINE"));
-  const expectedNara = ethers.getAddress(requiredEnv("V4_NARA_TOKEN"));
+  const config = currentV4Config();
+  const engineAddress = config.engine;
+  const expectedNara = config.token;
   const request = new ethers.FetchRequest(requiredBaseRpcUrl());
   request.timeout = 30_000;
   const provider = new ethers.JsonRpcProvider(request, Number(BASE_CHAIN_ID), {
@@ -226,6 +239,8 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
   });
 
   try {
+    const deployment = await assertProductionV4Runtime(provider, config);
+    console.log(`Production runtime guard: ${productionV4RuntimeBanner(deployment)}`);
     const network = await provider.getNetwork();
     if (network.chainId !== BASE_CHAIN_ID) {
       throw new Error(`Expected Base mainnet chainId ${BASE_CHAIN_ID}, got ${network.chainId}`);
@@ -239,28 +254,75 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
     }
     const nara = new ethers.Contract(expectedNara, ERC20_ABI, provider);
     let health = await readHealth(readEngine, nara, engineAddress);
+    const plannedBatches = planEpochBatches(health.backlog, options.batchSize, options.maxBatches);
+    const plannedCapacity = plannedBatches.reduce((sum, value) => sum + value, 0n);
 
     console.log(`NARA v4 epoch maintainer (${options.execute ? "execute" : "read-only"})`);
     console.log(JSON.stringify(formatHealth(health), null, 2));
+    if (options.maxBacklog !== undefined && health.backlog > BigInt(options.maxBacklog)) {
+      throw new Error(
+        `Observed backlog ${health.backlog} exceeds the automatic limit ${options.maxBacklog}; manual recovery review required`,
+      );
+    }
     if (!options.execute) {
-      const batches = planEpochBatches(health.backlog, options.batchSize, options.maxBatches);
-      console.log(`Planned advanceEpochs batches: ${batches.map(String).join(", ") || "none"}`);
-      if (batches.reduce((sum, value) => sum + value, 0n) < health.backlog) {
+      console.log(`Planned advanceEpochs batches: ${plannedBatches.map(String).join(", ") || "none"}`);
+      if (plannedCapacity < health.backlog) {
         throw new Error("Configured batch limit cannot clear the observed backlog");
       }
       return;
     }
 
-    const operationsKey = process.env.V4_OPERATIONS_KEEPER_PRIVATE_KEY?.trim();
-    const signer = new ethers.Wallet(
-      operationsKey || requiredEnv("V4_EPOCH_KEEPER_PRIVATE_KEY"),
+    if (plannedCapacity < health.backlog) {
+      throw new Error("Configured batch limit cannot clear the observed backlog; refusing a partial automatic recovery");
+    }
+    if (health.untrackedDirectReserve > 0n && !options.syncUntrackedReserve) {
+      throw new Error(
+        "Untracked direct engine reserve requires explicit --sync-untracked-reserve approval; refusing automatic accounting",
+      );
+    }
+    if (process.env.V4_EPOCH_REQUIRE_HEARTBEAT === "true" && !process.env.V4_EPOCH_HEARTBEAT_URL?.trim()) {
+      throw new Error("V4_EPOCH_HEARTBEAT_URL is required for automated epoch execution");
+    }
+
+    const expectedKeeper = ethers.getAddress(requiredEnv("V4_EPOCH_KEEPER_ADDRESS"));
+    const forbiddenKeepers = new Map<string, string>([
+      [deployment.safe.toLowerCase(), "custody Safe"],
+      [deployment.admin.toLowerCase(), "production admin"],
+      [deployment.treasury.toLowerCase(), "treasury"],
+      [deployment.deployer.toLowerCase(), "deployer"],
+    ]);
+    const forbiddenRole = forbiddenKeepers.get(expectedKeeper.toLowerCase());
+    if (forbiddenRole) {
+      throw new Error(`Epoch keeper must be a dedicated gas-only EOA, not the ${forbiddenRole}`);
+    }
+    const safe = new ethers.Contract(
+      deployment.safe,
+      ["function getOwners() view returns (address[] owners)"],
       provider,
     );
+    const [keeperCode, keeperBalance, safeOwners] = await Promise.all([
+      provider.getCode(expectedKeeper),
+      provider.getBalance(expectedKeeper),
+      safe.getOwners() as Promise<string[]>,
+    ]);
+    if (keeperCode !== "0x") {
+      throw new Error("Epoch keeper must be a plain gas-only EOA with no deployed code");
+    }
+    if (safeOwners.some((owner) => ethers.getAddress(owner) === expectedKeeper)) {
+      throw new Error("Epoch keeper must not be a custody Safe owner");
+    }
+    if (keeperBalance === 0n) {
+      throw new Error("Epoch keeper has zero Base ETH and cannot pay transaction gas");
+    }
+    const signer = new ethers.Wallet(requiredEnv("V4_EPOCH_KEEPER_PRIVATE_KEY"), provider);
+    if (signer.address !== expectedKeeper) {
+      throw new Error(`Epoch keeper credential mismatch: expected ${expectedKeeper}, derived ${signer.address}`);
+    }
     const engine = readEngine.connect(signer) as ethers.Contract;
     const txHashes: string[] = [];
     let batchesUsed = 0;
 
-    if (health.untrackedDirectReserve > 0n) {
+    if (health.untrackedDirectReserve > 0n && options.syncUntrackedReserve) {
       txHashes.push(await sendWithMargin(
         "syncEmissionReserve",
         () => engine.syncEmissionReserve.estimateGas(),

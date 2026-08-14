@@ -45,10 +45,9 @@ the separation between the validation and irreversible binding-freeze actions.
 5. Execute the freeze batch through the Safe. This permanently prevents the
    vault from being pointed at a different compounder; it does not disable
    future compounding.
-6. Create one dedicated gas-only operations EOA locally. Do not reuse an admin,
-   treasury, deployer, Safe-owner, or trading key. The same new EOA may run the
-   permissionless epoch maintenance and the narrowly authorized compound call.
-   Put only its public address in `V4_COMPOUND_KEEPER_ADDRESS`.
+6. Create a dedicated gas-only liquidity EOA locally. Do not reuse the separate
+   epoch keeper, an admin, treasury, deployer, Safe-owner, or trading key. Put
+   only its public address in `V4_COMPOUND_KEEPER_ADDRESS`.
 7. Build and execute the keeper authorization through the Safe:
 
    ```powershell
@@ -59,11 +58,10 @@ the separation between the validation and irreversible binding-freeze actions.
    key only in the GitHub Actions secret `V4_OPERATIONS_KEEPER_PRIVATE_KEY`, and
    run the workflow manually in read-only mode, then execute mode.
 9. Only after a new explicit authorization, the manual cycle, and post-state
-   verification pass may maintainers consider setting repository variables
-   `V4_LIQUIDITY_MAINTAINER_ENABLED=true` and
-   `V4_OPERATIONS_KEEPER_ENABLED=true`. If later enabled, the combined
-   operations workflow is scheduled every 30 minutes; the separate liquidity
-   workflow remains manual-only. Both are disabled now.
+   verification pass may maintainers consider setting repository variable
+   `V4_LIQUIDITY_MAINTAINER_ENABLED=true`. Liquidity remains a separate,
+   manual-only workflow; epoch-maintenance authorization is independent. Both
+   workflows are disabled now.
 
 ## Runtime safety
 

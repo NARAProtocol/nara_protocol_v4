@@ -1,4 +1,21 @@
 import { ethers } from "ethers";
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const repoRoot = resolve(__dirname, "..", "..");
+
+export const PRODUCTION_V4_MANIFEST_PATH = resolve(
+    repoRoot,
+    "deployments",
+    "v4-production-activation-2026-08-09.json",
+);
+export const PRODUCTION_V4_MANIFEST_SHA256 =
+    "e525b8c6508c454b951fdb422eb6ad03b51a120827b22efc4ae64a3862ddd066";
+export const PRODUCTION_V4_CHANGE_ID = "NARA-20260809-v4-production-activation";
 
 export const BASE_UNIVERSAL_ROUTER = "0x6ff5693b99212da76ad316178a184ab56d299b43";
 export const BASE_PERMIT2 = "0x000000000022D473030F116dDEE9F6B43aC78BA3";
@@ -40,6 +57,56 @@ export interface CanonicalV4PoolKey {
     hook: string;
     poolId: string;
     tokenIsCurrency0: boolean;
+}
+
+export interface V4LiveConfig {
+    universalRouter: string;
+    permit2: string;
+    poolManager: string;
+    positionManager: string;
+    token: string;
+    base: string;
+    hook: string;
+    fee: number;
+    tickSpacing: number;
+    lpTokenId: bigint;
+    poolId: string;
+    vault: string;
+    engine: string;
+    canonicalPoolKey: CanonicalV4PoolKey;
+}
+
+export interface ProductionV4Deployment {
+    changeId: string;
+    manifestPath: string;
+    manifestSha256: string;
+    chainId: bigint;
+    originCommit: string;
+    token: string;
+    engine: string;
+    hook: string;
+    vault: string;
+    compounder: string;
+    safe: string;
+    admin: string;
+    treasury: string;
+    deployer: string;
+    launcher: string;
+    rewardReserve: string;
+    create2HookDeployer: string;
+    base: string;
+    poolManager: string;
+    positionManager: string;
+    permit2: string;
+    universalRouter: string;
+    poolId: string;
+    poolFee: number;
+    tickSpacing: number;
+    lpTokenId: bigint;
+    engineDeploymentBlock: bigint;
+    engineDeploymentTransactionHash: string;
+    safeCodeHash: string;
+    runtimeCodeHashes: Readonly<Record<"token" | "engine" | "hook" | "vault" | "compounder" | "safe", string>>;
 }
 
 export function deriveV4PoolKey(input: Omit<V4PoolConfigInput, "poolId">): CanonicalV4PoolKey {
@@ -155,7 +222,214 @@ function parseRequiredLaunchBigInt(name: string, retiredFallback: bigint): bigin
     );
 }
 
-export function currentV4Config() {
+type JsonObject = Record<string, unknown>;
+
+function jsonObject(value: unknown, label: string): JsonObject {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+        throw new Error(`Production v4 manifest field ${label} must be an object`);
+    }
+    return value as JsonObject;
+}
+
+function jsonString(object: JsonObject, key: string, label = key): string {
+    const value = object[key];
+    if (typeof value !== "string" || value.length === 0) {
+        throw new Error(`Production v4 manifest field ${label} must be a non-empty string`);
+    }
+    return value;
+}
+
+function jsonInteger(object: JsonObject, key: string, label = key): bigint {
+    const value = object[key];
+    if ((typeof value !== "string" && typeof value !== "number") || !/^\d+$/.test(String(value))) {
+        throw new Error(`Production v4 manifest field ${label} must be a non-negative integer`);
+    }
+    return BigInt(value);
+}
+
+function normalizedManifestSha256(raw: string): string {
+    return createHash("sha256").update(raw.replace(/\r\n/g, "\n")).digest("hex");
+}
+
+export function canonicalProductionV4Deployment(
+    manifestPath = PRODUCTION_V4_MANIFEST_PATH,
+): ProductionV4Deployment {
+    const raw = readFileSync(manifestPath, "utf8");
+    const manifestSha256 = normalizedManifestSha256(raw);
+    if (manifestSha256 !== PRODUCTION_V4_MANIFEST_SHA256) {
+        throw new Error(
+            `Production v4 manifest hash mismatch: expected ${PRODUCTION_V4_MANIFEST_SHA256}, ` +
+            `received ${manifestSha256}`,
+        );
+    }
+
+    const manifest = jsonObject(JSON.parse(raw), "root");
+    const changeId = jsonString(manifest, "changeId");
+    if (changeId !== PRODUCTION_V4_CHANGE_ID) {
+        throw new Error(`Production v4 manifest changeId mismatch: expected ${PRODUCTION_V4_CHANGE_ID}, received ${changeId}`);
+    }
+    const envSync = jsonObject(manifest.envSync, "envSync");
+    const contracts = jsonObject(manifest.contracts, "contracts");
+    const custody = jsonObject(manifest.custody, "custody");
+    const contract = (key: string) => jsonObject(contracts[key], `contracts.${key}`);
+    const runtimeCodeHash = (key: string) =>
+        jsonString(contract(key), "runtimeCodeHash", `contracts.${key}.runtimeCodeHash`).toLowerCase();
+    const address = (key: string) => ethers.getAddress(jsonString(envSync, key, `envSync.${key}`));
+
+    return {
+        changeId,
+        manifestPath,
+        manifestSha256,
+        chainId: jsonInteger(envSync, "chainId", "envSync.chainId"),
+        originCommit: jsonString(envSync, "originCommit", "envSync.originCommit").toLowerCase(),
+        token: address("token"),
+        engine: address("engine"),
+        hook: address("hook"),
+        vault: address("vault"),
+        compounder: address("compounder"),
+        safe: address("custodySafe"),
+        admin: address("finalAdmin"),
+        treasury: address("treasury"),
+        deployer: address("deployer"),
+        launcher: address("launcher"),
+        rewardReserve: address("rewardReserve"),
+        create2HookDeployer: address("create2HookDeployer"),
+        base: address("usdc"),
+        poolManager: address("poolManager"),
+        positionManager: address("positionManager"),
+        permit2: address("permit2"),
+        universalRouter: address("universalRouter"),
+        poolId: jsonString(envSync, "poolId", "envSync.poolId").toLowerCase(),
+        poolFee: Number(jsonInteger(envSync, "poolFee", "envSync.poolFee")),
+        tickSpacing: Number(jsonInteger(envSync, "tickSpacing", "envSync.tickSpacing")),
+        lpTokenId: jsonInteger(envSync, "lpTokenId", "envSync.lpTokenId"),
+        engineDeploymentBlock: jsonInteger(envSync, "engineDeploymentBlock", "envSync.engineDeploymentBlock"),
+        engineDeploymentTransactionHash: jsonString(
+            envSync,
+            "engineDeploymentTransactionHash",
+            "envSync.engineDeploymentTransactionHash",
+        ).toLowerCase(),
+        safeCodeHash: jsonString(custody, "safeRuntimeCodeHash", "custody.safeRuntimeCodeHash").toLowerCase(),
+        runtimeCodeHashes: {
+            token: runtimeCodeHash("token"),
+            engine: runtimeCodeHash("engine"),
+            hook: runtimeCodeHash("liquidityHook"),
+            vault: runtimeCodeHash("liquidityVault"),
+            compounder: runtimeCodeHash("liquidityCompounder"),
+            safe: jsonString(custody, "safeRuntimeCodeHash", "custody.safeRuntimeCodeHash").toLowerCase(),
+        },
+    };
+}
+
+function requiredEnvironmentValue(environment: NodeJS.ProcessEnv, key: string): string {
+    const value = environment[key]?.trim();
+    if (!value) throw new Error(`Production v4 runtime requires explicit env key ${key}`);
+    return value;
+}
+
+function equalProductionValue(key: string, actual: string, expected: string): void {
+    let matches: boolean;
+    if (/^0x[0-9a-fA-F]{40}$/.test(expected)) {
+        matches = ethers.getAddress(actual) === ethers.getAddress(expected);
+    } else if (/^\d+$/.test(expected)) {
+        matches = /^\d+$/.test(actual) && BigInt(actual) === BigInt(expected);
+    } else {
+        matches = actual.toLowerCase() === expected.toLowerCase();
+    }
+    if (!matches) {
+        throw new Error(`Production v4 manifest mismatch for ${key}: expected ${expected}, received ${actual}`);
+    }
+}
+
+export function assertProductionV4Config(
+    config: V4LiveConfig,
+    environment: NodeJS.ProcessEnv = process.env,
+    deployment = canonicalProductionV4Deployment(),
+): ProductionV4Deployment {
+    const configuredValues: ReadonlyArray<[string, string, string]> = [
+        ["V4_NARA_TOKEN", config.token, deployment.token],
+        ["V4_ENGINE", config.engine, deployment.engine],
+        ["V4_HOOK", config.hook, deployment.hook],
+        ["V4_VAULT", config.vault, deployment.vault],
+        ["V4_BASE_TOKEN", config.base, deployment.base],
+        ["V4_POOL_MANAGER", config.poolManager, deployment.poolManager],
+        ["V4_POSITION_MANAGER", config.positionManager, deployment.positionManager],
+        ["V4_PERMIT2", config.permit2, deployment.permit2],
+        ["V4_UNIVERSAL_ROUTER", config.universalRouter, deployment.universalRouter],
+        ["V4_POOL_ID", config.poolId, deployment.poolId],
+        ["V4_POOL_FEE", String(config.fee), String(deployment.poolFee)],
+        ["V4_TICK_SPACING", String(config.tickSpacing), String(deployment.tickSpacing)],
+        ["V4_LP_TOKEN_ID", String(config.lpTokenId), String(deployment.lpTokenId)],
+    ];
+    for (const [key, actual, expected] of configuredValues) equalProductionValue(key, actual, expected);
+
+    const requiredManifestEnv: ReadonlyArray<[string, string]> = [
+        ["V4_ADMIN_ADDRESS", deployment.admin],
+        ["V4_SAFE", deployment.safe],
+        ["V4_DEPLOYER", deployment.deployer],
+        ["V4_TREASURY_ADDRESS", deployment.treasury],
+        ["V4_REWARD_RESERVE", deployment.rewardReserve],
+        ["V4_LAUNCHER", deployment.launcher],
+        ["V4_CREATE2_HOOK_DEPLOYER", deployment.create2HookDeployer],
+        ["V4_COMPOUNDER", deployment.compounder],
+        ["V4_COMPOUNDER_ADDRESS", deployment.compounder],
+        ["V4_ENGINE_DEPLOYMENT_BLOCK", String(deployment.engineDeploymentBlock)],
+        ["V4_ENGINE_DEPLOYMENT_TX_HASH", deployment.engineDeploymentTransactionHash],
+        ["V4_SAFE_CODEHASH", deployment.safeCodeHash],
+        ["V4_RELEASE_COMMIT", deployment.originCommit],
+    ];
+    for (const [key, expected] of requiredManifestEnv) {
+        equalProductionValue(key, requiredEnvironmentValue(environment, key), expected);
+    }
+    return deployment;
+}
+
+export async function assertProductionV4Runtime(
+    provider: ethers.Provider,
+    config = currentV4Config(),
+): Promise<ProductionV4Deployment> {
+    const deployment = assertProductionV4Config(config);
+    const network = await provider.getNetwork();
+    if (network.chainId !== deployment.chainId) {
+        throw new Error(`Production v4 chain mismatch: expected ${deployment.chainId}, received ${network.chainId}`);
+    }
+    const targets = [
+        ["token", deployment.token],
+        ["engine", deployment.engine],
+        ["hook", deployment.hook],
+        ["vault", deployment.vault],
+        ["compounder", deployment.compounder],
+        ["safe", deployment.safe],
+    ] as const;
+    const codes = await Promise.all(targets.map(([, address]) => provider.getCode(address)));
+    for (let index = 0; index < targets.length; index += 1) {
+        const [label, address] = targets[index];
+        const code = codes[index];
+        if (code === "0x") throw new Error(`Production v4 ${label} has no runtime code at ${address}`);
+        const actualHash = ethers.keccak256(code).toLowerCase();
+        const expectedHash = deployment.runtimeCodeHashes[label];
+        if (actualHash !== expectedHash) {
+            throw new Error(
+                `Production v4 ${label} runtime hash mismatch at ${address}: ` +
+                `expected ${expectedHash}, received ${actualHash}`,
+            );
+        }
+    }
+    return deployment;
+}
+
+export function productionV4RuntimeBanner(deployment: ProductionV4Deployment): string {
+    return [
+        `release=${deployment.changeId}`,
+        `manifestSha256=${deployment.manifestSha256}`,
+        `originCommit=${deployment.originCommit}`,
+        `engine=${deployment.engine}`,
+        `hook=${deployment.hook}`,
+        `poolId=${deployment.poolId}`,
+    ].join(" ");
+}
+
+export function currentV4Config(options: { requireProduction?: boolean } = {}): V4LiveConfig {
     const token = ethers.getAddress(requiredLaunchEnv("V4_NARA_TOKEN", RETIRED_INCIDENT_V4_NARA));
     const base = ethers.getAddress(optionalEnv("V4_BASE_TOKEN", BASE_USDC));
 
@@ -188,5 +462,7 @@ export function currentV4Config() {
         );
     }
 
-    return { ...config, canonicalPoolKey };
+    const result = { ...config, canonicalPoolKey };
+    if (options.requireProduction !== false) assertProductionV4Config(result);
+    return result;
 }

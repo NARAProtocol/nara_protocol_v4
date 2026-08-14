@@ -28,7 +28,12 @@ import { ethers } from "ethers";
 import * as dotenv from "dotenv";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
-import { requiredBaseRpcUrl } from "./lib/v4LiveConfig.js";
+import {
+  assertProductionV4Runtime,
+  currentV4Config,
+  productionV4RuntimeBanner,
+  requiredBaseRpcUrl,
+} from "./lib/v4LiveConfig.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -198,6 +203,8 @@ async function scopedGate(
 
 async function main() {
   const provider = new ethers.JsonRpcProvider(requiredBaseRpcUrl());
+  const deployment = await assertProductionV4Runtime(provider, currentV4Config());
+  console.log(`Production runtime guard: ${productionV4RuntimeBanner(deployment)}`);
   const args = new Set(process.argv.slice(2));
   const preSeed = args.has("--pre-seed");
   const basketsOnly = args.has("--baskets-only");

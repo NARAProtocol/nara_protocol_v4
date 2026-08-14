@@ -32,12 +32,24 @@ describe("v4 epoch maintainer", function () {
       execute: false,
       batchSize: 100,
       maxBatches: 10,
+      maxBacklog: undefined,
       confirmations: 1,
+      syncUntrackedReserve: false,
     });
     expect(parseMaintainerArgs([
-      "--execute", "--batch-size", "75", "--max-batches", "8", "--confirmations", "2",
-    ])).to.deep.equal({ execute: true, batchSize: 75, maxBatches: 8, confirmations: 2 });
+      "--execute", "--batch-size", "75", "--max-batches", "8", "--max-backlog", "8",
+      "--confirmations", "2", "--sync-untracked-reserve",
+    ])).to.deep.equal({
+      execute: true,
+      batchSize: 75,
+      maxBatches: 8,
+      maxBacklog: 8,
+      confirmations: 2,
+      syncUntrackedReserve: true,
+    });
     expect(() => parseMaintainerArgs(["--batch-size", "151"]))
       .to.throw("--batch-size must be an integer between 1 and 150");
+    expect(() => parseMaintainerArgs(["--max-backlog", "3001"]))
+      .to.throw("--max-backlog must be an integer between 1 and 3000");
   });
 });
