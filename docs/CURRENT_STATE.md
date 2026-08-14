@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-08-09.
+Last updated: 2026-08-14.
 
 This repository is v4-only. `contracts/v4/` is the sole active Solidity source.
 The experimental V5 stack, tests, scripts, and release plans have been deleted
@@ -61,21 +61,24 @@ reversible workflow controls:
 
 | Workflow | GitHub workflow ID | Current state |
 |---|---:|---|
-| `NARA v4 operations keeper` | `324678194` | `disabled_manually` |
+| `NARA v4 epoch maintainer` | `324678194` | `disabled_manually` |
 | `NARA v4 liquidity maintainer` | `324678196` | `disabled_manually` |
 
-Repository variables `V4_OPERATIONS_KEEPER_ENABLED` and
-`V4_LIQUIDITY_MAINTAINER_ENABLED` are both `false`. A post-change query found
-no running or queued operational run. `NARA v4 CI`, `CodeQL`, and Dependabot
-remain active because they are verification/dependency workflows, not
-transaction bots.
+Legacy repository variable `V4_OPERATIONS_KEEPER_ENABLED` and repository
+variable `V4_LIQUIDITY_MAINTAINER_ENABLED` are both `false`. The hardened epoch
+workflow instead requires the new `V4_EPOCH_MAINTAINER_ENABLED` variable, which
+is not configured and therefore cannot schedule its job. A post-change query
+found no running or queued operational run. `NARA v4 CI`, `CodeQL`, and
+Dependabot remain active because they are verification/dependency workflows,
+not transaction bots.
 
 No secret was read, changed, or deleted, and this shutdown sent no on-chain
-transaction. The workflow files remain as historical/reviewable source, but
-GitHub will not schedule or dispatch them while disabled. Do not re-enable or
-dispatch either workflow without a new explicit user order, current verified
-deployment inputs, a reviewed execution credential/role posture, and a
-read-only dry run. See
+transaction. The epoch workflow source was later separated from liquidity and
+bound to the hash-pinned production manifest, but it remains disabled and its
+new enable variable is not configured. GitHub will not schedule or dispatch either
+workflow while disabled. Do not re-enable or dispatch either workflow without
+a new explicit user order, current verified deployment inputs, a reviewed
+execution credential/role posture, and a read-only dry run. See
 [NARA-20260809-disable-github-operations-bots.md](releases/NARA-20260809-disable-github-operations-bots.md).
 
 ## Fresh Base v4 core deployment

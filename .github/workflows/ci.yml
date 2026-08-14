@@ -1,7 +1,11 @@
 name: NARA v4 CI
 
 on:
+  # Feature branches are verified by pull_request. Restrict push verification
+  # to main so one commit cannot start duplicate copies of every expensive job.
   push:
+    branches:
+      - main
   pull_request:
   workflow_dispatch:
 

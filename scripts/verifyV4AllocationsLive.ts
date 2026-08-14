@@ -6,6 +6,11 @@
  */
 
 import hre from "hardhat";
+import {
+  assertProductionV4Runtime,
+  currentV4Config,
+  productionV4RuntimeBanner,
+} from "./lib/v4LiveConfig.js";
 
 function env(name: string, fallback?: string): string {
   const value = process.env[name] ?? fallback;
@@ -42,6 +47,8 @@ function decodeJsonDataUri(label: string, uri: string): Record<string, unknown> 
 async function main() {
   const connection = await hre.network.connect();
   const { ethers } = connection as any;
+  const production = await assertProductionV4Runtime(ethers.provider, currentV4Config());
+  console.log(`Production runtime guard: ${productionV4RuntimeBanner(production)}`);
 
   const tokenAddress = ethers.getAddress(env("V4_NARA_TOKEN"));
   const engineAddress = ethers.getAddress(env("V4_ENGINE"));

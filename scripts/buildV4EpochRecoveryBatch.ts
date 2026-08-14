@@ -8,7 +8,13 @@ import * as dotenv from "dotenv";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { requiredBaseRpcUrl, requiredEnv } from "./lib/v4LiveConfig.js";
+import {
+  assertProductionV4Runtime,
+  currentV4Config,
+  productionV4RuntimeBanner,
+  requiredBaseRpcUrl,
+  requiredEnv,
+} from "./lib/v4LiveConfig.js";
 import {
   ENGINE_ABI,
   ERC20_ABI,
@@ -67,8 +73,9 @@ export function recoverySingleTransactionPlan(
 }
 
 async function main(): Promise<void> {
-  const engineAddress = ethers.getAddress(requiredEnv("V4_ENGINE"));
-  const naraAddress = ethers.getAddress(requiredEnv("V4_NARA_TOKEN"));
+  const config = currentV4Config();
+  const engineAddress = config.engine;
+  const naraAddress = config.token;
   const safe = ethers.getAddress(requiredEnv("V4_SAFE"));
   const request = new ethers.FetchRequest(requiredBaseRpcUrl());
   request.timeout = 30_000;
@@ -78,6 +85,8 @@ async function main(): Promise<void> {
   });
 
   try {
+    const deployment = await assertProductionV4Runtime(provider, config);
+    console.log(`Production runtime guard: ${productionV4RuntimeBanner(deployment)}`);
     const [network, engineCode, safeCode, latestBlock] = await Promise.all([
       provider.getNetwork(),
       provider.getCode(engineAddress),

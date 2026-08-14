@@ -57,10 +57,30 @@ in the pull request.
 
 ## Required local gates
 
+Use a widening verification cadence. Repeating every expensive gate after each
+edit is neither required nor useful:
+
+```powershell
+# Fast operations/config/workflow edit loop
+npm run test:ops
+
+# Once before committing a non-contract change
+npm run build
+npm run test:nonfork
+```
+
+`npm test` is the canonical complete CI gate. A local `.env` with a Base RPC
+also opts it into state-dependent fork tests, so run it locally only when a
+contract/fork surface changed or when live fork evidence is intentionally being
+refreshed. Record any skipped or state-dependent fork result in the pull
+request; never relabel it as passing.
+
+At the final pre-push boundary, run the remaining applicable gates once:
+
 ```powershell
 npm ci
 npm run build
-npm test
+npm run test:nonfork # use npm test when contract/fork scope requires it
 npm run size
 npm audit --audit-level=high
 git diff --check
@@ -70,6 +90,10 @@ git diff
 
 Run scoped static analysis and fork tests when the changed risk surface requires
 them.
+
+Feature branches must not trigger duplicate CI through both `push` and
+`pull_request`. The canonical workflow restricts `push` to `main`, retains all
+required PR checks, and verifies `main` again after merge.
 
 ## State language
 

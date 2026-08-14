@@ -21,6 +21,11 @@
 
 import hre from "hardhat";
 import { writeFileSync } from "fs";
+import {
+  assertProductionV4Runtime,
+  currentV4Config,
+  productionV4RuntimeBanner,
+} from "./lib/v4LiveConfig.js";
 
 const BASE_CHAIN_ID = 8453n;
 
@@ -35,6 +40,10 @@ async function main() {
   const { ethers } = connection;
   const [deployer] = await ethers.getSigners();
   const network = await ethers.provider.getNetwork();
+  const production = network.chainId === BASE_CHAIN_ID
+    ? await assertProductionV4Runtime(ethers.provider, currentV4Config())
+    : undefined;
+  if (production) console.log(`Production runtime guard: ${productionV4RuntimeBanner(production)}`);
   console.log("Deployer:", deployer.address);
 
   const NARA         = process.env.NARA_TOKEN_V4!;
@@ -45,6 +54,12 @@ async function main() {
 
   if (!NARA || !USDC || !ENGINE || !POSITION_NFT || !ADMIN) {
     throw new Error("Set NARA_TOKEN_V4, USDC_ADDRESS, ENGINE_V4, POSITION_NFT_V4, ADMIN_ADDRESS in env");
+  }
+  if (production) {
+    if (ethers.getAddress(NARA) !== production.token) throw new Error("NARA_TOKEN_V4 does not match production Token");
+    if (ethers.getAddress(USDC) !== production.base) throw new Error("USDC_ADDRESS does not match production Base USDC");
+    if (ethers.getAddress(ENGINE) !== production.engine) throw new Error("ENGINE_V4 does not match production Engine");
+    if (ethers.getAddress(ADMIN) !== production.admin) throw new Error("ADMIN_ADDRESS does not match production admin Safe");
   }
   if (
     network.chainId === BASE_CHAIN_ID &&

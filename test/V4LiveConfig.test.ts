@@ -9,6 +9,7 @@ import {
   REQUIRED_V4_HOOK_FLAGS,
   V4_HOOK_FLAG_MASK,
   assertCanonicalV4PoolConfig,
+  canonicalProductionV4Deployment,
   currentV4Config,
   deriveV4PoolKey,
 } from "../scripts/lib/v4LiveConfig.js";
@@ -25,6 +26,23 @@ const LAUNCH_ENV_KEYS = [
   "V4_ENGINE",
   "V4_ALLOW_RETIRED_DEFAULTS",
   "V4_ALLOW_QUARANTINED_STAGE_A",
+  "V4_POOL_MANAGER",
+  "V4_POSITION_MANAGER",
+  "V4_PERMIT2",
+  "V4_UNIVERSAL_ROUTER",
+  "V4_ADMIN_ADDRESS",
+  "V4_SAFE",
+  "V4_DEPLOYER",
+  "V4_TREASURY_ADDRESS",
+  "V4_REWARD_RESERVE",
+  "V4_LAUNCHER",
+  "V4_CREATE2_HOOK_DEPLOYER",
+  "V4_COMPOUNDER",
+  "V4_COMPOUNDER_ADDRESS",
+  "V4_ENGINE_DEPLOYMENT_BLOCK",
+  "V4_ENGINE_DEPLOYMENT_TX_HASH",
+  "V4_SAFE_CODEHASH",
+  "V4_RELEASE_COMMIT",
 ] as const;
 
 function withCleanLaunchEnv(run: () => void) {
@@ -58,7 +76,7 @@ describe("v4 live config launch guards", () => {
     withCleanLaunchEnv(() => {
       process.env.V4_ALLOW_RETIRED_DEFAULTS = "1";
 
-      const config = currentV4Config();
+      const config = currentV4Config({ requireProduction: false });
 
       expect(config.token).to.equal(ethers.getAddress(RETIRED_INCIDENT_V4_NARA));
       expect(config.hook).to.equal(ethers.getAddress(RETIRED_INCIDENT_V4_HOOK));
@@ -93,7 +111,7 @@ describe("v4 live config launch guards", () => {
       process.env.V4_LP_TOKEN_ID = fresh.lpTokenId;
       process.env.V4_POOL_ID = fresh.poolId;
 
-      const config = currentV4Config();
+      const config = currentV4Config({ requireProduction: false });
 
       expect(config.token).to.equal(ethers.getAddress(fresh.token));
       expect(config.hook).to.equal(ethers.getAddress(fresh.hook));
@@ -180,6 +198,62 @@ describe("v4 live config launch guards", () => {
 
       expect(() => currentV4Config()).to.throw(
         "Configured hook/pool belongs to the quarantined Stage A liquidity stack",
+      );
+    });
+  });
+
+  it("accepts only the exact pinned production manifest configuration by default", () => {
+    withCleanLaunchEnv(() => {
+      const deployment = canonicalProductionV4Deployment();
+      const values: Record<string, string> = {
+        V4_NARA_TOKEN: deployment.token,
+        V4_ENGINE: deployment.engine,
+        V4_HOOK: deployment.hook,
+        V4_VAULT: deployment.vault,
+        V4_BASE_TOKEN: deployment.base,
+        V4_POOL_MANAGER: deployment.poolManager,
+        V4_POSITION_MANAGER: deployment.positionManager,
+        V4_PERMIT2: deployment.permit2,
+        V4_UNIVERSAL_ROUTER: deployment.universalRouter,
+        V4_POOL_ID: deployment.poolId,
+        V4_POOL_FEE: String(deployment.poolFee),
+        V4_TICK_SPACING: String(deployment.tickSpacing),
+        V4_LP_TOKEN_ID: String(deployment.lpTokenId),
+        V4_ADMIN_ADDRESS: deployment.admin,
+        V4_SAFE: deployment.safe,
+        V4_DEPLOYER: deployment.deployer,
+        V4_TREASURY_ADDRESS: deployment.treasury,
+        V4_REWARD_RESERVE: deployment.rewardReserve,
+        V4_LAUNCHER: deployment.launcher,
+        V4_CREATE2_HOOK_DEPLOYER: deployment.create2HookDeployer,
+        V4_COMPOUNDER: deployment.compounder,
+        V4_COMPOUNDER_ADDRESS: deployment.compounder,
+        V4_ENGINE_DEPLOYMENT_BLOCK: String(deployment.engineDeploymentBlock),
+        V4_ENGINE_DEPLOYMENT_TX_HASH: deployment.engineDeploymentTransactionHash,
+        V4_SAFE_CODEHASH: deployment.safeCodeHash,
+        V4_RELEASE_COMMIT: deployment.originCommit,
+      };
+      Object.assign(process.env, values);
+
+      const config = currentV4Config();
+
+      expect(config.engine).to.equal(deployment.engine);
+      expect(config.hook).to.equal(deployment.hook);
+      expect(config.poolId).to.equal(deployment.poolId);
+    });
+  });
+
+  it("rejects the internally consistent retired 2026-07-30 stack", () => {
+    withCleanLaunchEnv(() => {
+      process.env.V4_NARA_TOKEN = "0x65E247AA3aa9C0131b2984b894c3D24c41341D7A";
+      process.env.V4_ENGINE = "0xbC2492BA73dE35d1114b5c18d7db633aca8963c9";
+      process.env.V4_HOOK = "0xA1c6a86d6F7B83deE32D7bc4aA6D35C14A8e6088";
+      process.env.V4_VAULT = "0x2dfE578C4342750Cd8fE618605eeB0E9C00Ba94d";
+      process.env.V4_POOL_ID = "0x221d377779f958eadf35122810743a6ba11e9079b0b6bd05234ea9500b227318";
+      process.env.V4_LP_TOKEN_ID = "2884402";
+
+      expect(() => currentV4Config()).to.throw(
+        "Production v4 manifest mismatch for V4_NARA_TOKEN",
       );
     });
   });

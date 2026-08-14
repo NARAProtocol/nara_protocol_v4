@@ -1,4 +1,4 @@
-name: NARA v4 operations keeper
+name: NARA v4 epoch maintainer
 
 on:
   schedule:
@@ -20,28 +20,11 @@ concurrency:
 
 jobs:
   maintain:
-    if: github.event_name == 'workflow_dispatch' || vars.V4_OPERATIONS_KEEPER_ENABLED == 'true'
+    if: github.event_name == 'workflow_dispatch' || vars.V4_EPOCH_MAINTAINER_ENABLED == 'true'
     runs-on: ubuntu-slim
     timeout-minutes: 12
     env:
       BASE_RPC_URL: ${{ secrets.BASE_RPC_URL }}
-      V4_ENGINE: ${{ vars.V4_ENGINE }}
-      V4_NARA_TOKEN: ${{ vars.V4_NARA_TOKEN }}
-      V4_BASE_TOKEN: ${{ vars.V4_BASE_TOKEN }}
-      V4_VAULT: ${{ vars.V4_VAULT }}
-      V4_HOOK: ${{ vars.V4_HOOK }}
-      V4_POOL_ID: ${{ vars.V4_POOL_ID }}
-      V4_LP_TOKEN_ID: ${{ vars.V4_LP_TOKEN_ID }}
-      V4_COMPOUNDER: ${{ vars.V4_COMPOUNDER }}
-      V4_SAFE: ${{ vars.V4_SAFE }}
-      V4_COMPOUND_KEEPER_ADDRESS: ${{ vars.V4_COMPOUND_KEEPER_ADDRESS }}
-      V4_COMPOUND_MIN_LIQUIDITY_USDC: ${{ vars.V4_COMPOUND_MIN_LIQUIDITY_USDC }}
-      V4_OPERATIONS_KEEPER_PRIVATE_KEY: ${{ secrets.V4_OPERATIONS_KEEPER_PRIVATE_KEY }}
-      V4_EPOCH_ALERT_WEBHOOK_URL: ${{ secrets.V4_EPOCH_ALERT_WEBHOOK_URL }}
-      V4_EPOCH_HEARTBEAT_URL: ${{ secrets.V4_EPOCH_HEARTBEAT_URL }}
-      V4_EPOCH_NOTIFY_RECOVERY: "true"
-      V4_COMPOUND_ALERT_WEBHOOK_URL: ${{ secrets.V4_COMPOUND_ALERT_WEBHOOK_URL }}
-      V4_COMPOUND_HEARTBEAT_URL: ${{ secrets.V4_COMPOUND_HEARTBEAT_URL }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -50,15 +33,23 @@ jobs:
           cache: npm
       - name: Install locked dependencies
         run: npm ci --ignore-scripts
+      - name: Hydrate hash-pinned production configuration
+        run: npm run v4:env:production:write
+      - name: Verify production manifest and deployed runtime
+        run: npm run verify:v4:runtime-config
       - name: Read-only health check
         if: github.event_name == 'workflow_dispatch' && inputs.execute != true
         run: npm run maintain:v4:epochs
-      - name: Read-only liquidity check
-        if: github.event_name == 'workflow_dispatch' && inputs.execute != true && vars.V4_LIQUIDITY_MAINTAINER_ENABLED == 'true'
-        run: npm run maintain:v4:liquidity
-      - name: Clear epoch backlog
+      - name: Verify routine backlog is inside the automatic bound
         if: github.event_name == 'schedule' || inputs.execute == true
-        run: npm run maintain:v4:epochs -- --execute --batch-size 100 --max-batches 10
-      - name: Compound collected fees above threshold
-        if: (github.event_name == 'schedule' || inputs.execute == true) && vars.V4_LIQUIDITY_MAINTAINER_ENABLED == 'true'
-        run: npm run maintain:v4:liquidity -- --execute
+        run: npm run maintain:v4:epochs:routine:check
+      - name: Maintain epochs inside the routine bound
+        if: github.event_name == 'schedule' || inputs.execute == true
+        env:
+          V4_EPOCH_KEEPER_ADDRESS: ${{ vars.V4_EPOCH_KEEPER_ADDRESS }}
+          V4_EPOCH_KEEPER_PRIVATE_KEY: ${{ secrets.V4_EPOCH_KEEPER_PRIVATE_KEY }}
+          V4_EPOCH_ALERT_WEBHOOK_URL: ${{ secrets.V4_EPOCH_ALERT_WEBHOOK_URL }}
+          V4_EPOCH_HEARTBEAT_URL: ${{ secrets.V4_EPOCH_HEARTBEAT_URL }}
+          V4_EPOCH_REQUIRE_HEARTBEAT: "true"
+          V4_EPOCH_NOTIFY_RECOVERY: "true"
+        run: npm run maintain:v4:epochs:routine
