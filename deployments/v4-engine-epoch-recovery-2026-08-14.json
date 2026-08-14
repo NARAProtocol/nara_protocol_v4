@@ -1,0 +1,154 @@
+{
+  "schemaVersion": 1,
+  "changeId": "NARA-20260814-v4-engine-epoch-recovery",
+  "releaseType": "POST_ACTIVATION_OPERATIONS_EVIDENCE",
+  "chain": {
+    "name": "Base",
+    "chainId": 8453
+  },
+  "origin": {
+    "repository": "NARAProtocol/nara_protocol_v4",
+    "contractSourceCommit": "027af3f06bbe6dea2c187dfd8062e50c228f1c35",
+    "operationsGuardMergeCommit": "819ddbbdd24ced347aab6d34fde6289fc963f6a7",
+    "activationManifest": "deployments/v4-production-activation-2026-08-09.json",
+    "activationManifestSha256": "e525b8c6508c454b951fdb422eb6ad03b51a120827b22efc4ae64a3862ddd066"
+  },
+  "contracts": {
+    "nara": "0xB6333F5D4cEd8dffA80F3F13697D6aA3BB3f19c1",
+    "engine": "0x98ab6406D6B548F37dEF7110961bb45A399e5aFC",
+    "safe": "0xd65c0e390Dc187A22c52c03816591CC736C0D755",
+    "rewardReserve": "0x8369CEf28128A4B24Bc5ed52aA6196D92D563F2f"
+  },
+  "preRecoveryReadback": {
+    "blockNumber": 49969845,
+    "blockHash": "0xabcc84d9d137ae774aeef12cc71fcb55d48382621355db80899737864b224559",
+    "blockTimestamp": 1786729037,
+    "blockTimestampUtc": "2026-08-14T17:37:17.000Z",
+    "currentEpoch": 557,
+    "storedEpoch": 35,
+    "backlogEpochs": 522,
+    "localEmissionReserveNara": "0.0",
+    "rewardReserveAvailableNara": "650000.0",
+    "trackedEmissionReserveNara": "0.0",
+    "engineTokenBalanceNara": "0.0",
+    "totalPendingNaraRewardsNara": "0.0",
+    "untrackedDirectReserveNara": "0.0",
+    "totalLockedNara": "0.0",
+    "nextPositionId": 1
+  },
+  "operation": {
+    "permissionless": true,
+    "function": "advanceEpochs(uint256)",
+    "requestedMaxStepsPerCall": "200",
+    "calldata": "0x0aeeca0000000000000000000000000000000000000000000000000000000000000000c8",
+    "valueWeiPerCall": "0",
+    "internalTarget": "0x98ab6406D6B548F37dEF7110961bb45A399e5aFC",
+    "sourceArtifactRule": "Transaction receipts and decoded calldata are authority; local Safe import-file metadata is not release authority."
+  },
+  "executions": [
+    {
+      "part": 1,
+      "safeNonce": 35,
+      "safeTxHash": "0xba5f1e1fee6232f4410926c6552de34837253d0afc4e278835ec88b94b6d7da7",
+      "transactionHash": "0x2d0c4c8059680a1223194b959baccdb103f834333d61c4dcec789211dc37de3e",
+      "blockNumber": 49970042,
+      "blockHash": "0x23243224e994463f53e6336a99db7eb39461e739933f1ea598d4d41758369ce0",
+      "blockTimestamp": 1786729431,
+      "blockTimestampUtc": "2026-08-14T17:43:51.000Z",
+      "transactionIndex": 26,
+      "status": 1,
+      "gasUsed": "7916941",
+      "effectiveGasPriceWei": "6000000",
+      "confirmationsRequired": 2,
+      "confirmationsRecorded": 2,
+      "epochAdvancedEventCount": 200,
+      "firstAdvancedEpoch": 36,
+      "lastAdvancedEpoch": 235,
+      "receiptBlockReadback": {
+        "currentEpoch": 557,
+        "storedEpoch": 235,
+        "backlogEpochs": 322
+      }
+    },
+    {
+      "part": 2,
+      "safeNonce": 36,
+      "safeTxHash": "0xc3702f878f04d4887fa0462e2e40661fc9afb9b29c66deb5bc7d37faa07ecbf3",
+      "transactionHash": "0x027ed35f0daafa86059187ed5f974d143354fbebf2595fd95602d48106b52ecc",
+      "blockNumber": 49970371,
+      "blockHash": "0x6b9896ede4fc3888bdad101287ed8b62274b15866c2b4729108b682f68e283d1",
+      "blockTimestamp": 1786730089,
+      "blockTimestampUtc": "2026-08-14T17:54:49.000Z",
+      "transactionIndex": 88,
+      "status": 1,
+      "gasUsed": "7916929",
+      "effectiveGasPriceWei": "6000000",
+      "confirmationsRequired": 2,
+      "confirmationsRecorded": 2,
+      "epochAdvancedEventCount": 200,
+      "firstAdvancedEpoch": 236,
+      "lastAdvancedEpoch": 435,
+      "receiptBlockReadback": {
+        "currentEpoch": 558,
+        "storedEpoch": 435,
+        "backlogEpochs": 123
+      }
+    },
+    {
+      "part": 3,
+      "safeNonce": 37,
+      "safeTxHash": "0xcbcaed5eb0469451efdeaf6241075b1a5dd709b7473f107acf9f68ab956128c2",
+      "transactionHash": "0x7221e732dd2c5cf34d929ab168cfea23d149c7e41ab91e6511c4abfce715e15f",
+      "blockNumber": 49970727,
+      "blockHash": "0x34615dfc0624c9a37975195828b3d1afebe367dc3b686993a7aa648b73e32cc5",
+      "blockTimestamp": 1786730801,
+      "blockTimestampUtc": "2026-08-14T18:06:41.000Z",
+      "transactionIndex": 25,
+      "status": 1,
+      "gasUsed": "4795343",
+      "effectiveGasPriceWei": "6000000",
+      "confirmationsRequired": 2,
+      "confirmationsRecorded": 2,
+      "epochAdvancedEventCount": 124,
+      "firstAdvancedEpoch": 436,
+      "lastAdvancedEpoch": 559,
+      "receiptBlockReadback": {
+        "currentEpoch": 559,
+        "storedEpoch": 559,
+        "backlogEpochs": 0
+      }
+    }
+  ],
+  "postRecoveryReadback": {
+    "blockNumber": 49970969,
+    "blockHash": "0x1639aa631ee0fd21d9d2364133267155060d11c0556f76c86afde563a33f5ccf",
+    "blockTimestamp": 1786731285,
+    "blockTimestampUtc": "2026-08-14T18:14:45.000Z",
+    "currentEpoch": 559,
+    "storedEpoch": 559,
+    "backlogEpochs": 0,
+    "localEmissionReserveNara": "0.0",
+    "rewardReserveAvailableNara": "650000.0",
+    "trackedEmissionReserveNara": "0.0",
+    "engineTokenBalanceNara": "0.0",
+    "totalPendingNaraRewardsNara": "0.0",
+    "untrackedDirectReserveNara": "0.0",
+    "totalLockedNara": "0.0",
+    "nextPositionId": 1,
+    "verificationGatePassedAtBlock": true
+  },
+  "operationalState": {
+    "activationBacklogRecovered": true,
+    "maintainerWorkflowEnabled": false,
+    "recurringKeeperConfigured": false,
+    "productionLockSmokeReceiptPinned": false,
+    "liquidityMaintainerEnabled": false
+  },
+  "remainingGates": [
+    "Provision and verify a dedicated gas-only epoch keeper and heartbeat before recurring maintenance activation.",
+    "Run the epoch workflow manually in read-only mode before any scheduled execution is enabled.",
+    "Execute and receipt-pin the separately approved production Engine lifecycle smoke flow.",
+    "Keep liquidity maintenance disabled unless it receives a separate deployment-specific approval."
+  ],
+  "onchainWritesByEvidenceChange": "none; this file records three earlier human-approved Safe executions"
+}

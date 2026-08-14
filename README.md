@@ -94,15 +94,16 @@ passed, including receipt-pinned same-block pressure and reversal evidence.
 Compounder validation/reconciliation/freeze is complete: LP NFT `2898486` is
 Compounder-owned with liquidity `9455824137787`, and total active liquidity was
 `4252096511257072` at the freeze block. Both recurring v4 workflows remain
-disabled. The Engine's
-activation backlog was recovered by Safe transaction
-`0xcd6e52b319f21b5a6772a36cc076a5c6f8390dcd7326ab1adf822a16f6638493`;
-the receipt-block readback was current at epoch `35`. Baskets remain
-preview-only. This is not an overall production-readiness claim.
-Canonical activation evidence:
+disabled. The Engine's later accumulated backlog was recovered by three
+permissionless Safe transactions on 2026-08-14; final receipt block `49970727`
+read current/stored epoch `559 / 559`, and block `49970969` independently
+confirmed zero backlog. Baskets remain preview-only. This is not an overall
+production-readiness claim.
+Canonical deployment and operations evidence:
 [`deployments/v4-production-activation-2026-08-09.json`](deployments/v4-production-activation-2026-08-09.json),
 [`deployments/v4-engine-epoch-recovery-2026-08-09.json`](deployments/v4-engine-epoch-recovery-2026-08-09.json),
-and [`deployments/v4-compounder-activation-2026-08-09.json`](deployments/v4-compounder-activation-2026-08-09.json).
+[`deployments/v4-compounder-activation-2026-08-09.json`](deployments/v4-compounder-activation-2026-08-09.json),
+and [`deployments/v4-engine-epoch-recovery-2026-08-14.json`](deployments/v4-engine-epoch-recovery-2026-08-14.json).
 
 ---
 
@@ -170,13 +171,13 @@ This is the v4 dependency shape. Full v4 layer inventory:
 ## ⚙️ How the Deployed V4 Engine Works
 
 - **JIT epochs.** Time is divided into fixed (default 15-min) epochs. Epoch advancement is triggered
-  *inside* user calls — no keeper cron. A single call bridges up to `MAX_JIT_ADVANCE = 8` epochs; past
-  that, writes revert `EpochStale` until anyone calls `poke()` / `advanceEpochs()`. (Better failure
-  shape than a cron dependency — but frontends must surface backlog.)
-  The activation backlog was receipt-pinned as recovered at Base block
-  `49735161`: both current and stored epoch were `35`. The next readback was
-  `36 / 35`, a normal one-epoch JIT-recoverable gap. Recurring maintenance is
-  still disabled, so operators must continue monitoring this invariant.
+  *inside* user calls and does not require privileged keeper authority. A single
+  call bridges up to `MAX_JIT_ADVANCE = 8` epochs; past that, writes revert
+  `EpochStale` until anyone calls `poke()` / `advanceEpochs()`. Frontends must
+  surface backlog. The 2026-08-14 Safe recovery advanced epochs `36..559`; final
+  receipt block `49970727` and later read block `49970969` both reported current
+  and stored epoch `559 / 559`. Recurring maintenance is still disabled, so
+  operators must continue monitoring this invariant.
 - **Weight = committed time.** `weight = amount × (1 + linearWad·r + quadraticWad·r²)`, where
   `r = duration / maxDuration`. Longer commitments receive a structurally higher weight (the curve
   accelerates with duration).
@@ -310,12 +311,12 @@ open. Both recurring v4 workflows are disabled. See
 
 ## 🚀 Deployment
 
-The 2026-08-09 activation, Engine recovery, same-block tax round trip, bounded
-Compounder validation, and permanent Vault binding freeze have receipt-block
-evidence, but release work is not finished. Keep both recurring workflows
-disabled; complete the Engine lifecycle smoke and monitored observation period;
-deploy no basket from this repository; and update downstream consumers only
-through the cross-repository handoff.
+The 2026-08-09 activation, the 2026-08-14 Engine recovery, same-block tax round
+trip, bounded Compounder validation, and permanent Vault binding freeze have
+receipt-block evidence, but release work is not finished. Keep both recurring
+workflows disabled; complete the Engine lifecycle smoke and monitored
+observation period; deploy no basket from this repository; and update
+downstream consumers only through the cross-repository handoff.
 Every further production transaction still requires explicit human approval.
 See the activation manifest and release note linked above.
 
