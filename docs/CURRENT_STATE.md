@@ -22,8 +22,9 @@ and separate permanent Vault binding freeze succeeded. Allocations/periphery
 are not evidenced by this release, recurring maintenance remains disabled, the
 Engine lifecycle smoke is pending, and baskets remain preview-only. Canonical
 sanitized evidence is `deployments/v4-production-activation-2026-08-09.json`,
-`deployments/v4-engine-epoch-recovery-2026-08-09.json`, and
-`deployments/v4-compounder-activation-2026-08-09.json`.
+`deployments/v4-engine-epoch-recovery-2026-08-09.json`,
+`deployments/v4-compounder-activation-2026-08-09.json`, and
+`deployments/v4-engine-epoch-recovery-2026-08-14.json`.
 
 ## Authoritative v4 release policy
 
@@ -80,6 +81,16 @@ workflow while disabled. Do not re-enable or dispatch either workflow without
 a new explicit user order, current verified deployment inputs, a reviewed
 execution credential/role posture, and a read-only dry run. See
 [NARA-20260809-disable-github-operations-bots.md](releases/NARA-20260809-disable-github-operations-bots.md).
+
+On 2026-08-14, the production Safe executed three permissionless, zero-value
+`advanceEpochs(200)` calls at Safe nonces `35..37`. Receipt events covered
+epochs `36..235`, `236..435`, and `436..559`; the final call stopped after the
+124 epochs actually available. At Base block `49970969`, current and stored
+epochs were both `559`, the backlog was zero, the external reward reserve
+reported `650,000 NARA`, and local, tracked, and untracked direct Engine reserve
+were zero. This one-time recovery did not enable, configure, or dispatch either
+workflow. Sanitized receipt evidence is in
+`deployments/v4-engine-epoch-recovery-2026-08-14.json`.
 
 ## Fresh Base v4 core deployment
 
@@ -364,11 +375,11 @@ Compounder validation/freeze are active or complete as specifically documented,
 but the whole stack is not production-ready. Remaining gates include:
 
 1. Keep the Engine backlog within its eight-epoch JIT buffer and explicitly
-   authorize a recurring maintenance path. Recovery transaction
-   `0xcd6e52b319f21b5a6772a36cc076a5c6f8390dcd7326ab1adf822a16f6638493`
-   advanced epochs `5..35`; at receipt block `49735161`, current and stored
-   epochs were both `35`. At later pinned block `49735219`, the state was
-   `36 / 35`, a one-epoch JIT-recoverable gap.
+   authorize a recurring maintenance path. The 2026-08-14 Safe recovery
+   advanced epochs `36..559`; at final receipt block `49970727`, current and
+   stored epochs were both `559`. A later read at block `49970969` again found
+   `559 / 559`, zero backlog, and no reserve-accounting anomaly. Recurring
+   maintenance remains disabled and is still a separate authorization gate.
 2. Complete and receipt-pin the Engine lock, activation, claim, and unlock
    lifecycle smoke before describing public locking or reward use as available.
 3. Merge the activation manifests and handoff through protected CI. Do not
