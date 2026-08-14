@@ -97,4 +97,12 @@ describe("v4 production runtime guard enforcement", () => {
     expect(workflow).not.to.contain("maintain:v4:liquidity");
     expect(workflow).not.to.contain("npm run maintain:v4:epochs -- --");
   });
+
+  it("avoids duplicate feature-branch CI while preserving PR and main verification", () => {
+    const workflow = source(".github/workflows/ci.yml");
+
+    expect(workflow).to.match(/push:\s+branches:\s+- main/);
+    expect(workflow).to.contain("pull_request:");
+    expect(workflow).to.contain("workflow_dispatch:");
+  });
 });

@@ -23,6 +23,10 @@ The workflow now:
 - requires a dead-man heartbeat endpoint before execute mode; and
 - does not invoke liquidity maintenance.
 
+The canonical CI workflow also limits `push` runs to `main`; feature branches
+use the pull-request event. This removes duplicate copies of the same required
+checks without skipping protected PR verification or post-merge `main` checks.
+
 ## Activation boundary
 
 Workflow ID `324678194` remains `disabled_manually`. The new repository variable

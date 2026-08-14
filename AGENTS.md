@@ -211,6 +211,30 @@ npm run echidna:v4         # fuzz harness
 npm run launch:gates       # combined local launch gate
 ```
 
+### Mandatory verification cadence
+
+Do not run the live/fork suite after every edit. Use the smallest gate that
+fully covers the changed surface, then widen verification once at the release
+boundary:
+
+1. Operations scripts, runtime config, or keeper workflow edits:
+   `npm run test:ops` during the edit loop.
+2. Before committing a non-contract change: `npm run build` and
+   `npm run test:nonfork` once.
+3. Contract, compiler, dependency-lock, or fork-integration changes: run the
+   applicable focused contract/fork tests, then the complete applicable suite.
+4. The protected pull request runs the canonical required CI checks once.
+
+Local `.env` RPC values automatically opt `npm test` into state-dependent Base
+fork suites. Do not use that command as a routine non-contract edit-loop gate;
+use `npm run test:nonfork`. Run live/fork tests only when their surface changed
+or when the current onchain-state evidence is deliberately being refreshed.
+
+Feature-branch CI must run through `pull_request` only. `push` verification is
+restricted to `main`; the regression test in
+`test/v4ProductionRuntimeGuard.test.ts` enforces this and prevents duplicate
+copies of every expensive job.
+
 ## Mandatory protocol safety standards
 
 See [CLAUDE.md](CLAUDE.md) → "MANDATORY PROTOCOL SAFETY STANDARDS" for the full rules. The four cornerstones:
