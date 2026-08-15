@@ -127,7 +127,13 @@ export function hasCompoundableInventory(
   bankedNara: bigint,
   bankedUsdc: bigint,
 ): boolean {
-  return vaultNara + bankedNara > 0n && vaultUsdc + bankedUsdc > 0n;
+  // Banked inventory can supply either side of the next liquidity add, but
+  // Vault.compoundAll() still reverts with ZeroValue when the Vault itself has
+  // no newly collected fees to transfer. Require both a fresh trigger and a
+  // combined two-sided balance before attempting the simulation.
+  return (vaultNara > 0n || vaultUsdc > 0n)
+    && vaultNara + bankedNara > 0n
+    && vaultUsdc + bankedUsdc > 0n;
 }
 
 function positiveBigInt(label: string, raw: string | undefined, maximum: bigint): bigint {
@@ -437,6 +443,8 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
     let blockedReason: string | undefined;
     if (!compoundPolicy) {
       blockedReason = "independent compound reference and explicit token-use caps are not configured";
+    } else if (before.vaultNara === 0n && before.vaultUsdc === 0n) {
+      blockedReason = "Vault has no newly collected fees to trigger compounding";
     } else if (!hasCompoundableInventory(
       before.vaultNara,
       before.vaultUsdc,
