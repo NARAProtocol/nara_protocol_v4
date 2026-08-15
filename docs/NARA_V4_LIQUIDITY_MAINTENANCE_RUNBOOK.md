@@ -2,14 +2,17 @@
 
 Change-ID: `NARA-20260731-liquidity-maintainer`
 
-Current stop boundary (2026-08-09): the fresh pool is initialized and seeded,
+Current stop boundary (updated 2026-08-15): the fresh pool is initialized and seeded,
 the Engine activation backlog is recovered, and Compounder validation/freeze
 completed under receipt-pinned Safe transactions. LP NFT `2898486` is
 Compounder-owned with liquidity `9455824137787`; unmatched inventory remains
-banked in the Compounder. Both v4 operations workflows and their repository
-enable variables are disabled. Do not schedule, dispatch, execute maintenance,
-or re-enable a workflow without a new explicit order, deployment-specific
-review, and keeper authorization. Current authority is
+banked in the Compounder. The liquidity workflow and its repository enable
+variables remain disabled. Its source contains a guarded twice-hourly schedule
+at minutes `17,47`, but scheduled or manual execution remains ineligible until
+both `V4_OPERATIONS_KEEPER_ENABLED` and
+`V4_LIQUIDITY_MAINTAINER_ENABLED` are explicitly `true`. Do not dispatch or
+execute maintenance without a new explicit order, deployment-specific review,
+and keeper authorization. Current authority is
 `deployments/v4-production-activation-2026-08-09.json` together with
 `deployments/v4-compounder-activation-2026-08-09.json` and
 `docs/releases/NARA-20260809-v4-compounder-activation.md`.
@@ -58,10 +61,9 @@ the separation between the validation and irreversible binding-freeze actions.
    key only in the GitHub Actions secret `V4_OPERATIONS_KEEPER_PRIVATE_KEY`, and
    run the workflow manually in read-only mode, then execute mode.
 9. Only after a new explicit authorization, the manual cycle, and post-state
-   verification pass may maintainers consider setting repository variable
-   `V4_LIQUIDITY_MAINTAINER_ENABLED=true`. Liquidity remains a separate,
-   manual-only workflow; epoch-maintenance authorization is independent. Both
-   workflows are disabled now.
+   verification pass may maintainers leave the twice-hourly schedule active.
+   Liquidity maintenance remains separately enabled and separately credentialed
+   from epoch maintenance.
 
 ## Runtime safety
 
@@ -100,6 +102,9 @@ different policy.
 
 The compounder never swaps. It adds only the NARA/USDC portion balanced at the
 live price. Excess assets remain banked in the compounder and are reconsidered
-on the next call. This reduces MEV exposure but cannot guarantee every collected
-USDC is immediately deployed. Changing that behavior requires a separately
-reviewed replacement compounder, not a keeper setting.
+with newly collected Vault fees on the next call. The maintainer must therefore
+check the combined Vault and Compounder inventory before simulation; requiring
+both sides to be present in the Vault alone is incorrect. This reduces MEV
+exposure but cannot guarantee every collected USDC is immediately deployed.
+Changing that behavior requires a separately reviewed replacement compounder,
+not a keeper setting.

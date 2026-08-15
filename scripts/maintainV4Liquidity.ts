@@ -121,6 +121,15 @@ export function shouldCompound(
   return simulatedLiquidity > 0n && simulatedBaseDepth >= minimumBaseDepth;
 }
 
+export function hasCompoundableInventory(
+  vaultNara: bigint,
+  vaultUsdc: bigint,
+  bankedNara: bigint,
+  bankedUsdc: bigint,
+): boolean {
+  return vaultNara + bankedNara > 0n && vaultUsdc + bankedUsdc > 0n;
+}
+
 function positiveBigInt(label: string, raw: string | undefined, maximum: bigint): bigint {
   if (!raw?.trim()) throw new Error(`${label} is required`);
   let value: bigint;
@@ -428,7 +437,14 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
     let blockedReason: string | undefined;
     if (!compoundPolicy) {
       blockedReason = "independent compound reference and explicit token-use caps are not configured";
-    } else if (before.vaultNara > 0n && before.vaultUsdc > 0n) {
+    } else if (!hasCompoundableInventory(
+      before.vaultNara,
+      before.vaultUsdc,
+      before.bankedNara,
+      before.bankedUsdc,
+    )) {
+      blockedReason = "combined Vault and Compounder inventory does not contain both NARA and USDC";
+    } else {
       currentSqrtPriceX96 = await readSqrtPriceX96(provider, config.poolManager, config.poolId);
       assertCurrentSqrtPriceWithinPolicy(currentSqrtPriceX96, compoundPolicy);
       constraintsData = compoundConstraintsData(
@@ -471,8 +487,18 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
     if (!frozen) throw new Error("Execution blocked until the Safe validates and freezes the compounder");
     if (!configuredKeeper) throw new Error("V4_COMPOUND_KEEPER_ADDRESS is required in execute mode");
     if (!keeperAllowed) throw new Error("Configured compound keeper is not authorized by the vault");
+    const heartbeatUrl = process.env.V4_COMPOUND_HEARTBEAT_URL?.trim();
+    if (process.env.V4_COMPOUND_REQUIRE_HEARTBEAT?.trim().toLowerCase() === "true" && !heartbeatUrl) {
+      throw new Error("V4_COMPOUND_HEARTBEAT_URL is required in execute mode");
+    }
     if (!ready) {
       console.log("No compound transaction required at the configured threshold.");
+      await postJson(heartbeatUrl, {
+        source: "nara-v4-liquidity-maintainer",
+        status: "idle",
+        block: latest.number,
+        simulatedLiquidityUsdcDepth: ethers.formatUnits(simulatedBaseDepth, 6),
+      });
       return;
     }
 
@@ -517,7 +543,7 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
       positionLiquidity: positionLiquidity.toString(),
       ...formatted(after),
     }, null, 2));
-    await postJson(process.env.V4_COMPOUND_HEARTBEAT_URL, {
+    await postJson(heartbeatUrl, {
       source: "nara-v4-liquidity-maintainer",
       status: "compounded",
       transactionHash: tx.hash,
