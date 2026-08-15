@@ -25,15 +25,6 @@ jobs:
     timeout-minutes: 10
     env:
       BASE_RPC_URL: ${{ secrets.BASE_RPC_URL }}
-      V4_NARA_TOKEN: ${{ vars.V4_NARA_TOKEN }}
-      V4_BASE_TOKEN: ${{ vars.V4_BASE_TOKEN }}
-      V4_VAULT: ${{ vars.V4_VAULT }}
-      V4_HOOK: ${{ vars.V4_HOOK }}
-      V4_ENGINE: ${{ vars.V4_ENGINE }}
-      V4_POOL_ID: ${{ vars.V4_POOL_ID }}
-      V4_LP_TOKEN_ID: ${{ vars.V4_LP_TOKEN_ID }}
-      V4_COMPOUNDER: ${{ vars.V4_COMPOUNDER }}
-      V4_SAFE: ${{ vars.V4_SAFE }}
       V4_COMPOUND_KEEPER_ADDRESS: ${{ vars.V4_COMPOUND_KEEPER_ADDRESS }}
       V4_COMPOUND_MIN_LIQUIDITY_USDC: ${{ vars.V4_COMPOUND_MIN_LIQUIDITY_USDC }}
       V4_COMPOUND_REFERENCE_SQRT_PRICE_X96: ${{ vars.V4_COMPOUND_REFERENCE_SQRT_PRICE_X96 }}
