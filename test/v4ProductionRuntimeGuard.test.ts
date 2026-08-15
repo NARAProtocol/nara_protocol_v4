@@ -116,6 +116,19 @@ describe("v4 production runtime guard enforcement", () => {
     expect(workflow).to.contain("vars.V4_COMPOUND_MAX_USDC_USED_RAW");
     expect(workflow).to.contain("github.event_name == 'schedule' || inputs.execute == true");
     expect(workflow).to.contain('V4_COMPOUND_REQUIRE_HEARTBEAT: "true"');
+    for (const key of [
+      "V4_NARA_TOKEN",
+      "V4_BASE_TOKEN",
+      "V4_VAULT",
+      "V4_HOOK",
+      "V4_ENGINE",
+      "V4_POOL_ID",
+      "V4_LP_TOKEN_ID",
+      "V4_COMPOUNDER",
+      "V4_SAFE",
+    ]) {
+      expect(workflow).not.to.contain(`vars.${key}`);
+    }
   });
 
   it("avoids duplicate feature-branch CI while preserving PR and main verification", () => {
