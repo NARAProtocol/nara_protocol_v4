@@ -3,6 +3,7 @@ import {
   assertCurrentSqrtPriceWithinPolicy,
   baseDepthForLiquidity,
   compoundExecutionPolicyFromEnv,
+  hasCompoundableInventory,
   liquidityMinimum,
   parseLiquidityMaintainerArgs,
   requireCompoundExecutionPolicy,
@@ -33,6 +34,12 @@ describe("v4 liquidity maintainer", function () {
     expect(shouldCompound(100n, 5_000_000n, 5_000_000n)).to.equal(true);
     expect(shouldCompound(100n, 4_999_999n, 5_000_000n)).to.equal(false);
     expect(shouldCompound(0n, 5_000_000n, 5_000_000n)).to.equal(false);
+  });
+
+  it("counts previously banked Compounder inventory when checking whether both sides exist", function () {
+    expect(hasCompoundableInventory(0n, 6_750_000n, 1_718n, 24_518_753n)).to.equal(true);
+    expect(hasCompoundableInventory(0n, 6_750_000n, 0n, 24_518_753n)).to.equal(false);
+    expect(hasCompoundableInventory(1n, 0n, 0n, 1n)).to.equal(true);
   });
 
   it("blocks compounding when the independent reference or explicit token caps are missing", function () {

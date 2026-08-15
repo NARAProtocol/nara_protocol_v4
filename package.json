@@ -16,7 +16,7 @@
     "test:bond-nft:v4": "hardhat test test/NARABondV4NFT.test.ts",
     "test:invariants:v4": "hardhat test test/NARAInvariantRegression.v4.test.ts",
     "test:composability:v4": "hardhat test test/composability/NARAStakingPool.test.ts test/composability/NARAFractionalPosition.test.ts",
-    "test:ops": "hardhat test test/maintainV4Epochs.test.ts test/V4LiveConfig.test.ts test/v4ProductionRuntimeGuard.test.ts test/syncV4FreshEnv.test.ts",
+    "test:ops": "hardhat test test/maintainV4Epochs.test.ts test/maintainV4Liquidity.test.ts test/V4LiveConfig.test.ts test/v4ProductionRuntimeGuard.test.ts test/syncV4FreshEnv.test.ts",
     "test:nonfork": "node scripts/runNonForkTests.mjs",
     "test:v4": "hardhat test test/NARAToken.v4.test.ts && hardhat test test/NARAEngine.v4.test.ts && hardhat test test/NARALiquidityGrowth.v4.test.ts test/NARALiquidityGrowth.real-v4.test.ts",
     "size": "tsx scripts/checkBytecodeSizes.ts",

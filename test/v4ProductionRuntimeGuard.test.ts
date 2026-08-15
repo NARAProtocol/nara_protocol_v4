@@ -98,6 +98,26 @@ describe("v4 production runtime guard enforcement", () => {
     expect(workflow).not.to.contain("npm run maintain:v4:epochs -- --");
   });
 
+  it("keeps scheduled liquidity execution manifest-pinned, explicitly enabled, and policy-bounded", () => {
+    const workflow = source(".github/workflows/v4-liquidity-maintainer.yml");
+    const hydrateIndex = workflow.indexOf("npm run v4:env:production:write");
+    const runtimeIndex = workflow.indexOf("npm run verify:v4:runtime-config");
+    const executeIndex = workflow.indexOf("npm run maintain:v4:liquidity -- --execute");
+
+    expect(hydrateIndex).to.be.greaterThan(-1);
+    expect(runtimeIndex).to.be.greaterThan(hydrateIndex);
+    expect(executeIndex).to.be.greaterThan(runtimeIndex);
+    expect(workflow).to.contain("vars.V4_OPERATIONS_KEEPER_ENABLED == 'true'");
+    expect(workflow).to.contain("vars.V4_LIQUIDITY_MAINTAINER_ENABLED == 'true'");
+    expect(workflow).to.contain("vars.V4_COMPOUND_KEEPER_ADDRESS");
+    expect(workflow).to.contain("secrets.V4_OPERATIONS_KEEPER_PRIVATE_KEY");
+    expect(workflow).to.contain("vars.V4_COMPOUND_REFERENCE_SQRT_PRICE_X96");
+    expect(workflow).to.contain("vars.V4_COMPOUND_MAX_NARA_USED_RAW");
+    expect(workflow).to.contain("vars.V4_COMPOUND_MAX_USDC_USED_RAW");
+    expect(workflow).to.contain("github.event_name == 'schedule' || inputs.execute == true");
+    expect(workflow).to.contain('V4_COMPOUND_REQUIRE_HEARTBEAT: "true"');
+  });
+
   it("avoids duplicate feature-branch CI while preserving PR and main verification", () => {
     const workflow = source(".github/workflows/ci.yml");
 

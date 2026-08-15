@@ -1,6 +1,8 @@
 name: NARA v4 liquidity maintainer
 
 on:
+  schedule:
+    - cron: "17,47 * * * *"
   workflow_dispatch:
     inputs:
       execute:
@@ -18,6 +20,7 @@ concurrency:
 
 jobs:
   maintain:
+    if: (github.event_name == 'workflow_dispatch' && inputs.execute != true) || (vars.V4_OPERATIONS_KEEPER_ENABLED == 'true' && vars.V4_LIQUIDITY_MAINTAINER_ENABLED == 'true')
     runs-on: ubuntu-slim
     timeout-minutes: 10
     env:
@@ -33,9 +36,11 @@ jobs:
       V4_SAFE: ${{ vars.V4_SAFE }}
       V4_COMPOUND_KEEPER_ADDRESS: ${{ vars.V4_COMPOUND_KEEPER_ADDRESS }}
       V4_COMPOUND_MIN_LIQUIDITY_USDC: ${{ vars.V4_COMPOUND_MIN_LIQUIDITY_USDC }}
-      V4_OPERATIONS_KEEPER_PRIVATE_KEY: ${{ secrets.V4_OPERATIONS_KEEPER_PRIVATE_KEY }}
-      V4_COMPOUND_ALERT_WEBHOOK_URL: ${{ secrets.V4_COMPOUND_ALERT_WEBHOOK_URL }}
-      V4_COMPOUND_HEARTBEAT_URL: ${{ secrets.V4_COMPOUND_HEARTBEAT_URL }}
+      V4_COMPOUND_REFERENCE_SQRT_PRICE_X96: ${{ vars.V4_COMPOUND_REFERENCE_SQRT_PRICE_X96 }}
+      V4_COMPOUND_MAX_NARA_USED_RAW: ${{ vars.V4_COMPOUND_MAX_NARA_USED_RAW }}
+      V4_COMPOUND_MAX_USDC_USED_RAW: ${{ vars.V4_COMPOUND_MAX_USDC_USED_RAW }}
+      V4_COMPOUND_SQRT_PRICE_GUARD_BPS: ${{ vars.V4_COMPOUND_SQRT_PRICE_GUARD_BPS }}
+      V4_COMPOUND_MAX_VALUE_IMBALANCE_BPS: ${{ vars.V4_COMPOUND_MAX_VALUE_IMBALANCE_BPS }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -44,9 +49,18 @@ jobs:
           cache: npm
       - name: Install locked dependencies
         run: npm ci --ignore-scripts
+      - name: Hydrate hash-pinned production configuration
+        run: npm run v4:env:production:write
+      - name: Verify production manifest and deployed runtime
+        run: npm run verify:v4:runtime-config
       - name: Read-only liquidity check
         if: github.event_name == 'workflow_dispatch' && inputs.execute != true
         run: npm run maintain:v4:liquidity
       - name: Compound collected fees
-        if: inputs.execute == true
+        if: github.event_name == 'schedule' || inputs.execute == true
+        env:
+          V4_OPERATIONS_KEEPER_PRIVATE_KEY: ${{ secrets.V4_OPERATIONS_KEEPER_PRIVATE_KEY }}
+          V4_COMPOUND_ALERT_WEBHOOK_URL: ${{ secrets.V4_COMPOUND_ALERT_WEBHOOK_URL }}
+          V4_COMPOUND_HEARTBEAT_URL: ${{ secrets.V4_COMPOUND_HEARTBEAT_URL }}
+          V4_COMPOUND_REQUIRE_HEARTBEAT: "true"
         run: npm run maintain:v4:liquidity -- --execute

@@ -82,6 +82,20 @@ a new explicit user order, current verified deployment inputs, a reviewed
 execution credential/role posture, and a read-only dry run. See
 [NARA-20260809-disable-github-operations-bots.md](releases/NARA-20260809-disable-github-operations-bots.md).
 
+On 2026-08-15, a new explicit user order initiated a deployment-specific
+liquidity-maintainer review. Read-only checks found that the dormant script
+ignored matching inventory already banked in the Compounder and that idle
+scheduled cycles did not heartbeat. The prepared correction counts combined
+Vault plus Compounder inventory, requires heartbeat reporting for execute-mode
+cycles, verifies the hash-pinned production runtime, and adds a twice-hourly
+`17,47` schedule guarded by both liquidity enable variables. A bounded live
+simulation at block `50003678` predicted `6 USDC` of active-side depth, but no
+keeper was authorized and no transaction was submitted. The workflow and both
+enable variables remain off pending protected merge, a separate unused
+gas-only keeper, Safe authorization, monitoring, and a receipt-reconciled
+manual cycle. See
+[NARA-20260815-v4-liquidity-maintainer-preparation.md](releases/NARA-20260815-v4-liquidity-maintainer-preparation.md).
+
 On 2026-08-14, the production Safe executed three permissionless, zero-value
 `advanceEpochs(200)` calls at Safe nonces `35..37`. Receipt events covered
 epochs `36..235`, `236..435`, and `436..559`; the final call stopped after the
