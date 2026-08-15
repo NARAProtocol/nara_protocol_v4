@@ -176,8 +176,8 @@ This is the v4 dependency shape. Full v4 layer inventory:
   `EpochStale` until anyone calls `poke()` / `advanceEpochs()`. Frontends must
   surface backlog. The 2026-08-14 Safe recovery advanced epochs `36..559`; final
   receipt block `49970727` and later read block `49970969` both reported current
-  and stored epoch `559 / 559`. Recurring maintenance is still disabled, so
-  operators must continue monitoring this invariant.
+  and stored epoch `559 / 559`. The separately bounded epoch maintainer is now
+  active on its `7,37` schedule; operators must still monitor this invariant.
 - **Weight = committed time.** `weight = amount × (1 + linearWad·r + quadraticWad·r²)`, where
   `r = duration / maxDuration`. Longer commitments receive a structurally higher weight (the curve
   accelerates with duration).
@@ -288,6 +288,7 @@ not a Forge setup.)
 | Live Hook-tax matrices | Receipt-pinned buy and sell matrices passed on 2026-08-09 |
 | Same-block Hook-tax round trip | 20-action buy and exact 20-action sell reversal reconciled at receipt blocks on 2026-08-09 |
 | Compounder activation | Bounded compound transaction `0xf1ea7e7d...56b5890be` minted LP NFT `2898486`; separate freeze transaction `0xccd73cf0...78084ef3` permanently locked the Vault binding |
+| Liquidity maintainer | Dedicated keeper authorized; bounded transaction `0x0d5c4deb...e579de` increased LP liquidity to `61410660413174`; hosted idle/heartbeat path passed; `17,47` schedule active |
 | Focused Hook/Vault/Compounder/atomic batch | **43/43** passing on 2026-08-05 |
 | V4 invariants | **4/4** Hardhat invariant regressions passing on 2026-08-05 |
 | Static review | Slither completed every configured production v4 target; internal critic disposition is recorded in the dated audit run |
@@ -297,9 +298,9 @@ not a Forge setup.)
 | Aderyn | Latest completed run is 2026-06-08; the 2026-07-29 rerun could not start because the binary is unavailable |
 
 These are internal verification results, not an independent audit or a
-production-readiness claim. Recurring-maintenance authorization, Engine
-lifecycle smoke, soak, basket deployment, and downstream integration remain
-open. Both recurring v4 workflows are disabled. See
+production-readiness claim. Engine lifecycle smoke, soak, basket deployment,
+and downstream integration remain open. The epoch and liquidity maintainers
+are active under separate bounded roles and credentials. See
 [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md).
 
 > Automated analysis is necessary but not sufficient. Independent review
@@ -312,10 +313,11 @@ open. Both recurring v4 workflows are disabled. See
 ## 🚀 Deployment
 
 The 2026-08-09 activation, the 2026-08-14 Engine recovery, same-block tax round
-trip, bounded Compounder validation, and permanent Vault binding freeze have
-receipt-block evidence, but release work is not finished. Keep both recurring
-workflows disabled; complete the Engine lifecycle smoke and monitored
-observation period; deploy no basket from this repository; and update
+trip, bounded Compounder validation, permanent Vault binding freeze, and the
+2026-08-15 guarded liquidity-maintainer cycle have receipt-block evidence, but
+release work is not finished. Monitor both separately bounded maintainers,
+complete the Engine lifecycle smoke and monitored observation period, deploy no
+basket from this repository, and update
 downstream consumers only through the cross-repository handoff.
 Every further production transaction still requires explicit human approval.
 See the activation manifest and release note linked above.

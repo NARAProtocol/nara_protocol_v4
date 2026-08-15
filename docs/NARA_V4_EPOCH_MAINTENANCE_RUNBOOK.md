@@ -5,6 +5,9 @@ Change-ID: `NARA-20260731-epoch-recovery`
 Recurring-maintenance hardening change-ID:
 `NARA-20260814-v4-epoch-maintainer-production-guard`
 
+Current activation evidence:
+`docs/releases/NARA-20260815-v4-epoch-maintainer-activation.md`
+
 This runbook covers the fresh Base v4 engine only. The engine's epoch functions
 are permissionless. No admin, treasury, Safe, or protocol role is needed.
 
@@ -97,19 +100,16 @@ stops if progress is not observed, and fails if any backlog remains.
 
 ## Recurring Maintenance
 
-> **Disabled 2026-08-09:** GitHub workflow `NARA v4 epoch maintainer`
+> **Activated 2026-08-14:** GitHub workflow `NARA v4 epoch maintainer`
 > (workflow ID `324678194`, previously named `NARA v4 operations keeper`) is
-> `disabled_manually`; its new repository variable
-> `V4_EPOCH_MAINTAINER_ENABLED` is not configured. The legacy
-> `V4_OPERATIONS_KEEPER_ENABLED` variable is `false`. The standalone liquidity workflow
-> is also disabled and its enable variable is `false`. The configuration below
-> is retained as historical/review material, not an active operating path. Do
-> not re-enable or dispatch it without a new explicit user order and current
-> deployment-specific review.
+> `active`; repository variable `V4_EPOCH_MAINTAINER_ENABLED` is `true`; and
+> dedicated gas-only keeper
+> `0xE3DDa33EdB0f8b6aa39e4ce853Ba7C4A29e520DD` is configured. The standalone
+> liquidity workflow was separately authorized and activated on 2026-08-15.
+> Read the two dated maintainer activation records before changing either path.
 
-`.github/workflows/v4-epoch-maintainer.yml` is an epoch-only cycle every 30
-minutes. It can run only if GitHub re-enables the workflow and a maintainer
-deliberately configures:
+`.github/workflows/v4-epoch-maintainer.yml` is an epoch-only cycle at minutes
+`7,37` of every UTC hour. Its active configuration requires:
 
 - repository variable `V4_EPOCH_MAINTAINER_ENABLED=true`;
 - repository variable `V4_EPOCH_KEEPER_ADDRESS` with a dedicated gas-only EOA;
@@ -126,10 +126,10 @@ an absent heartbeat, an unexpected direct Engine balance, or a backlog above
 eight fails before routine execution.
 
 Do not reuse the epoch EOA for liquidity, admin, treasury, deployment,
-Safe-owner, or trading activity. Keep the enable variable false until the
-one-time recovery has been reviewed. Use `workflow_dispatch` in read-only mode
-first. Scheduled execution remains disabled unless the variable is explicitly
-enabled.
+Safe-owner, or trading activity. Do not change the enabled state, keeper,
+schedule, bounds, or deployment binding without a new explicit user order and
+deployment-specific review. Manual diagnostics should use `workflow_dispatch`
+in read-only mode first.
 
 The heartbeat is sent only after an execute-mode cycle ends with zero backlog.
 Configure the dead-man service to alert if the 30-minute workflow misses its

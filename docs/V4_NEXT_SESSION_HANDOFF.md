@@ -85,6 +85,10 @@ The current sanitized Compounder activation record is
 [`deployments/v4-compounder-activation-2026-08-09.json`](../deployments/v4-compounder-activation-2026-08-09.json).
 The dated release handoff is
 [`docs/releases/NARA-20260809-v4-compounder-activation.md`](releases/NARA-20260809-v4-compounder-activation.md).
+The current liquidity-automation authority is
+[`docs/releases/NARA-20260815-v4-liquidity-maintainer-activation.md`](releases/NARA-20260815-v4-liquidity-maintainer-activation.md).
+The current epoch-automation authority is
+[`docs/releases/NARA-20260815-v4-epoch-maintainer-activation.md`](releases/NARA-20260815-v4-epoch-maintainer-activation.md).
 
 ## Next gated work
 
@@ -93,8 +97,9 @@ The dated release handoff is
 2. Complete and receipt-pin the Engine lock, activation, claim, and unlock
    lifecycle smoke.
 3. Complete the monitored observation period.
-4. Keep both recurring v4 workflows disabled until a new explicit user order
-   and deployment-specific review authorizes an operational path.
+4. Monitor both active bounded maintainers and preserve their separate keepers,
+   schedules, bounds, and deployment bindings unless a new explicit user order
+   and deployment-specific review authorize a change.
 5. Keep baskets in preview/non-availability state until their verified
    manifests and explicit downstream handoffs exist.
 6. Reconcile public documentation last. Do not turn the activation evidence
@@ -109,8 +114,9 @@ npm run verify:v4:preflight
 npm run verify:v4:launch-gates:baskets
 ```
 
-The one-time validation and freeze builders must not be replayed. Recurring
-workflow dispatches remain blocked until a fresh explicit approval exists.
+The one-time validation and freeze builders must not be replayed. Epoch and
+liquidity maintenance are active only under their separately recorded bounded
+policies; material changes require fresh explicit approval.
 
 ## Stop conditions
 

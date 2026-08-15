@@ -6,6 +6,11 @@ Date: 2026-08-15
 
 Network: Base (`8453`)
 
+Status: superseded by the completed activation record
+[`NARA-20260815-v4-liquidity-maintainer-activation.md`](NARA-20260815-v4-liquidity-maintainer-activation.md).
+The remainder of this file preserves the pre-activation evidence and stop
+boundary as it existed before keeper authorization and execution.
+
 ## Outcome
 
 Recurring liquidity maintenance remains disabled. This change prepares the

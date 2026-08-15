@@ -167,8 +167,10 @@ npm run build:v4:compounder-validation -- --freeze
 ```
 
 The freeze was built only after the separately executed live compound produced
-and reconciled a nonzero position. Both operations workflows stay disabled
-until separately authorized.
+and reconciled a nonzero position. The liquidity workflow was separately
+authorized and activated on 2026-08-15 after an additional bounded compound and
+hosted idle/heartbeat verification. The epoch workflow was separately activated
+with its own bounded keeper path.
 
 Success criteria:
 
@@ -177,8 +179,8 @@ Success criteria:
 - One live compound produced a nonzero Safe-reviewed position with reconciled
   Vault and Compounder totals.
 - `freezeCompounder()` executed only after that evidence was verified.
-- No workflow is enabled without a new explicit authorization and
-  deployment-specific review.
+- Any workflow activation or material policy change has a new explicit
+  authorization and deployment-specific review.
 
 ---
 
@@ -433,8 +435,9 @@ If users do not understand rewards:
 2. Complete and receipt-pin the Engine lock, activation, claim, and unlock
    lifecycle smoke.
 3. Complete the monitored observation period.
-4. Keep both v4 operations workflows disabled until a new explicit order,
-   dedicated keeper review, and deployment-specific authorization.
+4. Monitor both active maintainers and keep their keepers, schedules, bounds,
+   and deployment bindings separate unless a new explicit order and
+   deployment-specific review authorize a change.
 5. Deploy and verify allocations with NFT bonds closed.
 6. Deploy periphery separately and update frontend/monitor configuration only
    through explicit fresh-address handoffs.

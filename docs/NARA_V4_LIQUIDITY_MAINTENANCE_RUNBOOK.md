@@ -2,20 +2,21 @@
 
 Change-ID: `NARA-20260731-liquidity-maintainer`
 
-Current stop boundary (updated 2026-08-15): the fresh pool is initialized and seeded,
-the Engine activation backlog is recovered, and Compounder validation/freeze
-completed under receipt-pinned Safe transactions. LP NFT `2898486` is
-Compounder-owned with liquidity `9455824137787`; unmatched inventory remains
-banked in the Compounder. The liquidity workflow and its repository enable
-variables remain disabled. Its source contains a guarded twice-hourly schedule
-at minutes `17,47`, but scheduled or manual execution remains ineligible until
-both `V4_OPERATIONS_KEEPER_ENABLED` and
-`V4_LIQUIDITY_MAINTAINER_ENABLED` are explicitly `true`. Do not dispatch or
-execute maintenance without a new explicit order, deployment-specific review,
-and keeper authorization. Current authority is
+Current operational boundary (updated 2026-08-15): the fresh pool is initialized
+and seeded, the Engine activation backlog is recovered, and Compounder
+validation/freeze completed under receipt-pinned Safe transactions. LP NFT
+`2898486` is Compounder-owned with liquidity `61410660413174`; unmatched
+inventory remains banked in the Compounder. Dedicated gas-only keeper
+`0x0f8ADa55B394E58e9BC667c23a1EEcED12216272` is authorized on the current
+production Vault. The liquidity workflow is active on its guarded twice-hourly
+schedule at minutes `17,47`, and both `V4_OPERATIONS_KEEPER_ENABLED` and
+`V4_LIQUIDITY_MAINTAINER_ENABLED` are `true`. The separate epoch workflow is
+also active under its own keeper, enable variable, schedule, and bounds. Do not
+change the keeper, execution policy, or enable gates without a new explicit
+order and deployment-specific review. Current authority is
 `deployments/v4-production-activation-2026-08-09.json` together with
 `deployments/v4-compounder-activation-2026-08-09.json` and
-`docs/releases/NARA-20260809-v4-compounder-activation.md`.
+`docs/releases/NARA-20260815-v4-liquidity-maintainer-activation.md`.
 
 The hook collects NARA/USDC pool fees into the growth vault during live swaps.
 Those fees do not become liquidity inside the swap transaction. A second,
@@ -60,10 +61,10 @@ the separation between the validation and irreversible binding-freeze actions.
 8. Fund the dedicated keeper with a small amount of ETH for Base gas, store its
    key only in the GitHub Actions secret `V4_OPERATIONS_KEEPER_PRIVATE_KEY`, and
    run the workflow manually in read-only mode, then execute mode.
-9. Only after a new explicit authorization, the manual cycle, and post-state
-   verification pass may maintainers leave the twice-hourly schedule active.
-   Liquidity maintenance remains separately enabled and separately credentialed
-   from epoch maintenance.
+9. The 2026-08-15 manual read-only, compound, post-state reconciliation, and
+   corrected execute-mode idle cycles passed. The twice-hourly schedule was
+   left active only after those checks. Liquidity maintenance remains separately
+   enabled and separately credentialed from epoch maintenance.
 
 ## Runtime safety
 
@@ -89,6 +90,11 @@ blocked and execute mode fails. The script never substitutes current `slot0`
 for the missing reference. When configured, it simulates `compoundAll`, applies
 a 99% minimum-liquidity guard, submits one
 transaction, then verifies the POL NFT custody and nonzero position liquidity.
+When the Vault itself has no fresh NARA or USDC, the script reports a healthy
+idle cycle even if the Compounder has banked two-sided inventory. This fresh
+Vault trigger is required because `compoundAll()` rejects a zero/zero Vault
+input. Execute-mode idle cycles still post the required heartbeat and do not
+construct or submit a transaction.
 The keeper has no vault ownership, configuration, compounder-recovery, or
 arbitrary withdrawal authority. While the live route mode is `Liquidity`, the
 route and split entry points revert and the keeper can execute only compounding.
@@ -103,8 +109,10 @@ different policy.
 The compounder never swaps. It adds only the NARA/USDC portion balanced at the
 live price. Excess assets remain banked in the compounder and are reconsidered
 with newly collected Vault fees on the next call. The maintainer must therefore
-check the combined Vault and Compounder inventory before simulation; requiring
-both sides to be present in the Vault alone is incorrect. This reduces MEV
-exposure but cannot guarantee every collected USDC is immediately deployed.
+require at least one fresh Vault balance and check combined Vault plus Compounder
+inventory before simulation; requiring both sides to be present in the Vault
+alone is incorrect, while treating banked-only inventory as a callable trigger
+would hit `ZeroValue()`. This reduces MEV exposure but cannot guarantee every
+collected USDC is immediately deployed.
 Changing that behavior requires a separately reviewed replacement compounder,
 not a keeper setting.

@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-08-14.
+Last updated: 2026-08-15.
 
 This repository is v4-only. `contracts/v4/` is the sole active Solidity source.
 The experimental V5 stack, tests, scripts, and release plans have been deleted
@@ -19,8 +19,9 @@ recorded supported exact-input transaction.
 This is a receipt-pinned liquidity activation checkpoint, not a full
 protocol-availability or production-readiness claim. The Compounder validation
 and separate permanent Vault binding freeze succeeded. Allocations/periphery
-are not evidenced by this release, recurring maintenance remains disabled, the
-Engine lifecycle smoke is pending, and baskets remain preview-only. Canonical
+are not evidenced by this release, the epoch and liquidity maintainers are
+active under separate bounded policies and credentials, the Engine lifecycle
+smoke is pending, and baskets remain preview-only. Canonical
 sanitized evidence is `deployments/v4-production-activation-2026-08-09.json`,
 `deployments/v4-engine-epoch-recovery-2026-08-09.json`,
 `deployments/v4-compounder-activation-2026-08-09.json`, and
@@ -54,7 +55,7 @@ The modular NFT contract named `NARAPositionRendererV5` is a renderer revision
 inside the v4 stack. It is not the deleted protocol V5 stack. Renaming it would
 change active v4 artifacts and is outside the liquidity remediation.
 
-## GitHub operational automation — disabled
+## GitHub operational automation — both maintainers active and separately gated
 
 At `2026-08-08T22:19Z` (`2026-08-09 01:19` Kyiv), the repository's two
 transaction-capable operational workflows were shut down through GitHub's
@@ -62,39 +63,48 @@ reversible workflow controls:
 
 | Workflow | GitHub workflow ID | Current state |
 |---|---:|---|
-| `NARA v4 epoch maintainer` | `324678194` | `disabled_manually` |
-| `NARA v4 liquidity maintainer` | `324678196` | `disabled_manually` |
+| `NARA v4 epoch maintainer` | `324678194` | `active` |
+| `NARA v4 liquidity maintainer` | `324678196` | `active` |
 
-Legacy repository variable `V4_OPERATIONS_KEEPER_ENABLED` and repository
-variable `V4_LIQUIDITY_MAINTAINER_ENABLED` are both `false`. The hardened epoch
-workflow instead requires the new `V4_EPOCH_MAINTAINER_ENABLED` variable, which
-is not configured and therefore cannot schedule its job. A post-change query
-found no running or queued operational run. `NARA v4 CI`, `CodeQL`, and
-Dependabot remain active because they are verification/dependency workflows,
-not transaction bots.
+Repository variables `V4_OPERATIONS_KEEPER_ENABLED` and
+`V4_LIQUIDITY_MAINTAINER_ENABLED` are both `true` for the separately authorized
+liquidity workflow. The hardened epoch workflow independently requires
+`V4_EPOCH_MAINTAINER_ENABLED`, which is also `true`. `NARA v4 CI`, `CodeQL`, and
+Dependabot remain active as verification/dependency workflows rather than
+transaction bots.
 
-No secret was read, changed, or deleted, and this shutdown sent no on-chain
-transaction. The epoch workflow source was later separated from liquidity and
-bound to the hash-pinned production manifest, but it remains disabled and its
-new enable variable is not configured. GitHub will not schedule or dispatch either
-workflow while disabled. Do not re-enable or dispatch either workflow without
-a new explicit user order, current verified deployment inputs, a reviewed
-execution credential/role posture, and a read-only dry run. See
+No secret was read, changed, or deleted, and the 2026-08-09 shutdown sent no
+on-chain transaction. The epoch workflow source was later separated from
+liquidity, bound to the hash-pinned production manifest, and separately
+activated with its own gas-only keeper, `7,37` schedule, bounded routine, and
+required heartbeat. Do not change either maintainer's authority, deployment
+binding, policy, or schedule without a new explicit user order and current
+deployment-specific review. See
 [NARA-20260809-disable-github-operations-bots.md](releases/NARA-20260809-disable-github-operations-bots.md).
+Current epoch evidence is
+[NARA-20260815-v4-epoch-maintainer-activation.md](releases/NARA-20260815-v4-epoch-maintainer-activation.md).
 
 On 2026-08-15, a new explicit user order initiated a deployment-specific
 liquidity-maintainer review. Read-only checks found that the dormant script
 ignored matching inventory already banked in the Compounder and that idle
-scheduled cycles did not heartbeat. The prepared correction counts combined
-Vault plus Compounder inventory, requires heartbeat reporting for execute-mode
-cycles, verifies the hash-pinned production runtime, and adds a twice-hourly
-`17,47` schedule guarded by both liquidity enable variables. A bounded live
-simulation at block `50003678` predicted `6 USDC` of active-side depth, but no
-keeper was authorized and no transaction was submitted. The workflow and both
-enable variables remain off pending protected merge, a separate unused
-gas-only keeper, Safe authorization, monitoring, and a receipt-reconciled
-manual cycle. See
-[NARA-20260815-v4-liquidity-maintainer-preparation.md](releases/NARA-20260815-v4-liquidity-maintainer-preparation.md).
+scheduled cycles did not heartbeat. Protected changes now count combined Vault
+plus Compounder inventory, require fresh Vault fees to trigger `compoundAll()`,
+require execute-mode heartbeat reporting, verify the hash-pinned production
+runtime, and run on the guarded twice-hourly `17,47` schedule.
+
+The Safe authorized dedicated keeper
+`0x0f8ADa55B394E58e9BC667c23a1EEcED12216272` on the current production Vault.
+Hosted read-only run `31886696484` passed. Hosted execute run `31886879730`
+submitted transaction
+`0x0d5c4deb1448855391be29b488c5435cba2f23b1afaf924782c480e8bfe579de`
+at Base block `50005313`, increasing Compounder-owned LP NFT `2898486`
+liquidity from `9455824137787` to `61410660413174`. A post-call empty-Vault
+idle defect was caught before the next schedule, the workflow and gates were
+disabled, and PR #28 added the missing trigger guard. Hosted execute-mode idle
+run `31887339426` then completed the required heartbeat without submitting a
+transaction; keeper nonce remained `1`. The workflow is active with both gates
+true. See
+[NARA-20260815-v4-liquidity-maintainer-activation.md](releases/NARA-20260815-v4-liquidity-maintainer-activation.md).
 
 On 2026-08-14, the production Safe executed three permissionless, zero-value
 `advanceEpochs(200)` calls at Safe nonces `35..37`. Receipt events covered
@@ -388,12 +398,13 @@ The fresh NARA/USDC pool, tested exact-input swap/tax path, and bounded
 Compounder validation/freeze are active or complete as specifically documented,
 but the whole stack is not production-ready. Remaining gates include:
 
-1. Keep the Engine backlog within its eight-epoch JIT buffer and explicitly
-   authorize a recurring maintenance path. The 2026-08-14 Safe recovery
+1. Keep the Engine backlog within its eight-epoch JIT buffer and monitor the
+   now-active recurring maintenance path. The 2026-08-14 Safe recovery
    advanced epochs `36..559`; at final receipt block `49970727`, current and
    stored epochs were both `559`. A later read at block `49970969` again found
-   `559 / 559`, zero backlog, and no reserve-accounting anomaly. Recurring
-   maintenance remains disabled and is still a separate authorization gate.
+   `559 / 559`, zero backlog, and no reserve-accounting anomaly. The separately
+   bounded epoch maintainer was activated afterward; its observation period
+   remains an operational gate.
 2. Complete and receipt-pin the Engine lock, activation, claim, and unlock
    lifecycle smoke before describing public locking or reward use as available.
 3. Merge the activation manifests and handoff through protected CI. Do not
@@ -410,9 +421,10 @@ but the whole stack is not production-ready. Remaining gates include:
    value-bearing flows; technical evidence and disclaimers do not establish
    legal compliance.
 
-The GitHub v4 operations and liquidity-maintainer workflows are disabled and
-their repository enable variables are false. No recurring v4 keeper is active;
-do not re-enable or dispatch either workflow without a new explicit user order
+The GitHub v4 epoch and liquidity maintainers are active with separate enable
+variables, gas-only keepers, schedules, heartbeat checks, and bounded duties.
+Do not reuse or broaden either keeper's authority, change policy caps or batch
+bounds, or change either deployment binding without a new explicit user order
 and deployment-specific review.
 
 ## Active workspace

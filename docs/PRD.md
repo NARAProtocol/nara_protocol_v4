@@ -98,8 +98,9 @@ Fresh v4 remaining launch scope:
 - Treat core deployment, Safe ownership acceptance, Compounder deployment and
   wiring, atomic pool activation, receipt-pinned tax testing, Engine backlog
   recovery, and Compounder validation/freeze as complete; do not rerun them.
-- Keep both v4 operations workflows disabled pending new explicit authorization
-  and deployment-specific review.
+- Monitor the separately authorized bounded epoch and liquidity maintainers;
+  do not change their independent roles, schedules, bounds, or deployment
+  bindings without a new explicit authorization and deployment-specific review.
 - Complete and receipt-pin the Engine lock, activation, claim, and unlock
   lifecycle smoke.
 - Deploy allocations with NFT bonds closed.
@@ -393,7 +394,8 @@ Fresh v4 remaining launch scope:
 ### Near-Term
 
 - Merge the receipt-pinned activation evidence through protected CI.
-- Keep operations workflows disabled until separately authorized and reviewed.
+- Monitor the separately authorized epoch and liquidity workflows; change no
+  keeper, schedule, bounds, or deployment binding without a new review.
 - Complete the Engine lock, activation, claim, and unlock lifecycle smoke.
 - Deploy allocations with NFT bonds closed.
 - Update docs and frontends only after fresh address verification.
