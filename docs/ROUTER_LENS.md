@@ -77,10 +77,10 @@ just-in-time advancement. Therefore user activity handles short gaps but is not
 an indefinite maintenance guarantee.
 
 The historical Railway cron is retired. The later guarded
-`.github/workflows/v4-epoch-maintainer.yml` schedule is also manually disabled
-as recorded in `CURRENT_STATE.md`; no recurring keeper is currently active.
-Permissionless/JIT advancement remains only a safety buffer, not an indefinite
-operations guarantee.
+`.github/workflows/v4-epoch-maintainer.yml` is active with a dedicated gas-only
+keeper, bounded routine, runtime verification, and required heartbeat, as
+recorded in `CURRENT_STATE.md`. Permissionless/JIT advancement remains only a
+safety buffer, not an indefinite operations guarantee.
 
 ## Deploy
 

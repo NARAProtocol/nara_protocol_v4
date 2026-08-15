@@ -23,30 +23,37 @@ This is a context-loss-safe summary for agents entering the NARA workspace.
   `0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF` passed its bounded validation
   in transaction
   `0xf1ea7e7dfdf8e1021ceebf26a943cba604e0a8c894eec5f527bc01656b5890be`.
-  It owns LP NFT `2898486` with liquidity `9455824137787`; the Vault binding
+  It owns LP NFT `2898486` with liquidity `61410660413174`; the Vault binding
   was permanently frozen in transaction
   `0xccd73cf07602f18412bea291812f0d171fa5cabd41fcff6b6894029978084ef3`.
 - The fresh NARA/USDC pool is registered, initialized, and seeded. Its PoolId is
   `0x83edced1f39e6adf7469cd718eeb409824d948959263408d4cfb6e745c8db464`;
   the initial LP NFT is `2898124` with liquidity `4242640687119285`.
 - Receipt-pinned live buy/sell matrices and the same-block round trip passed.
-  This evidence is not an overall production-readiness claim. Both recurring
-  v4 workflows remain disabled, and the Engine lifecycle smoke is pending.
+  The separately authorized liquidity maintainer is active on the `17,47`
+  schedule after a receipt-reconciled compound and hosted idle/heartbeat test.
+  The epoch workflow is separately active on its `7,37` schedule with a
+  different keeper and heartbeat, and the Engine lifecycle smoke is pending.
+  This evidence is not an overall production-readiness claim.
 - The Engine activation backlog was recovered through the Safe in transaction
   `0xcd6e52b319f21b5a6772a36cc076a5c6f8390dcd7326ab1adf822a16f6638493`.
   At receipt block `49735161`, `currentEpoch()` and `epochState.epoch` were both
   `35`; 31 `EpochAdvanced` events covered epochs `5..35`. The later pinned
   block `49735219` was `36 / 35`, a one-epoch JIT-recoverable gap, not a
-  write-blocking backlog. Recurring maintenance remains disabled; use
-  `deployments/v4-engine-epoch-recovery-2026-08-09.json` as the evidence.
+  write-blocking backlog. That historical recovery is recorded in
+  `deployments/v4-engine-epoch-recovery-2026-08-09.json`; recurring epoch
+  maintenance was activated separately on 2026-08-14.
 - The historical 2026-07-30 NARA/USDC liquidity stack was fully withdrawn and
   retired by human Safe signers on 2026-08-08. Its Vault and Compounder are
   empty, both LP NFTs are burned, and old pool active liquidity is zero. Never
   replay its Safe batch or re-propose its completed `WindDown`.
-- Both GitHub transaction-capable v4 operational workflows are manually
-  disabled, both enable variables are `false`, and no recurring keeper is
-  active. Do not re-enable or manually dispatch them without a new explicit
-  user order and current deployment-specific review.
+- The GitHub epoch and liquidity maintainers are active with different enable
+  variables, schedules, heartbeat checks, and gas-only keepers. The liquidity
+  keeper is `0x0f8ADa55B394E58e9BC667c23a1EEcED12216272`; the epoch keeper is
+  `0xE3DDa33EdB0f8b6aa39e4ce853Ba7C4A29e520DD`. Do not change either workflow's
+  authority or policy without a new explicit user order and current
+  deployment-specific review. Read both 2026-08-15 maintainer activation
+  records first.
 
 `NARAPositionRendererV5` is the historical name of the modular renderer revision
 inside the v4 contract family. It is not a protocol V5 stack.
@@ -57,12 +64,14 @@ inside the v4 contract family. It is not a protocol V5 stack.
 2. `docs/CURRENT_STATE.md`
 3. `deployments/v4-compounder-activation-2026-08-09.json`
 4. `docs/releases/NARA-20260809-v4-compounder-activation.md`
-5. `deployments/v4-production-activation-2026-08-09.json`
-6. `docs/releases/NARA-20260809-v4-same-block-tax-round-trip.md`
-7. `docs/V4_NEXT_SESSION_HANDOFF.md`
-8. `docs/UNISWAP_V4_HOOK.md`
-9. `docs/V4_LAUNCH_CHECKLIST.md`
-10. `docs/NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md`
+5. `docs/releases/NARA-20260815-v4-liquidity-maintainer-activation.md`
+6. `docs/releases/NARA-20260815-v4-epoch-maintainer-activation.md`
+7. `deployments/v4-production-activation-2026-08-09.json`
+8. `docs/releases/NARA-20260809-v4-same-block-tax-round-trip.md`
+9. `docs/V4_NEXT_SESSION_HANDOFF.md`
+10. `docs/UNISWAP_V4_HOOK.md`
+11. `docs/V4_LAUNCH_CHECKLIST.md`
+12. `docs/NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md`
 
 ## Protocol shape
 
