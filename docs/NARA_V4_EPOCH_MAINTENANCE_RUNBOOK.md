@@ -95,8 +95,11 @@ For the 466-epoch backlog observed at Base block `49358447`, the expected plan
 is five transactions: `100 + 100 + 100 + 100 + 66`. Read-only estimates at
 that state were `3,934,332` gas for a 100-epoch call and `2,634,510` gas for
 the final 66-epoch call, about `18,371,838` execution gas in total. Actual cost
-depends on Base execution and L1 data fees. The script re-reads state after every receipt,
-stops if progress is not observed, and fails if any backlog remains.
+depends on Base execution and L1 data fees. The script re-reads every health
+value at the successful receipt's exact block, retries only that block-pinned
+read if the RPC backend has not indexed it yet, stops if progress is not
+observed, and fails if any backlog remains. Verification retries never resend a
+transaction.
 
 ## Recurring Maintenance
 
@@ -160,5 +163,8 @@ has immutable transaction evidence.
   `totalReleased` before attempting any funding action.
 - Untracked direct reserve `>0`: the maintainer calls
   `syncEmissionReserve()` once, then verifies the delta is gone.
+- Status-`1` receipt followed by a progress error: inspect state at the exact
+  receipt block before considering any recovery. Never replay or manually
+  dispatch based on an unpinned `latest` read.
 - Repeated RPC failure: switch the keeper to a reviewed backup RPC and keep the
   monitor alert open. Never log an RPC URL or secret value.

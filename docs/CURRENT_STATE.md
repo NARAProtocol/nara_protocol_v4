@@ -84,6 +84,16 @@ deployment-specific review. See
 Current epoch evidence is
 [NARA-20260815-v4-epoch-maintainer-activation.md](releases/NARA-20260815-v4-epoch-maintainer-activation.md).
 
+On 2026-08-16, receipt-block reconciliation proved that six scheduled epoch
+runs shown as failed had actually submitted successful status-`1`
+`advanceEpochs()` transactions and advanced the stored epoch. The failure was
+an unpinned post-receipt `latest` read, not a failed keeper write. The source
+correction retains the confirmed receipt block, pins every post-write health
+read to that block, and bounds retries to read-only RPC indexing checks. It does
+not replay a transaction or change the keeper's authority, schedule, bounds,
+credentials, heartbeat, or deployment binding. Evidence and test scope are in
+[NARA-20260816-v4-epoch-maintainer-receipt-readback-fix.md](releases/NARA-20260816-v4-epoch-maintainer-receipt-readback-fix.md).
+
 On 2026-08-15, a new explicit user order initiated a deployment-specific
 liquidity-maintainer review. Read-only checks found that the dormant script
 ignored matching inventory already banked in the Compounder and that idle
