@@ -25,6 +25,8 @@ const BASE_CHAIN_ID = 8453n;
 const DEFAULT_BATCH_SIZE = 100;
 const DEFAULT_MAX_BATCHES = 10;
 const DEFAULT_CONFIRMATIONS = 1;
+const DEFAULT_CONFIRMED_READ_ATTEMPTS = 5;
+const DEFAULT_CONFIRMED_READ_DELAY_MS = 500;
 const MAX_BATCH_SIZE = 150;
 const MAX_BATCHES = 20;
 
@@ -62,6 +64,17 @@ export type MaintainerOptions = {
   maxBacklog?: number;
   confirmations: number;
   syncUntrackedReserve: boolean;
+};
+
+export type ConfirmedReadOptions = {
+  attempts?: number;
+  delayMs?: number;
+  wait?: (delayMs: number) => Promise<void>;
+};
+
+type ConfirmedTransaction = {
+  hash: string;
+  blockNumber: number;
 };
 
 export function positiveInteger(
@@ -147,18 +160,20 @@ export async function readHealth(
   engine: ethers.Contract,
   nara: ethers.Contract,
   engineAddress: string,
+  blockTag?: number,
 ): Promise<EpochHealth> {
+  const callOverrides = blockTag === undefined ? {} : { blockTag };
   const [currentEpoch, state, localEmissionReserve, externalRewardReserve, trackedEmissionReserve,
     totalLocked, totalPendingNaraRewards, nextPositionId, engineBalance] = await Promise.all([
-    engine.currentEpoch() as Promise<bigint>,
-    engine.epochState() as Promise<{ epoch: bigint }>,
-    engine.emissionReserve() as Promise<bigint>,
-    engine.rewardReserveAvailable() as Promise<bigint>,
-    engine.trackedEmissionReserve() as Promise<bigint>,
-    engine.totalLocked() as Promise<bigint>,
-    engine.totalPendingNaraRewards() as Promise<bigint>,
-    engine.nextPositionId() as Promise<bigint>,
-    nara.balanceOf(engineAddress) as Promise<bigint>,
+    engine.currentEpoch(callOverrides) as Promise<bigint>,
+    engine.epochState(callOverrides) as Promise<{ epoch: bigint }>,
+    engine.emissionReserve(callOverrides) as Promise<bigint>,
+    engine.rewardReserveAvailable(callOverrides) as Promise<bigint>,
+    engine.trackedEmissionReserve(callOverrides) as Promise<bigint>,
+    engine.totalLocked(callOverrides) as Promise<bigint>,
+    engine.totalPendingNaraRewards(callOverrides) as Promise<bigint>,
+    engine.nextPositionId(callOverrides) as Promise<bigint>,
+    nara.balanceOf(engineAddress, callOverrides) as Promise<bigint>,
   ]);
   const settledEpoch = state.epoch;
   if (settledEpoch > currentEpoch) throw new Error("Engine settled epoch is ahead of its clock");
@@ -178,6 +193,48 @@ export async function readHealth(
     totalLocked,
     nextPositionId,
   };
+}
+
+export async function readHealthAtConfirmedBlock(
+  engine: ethers.Contract,
+  nara: ethers.Contract,
+  engineAddress: string,
+  blockNumber: number,
+  options: ConfirmedReadOptions = {},
+): Promise<EpochHealth> {
+  if (!Number.isSafeInteger(blockNumber) || blockNumber < 0) {
+    throw new Error("Confirmed receipt block number must be a non-negative safe integer");
+  }
+  const attempts = options.attempts ?? DEFAULT_CONFIRMED_READ_ATTEMPTS;
+  const delayMs = options.delayMs ?? DEFAULT_CONFIRMED_READ_DELAY_MS;
+  if (!Number.isSafeInteger(attempts) || attempts < 1) {
+    throw new Error("Confirmed state read attempts must be a positive safe integer");
+  }
+  if (!Number.isSafeInteger(delayMs) || delayMs < 0) {
+    throw new Error("Confirmed state read delay must be a non-negative safe integer");
+  }
+  const wait = options.wait ?? ((milliseconds: number) => new Promise<void>((resolveWait) => {
+    setTimeout(resolveWait, milliseconds);
+  }));
+
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await readHealth(engine, nara, engineAddress, blockNumber);
+    } catch (error) {
+      lastError = error;
+      if (attempt === attempts) break;
+      console.warn(
+        `Confirmed block ${blockNumber} is not readable yet; retrying state read (${attempt}/${attempts})`,
+      );
+      await wait(delayMs);
+    }
+  }
+
+  throw new Error(
+    `Confirmed epoch state at block ${blockNumber} remained unavailable after ${attempts} attempts`,
+    { cause: lastError },
+  );
 }
 
 async function postAlert(payload: Record<string, unknown>): Promise<void> {
@@ -217,13 +274,14 @@ async function sendWithMargin(
   estimate: () => Promise<bigint>,
   send: (gasLimit: bigint) => Promise<ethers.ContractTransactionResponse>,
   confirmations: number,
-): Promise<string> {
+): Promise<ConfirmedTransaction> {
   const estimatedGas = await estimate();
   const transaction = await send((estimatedGas * 120n) / 100n);
   console.log(`${label}: ${transaction.hash}`);
   const receipt = await transaction.wait(confirmations);
   if (!receipt || receipt.status !== 1) throw new Error(`${label} transaction failed`);
-  return transaction.hash;
+  console.log(`${label} confirmed at block ${receipt.blockNumber}`);
+  return { hash: transaction.hash, blockNumber: receipt.blockNumber };
 }
 
 export async function main(args = process.argv.slice(2)): Promise<void> {
@@ -323,13 +381,19 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
     let batchesUsed = 0;
 
     if (health.untrackedDirectReserve > 0n && options.syncUntrackedReserve) {
-      txHashes.push(await sendWithMargin(
+      const confirmed = await sendWithMargin(
         "syncEmissionReserve",
         () => engine.syncEmissionReserve.estimateGas(),
         (gasLimit) => engine.syncEmissionReserve({ gasLimit }),
         options.confirmations,
-      ));
-      health = await readHealth(readEngine, nara, engineAddress);
+      );
+      txHashes.push(confirmed.hash);
+      health = await readHealthAtConfirmedBlock(
+        readEngine,
+        nara,
+        engineAddress,
+        confirmed.blockNumber,
+      );
       if (health.untrackedDirectReserve !== 0n) {
         throw new Error("Direct engine reserve remains untracked after syncEmissionReserve");
       }
@@ -339,15 +403,21 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
       const steps = health.backlog < BigInt(options.batchSize)
         ? health.backlog
         : BigInt(options.batchSize);
-      txHashes.push(await sendWithMargin(
+      const confirmed = await sendWithMargin(
         `advanceEpochs(${steps})`,
         () => engine.advanceEpochs.estimateGas(steps),
         (gasLimit) => engine.advanceEpochs(steps, { gasLimit }),
         options.confirmations,
-      ));
+      );
+      txHashes.push(confirmed.hash);
       batchesUsed += 1;
       const before = health.settledEpoch;
-      health = await readHealth(readEngine, nara, engineAddress);
+      health = await readHealthAtConfirmedBlock(
+        readEngine,
+        nara,
+        engineAddress,
+        confirmed.blockNumber,
+      );
       if (health.settledEpoch <= before) throw new Error("advanceEpochs did not move the settled epoch");
     }
 

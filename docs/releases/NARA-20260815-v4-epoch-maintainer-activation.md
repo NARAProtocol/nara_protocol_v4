@@ -54,3 +54,16 @@ This operational evidence does not establish overall protocol availability,
 an independent audit, or a production-readiness claim. Any keeper, schedule,
 deployment binding, batch bound, or role change requires a new explicit order
 and deployment-specific review.
+
+## Post-activation receipt-readback correction
+
+Later monitoring found intermittent false workflow failures after successful
+status-`1` `advanceEpochs()` receipts. The writes advanced the stored epoch at
+their receipt blocks, but an immediate unpinned `latest` read sometimes returned
+the pre-transaction state and prevented the heartbeat for that cycle.
+
+Change ID `NARA-20260816-v4-epoch-maintainer-receipt-readback-fix` pins all
+post-write health reads to the confirmed receipt block and bounds RPC-indexing
+retries to reads only. It does not replay a transaction or change the active
+keeper policy. See
+[`NARA-20260816-v4-epoch-maintainer-receipt-readback-fix.md`](NARA-20260816-v4-epoch-maintainer-receipt-readback-fix.md).
