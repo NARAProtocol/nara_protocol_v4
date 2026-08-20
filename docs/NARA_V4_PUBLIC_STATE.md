@@ -113,10 +113,10 @@ available from this release.
 - **Supply:** 1,000,000 NARA permanent supply. A capped ERC-3156 flash mint can
   expand supply transiently and must be burned within the same transaction.
 - **Reward reserve:** 650,000 NARA sealed at deployment. The Engine source is designed to distribute it over time through the emission model after valid positions exist.
-- **Duration range:** 1 epoch minimum (activation delay + 1) up to 35,040 epochs (~1 year at 15-min epochs).
+- **Duration range:** 9 epochs minimum (the production 8-epoch activation delay + 1) up to 35,040 epochs (~1 year at 15-min epochs).
 - **Weight formula:** quadratic in duration. A max-duration lock receives up to
   approximately 3x the modeled weight per NARA versus the shortest lock.
-- **Activation delay:** source behavior activates weight 3 epochs after locking.
+- **Activation delay:** the production Engine is configured with an 8-epoch delay; a newly created position's activation epoch is the creation epoch plus 9.
 - **ETH rewards:** the Engine source accounts ETH sent through `notifyEthRewards()` across active weight. No production funding action is authorized by this document.
 - **ERC-20 rewards:** the generic Engine rail exists in source but is disabled
   for this deployment. No `BribeRouterV4` deployment or notifier-role grant is

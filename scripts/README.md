@@ -14,6 +14,7 @@ and simulate the exact target before using any state-changing command.
 | `npm run verify:v4:preseed` | Read the dormant pre-liquidity state |
 | `npm run verify:v4:preflight` | Verify configured launch assumptions |
 | `npm run verify:v4:launch-gates` | Read configured launch-gate state |
+| `npx tsx scripts/prepareV4EngineLifecycleSmoke.ts --wallet <address>` | Verify production state and simulate exactly one next lifecycle-smoke wallet action; never signs or broadcasts |
 | `syncV4FreshEnv.ts` without `--write-dotenv` | Preview generated v4 environment values |
 | `checkBytecodeSizes.ts` | Compile and measure deployable artifacts |
 

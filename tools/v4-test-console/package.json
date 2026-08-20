@@ -1,0 +1,53 @@
+{
+  "name": "nara-v4-test-console",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "sync:contracts": "node scripts/generate-contract-bindings.mjs",
+    "predev": "npm run sync:contracts",
+    "dev": "vite",
+    "dev:swap": "npm run sync:contracts && vite --config vite.swap.config.ts",
+    "prebuild": "npm run sync:contracts",
+    "build": "tsc --noEmit && vite build",
+    "build:swap": "npm run sync:contracts && tsc --noEmit -p tsconfig.swap.json && vite build --config vite.swap.config.ts",
+    "check:swap-preview": "node scripts/check-nara-swap-preview.mjs",
+    "check:preview": "node scripts/check-cloudflare-preview.mjs",
+    "check:proxy": "node scripts/check-pages-rpc-function.mjs",
+    "check:live": "npm run sync:contracts && node scripts/check-live-read.mjs && node scripts/check-live-quote.mjs",
+    "check:browser": "node scripts/check-browser-regression.mjs",
+    "preview": "vite preview",
+    "preview:swap": "vite preview --config vite.swap.config.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@rainbow-me/rainbowkit": "2.2.11",
+    "@sentry/react": "^10.70.0",
+    "@tanstack/query-core": "5.101.2",
+    "@tanstack/react-query": "5.101.2",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "unstorage": "1.17.5",
+    "viem": "2.55.10",
+    "wagmi": "2.19.5"
+  },
+  "optionalDependencies": {
+    "@rolldown/binding-win32-x64-msvc": "1.1.5",
+    "lightningcss-win32-x64-msvc": "1.33.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.2",
+    "playwright": "^1.62.1",
+    "typescript": "5.9.3",
+    "vite": "8.1.5"
+  },
+  "overrides": {
+    "@base-org/account": "2.5.10",
+    "axios": "1.18.1",
+    "use-sync-external-store": "1.6.0",
+    "uuid": "11.1.1",
+    "ws": "8.21.1"
+  }
+}

@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-08-14.
+Last updated: 2026-08-19.
 
 This repository is v4-only. `contracts/v4/` is the sole active Solidity source.
 The experimental V5 stack, tests, scripts, and release plans have been deleted
@@ -33,7 +33,9 @@ sanitized evidence is `deployments/v4-production-activation-2026-08-09.json`,
   explicit user order naming that contract.
 - Canonical Hook: `contracts/v4/NARALiquidityGrowthHook.sol`.
 - Hook update delay: seven days.
-- Default maximum buy and sell curve rates: 2,000 BPS (20%).
+- Active Hook fee curves (executed at Safe nonce 44, Base block 50189462 after 7-day timelock maturation):
+  - **Buy Curve (USDC in):** Base 3.00% (300 BPS), Medium 5.00% (500 BPS), High 8.00% (800 BPS), Extreme 12.00% (1,200 BPS), Max Cap 12.00% (1,200 BPS).
+  - **Sell Curve (NARA in):** Base 5.00% (500 BPS), Medium 8.00% (800 BPS), High 12.00% (1,200 BPS), Extreme 20.00% (2,000 BPS), Max Cap 20.00% (2,000 BPS).
 - Pressure accounting: cumulative per input currency within one block.
 - Tax boundary: every supported exact-input swap through the one registered
   canonical NARA/USDC Hook pool is charged. Exact-output is rejected. ERC-20
@@ -191,6 +193,17 @@ exact-spend Compounder (`1818.586695052744227683 NARA + 25.412880 USDC`). They
 are not the actual LP inputs. The difference remains banked in the Compounder,
 not active liquidity. Full evidence is in
 [NARA-20260809-v4-compounder-activation.md](releases/NARA-20260809-v4-compounder-activation.md).
+
+On 2026-08-19, the production Safe executed a full protocol fee compounding (`compoundAll`) at Safe nonce `43` in Base transaction at block `50189224`, followed by executing the matured seven-day timelocked fee curve reductions at Safe nonce `44` at block `50189462`. At block `50189462`:
+
+- Seed LP NFT `2898124` remained Safe-owned with liquidity `4242640687119285` (~89.95%);
+- Compounder POL LP NFT `2898486` increased to `473995658948700` (~10.05% of active pool liquidity);
+- Total PoolManager active liquidity was `4716636346067985`;
+- Compounder lifetime additions reached `2873.253287619647716235 NARA` and `80.106763 USDC`;
+- Vault token balances were zero; lifetime compounded reached `2875.256695052744227683 NARA` and `80.135480 USDC`;
+- Banked remainders in Compounder were `2.003407 NARA` and `0.028717 USDC`;
+- Active Hook buy curve is `300 / 500 / 800 / 1200 / 1200` (Base `3.00%`, Max Cap `12.00%`);
+- Active Hook sell curve is `500 / 800 / 1200 / 2000 / 2000` (Base `5.00%`, Max Cap `20.00%`).
 
 The original core deployment evidence remains a historical pre-activation
 checkpoint. Its deployment receipt journal contains complete transaction
