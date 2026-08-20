@@ -4,6 +4,22 @@ This file is read by AI coding assistants that look for `AGENTS.md` on entry (Op
 
 Last updated: 2026-07-26.
 
+## Duplicate-Checkout Warning
+
+This local folder is a secondary documentation checkout of
+`NARAProtocol/nara_protocol_v4`. In the FIELD workspace,
+`../nara-protocol-hardhat/` is the authoritative engineering checkout of the
+same remote.
+
+Do not originate or independently modify contract source, artifacts, manifests,
+deployment scripts, ABIs, or addresses here. A documentation branch in this
+checkout must start from an identified remote commit and must cite the merged
+engineering commit and verified deployment evidence it describes. Never copy
+uncommitted files between the two checkouts.
+
+Before a multi-repository change, read
+`../docs/NARA_CROSS_REPOSITORY_RELEASE_PROTOCOL.md`.
+
 ## 🚨 v4 RESET — READ FIRST
 
 On **2026-05-27** the project committed to a clean fresh start on the v4 stack.

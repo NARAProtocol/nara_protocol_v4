@@ -28,7 +28,8 @@ When the user asks anything about NARA (token, engine, bond, NFT position, etc.)
 ## Active Paths
 
 - Active contracts and ops: `nara-protocol-hardhat/`
-- Active launch frontend: `../apps/nara-baskets/` only.
+- Active publishable launch frontend: `../nara-category-baskets-v1/app/` only.
+  `../apps/nara-baskets/` is a non-publishing historical working copy.
 - `../apps/nara-lockboard/` is deferred. `../apps/nara-lotto/` and
   `../apps/nara-arena/` remain retired and must not be enabled.
 - Active cron folder: `../cron/` — **RETIRED 2026-05-28**, see `../cron/DEPRECATED.md`. Router replaces it.

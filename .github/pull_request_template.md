@@ -7,6 +7,25 @@ Describe the smallest complete change and why it is needed.
 Choose one: contract, test, deployment, integration, documentation, dependency,
 or operations.
 
+## Cross-repository routing
+
+For a repository-local change, write `not applicable` with a reason.
+
+```text
+Change-ID:
+Origin remote:
+Origin commit:
+Evidence state:
+Depends-on:
+Unblocks:
+Downstream repositories reviewed:
+```
+
+- [ ] Protocol behavior originated in the authoritative engineering checkout.
+- [ ] This branch starts from an identified remote commit.
+- [ ] Address or deployment claims use verified evidence.
+- [ ] No uncommitted file was copied from another checkout.
+
 ## Evidence
 
 Link exact source, tests, sanitized deployment evidence, or a named Base block.
@@ -47,4 +66,3 @@ Record command results and any skipped environment-dependent gate.
 ## Handoff
 
 State unresolved assumptions, remaining risks, and the next authorized step.
-

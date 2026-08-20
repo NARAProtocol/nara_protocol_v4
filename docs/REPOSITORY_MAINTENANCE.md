@@ -92,6 +92,23 @@ Never collapse these states into “live.”
 - Keep only sanitized manifests in Git.
 - Do not publish wallet material, private RPC URLs, or signing procedures.
 
+## Cross-repository order
+
+This folder is a secondary checkout of the same
+`NARAProtocol/nara_protocol_v4` remote used by the authoritative engineering
+checkout. It is not a publication fork or an independent source.
+
+1. Complete engineering work in the authoritative checkout.
+2. Merge through protected CI and record the full release commit.
+3. Verify any deployed or observed state.
+4. Start this documentation branch from the identified remote commit.
+5. Update consumers in baskets and monitor from the same evidence.
+6. Publish beginner-facing state through `NARAProtocol/nara_protocol` last.
+
+Never copy uncommitted files between checkouts. In the FIELD workspace, follow
+`../docs/NARA_CROSS_REPOSITORY_RELEASE_PROTOCOL.md` for the complete registry
+and handoff format.
+
 ## Stop conditions
 
 Stop and request maintainer review when:
@@ -108,4 +125,3 @@ Stop and request maintainer review when:
 Every pull request records scope, evidence, threat-model impact, synchronized
 files, commands and results, unresolved assumptions, and whether an onchain
 write occurred.
-
