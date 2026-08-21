@@ -1,0 +1,10 @@
+﻿{
+  "schemaVersion": 1,
+  "changeId": "NARA-20260821-v4-position-nft-phase2",
+  "status": "approved",
+  "marketCapFloorTargetUsd": 100000,
+  "sequenceDecision": "nft_deployment_authorized_before_floor",
+  "strategicBufferReviewed": true,
+  "observedAtBlock": 50281948,
+  "observedAtBlockHash": "0x76fe439f1f5233652970691c0bd7d1600f27736131828ec4176db841ee68b243"
+}
