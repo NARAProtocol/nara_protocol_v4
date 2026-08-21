@@ -1,0 +1,175 @@
+{
+  "schemaVersion": 1,
+  "changeId": "NARA-20260821-v4-position-nft-phase2",
+  "sourceCommit": "f55e1afab1e689513dc24bbee3c13ba0909507c5",
+  "artifacts": {
+    "NARAArtMetadataV1": {
+      "fullyQualifiedName": "contracts/v4/NARAArtMetadataV1.sol:NARAArtMetadataV1",
+      "sourceName": "contracts/v4/NARAArtMetadataV1.sol",
+      "contractName": "NARAArtMetadataV1",
+      "sourceSha256": "48d9f0aceb64735f3f1dec236cd3e40095beea9f53ca3e86bbfbf167f80b92e2",
+      "artifactSha256": "9ef55807c1ef28090093e586d42019311c7bd0467ba7f0b2926a293f6ba4e4ec",
+      "abiSha256": "07ac262c2d542f42565b029ac8c1fe77fd7b5be59c5cb6ec08fb540cdfd7abac",
+      "creationBytecodeHash": "0x997dfce927d61a4f1a8ca80979995a4f47a59b47eddc39000c1e4e171730373b",
+      "deployedBytecodeTemplateHash": "0x77490cee6084f15827e4e07b36d646da7099f6a7b7106798c30b02b6706a5fce",
+      "compilerInputSha256": "9a959df427c55992d587aa0de5625dd89a6c0a2e88c2b3b9a9c72af6575bfa83",
+      "compilerSourcesSha256": "5c272f111cbcfe21cc1261d8a779ffad042fced2001ea95a4006397b4cdb41b3",
+      "contractMetadataSha256": "d2aa0e63f59eb7102424dcbd92e00cf3ade452e6b523dd932eb89b5bebe30017",
+      "solcVersion": "0.8.34",
+      "solcLongVersion": "0.8.34+commit.80d5c536",
+      "compilerSettings": {
+        "optimizer": {
+          "enabled": true,
+          "runs": 1
+        },
+        "viaIR": true,
+        "evmVersion": "cancun",
+        "metadata": null
+      }
+    },
+    "NARAArtSecurityPrintV1": {
+      "fullyQualifiedName": "contracts/v4/NARAArtSecurityPrintV1.sol:NARAArtSecurityPrintV1",
+      "sourceName": "contracts/v4/NARAArtSecurityPrintV1.sol",
+      "contractName": "NARAArtSecurityPrintV1",
+      "sourceSha256": "ff4885db0664e88bca28e2f6dfa271b30066a7ada5f1edd00ce639c1a11e2bde",
+      "artifactSha256": "8c1ee2e50fcf5e1f787e8e29e18ef108edb213e7ea36cb8689b89c9e2766212c",
+      "abiSha256": "1d92f673b0eaa1f5891d1dbe84b3c1d14bfcb9d333ac12ca2a286dc2ccd8cdb5",
+      "creationBytecodeHash": "0x8a522754b3d3dbb12e768fcdf790d1550d990323b50254d789a0ad83cb67d89e",
+      "deployedBytecodeTemplateHash": "0xca56b4908e1f916f2371aa96d04edb367d2f86936932445fa505827589983708",
+      "compilerInputSha256": "9a959df427c55992d587aa0de5625dd89a6c0a2e88c2b3b9a9c72af6575bfa83",
+      "compilerSourcesSha256": "5c272f111cbcfe21cc1261d8a779ffad042fced2001ea95a4006397b4cdb41b3",
+      "contractMetadataSha256": "3a4823d87edbce7f9b317c095953087f227c420e4a1756c5be7fca6e4e2aaeac",
+      "solcVersion": "0.8.34",
+      "solcLongVersion": "0.8.34+commit.80d5c536",
+      "compilerSettings": {
+        "optimizer": {
+          "enabled": true,
+          "runs": 1
+        },
+        "viaIR": true,
+        "evmVersion": "cancun",
+        "metadata": null
+      }
+    },
+    "NARAArtCorePlateV1": {
+      "fullyQualifiedName": "contracts/v4/NARAArtCorePlateV1.sol:NARAArtCorePlateV1",
+      "sourceName": "contracts/v4/NARAArtCorePlateV1.sol",
+      "contractName": "NARAArtCorePlateV1",
+      "sourceSha256": "17131740a3e4a6bb1e20555f3195dc91b147cbc3491845d48d1de077065da691",
+      "artifactSha256": "186c091b39563a6d17bcf322a133ed2ceb281045c8b3ec537d411cb31b0d3ff4",
+      "abiSha256": "60a5e7ca2869b0dc1b2f6a07d8b22e33521d0623f0fe001a96389a32c2857cdb",
+      "creationBytecodeHash": "0xf984bfa57c17037aad4c178ceb9b5900a86d1ed98349eb49b1627225cd87acbc",
+      "deployedBytecodeTemplateHash": "0xbf8bfe149f6a5e9635844f0c75c1027543ed9eb09c8c77475d9cdc2c5919d12f",
+      "compilerInputSha256": "9a959df427c55992d587aa0de5625dd89a6c0a2e88c2b3b9a9c72af6575bfa83",
+      "compilerSourcesSha256": "5c272f111cbcfe21cc1261d8a779ffad042fced2001ea95a4006397b4cdb41b3",
+      "contractMetadataSha256": "66f6b6077bcd8c591e99e0e877457889e4df94ae1fa7acd03d360c6442a782a7",
+      "solcVersion": "0.8.34",
+      "solcLongVersion": "0.8.34+commit.80d5c536",
+      "compilerSettings": {
+        "optimizer": {
+          "enabled": true,
+          "runs": 1
+        },
+        "viaIR": true,
+        "evmVersion": "cancun",
+        "metadata": null
+      }
+    },
+    "NARAArtGenesisPlateV1": {
+      "fullyQualifiedName": "contracts/v4/NARAArtGenesisPlateV1.sol:NARAArtGenesisPlateV1",
+      "sourceName": "contracts/v4/NARAArtGenesisPlateV1.sol",
+      "contractName": "NARAArtGenesisPlateV1",
+      "sourceSha256": "e545f2b993e602ecd28d11e4b87740534585e7d16b6b5de3aa3d258d5f5d2482",
+      "artifactSha256": "0fa4a9fec2cad7939ad62679664ee9fcc9af5e1afac871d8f4e7e63b13ba1284",
+      "abiSha256": "6891a4eacdccfc0b6c15192945db785bf1bd37ba33d27003fc7c6455ee197f15",
+      "creationBytecodeHash": "0x02235584ffff3b54a9d343433fa12c93ff9c7d6f4be839084e64c6d820b1dfde",
+      "deployedBytecodeTemplateHash": "0x24229f1144f782e7064ee0afb8e87bb2cf1b567576880ac5d4f80bb6103ebe90",
+      "compilerInputSha256": "9a959df427c55992d587aa0de5625dd89a6c0a2e88c2b3b9a9c72af6575bfa83",
+      "compilerSourcesSha256": "5c272f111cbcfe21cc1261d8a779ffad042fced2001ea95a4006397b4cdb41b3",
+      "contractMetadataSha256": "06e56f85bc8543cad956b64d1286f458f085f53beec50564d77478825b840c51",
+      "solcVersion": "0.8.34",
+      "solcLongVersion": "0.8.34+commit.80d5c536",
+      "compilerSettings": {
+        "optimizer": {
+          "enabled": true,
+          "runs": 1
+        },
+        "viaIR": true,
+        "evmVersion": "cancun",
+        "metadata": null
+      }
+    },
+    "NARAPositionRendererV5": {
+      "fullyQualifiedName": "contracts/v4/NARAPositionRendererV5.sol:NARAPositionRendererV5",
+      "sourceName": "contracts/v4/NARAPositionRendererV5.sol",
+      "contractName": "NARAPositionRendererV5",
+      "sourceSha256": "c039129d2ebea38383709e6e4ae4897d5edc8a4d9e3b646481e5979c28161331",
+      "artifactSha256": "13b7bd8e8c0ebbec4e9196629ee7190d94c3220820d776c57a1bc5622490baa5",
+      "abiSha256": "9196d009691e9567796851a9e13afbf18163962ba645346e9387037679fd404b",
+      "creationBytecodeHash": "0xf79f1fa597c07a6316241450f4c5383b53a750ec6c674f94df2084120a116b07",
+      "deployedBytecodeTemplateHash": "0xa5ab7fc7ce7e841943339cb47dbb66db722216a6c63fdeba7d3bdb9d307a8598",
+      "compilerInputSha256": "9a959df427c55992d587aa0de5625dd89a6c0a2e88c2b3b9a9c72af6575bfa83",
+      "compilerSourcesSha256": "5c272f111cbcfe21cc1261d8a779ffad042fced2001ea95a4006397b4cdb41b3",
+      "contractMetadataSha256": "5813b75697c5e1e492c4662fe7bb6e155e6ad0545e76e7ddfaf1af6e70570a7e",
+      "solcVersion": "0.8.34",
+      "solcLongVersion": "0.8.34+commit.80d5c536",
+      "compilerSettings": {
+        "optimizer": {
+          "enabled": true,
+          "runs": 1
+        },
+        "viaIR": true,
+        "evmVersion": "cancun",
+        "metadata": null
+      }
+    },
+    "NARAPositionAccountV4": {
+      "fullyQualifiedName": "contracts/v4/NARAPositionAccountV4.sol:NARAPositionAccountV4",
+      "sourceName": "contracts/v4/NARAPositionAccountV4.sol",
+      "contractName": "NARAPositionAccountV4",
+      "sourceSha256": "ecea39ae3065a83f6ea56fc670bbbb0af369d9bda4ff15a91141cd8541415eb9",
+      "artifactSha256": "1eceb148c4abdbc5c68ed99ae3e8ff5fd7240b56852597731c8d7ac7c434b791",
+      "abiSha256": "5b7126893cd5b6e686ebb869ddff0b5fb0265340b6a9f32a524f7dede07e0373",
+      "creationBytecodeHash": "0xd4e5eabcc3cc24e6417fd75269acefae329e3865b68df9bafecb1aabf8fc4748",
+      "deployedBytecodeTemplateHash": "0xee221a58eed85fbd3817f5460faa7eff78e277471ea6a6ba5f4f961f11eda73b",
+      "compilerInputSha256": "9a959df427c55992d587aa0de5625dd89a6c0a2e88c2b3b9a9c72af6575bfa83",
+      "compilerSourcesSha256": "5c272f111cbcfe21cc1261d8a779ffad042fced2001ea95a4006397b4cdb41b3",
+      "contractMetadataSha256": "37e0afdd9996e8bf1df902d775e61f8b840b5fee22a1b58617f89ad4f32bc2e8",
+      "solcVersion": "0.8.34",
+      "solcLongVersion": "0.8.34+commit.80d5c536",
+      "compilerSettings": {
+        "optimizer": {
+          "enabled": true,
+          "runs": 1
+        },
+        "viaIR": true,
+        "evmVersion": "cancun",
+        "metadata": null
+      }
+    },
+    "NARAPositionNFTV4": {
+      "fullyQualifiedName": "contracts/v4/NARAPositionNFTV4.sol:NARAPositionNFTV4",
+      "sourceName": "contracts/v4/NARAPositionNFTV4.sol",
+      "contractName": "NARAPositionNFTV4",
+      "sourceSha256": "ff74f790fb43c23b6dc2e7014352edc949fa14af4063f8bf8a33b8f82d88e669",
+      "artifactSha256": "ac56ff3aa496cabe07472392765cfdb7feb96d697a84d57d865fc4c597a8dea4",
+      "abiSha256": "1ca2a78575b317c0e034ac725e31ec5579d1fc38eca5b36b6e8f59d606bb987d",
+      "creationBytecodeHash": "0x8e3870364089467eb7a318791954a273d7650abf8d9220fcc9d3c0258c743ae7",
+      "deployedBytecodeTemplateHash": "0x17d0706659d5f4e14552e169b05882d3b1fc852866125d6c89f0cabe5b939c09",
+      "compilerInputSha256": "9a959df427c55992d587aa0de5625dd89a6c0a2e88c2b3b9a9c72af6575bfa83",
+      "compilerSourcesSha256": "5c272f111cbcfe21cc1261d8a779ffad042fced2001ea95a4006397b4cdb41b3",
+      "contractMetadataSha256": "afa6dff17bb68cd5af1b296add8cac24ab1bce2eb2ba2baf923669e2e9975cf9",
+      "solcVersion": "0.8.34",
+      "solcLongVersion": "0.8.34+commit.80d5c536",
+      "compilerSettings": {
+        "optimizer": {
+          "enabled": true,
+          "runs": 1
+        },
+        "viaIR": true,
+        "evmVersion": "cancun",
+        "metadata": null
+      }
+    }
+  }
+}

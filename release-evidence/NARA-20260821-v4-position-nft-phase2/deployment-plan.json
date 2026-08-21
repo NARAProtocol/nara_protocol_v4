@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "changeId": "NARA-20260821-v4-position-nft-phase2",
+  "sourceCommit": "f55e1afab1e689513dc24bbee3c13ba0909507c5",
+  "chainId": "8453",
+  "network": "base",
+  "createdAt": "2026-08-21T23:00:43.000Z",
+  "deployer": "0xAE9D1667B45558232BeD9d45DcCA53940F892aB5",
+  "expectedStartNonce": 157,
+  "predictedAddresses": {
+    "NARAArtMetadataV1": "0xAE0Da2B2066FF0c1409A2aC4053699E75dd00633",
+    "NARAArtSecurityPrintV1": "0x0640dd2B545348eC91826ab7c58DD88EcE81f353",
+    "NARAArtCorePlateV1": "0x476b69f490C17a5500c4Eb9b6cB49302cef4bE4A",
+    "NARAArtGenesisPlateV1": "0x20520115546c28F99aE581d62935e62D9E8B9022",
+    "NARAPositionRendererV5": "0x607b08365C23a983C542898a79E670e6D4B80673",
+    "NARAPositionAccountV4": "0x3a8c9cA4f95E94751774810B33caF01bb992A55F",
+    "NARAPositionNFTV4": "0xCcBD8c59664958636369F8fe24B927aEBc3DF7cC"
+  },
+  "observedAtBlock": 50281948,
+  "observedAtBlockHash": "0x76fe439f1f5233652970691c0bd7d1600f27736131828ec4176db841ee68b243",
+  "validUntilBlock": 50325148,
+  "observedChecks": {
+    "latestNonceEqualsPendingNonce": true,
+    "allSevenPredictedAddressesHaveNoCode": true,
+    "deploymentSignerDiffersFromOwnerSafe": true
+  },
+  "humanAttestationsRequired": [
+    "dedicatedIdleSigner",
+    "noPriorPhase2Attempt",
+    "explicitProductionApprovalAfterObservation"
+  ]
+}
