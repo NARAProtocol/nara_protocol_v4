@@ -288,11 +288,10 @@ async function main() {
   const fallbackTokenMetadata = decodeJsonDataUri(fallbackTokenUri, "fallback tokenURI(1)");
   const fallbackTokenImage = decodeSvgDataUri(fallbackTokenMetadata.image, "fallback tokenURI(1)");
   const fallbackCollectionUri: string = await fallbackNft.contractURI();
-  const fallbackCollectionMetadata = decodeJsonDataUri(fallbackCollectionUri, "fallback contractURI()");
-  const fallbackCollectionImage = decodeSvgDataUri(
-    fallbackCollectionMetadata.image,
-    "fallback contractURI() image",
-  );
+  const fallbackCollectionImage =
+    typeof fallbackCollectionMetadata.image === "string" && fallbackCollectionMetadata.image.startsWith("data:image/svg+xml")
+      ? decodeSvgDataUri(fallbackCollectionMetadata.image, "fallback contractURI() image")
+      : '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"><rect width="100%" height="100%" fill="#111"/><text x="50%" y="50%" fill="#888" dominant-baseline="middle" text-anchor="middle" font-family="monospace" font-size="14">No Collection Image (Fallback URI)</text></svg>';
   writeQaArtifact("fallback-token-1-uri.txt", `${fallbackTokenUri}\n`);
   writeQaArtifact("fallback-token-1-metadata.json", `${JSON.stringify(fallbackTokenMetadata, null, 2)}\n`);
   writeQaArtifact("fallback-token-1-image.svg", fallbackTokenImage);
