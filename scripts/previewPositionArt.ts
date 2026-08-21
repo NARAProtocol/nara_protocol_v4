@@ -288,6 +288,7 @@ async function main() {
   const fallbackTokenMetadata = decodeJsonDataUri(fallbackTokenUri, "fallback tokenURI(1)");
   const fallbackTokenImage = decodeSvgDataUri(fallbackTokenMetadata.image, "fallback tokenURI(1)");
   const fallbackCollectionUri: string = await fallbackNft.contractURI();
+  const fallbackCollectionMetadata = decodeJsonDataUri(fallbackCollectionUri, "fallback contractURI()");
   const fallbackCollectionImage =
     typeof fallbackCollectionMetadata.image === "string" && fallbackCollectionMetadata.image.startsWith("data:image/svg+xml")
       ? decodeSvgDataUri(fallbackCollectionMetadata.image, "fallback contractURI() image")
