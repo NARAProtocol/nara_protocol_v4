@@ -96,8 +96,8 @@ async function mineTime(ethers: any, seconds: bigint) {
     await ethers.provider.send("evm_mine", []);
 }
 
-function mulDivDown(x: bigint, y: bigint, denominator: bigint) {
-    return (x * y) / denominator;
+function mulDivDown(x: bigint | number, y: bigint | number, denominator: bigint | number): bigint {
+    return (BigInt(x) * BigInt(y)) / BigInt(denominator);
 }
 
 function computeWeight(amount: bigint, durationEpochs: bigint, cfg: ReturnType<typeof defaultEngineConfig>) {

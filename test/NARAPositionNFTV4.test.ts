@@ -1,7 +1,7 @@
 import hre from "hardhat";
 import { expect } from "chai";
 import type { Signer } from "ethers";
-import { deployRenderer } from "./helpers/art";
+import { deployRenderer } from "./helpers/art.js";
 
 const ONE = 10n ** 18n;
 const USDC = 10n ** 6n;
@@ -742,7 +742,7 @@ describe("NARAPositionNFTV4", () => {
         to: await f.nft.getAddress(),
         data: removedConversion.encodeFunctionData("convertGenesisToEternal", [1]),
       }),
-    ).to.be.revertedWithoutReason();
+    ).to.be.revertedWithoutReason(f.ethers);
 
     const meta = await f.nft.genesisMetadataOf(1);
     expect(meta.isEternal).to.equal(false);
@@ -1175,7 +1175,7 @@ describe("NARAPositionNFTV4 — wrapper claim fees", () => {
     const ownerEthBefore = await f.ethers.provider.getBalance(owner);
     const tx = await f.nft.connect(f.alice).extendLock(1, 10);
     const receipt = await tx.wait();
-    const gas = receipt!.gasUsed * receipt!.gasPrice;
+    const gas = BigInt(receipt!.gasUsed) * BigInt(receipt!.gasPrice ?? 0n);
 
     expect((await f.nara.balanceOf(recipient)) - recipNaraBefore).to.equal(wad(5));
     expect((await f.nara.balanceOf(owner)) - ownerNaraBefore).to.equal(wad(95));

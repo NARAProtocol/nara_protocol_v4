@@ -51,6 +51,11 @@ async function verify(address: string, args: any[]) {
 }
 
 async function main() {
+  throw new Error(
+    "QUARANTINED: router/lens deployment is Phase 3 and requires a separately reviewed release workflow " +
+      "after the finalized Position NFT manifest exists.",
+  );
+
   const { ethers } = await hre.network.connect();
   const [deployer] = await ethers.getSigners();
   const network = await ethers.provider.getNetwork();
@@ -58,26 +63,24 @@ async function main() {
   const production = isMainnet
     ? await assertProductionV4Runtime(ethers.provider, currentV4Config())
     : undefined;
-  if (production) console.log(`Production runtime guard: ${productionV4RuntimeBanner(production)}`);
+  if (production) console.log(`Production runtime guard: ${productionV4RuntimeBanner(production!)}`);
 
-  const engineAddress = process.env.ENGINE_V4
-    ? ethers.getAddress(process.env.ENGINE_V4)
-    : undefined;
-  const nftAddress = process.env.POSITION_NFT_V4
-    ? ethers.getAddress(process.env.POSITION_NFT_V4)
-    : undefined;
-  if (!engineAddress || !nftAddress) {
+  const rawEngine = process.env.ENGINE_V4;
+  const rawNft = process.env.POSITION_NFT_V4;
+  if (!rawEngine || !rawNft) {
     throw new Error("Set ENGINE_V4 and POSITION_NFT_V4 in env");
   }
-  if (production && engineAddress !== production.engine) {
-    throw new Error(`ENGINE_V4 must match production Engine ${production.engine}; received ${engineAddress}`);
+  const engineAddress = ethers.getAddress(rawEngine!);
+  const nftAddress = ethers.getAddress(rawNft!);
+  if (production && engineAddress !== production!.engine) {
+    throw new Error(`ENGINE_V4 must match production Engine ${production!.engine}; received ${engineAddress}`);
   }
 
   console.log("Chain:   ", network.chainId.toString());
   console.log("Deployer:", deployer.address);
 
-  let routerAddress = process.env.ROUTER_ADDRESS
-    ? ethers.getAddress(process.env.ROUTER_ADDRESS)
+  let routerAddress: string | undefined = process.env.ROUTER_ADDRESS
+    ? ethers.getAddress(process.env.ROUTER_ADDRESS!)
     : undefined;
 
   if (!routerAddress) {
@@ -87,13 +90,13 @@ async function main() {
     await router.waitForDeployment();
     routerAddress = await router.getAddress();
     console.log("Deployed:", routerAddress);
-    if (isMainnet) await verify(routerAddress, [engineAddress, nftAddress]);
+    if (isMainnet) await verify(routerAddress!, [engineAddress, nftAddress]);
   } else {
     console.log("\n-- NARARouter existing --");
-    if ((await ethers.provider.getCode(routerAddress)) === "0x") {
+    if ((await ethers.provider.getCode(routerAddress!)) === "0x") {
       throw new Error(`ROUTER_ADDRESS has no code: ${routerAddress}`);
     }
-    const router = await ethers.getContractAt("NARARouter", routerAddress);
+    const router = await ethers.getContractAt("NARARouter", routerAddress!);
     if (
       (await router.ENGINE()).toLowerCase() !== engineAddress.toLowerCase() ||
       (await router.NFT()).toLowerCase() !== nftAddress.toLowerCase()
@@ -128,31 +131,31 @@ async function main() {
 
   console.log("\n-- NARAEngineOpsRouterV1 --");
   const opsParamOperator = process.env.ENGINE_OPS_PARAM_OPERATOR
-    ? ethers.getAddress(process.env.ENGINE_OPS_PARAM_OPERATOR)
+    ? ethers.getAddress(process.env.ENGINE_OPS_PARAM_OPERATOR!)
     : undefined;
   const opsTreasuryOperator = process.env.ENGINE_OPS_TREASURY_OPERATOR
-    ? ethers.getAddress(process.env.ENGINE_OPS_TREASURY_OPERATOR)
+    ? ethers.getAddress(process.env.ENGINE_OPS_TREASURY_OPERATOR!)
     : undefined;
   let engineOpsRouterAddress: string | null = process.env.ENGINE_OPS_ROUTER_ADDRESS
-    ? ethers.getAddress(process.env.ENGINE_OPS_ROUTER_ADDRESS)
+    ? ethers.getAddress(process.env.ENGINE_OPS_ROUTER_ADDRESS!)
     : null;
   if (engineOpsRouterAddress) {
-    if ((await ethers.provider.getCode(engineOpsRouterAddress)) === "0x") {
+    if ((await ethers.provider.getCode(engineOpsRouterAddress!)) === "0x") {
       throw new Error(`ENGINE_OPS_ROUTER_ADDRESS has no code: ${engineOpsRouterAddress}`);
     }
-    const opsRouter = await ethers.getContractAt("NARAEngineOpsRouterV1", engineOpsRouterAddress);
+    const opsRouter = await ethers.getContractAt("NARAEngineOpsRouterV1", engineOpsRouterAddress!);
     if ((await opsRouter.ENGINE()).toLowerCase() !== engineAddress.toLowerCase()) {
       throw new Error("ENGINE_OPS_ROUTER_ADDRESS is not paired with ENGINE_V4");
     }
     if (
       opsParamOperator &&
-      (await opsRouter.PARAM_OPERATOR()).toLowerCase() !== opsParamOperator.toLowerCase()
+      (await opsRouter.PARAM_OPERATOR()).toLowerCase() !== opsParamOperator!.toLowerCase()
     ) {
       throw new Error("ENGINE_OPS_ROUTER_ADDRESS PARAM_OPERATOR does not match ENGINE_OPS_PARAM_OPERATOR");
     }
     if (
       opsTreasuryOperator &&
-      (await opsRouter.TREASURY_OPERATOR()).toLowerCase() !== opsTreasuryOperator.toLowerCase()
+      (await opsRouter.TREASURY_OPERATOR()).toLowerCase() !== opsTreasuryOperator!.toLowerCase()
     ) {
       throw new Error("ENGINE_OPS_ROUTER_ADDRESS TREASURY_OPERATOR does not match ENGINE_OPS_TREASURY_OPERATOR");
     }
@@ -162,13 +165,13 @@ async function main() {
       throw new Error("Set both ENGINE_OPS_PARAM_OPERATOR and ENGINE_OPS_TREASURY_OPERATOR to deploy NARAEngineOpsRouterV1");
     }
     const EngineOpsRouter = await ethers.getContractFactory("NARAEngineOpsRouterV1");
-    const opsRouter = await EngineOpsRouter.deploy(engineAddress, opsParamOperator, opsTreasuryOperator);
+    const opsRouter = await EngineOpsRouter.deploy(engineAddress, opsParamOperator!, opsTreasuryOperator!);
     await opsRouter.waitForDeployment();
     const deployedOpsRouter = await opsRouter.getAddress();
     engineOpsRouterAddress = deployedOpsRouter;
     console.log("Deployed:", deployedOpsRouter);
     console.log("ACTION REQUIRED: grant PARAM_ROLE and TREASURY_ROLE to", deployedOpsRouter);
-    if (isMainnet) await verify(deployedOpsRouter, [engineAddress, opsParamOperator, opsTreasuryOperator]);
+    if (isMainnet) await verify(deployedOpsRouter, [engineAddress, opsParamOperator!, opsTreasuryOperator!]);
   } else {
     console.log("Skipped. Set ENGINE_OPS_PARAM_OPERATOR and ENGINE_OPS_TREASURY_OPERATOR to deploy.");
   }
@@ -188,13 +191,14 @@ async function main() {
   console.log("\n-- NARACirculatingSupplyV1 --");
   const ONE = 10n ** 18n;
   let circulatingSupplyAddress: string | null = null;
-  const naraTokenForCirc = process.env.NARA_V4 ? ethers.getAddress(process.env.NARA_V4) : undefined;
+  const rawNaraTokenForCirc = process.env.NARA_V4;
   const circExcludedRaw = process.env.CIRC_EXCLUDED;
-  if (naraTokenForCirc && circExcludedRaw) {
+  if (rawNaraTokenForCirc && circExcludedRaw) {
+    const naraTokenForCirc = ethers.getAddress(rawNaraTokenForCirc!);
     const maxSupplyCap = process.env.CIRC_MAX_SUPPLY_CAP
-      ? BigInt(process.env.CIRC_MAX_SUPPLY_CAP)
+      ? BigInt(process.env.CIRC_MAX_SUPPLY_CAP!)
       : 1_000_000n * ONE;
-    const excluded = circExcludedRaw
+    const excluded = circExcludedRaw!
       .split(",")
       .map((a) => a.trim())
       .filter((a) => a.length > 0)
@@ -240,7 +244,7 @@ async function main() {
   console.log("\n-- Addresses --");
   console.log(JSON.stringify(output, null, 2));
 
-  const directory = join(__dirname, "../deployments");
+  const directory = join(import.meta.dirname, "../deployments");
   mkdirSync(directory, { recursive: true });
   const file = join(directory, `router-lens-${network.chainId}.json`);
   writeFileSync(file, JSON.stringify(output, null, 2));

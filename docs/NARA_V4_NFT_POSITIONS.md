@@ -1,6 +1,6 @@
 # NARA v4 NFT Positions — Canonical Spec
 
-Last updated: 2026-06-29.
+Last updated: 2026-08-21.
 **This is the v4 canonical NFT spec.** The old `NFT_WRAPPER_BUILD_PLAN.md` lives only in
 `archive/legacy-v3/docs/` and describes the **retired v3** `NaraLockNFT` + `NaraLockAccount`.
 Do not apply v3 wrapper patterns to v4 — the architecture is different.
@@ -8,20 +8,33 @@ Do not apply v3 wrapper patterns to v4 — the architecture is different.
 For the protocol-wide picture of what NFTs exist, what's missing, and what should never be built,
 see `NARA_V4_NFT_PROTOCOL_ROLE_AUDIT.md`.
 
-Source contracts:
-- `contracts/v4/NARAPositionNFTV4.sol`
+Phase-2 source contracts (exact deployment scope):
+- `contracts/v4/NARAArtMetadataV1.sol`
+- `contracts/v4/NARAArtSecurityPrintV1.sol`
+- `contracts/v4/NARAArtCorePlateV1.sol`
+- `contracts/v4/NARAArtGenesisPlateV1.sol`
+- `contracts/v4/NARAPositionRendererV5.sol`
 - `contracts/v4/NARAPositionAccountV4.sol`
-- `contracts/v4/NARAPositionRendererV5.sol` (+ modular `NARAArt*V1` contracts)
-- `contracts/v4/router/NARAPositionDataLensV1.sol`
-- `contracts/v4/NARAGenesisRewardDistributorV4.sol` (parallel reward pool, separate doc territory)
+- `contracts/v4/NARAPositionNFTV4.sol`
+
+`NARAPositionDataLensV1`, the dashboard/router layer, bonds, and
+`NARAGenesisRewardDistributorV4` are implemented future surfaces but are explicitly deferred to
+Phase 3. They are not part of the Phase-2 deployment, manifest, Safe batch, or consumer handoff.
+
+> **Production state — 2026-08-21:** The hardened Phase-2 workflow exists locally but is unmerged
+> and not deployed. No Base Position NFT address, runtime, receipt, source verification, or finalized
+> manifest is available. Planned, local, environment-only, and zero-code addresses are not
+> deployments and must remain disabled in consumers.
 
 ---
 
 ## What it is
 
-In v4, **a lock position is an ERC-721 NFT.** There is no separate "wrapper" step — locking
-NARA mints `NARAPositionNFTV4` (`"NARA Position"`, symbol `NARAPOS`). The NFT is the bearer
-asset; transferring it transfers the whole position and all its future rewards.
+In v4, `NARAPositionNFTV4` (`"NARA Position"`, symbol `NARAPOS`) is an **optional ERC-721 creation
+path** for new Engine positions. A lock created through the NFT owns its Engine position through a
+restricted clone account, and transferring the NFT transfers control of that wrapped position and
+its future claimable rewards. Direct `NARAEngine` positions remain valid raw positions and are not
+retroactively wrapped.
 
 ## Architecture (NFT → clone account → engine)
 
@@ -53,16 +66,19 @@ NARAEngine position (positionId)                          ← positionIdOf[token
 2. **Genesis bond** — `mintGenesisAndLockFor(…, roundId, tierId, rewardMultiplierBps, eternal)`.
    `onlyGenesisMinter` (allowlisted via `setGenesisMinter`). This is the path the **bond depository**
    uses to deliver discounted NARA as a vesting NFT. Records `GenesisMetadata` and registers a
-   **reward weight** with the Genesis distributor (see below).
+   **reward weight** with the Genesis distributor (see below). This bytecode path is **not enabled in
+   Phase 2**: the Genesis distributor and minter remain unset, with no `GenesisMinterSet` event. Its
+   configuration belongs to the separately reviewed Phase-3 bond/Genesis release.
 
 ## Rewards — what an NFT position earns
 
-A position earns from **two independent pools**:
+The complete bytecode architecture supports **two independent pools**. Phase-2 positions use the
+Engine pool; the Genesis pool remains unavailable until its separately verified Phase-3 binding:
 
 | Pool | What | Claim |
 |---|---|---|
 | **Engine** (all lockers) | Active: NARA drip + ETH by lock **weight**. ERC-20 claim functions exist but notification is disabled for this deployment. | `claimRewards(tokenId, to)` → NARA + ETH; token-claim functions remain dormant |
-| **Genesis** (genesis NFTs only) | Extra ETH + reward-token (USDC) by **reward weight**, parallel pool | `claimGenesisEth(tokenId, to)`, `claimGenesisToken(tokenId, to)` |
+| **Genesis** (future genesis NFTs only) | Phase-3 extra ETH + reward-token accounting by **reward weight**; unavailable while the distributor/minter are unset | `claimGenesisEth(tokenId, to)`, `claimGenesisToken(tokenId, to)` after the separately verified Phase-3 binding |
 
 - Engine claims flow NFT → `account.claimRewards(to)` → `engine.claimRewards(positionId, to)` → assets
   go **directly to `to`**, never held by the NFT. `to` cannot be the clone account (guarded).
@@ -99,8 +115,12 @@ A position earns from **two independent pools**:
   `setDefaultRoyalty` / `deleteDefaultRoyalty` (ERC-2981, capped at `MAX_ROYALTY_BPS = 1_000` = 10%),
   one-way `freezeRoyalties`, and `sweepNative` (only stray ETH sent to the NFT contract itself, not
   position funds).
-- Production deployment defaults to zero royalties and freezes the configuration before ownership
-  handoff. A non-zero royalty remains optional and ERC-2981 royalties are not marketplace-enforced.
+- The approved Phase-2 production policy is exactly `1000 BPS` (10.00%) to the manifest-pinned
+  production Treasury address, followed by the one-way `freezeRoyalties()` call. The NFT is owned by
+  the manifest-pinned production Admin Safe from construction; the owner Safe and Treasury receiver
+  are separate manifest fields. The Safe also reasserts `0 BPS` NARA/token wrapper claim fees, sets
+  the claim-fee recipient to zero, and permanently freezes those fees. Treasury controls later use
+  of royalties; they do not automatically reach lockers. ERC-2981 remains marketplace-voluntary.
 - No mint authority over arbitrary positions, no ability to move user funds out of clone accounts
   except the owner-driven `sweepAccount*` which always sends to a validated `to`.
 
@@ -152,9 +172,10 @@ Genesis traits (`Round`, `Tier`, `Multiplier`, `Minted At`, `Eternal`) on genesi
 description. If the immutable renderer reverts or returns an empty URI, the NFT returns minimal
 fully on-chain fallback token and collection metadata instead of becoming unrenderable.
 
-## Live data for apps and future projects
+## Live data for apps and future projects (Phase 3)
 
-`NARAPositionDataLensV1` is the typed, stateless, admin-free live-data surface. It returns:
+`NARAPositionDataLensV1` is the implemented typed, stateless, admin-free live-data surface, but it is
+not deployed or handed off in Phase 2. After a separately verified Phase-3 deployment it returns:
 
 - actual ERC-721 owner, clone account, and engine-position custodian as separate fields;
 - live and settled epochs plus pending/active/matured state based on the settled epoch;
@@ -162,11 +183,13 @@ fully on-chain fallback token and collection metadata instead of becoming unrend
 - Genesis provenance, reward weight/share, Eternal state, and Genesis claimables;
 - bounded batches of up to 100 token IDs.
 
-Apps should use marketplace metadata for presentation and the data lens for current financial state.
+After that Phase-3 manifest exists, apps should use marketplace metadata for presentation and the
+data lens for current financial state. Until then, consumers must not invent a lens address.
 
 ## Who builds on top of these NFTs
 
-- **Bonds** (`NARABondDepositoryV4NFT`) mint genesis NFTs as the delivery vehicle.
+- **Phase-3 bonds** (`NARABondDepositoryV4NFT`) can mint genesis NFTs as the delivery vehicle only
+  after the separately verified Genesis/minter binding.
 - **Composability** wraps them: `NARAStakingPoolV4` (stNARA) locks NARA under the hood and holds
   positions; `NARAFractionalPositionFactoryV4` fractionalizes a single position NFT.
 - **Lens** (`NARADashboardLens`) reads broad dashboard state; `NARAPositionDataLensV1` provides the
@@ -174,10 +197,20 @@ Apps should use marketplace metadata for presentation and the data lens for curr
 
 ## Integration
 
-- ABIs + deployed addresses: `apps/nara-lockboard/src/shared/nara.ts` (canonical registry).
-- Deploy: the allocation layer step in `NARA_V4_LAUNCH_RUNBOOK.md` (`deploy:v4:allocations`) deploys
-  `NARAPositionAccountV4` (impl) → `NARAPositionNFTV4` → `NARAGenesisRewardDistributorV4`, then wires
-  `setGenesisRewardDistributor` and `setGenesisMinter`.
-- The allocation deployment adds the immutable renderer before the NFT and freezes royalties by
-  default. The router/lens deployment adds `NARAPositionDataLensV1`.
+- Production plan: `NARA_V4_NFT_PRODUCTION_PLAN.md`.
+- Exact operator/evidence sequence:
+  `releases/NARA-20260821-v4-position-nft-phase2.md`.
+- Phase 2 deploys the four art modules, V5 renderer, account implementation, and NFT in the exact
+  seven-contract nonce order. It does not deploy an allocation layer, bond/Genesis contracts, or a
+  data lens.
+- The final Admin Safe batch reasserts the manifest-pinned Treasury receiver and `1000 BPS`, resets
+  both wrapper claim fees and their recipient to zero, then freezes royalties and claim fees in that
+  exact five-call order.
+- Minting is permissionless from the confirmed NFT deployment block. Pending/final verifiers must
+  reconcile all `PositionMinted` events and `nextTokenId`; no operator may assume an empty mint window
+  or reserve a manual token ID.
+- Addresses, start blocks, generated ABIs/bindings, and consumer configuration remain blank/disabled
+  until the finalized source-verified manifest, approved smoke, 48-hour observation hold, immutable
+  protocol origin, and explicit cross-repository handoff exist. Swarm, baskets, analytics, frontends,
+  and public documentation must fail closed during that quarantine.
 - The engine is **not permit-aware**, but the NFT is: `mintAndLockWithPermit` does the NARA permit.

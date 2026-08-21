@@ -1,6 +1,6 @@
 # Local Testing
 
-Last updated: 2026-05-27.
+Last updated: 2026-08-22.
 
 This document covers the active local workflow for the NARA contracts workspace. Code and `package.json` scripts are the source of truth.
 
@@ -42,24 +42,69 @@ npm run test:composability:v4
 
 All v3 and archived tests (NARATokenV3, NARAEngineV2, NARABondVault, BurnRunArena, NaraLottoPool, NARASponsorHub, MisterMint) are in `archive/legacy-v3/` and are not run by `npm test`.
 
+Bond, Genesis, router/lens, allocation, and composability tests exercise local
+Phase-3 components only. Their presence does not put those contracts inside the
+Position NFT Phase-2 deployment or authorize a production release.
+
 ## Start A Local Node
 
 ```bash
 npx hardhat node
 ```
 
-Hardhat will expose funded local accounts with ETH for testing.
+Hardhat will expose funded local accounts with ETH for ad hoc component testing.
+This persistent `localhost` process is not the canonical Position NFT Phase-2
+rehearsal.
 
-## Local Deploy Flow
+## Position NFT Phase-2 Rehearsal
 
-With the local node running, deploy v4 against `localhost`:
+Run the exact seven-contract Position NFT deployment and verification together
+inside one fresh ephemeral Base fork:
 
 ```bash
-npx hardhat run scripts/deployV4BaseUsdc.ts --network localhost
-npx hardhat run scripts/deployV4Allocations.ts --network localhost
+npm run rehearse:v4:position-nft
 ```
 
-v3 deploy scripts are archived in `archive/legacy-v3/scripts/` and are not run locally.
+The rehearsal covers, in nonce order, `NARAArtMetadataV1`,
+`NARAArtSecurityPrintV1`, `NARAArtCorePlateV1`, `NARAArtGenesisPlateV1`,
+`NARAPositionRendererV5`, `NARAPositionAccountV4`, and `NARAPositionNFTV4`.
+Deployment and verification must remain in the same `baseFork` process because a
+later Hardhat process starts a different ephemeral fork. The
+`npm run verify:v4:position-nft:rehearsal` alias therefore repeats the entire
+fresh deploy-and-verify rehearsal; it is not a post-rehearsal verifier.
+
+Each rehearsal also writes a new, no-overwrite scratch Safe Transaction Builder
+file:
+
+```text
+deployments/REHEARSAL-DO-NOT-IMPORT-v4-position-nft-phase2-finalization-<block>-<run-id>.json
+```
+
+Its embedded name says `REHEARSAL - DO NOT IMPORT`, and its description says the
+fork-only batch must never be imported or signed. It targets ephemeral rehearsal
+contracts and is local verification evidence only: never import, sign, send,
+execute, rename, or promote it as production evidence. Production deployment
+writes no standalone Safe import at this stage: the canonical five-call batch
+remains embedded in the pending manifest until all seven contracts have source
+verification. Only the later just-in-time builder may emit the nonce- and
+transaction-hash-bound production `UNEXECUTED` signing packet and Safe batch.
+
+**RETIRED / DO NOT RUN:** the May 2026 aggregate local flow that ran
+`deployV4BaseUsdc.ts` followed by `deployV4Allocations.ts` is preserved only as
+historical context. `npm run deploy:v4:allocations` is now a refusal guard. Do
+not bypass it or invoke the retired TypeScript deployer directly. Allocations,
+`NARAOpsVaultV4`, bonds, Genesis distributor/binding, router/lens, circulating
+supply, and composability remain Phase 3 and require new separately reviewed
+release paths.
+
+The fork rehearsal is a local gate, not production evidence or deployment
+authorization. Follow `docs/NARA_V4_NFT_PRODUCTION_PLAN.md` and
+`docs/releases/NARA-20260821-v4-position-nft-phase2.md` for the production
+source/evidence, deployment, Safe finalization, verification, smoke, and hold
+sequence.
+
+v3 deploy scripts are archived in `archive/legacy-v3/scripts/` and are not run
+locally.
 
 ## Recommended Local Env Overrides
 
@@ -83,7 +128,10 @@ V4_ALLOW_SHORT_BOND_DELAY=1
 3. Claim rewards with `claim(positionId)`.
 4. Unlock after maturity with `unlock(positionId)`.
 
-### Bonds
+### Bonds (Phase-3 Component Testing Only)
+
+These steps describe local fixtures. They do not deploy or bind bond, Ops Vault,
+or Genesis contracts during Position NFT Phase 2.
 
 1. Wire the vault market to `NARABondDepositoryV4NFT` via `proposeMarket` + time delay.
 2. Pause the depository (`PAUSER_ROLE`).

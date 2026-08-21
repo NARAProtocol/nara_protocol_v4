@@ -52,13 +52,13 @@ const MAX_BOND_ALLOC  = wad(290_000);
 const MAX_OPS_ALLOC   = wad(10_000);
 const LOCK_FEE_WEI    = 10n ** 14n;  // 0.0001 ETH (matches mock default)
 
-async function mineTime(ethers: typeof hre.ethers, seconds: bigint) {
+async function mineTime(ethers: any, seconds: bigint) {
   await ethers.provider.send("evm_increaseTime", [Number(seconds)]);
   await ethers.provider.send("evm_mine", []);
 }
 
 /** Default BondTerms — capacity is always 0 at constructor time. */
-function defaultTerms(ethers: typeof hre.ethers, overrides: Record<string, unknown> = {}) {
+function defaultTerms(ethers: any, overrides: Record<string, unknown> = {}) {
   return {
     naraPerEthWad:          ethers.parseUnits("100", 18), // 100 NARA/ETH
     discountBps:            500,                           // 5%
@@ -74,7 +74,7 @@ function defaultTerms(ethers: typeof hre.ethers, overrides: Record<string, unkno
 
 // ─── Deploy helpers (NARAOpsVaultV4) ─────────────────────────────────────────
 
-async function deployOps(ethers: typeof hre.ethers, deployer: Signer, duration = VESTING_30DAYS) {
+async function deployOps(ethers: any, deployer: Signer, duration = VESTING_30DAYS) {
   const deployerAddr = await deployer.getAddress();
 
   const NaraToken = await ethers.getContractFactory("MockERC20", deployer);
@@ -91,7 +91,7 @@ async function deployOps(ethers: typeof hre.ethers, deployer: Signer, duration =
 // ─── Deploy helpers (NARABondVaultV4) ────────────────────────────────────────
 
 async function deployBondVault(
-  ethers: typeof hre.ethers,
+  ethers: any,
   deployer: Signer,
   alloc = wad(10_000),
 ) {
@@ -108,7 +108,7 @@ async function deployBondVault(
   return { nara, vault };
 }
 
-async function deployBondVaultWired(ethers: typeof hre.ethers, deployer: Signer, alloc = wad(10_000)) {
+async function deployBondVaultWired(ethers: any, deployer: Signer, alloc = wad(10_000)) {
   const ctx = await deployBondVault(ethers, deployer, alloc);
   const { nara, vault } = ctx;
   const vaultAddr = await vault.getAddress();
@@ -122,7 +122,7 @@ async function deployBondVaultWired(ethers: typeof hre.ethers, deployer: Signer,
 // ─── Deploy helpers (NARABondDepositoryV4 full stack) ────────────────────────
 
 interface FullCtx {
-  ethers: typeof hre.ethers;
+  ethers: any;
   deployer: Signer;
   alice: Signer;
   bob: Signer;
@@ -138,7 +138,7 @@ interface FullCtx {
   treasuryAddr: string;
 }
 
-async function deployFull(ethers: typeof hre.ethers, opts: {
+async function deployFull(ethers: any, opts: {
   termOverrides?: Record<string, unknown>;
   vaultAlloc?: bigint;
   releaseCap?: bigint;
@@ -225,7 +225,7 @@ describe("I. NARAOpsVaultV4", () => {
   // ─── A. Constructor guards ────────────────────────────────────────────────
 
   describe("A. Constructor guards", () => {
-    let ethers: typeof hre.ethers;
+    let ethers: any;
     let deployer: Signer;
 
     before(async () => {
@@ -264,7 +264,7 @@ describe("I. NARAOpsVaultV4", () => {
   // ─── B. fund() ────────────────────────────────────────────────────────────
 
   describe("B. fund()", () => {
-    let ethers: typeof hre.ethers;
+    let ethers: any;
     let deployer: Signer;
     let alice: Signer;
 
@@ -321,7 +321,7 @@ describe("I. NARAOpsVaultV4", () => {
   // ─── C. vestedAmount + withdrawable ───────────────────────────────────────
 
   describe("C. vestedAmount + withdrawable", () => {
-    let ethers: typeof hre.ethers;
+    let ethers: any;
     let deployer: Signer;
     let vault: any;
     let nara: any;
@@ -371,7 +371,7 @@ describe("I. NARAOpsVaultV4", () => {
   // ─── D. withdraw + withdrawAmount ─────────────────────────────────────────
 
   describe("D. withdraw + withdrawAmount", () => {
-    let ethers: typeof hre.ethers;
+    let ethers: any;
     let deployer: Signer;
     let alice: Signer;
     let vault: any;
@@ -453,7 +453,7 @@ describe("I. NARAOpsVaultV4", () => {
   // ─── E. Two-step ownership ────────────────────────────────────────────────
 
   describe("E. Two-step ownership", () => {
-    let ethers: typeof hre.ethers;
+    let ethers: any;
     let deployer: Signer;
     let alice: Signer;
     let vault: any;
@@ -499,7 +499,7 @@ describe("I. NARAOpsVaultV4", () => {
   // ─── F. sweepForeignToken ─────────────────────────────────────────────────
 
   describe("F. sweepForeignToken", () => {
-    let ethers: typeof hre.ethers;
+    let ethers: any;
     let deployer: Signer;
     let vault: any;
     let nara: any;
@@ -549,7 +549,7 @@ describe("II. NARABondVaultV4", () => {
   // ─── A. Constructor guards ────────────────────────────────────────────────
 
   describe("A. Constructor guards", () => {
-    let ethers: typeof hre.ethers;
+    let ethers: any;
     let deployer: Signer;
 
     before(async () => {
@@ -596,7 +596,7 @@ describe("II. NARABondVaultV4", () => {
   // ─── B. setNara — one-shot ────────────────────────────────────────────────
 
   describe("B. setNara", () => {
-    let ethers: typeof hre.ethers;
+    let ethers: any;
     let deployer: Signer;
 
     before(async () => {
@@ -634,7 +634,7 @@ describe("II. NARABondVaultV4", () => {
   // ─── C. View helpers ──────────────────────────────────────────────────────
 
   describe("C. View helpers", () => {
-    let ethers: typeof hre.ethers;
+    let ethers: any;
     let deployer: Signer;
     let vault: any;
 
@@ -664,7 +664,7 @@ describe("II. NARABondVaultV4", () => {
   // ─── D. Market management (timelock) ─────────────────────────────────────
 
   describe("D. Market management", () => {
-    let ethers: typeof hre.ethers;
+    let ethers: any;
     let deployer: Signer;
     let vault: any;
     let mockMarket: any;
@@ -724,7 +724,7 @@ describe("II. NARABondVaultV4", () => {
   // ─── E. Release cap management ────────────────────────────────────────────
 
   describe("E. Release cap management", () => {
-    let ethers: typeof hre.ethers;
+    let ethers: any;
     let deployer: Signer;
     let vault: any;
     const ALLOC = wad(1_000);
@@ -772,7 +772,7 @@ describe("II. NARABondVaultV4", () => {
   // ─── F. pullToMarket + returnUnsold ───────────────────────────────────────
 
   describe("F. pullToMarket + returnUnsold", () => {
-    let ethers: typeof hre.ethers;
+    let ethers: any;
     let deployer: Signer;
     let vault: any;
     let nara: any;
@@ -966,7 +966,7 @@ describe("II. NARABondVaultV4", () => {
   // ─── G. sweepForeignToken ─────────────────────────────────────────────────
 
   describe("G. sweepForeignToken", () => {
-    let ethers: typeof hre.ethers;
+    let ethers: any;
     let deployer: Signer;
     let vault: any;
     let nara: any;
@@ -1017,7 +1017,7 @@ describe("III. NARABondDepositoryV4", () => {
   // ─── A. Constructor guards ────────────────────────────────────────────────
 
   describe("A. Constructor guards", () => {
-    let ethers: typeof hre.ethers;
+    let ethers: any;
     let deployer: Signer;
 
     before(async () => {
@@ -1115,7 +1115,7 @@ describe("III. NARABondDepositoryV4", () => {
   // ─── B. Terms management ──────────────────────────────────────────────────
 
   describe("B. Terms management", () => {
-    let ethers: typeof hre.ethers;
+    let ethers: any;
     let dep: any;
     let deployer: Signer;
 
@@ -1182,7 +1182,7 @@ describe("III. NARABondDepositoryV4", () => {
   // ─── C. addCapacity ───────────────────────────────────────────────────────
 
   describe("C. addCapacity", () => {
-    let ethers: typeof hre.ethers;
+    let ethers: any;
     let dep: any;
 
     before(async () => {
@@ -1235,7 +1235,7 @@ describe("III. NARABondDepositoryV4", () => {
   // ─── D. buyBond — price math, payout, capacity ────────────────────────────
 
   describe("D. buyBond — price math", () => {
-    let ethers: typeof hre.ethers;
+    let ethers: any;
     let ctx: FullCtx;
     let dep: any;
     let deployer: Signer;
@@ -1379,7 +1379,7 @@ describe("III. NARABondDepositoryV4", () => {
   // ─── E. buyBondFor ────────────────────────────────────────────────────────
 
   describe("E. buyBondFor", () => {
-    let ethers: typeof hre.ethers;
+    let ethers: any;
     let ctx: FullCtx;
     let dep: any;
     let alice: Signer;
@@ -1429,7 +1429,7 @@ describe("III. NARABondDepositoryV4", () => {
   // ─── F. ETH routing ───────────────────────────────────────────────────────
 
   describe("F. ETH routing — splits and queuing", () => {
-    let ethers: typeof hre.ethers;
+    let ethers: any;
     let ctx: FullCtx;
     let dep: any;
     let engine: any;
@@ -1477,7 +1477,7 @@ describe("III. NARABondDepositoryV4", () => {
   // ─── G. ETH flush functions ───────────────────────────────────────────────
 
   describe("G. ETH flush functions", () => {
-    let ethers: typeof hre.ethers;
+    let ethers: any;
     let ctx: FullCtx;
     let dep: any;
     let engine: any;
@@ -1535,7 +1535,7 @@ describe("III. NARABondDepositoryV4", () => {
   // ─── H. quoteBond view ────────────────────────────────────────────────────
 
   describe("H. quoteBond view", () => {
-    let ethers: typeof hre.ethers;
+    let ethers: any;
     let ctx: FullCtx;
     let dep: any;
 
@@ -1568,7 +1568,7 @@ describe("III. NARABondDepositoryV4", () => {
   // ─── I. MAX_DISCOUNT_BPS = 3000 enforced ─────────────────────────────────
 
   describe("I. MAX_DISCOUNT_BPS = 3000 enforced", () => {
-    let ethers: typeof hre.ethers;
+    let ethers: any;
     let dep: any;
 
     before(async () => {
@@ -1617,7 +1617,7 @@ describe("III. NARABondDepositoryV4", () => {
   // ─── J. Full lifecycle ────────────────────────────────────────────────────
 
   describe("J. Full lifecycle", () => {
-    let ethers: typeof hre.ethers;
+    let ethers: any;
     let ctx: FullCtx;
 
     before(async () => {

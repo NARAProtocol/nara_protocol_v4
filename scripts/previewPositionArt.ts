@@ -2,21 +2,85 @@
  * Render the real on-chain NARA position SVG art across every Realized Tier and the
  * Genesis/Eternal variants, then write .svg files + an index.html viewer.
  *
- * Run:  NODE_OPTIONS="--require ./polyfill.cjs" npx hardhat run scripts/previewPositionArt.ts
+ * Run: npm run preview:v4:position-nft-art
  * Output dir is printed at the end (open index.html in a browser).
  */
 import hre from "hardhat";
-import { mkdirSync, readdirSync, rmSync, writeFileSync } from "fs";
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
+import { isAbsolute, join, relative, resolve } from "node:path";
+import {
+  POSITION_NFT_PHASE2_CHANGE_ID,
+  collectPositionNftPhase2ArtifactEvidence,
+} from "./lib/v4PositionNftPhase2.js";
 
 const ONE = 10n ** 18n;
 const LOCK_FEE = 10n ** 14n;
 
-const OUT_DIR =
-  "C:/Users/linas/AppData/Local/Temp/claude/c--Users-linas-Desktop-FIELD-Token/" +
-  "8ea259a0-433d-44b4-b0e9-a9586113eba5/scratchpad/nft-preview";
+const REPOSITORY_ROOT = resolve(import.meta.dirname, "..");
+const ART_QA_ROOT = resolve(REPOSITORY_ROOT, ".nara-art-qa");
+const REQUESTED_OUT_DIR = process.env.V4_POSITION_NFT_ART_QA_OUT?.trim();
+const OUT_DIR = REQUESTED_OUT_DIR
+  ? resolve(REPOSITORY_ROOT, REQUESTED_OUT_DIR)
+  : resolve(ART_QA_ROOT, "v4-position-nft-phase2");
+const OUTPUT_RELATIVE_PATH = relative(ART_QA_ROOT, OUT_DIR);
+if (
+  OUTPUT_RELATIVE_PATH.length === 0 ||
+  OUTPUT_RELATIVE_PATH.startsWith("..") ||
+  isAbsolute(OUTPUT_RELATIVE_PATH)
+) {
+  throw new Error("V4_POSITION_NFT_ART_QA_OUT must be a new subdirectory inside .nara-art-qa/");
+}
+
+function decodeJsonDataUri(value: string, label: string): Record<string, unknown> {
+  const prefix = "data:application/json;base64,";
+  if (!value.startsWith(prefix)) throw new Error(`${label} is not a base64 JSON data URI`);
+  const parsed = JSON.parse(Buffer.from(value.slice(prefix.length), "base64").toString("utf8"));
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error(`${label} does not decode to a JSON object`);
+  }
+  return parsed as Record<string, unknown>;
+}
+
+function decodeSvgDataUri(value: unknown, label: string): string {
+  const prefix = "data:image/svg+xml;base64,";
+  if (typeof value !== "string" || !value.startsWith(prefix)) {
+    throw new Error(`${label} does not contain a base64 SVG image`);
+  }
+  return Buffer.from(value.slice(prefix.length), "base64").toString("utf8");
+}
+
+function gitOutput(args: string[]): string {
+  try {
+    return execFileSync("git", args, {
+      cwd: REPOSITORY_ROOT,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    }).trim();
+  } catch {
+    throw new Error(`Art-QA source check failed: git ${args.join(" ")} did not succeed`);
+  }
+}
 
 async function main() {
-  const { ethers } = await hre.network.connect();
+  const networkName = hre.globalOptions.network ?? "default";
+  if (networkName !== "default" && networkName !== "hardhat") {
+    throw new Error("Position NFT art preview may run only on the local default/hardhat network");
+  }
+  const connection = await hre.network.connect();
+  const { ethers } = connection as any;
+  const network = await ethers.provider.getNetwork();
+  if (network.chainId !== 31_337n) {
+    throw new Error(`Position NFT art preview requires local chain 31337; connected ${network.chainId}`);
+  }
+  const sourceCommit = gitOutput(["rev-parse", "HEAD"]).toLowerCase();
+  const originMainCommit = gitOutput(["rev-parse", "origin/main"]).toLowerCase();
+  const dirty = gitOutput(["status", "--porcelain=v1", "--untracked-files=all"]);
+  if (!/^[0-9a-f]{40}$/.test(sourceCommit) || sourceCommit !== originMainCommit || dirty !== "") {
+    throw new Error("Art QA requires the exact clean protected source commit at origin/main");
+  }
+  const sourceArtifacts = await collectPositionNftPhase2ArtifactEvidence(hre.artifacts);
   const [deployer, treasury] = await ethers.getSigners();
 
   const Token = await ethers.getContractFactory("MockERC20", deployer);
@@ -65,7 +129,7 @@ async function main() {
     await renderer.getAddress(),
     await deployer.getAddress(),
     await treasury.getAddress(),
-    500,
+    1_000,
   );
   await nft.waitForDeployment();
 
@@ -78,25 +142,36 @@ async function main() {
   const nftAddr = await nft.getAddress();
   const dep = await deployer.getAddress();
 
-  mkdirSync(OUT_DIR, { recursive: true });
-  for (const name of readdirSync(OUT_DIR)) {
-    if (name.endsWith(".svg") || name.endsWith(".html")) {
-      rmSync(`${OUT_DIR}/${name}`);
-    }
+  if (existsSync(OUT_DIR) && readdirSync(OUT_DIR).length !== 0) {
+    throw new Error(`Refusing to overwrite non-empty art-QA directory: ${OUT_DIR}`);
   }
+  mkdirSync(OUT_DIR, { recursive: true });
+  const generatedArtifacts: Array<{ path: string; sha256: string; bytes: number }> = [];
+  const writeQaArtifact = (name: string, contents: string): void => {
+    if (name.includes("/") || name.includes("\\") || name === "qa-manifest.json") {
+      throw new Error(`Invalid generated art-QA filename: ${name}`);
+    }
+    const bytes = Buffer.from(contents, "utf8");
+    writeFileSync(join(OUT_DIR, name), bytes, { flag: "wx" });
+    generatedArtifacts.push({
+      path: name,
+      sha256: createHash("sha256").update(bytes).digest("hex"),
+      bytes: bytes.length,
+    });
+  };
   const cards: { label: string; file: string }[] = [];
   const rareCards: { label: string; file: string; note: string }[] = [];
 
   const save = async (tokenId: number, label: string, file: string) => {
     const svg: string = await renderer.tokenSVG(nftAddr, tokenId);
-    writeFileSync(`${OUT_DIR}/${file}`, svg);
+    writeQaArtifact(file, svg);
     cards.push({ label, file });
     console.log(`rendered ${label} -> ${file}`);
   };
 
   const saveRareCoreProof = async (seed: bigint, label: string, note: string, file: string) => {
     const svg: string = await corePlate.svg(4, seed, 5, seed, seed, 0, 2, 1);
-    writeFileSync(`${OUT_DIR}/${file}`, svg);
+    writeQaArtifact(file, svg);
     rareCards.push({ label, file, note });
     console.log(`rendered ${label} -> ${file}`);
   };
@@ -177,6 +252,70 @@ async function main() {
       );
     }
   }
+  if (seenModules.size !== 6) {
+    throw new Error(`Art QA observed ${seenModules.size}/6 renderer modules; refusing incomplete evidence`);
+  }
+
+  const tokenUri: string = await nft.tokenURI(1);
+  const tokenMetadata = decodeJsonDataUri(tokenUri, "tokenURI(1)");
+  const tokenImage = decodeSvgDataUri(tokenMetadata.image, "tokenURI(1)");
+  const collectionUri: string = await nft.contractURI();
+  const collectionMetadata = decodeJsonDataUri(collectionUri, "contractURI()");
+  const collectionImage = decodeSvgDataUri(collectionMetadata.image, "contractURI()");
+  writeQaArtifact("token-1-uri.txt", `${tokenUri}\n`);
+  writeQaArtifact("token-1-metadata.json", `${JSON.stringify(tokenMetadata, null, 2)}\n`);
+  writeQaArtifact("token-1-image.svg", tokenImage);
+  writeQaArtifact("collection-uri.txt", `${collectionUri}\n`);
+  writeQaArtifact("collection-metadata.json", `${JSON.stringify(collectionMetadata, null, 2)}\n`);
+  writeQaArtifact("collection-image.svg", collectionImage);
+
+  // Deploy a local-only NFT against a contract that intentionally lacks the renderer ABI.
+  // This forces both reviewed fallback paths without changing production source or state.
+  const fallbackNft: any = await NFT.deploy(
+    await engine.getAddress(),
+    await nara.getAddress(),
+    await accountImpl.getAddress(),
+    await usdc.getAddress(),
+    await deployer.getAddress(),
+    await treasury.getAddress(),
+    1_000,
+  );
+  await fallbackNft.waitForDeployment();
+  const fallbackNftAddress = await fallbackNft.getAddress();
+  await nara.connect(deployer).approve(fallbackNftAddress, 1_000n * ONE);
+  await fallbackNft.connect(deployer).mintAndLock(1_000n * ONE, 96, 0, { value: LOCK_FEE });
+  const fallbackTokenUri: string = await fallbackNft.tokenURI(1);
+  const fallbackTokenMetadata = decodeJsonDataUri(fallbackTokenUri, "fallback tokenURI(1)");
+  const fallbackTokenImage = decodeSvgDataUri(fallbackTokenMetadata.image, "fallback tokenURI(1)");
+  const fallbackCollectionUri: string = await fallbackNft.contractURI();
+  const fallbackCollectionMetadata = decodeJsonDataUri(fallbackCollectionUri, "fallback contractURI()");
+  const fallbackCollectionImage = decodeSvgDataUri(
+    fallbackCollectionMetadata.image,
+    "fallback contractURI() image",
+  );
+  writeQaArtifact("fallback-token-1-uri.txt", `${fallbackTokenUri}\n`);
+  writeQaArtifact("fallback-token-1-metadata.json", `${JSON.stringify(fallbackTokenMetadata, null, 2)}\n`);
+  writeQaArtifact("fallback-token-1-image.svg", fallbackTokenImage);
+  writeQaArtifact("fallback-collection-uri.txt", `${fallbackCollectionUri}\n`);
+  writeQaArtifact(
+    "fallback-collection-metadata.json",
+    `${JSON.stringify(fallbackCollectionMetadata, null, 2)}\n`,
+  );
+  writeQaArtifact("fallback-collection-image.svg", fallbackCollectionImage);
+
+  const htmlEscape = (value: unknown): string => JSON.stringify(value, null, 2)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+  const metadataQaHtml =
+    "<!doctype html><meta charset=utf-8><title>NARA Metadata QA</title>" +
+    "<style>body{margin:0;background:#090b0d;color:#ddd;font:14px/1.5 Consolas,monospace}main{padding:24px;display:grid;gap:28px}section{border:1px solid #333;padding:18px}img{width:min(420px,100%);background:#fff}pre{white-space:pre-wrap;overflow-wrap:anywhere;color:#b8c2cc}</style>" +
+    "<main><h1>NARA token / collection / fallback metadata QA</h1>" +
+    `<section><h2>tokenURI(1)</h2><img src='token-1-image.svg' alt='decoded token metadata image'/><pre>${htmlEscape(tokenMetadata)}</pre></section>` +
+    `<section><h2>contractURI()</h2><img src='collection-image.svg' alt='decoded collection metadata image'/><pre>${htmlEscape(collectionMetadata)}</pre></section>` +
+    `<section><h2>Renderer-failure fallback tokenURI(1)</h2><img src='fallback-token-1-image.svg' alt='decoded fallback token image'/><pre>${htmlEscape(fallbackTokenMetadata)}</pre></section>` +
+    `<section><h2>Renderer-failure fallback contractURI()</h2><img src='fallback-collection-image.svg' alt='decoded fallback collection image'/><pre>${htmlEscape(fallbackCollectionMetadata)}</pre></section>` +
+    "</main>";
 
   const rareHtml = rareCards
     .map(
@@ -194,7 +333,7 @@ async function main() {
     )
     .join("");
 
-  const version = Date.now();
+  const version = "phase2";
   const rareOnlyHtml =
     "<!doctype html><meta charset=utf-8><title>NARA Rare Hit Showcase</title>" +
     "<style>" +
@@ -269,14 +408,50 @@ async function main() {
       )
       .join("") +
     "</main></body>";
-  writeFileSync(`${OUT_DIR}/index.html`, html);
-  writeFileSync(`${OUT_DIR}/rare-showcase.html`, rareOnlyHtml);
-  writeFileSync(`${OUT_DIR}/thumbnail-qa.html`, qaHtml);
+  writeQaArtifact("index.html", html);
+  writeQaArtifact("rare-showcase.html", rareOnlyHtml);
+  writeQaArtifact("thumbnail-qa.html", qaHtml);
+  writeQaArtifact("metadata-qa.html", metadataQaHtml);
+  const qaManifest = {
+    schemaVersion: 1,
+    changeId: POSITION_NFT_PHASE2_CHANGE_ID,
+    sourceCommit,
+    sourceArtifacts,
+    outputDirectory: `.nara-art-qa/${OUTPUT_RELATIVE_PATH.replaceAll("\\", "/")}`,
+    localChainId: "31337",
+    productionPolicyPreview: {
+      royaltyReceiverClass: "treasury signer used by local preview",
+      royaltyBps: 1000,
+      claimFees: "zero defaults",
+    },
+    coverage: {
+      tokenUriDecoded: true,
+      contractUriDecoded: true,
+      rendererFailureTokenFallbackDecoded: true,
+      rendererFailureCollectionFallbackDecoded: true,
+      thumbnailSizes: [64, 128, 300],
+      backgrounds: ["light", "neutral", "dark"],
+      allRendererModulesObserved: seenModules.size === 6,
+    },
+    artifacts: generatedArtifacts,
+    externalApprovalStillRequired: [
+      "browser visual review",
+      "marketplace-compatible metadata decoder review",
+      "thumbnail/background review",
+    ],
+  };
+  writeFileSync(
+    join(OUT_DIR, "qa-manifest.json"),
+    `${JSON.stringify(qaManifest, null, 2)}\n`,
+    { flag: "wx" },
+  );
 
   console.log("\nDONE. Open this in a browser:");
   console.log(`${OUT_DIR}/index.html`);
   console.log(`${OUT_DIR}/rare-showcase.html`);
   console.log(`${OUT_DIR}/thumbnail-qa.html`);
+  console.log(`${OUT_DIR}/metadata-qa.html`);
+  console.log(`${OUT_DIR}/qa-manifest.json`);
 }
 
 main().catch((e) => {

@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import hre from "hardhat";
-import { deployRenderer } from "./helpers/art";
+import { deployRenderer } from "./helpers/art.js";
 
 const ONE = 10n ** 18n;
 const USDC = 10n ** 6n;
@@ -36,24 +36,24 @@ async function deployFixture(options: { skipVaultHook?: boolean } = {}) {
     const { ethers } = connection;
     const [owner, alice, keeper, attacker] = await ethers.getSigners();
 
-    const token = await ethers.deployContract("MockERC20", ["NARA", "NARA", 18], owner);
+    const token: any = await ethers.deployContract("MockERC20", ["NARA", "NARA", 18], owner);
     await token.waitForDeployment();
-    const base = await ethers.deployContract("MockERC20", ["Wrapped Ether", "WETH", 18], owner);
+    const base: any = await ethers.deployContract("MockERC20", ["Wrapped Ether", "WETH", 18], owner);
     await base.waitForDeployment();
 
-    const manager = await ethers.deployContract("MockV4PoolManager", [], owner);
+    const manager: any = await ethers.deployContract("MockV4PoolManager", [], owner);
     await manager.waitForDeployment();
 
     const tokenAddr = await token.getAddress();
     const baseAddr = await base.getAddress();
     const managerAddr = await manager.getAddress();
 
-    const vault = await ethers.deployContract("NARALiquidityGrowthVault", [owner.address, tokenAddr, baseAddr], owner);
+    const vault: any = await ethers.deployContract("NARALiquidityGrowthVault", [owner.address, tokenAddr, baseAddr], owner);
     await vault.waitForDeployment();
     const vaultAddr = await vault.getAddress();
     await vault.connect(owner).setCompoundKeeper(keeper.address, true);
 
-    const hook = await ethers.deployContract(
+    const hook: any = await ethers.deployContract(
         "TestNARALiquidityGrowthHook",
         [managerAddr, owner.address, tokenAddr, baseAddr, vaultAddr],
         owner,
@@ -317,7 +317,7 @@ describe("NARALiquidityGrowth v4 - pool fee", () => {
 
         expect(singleFee).to.equal(285n * ONE / 1_000n);
         expect(splitFee).to.equal(150n * ONE / 1_000n);
-        expect((singleFee - splitFee) * BPS / total).to.equal(450n);
+        expect((BigInt(singleFee) - BigInt(splitFee)) * BPS / total).to.equal(450n);
     });
 
     it("separates the marginal pressure tier from the effective integrated fee rate", async () => {
@@ -618,7 +618,7 @@ describe("NARALiquidityGrowth v4 - pool fee", () => {
 describe("NARALiquidityGrowth v4 - vault routing", () => {
     it("rejects a one-shot hook binding that points at a different vault", async () => {
         const { ethers, owner, token, base, vaultAddr } = await deployFixture();
-        const freshVault = await ethers.deployContract(
+        const freshVault: any = await ethers.deployContract(
             "NARALiquidityGrowthVault",
             [owner.address, await token.getAddress(), await base.getAddress()],
             owner,
@@ -862,7 +862,7 @@ describe("NARALiquidityGrowth v4 - vault routing", () => {
 
         const renderer = await deployRenderer(ethers, owner);
 
-        const positionNft = await ethers.deployContract(
+        const positionNft: any = await ethers.deployContract(
             "NARAPositionNFTV4",
             [
                 await engine.getAddress(),
@@ -877,7 +877,7 @@ describe("NARALiquidityGrowth v4 - vault routing", () => {
         );
         await positionNft.waitForDeployment();
 
-        const genesisDistributor = await ethers.deployContract(
+        const genesisDistributor: any = await ethers.deployContract(
             "NARAGenesisRewardDistributorV4",
             [await positionNft.getAddress(), baseAddr],
             owner,
@@ -946,7 +946,7 @@ describe("NARALiquidityGrowth v4 - vault routing", () => {
 
         const renderer = await deployRenderer(ethers, owner);
 
-        const positionNft = await ethers.deployContract(
+        const positionNft: any = await ethers.deployContract(
             "NARAPositionNFTV4",
             [
                 await engine.getAddress(),
@@ -961,7 +961,7 @@ describe("NARALiquidityGrowth v4 - vault routing", () => {
         );
         await positionNft.waitForDeployment();
 
-        const genesisDistributor = await ethers.deployContract(
+        const genesisDistributor: any = await ethers.deployContract(
             "NARAGenesisRewardDistributorV4",
             [await positionNft.getAddress(), baseAddr],
             owner,

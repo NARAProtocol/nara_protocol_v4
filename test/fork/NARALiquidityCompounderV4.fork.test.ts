@@ -183,7 +183,7 @@ function encodeCompoundConstraints(
     const usdcAddr = await usdc.getAddress();
 
     // Vault + permission-correct Hook wired to the REAL v4 stack.
-    const vault = await ethers.deployContract(
+    const vault: any = await ethers.deployContract(
       "NARALiquidityGrowthVault",
       [deployer.address, naraAddr, usdcAddr],
       deployer,

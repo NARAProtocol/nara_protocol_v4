@@ -8,7 +8,7 @@ import "dotenv/config";
 
 const PRIVATE_KEY = process.env.PRIVATE_KEY ?? "";
 const BASE_SEPOLIA_RPC_URL = process.env.BASE_SEPOLIA_RPC_URL ?? "";
-const BASE_RPC_URL = process.env.BASE_MAINNET_RPC_URL ?? process.env.BASE_RPC_URL ?? "";
+const BASE_RPC_URL = process.env.BASE_MAINNET_RPC_URL || process.env.BASE_RPC_URL || "https://mainnet.base.org";
 
 const networks = {
   default: {
@@ -56,6 +56,7 @@ if (BASE_RPC_URL) {
   optionalNetworks.baseFork = {
     type: "edr-simulated",
     chainType: "op",
+    chainId: 8453,
     allowUnlimitedContractSize: true,
     blockGasLimit: 60_000_000,
     hardfork: "isthmus",
@@ -68,6 +69,7 @@ if (BASE_RPC_URL) {
   optionalNetworks.baseLiquidityRetirementFork = {
     type: "edr-simulated",
     chainType: "op",
+    chainId: 8453,
     allowUnlimitedContractSize: true,
     blockGasLimit: 60_000_000,
     hardfork: "isthmus",

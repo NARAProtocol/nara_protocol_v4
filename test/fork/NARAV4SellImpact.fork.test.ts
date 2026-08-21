@@ -49,7 +49,7 @@ function poolStateSlot() {
   );
 }
 
-async function sqrtPriceX96(poolManager: { extsload(slot: string): Promise<string> }): Promise<bigint> {
+async function sqrtPriceX96(poolManager: any): Promise<bigint> {
   const raw = await poolManager.extsload(poolStateSlot()) as string;
   return BigInt(raw) & ((1n << 160n) - 1n);
 }

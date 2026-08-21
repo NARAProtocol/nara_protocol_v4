@@ -20,7 +20,7 @@ async function setup() {
 async function deployTokenFixture() {
     const ctx = await setup();
     const { ethers, treasury, sink } = ctx;
-    const token = await ethers.deployContract("NARAToken", [treasury.address, sink.address, TOKEN_NAME, TOKEN_SYMBOL]);
+    const token: any = await ethers.deployContract("NARAToken", [treasury.address, sink.address, TOKEN_NAME, TOKEN_SYMBOL]);
     await token.waitForDeployment();
     return { ...ctx, token };
 }
@@ -350,7 +350,7 @@ describe("NARALauncher", function () {
     async function deployLauncher() {
         const ctx = await setup();
         const { ethers, deployer } = ctx;
-        const launcher = await ethers.deployContract("NARALauncher", [deployer.address]);
+        const launcher: any = await ethers.deployContract("NARALauncher", [deployer.address]);
         await launcher.waitForDeployment();
         return { ...ctx, launcher };
     }
@@ -401,7 +401,7 @@ describe("NARALauncher", function () {
         expect(await engine.CONFIG_VALUE()).to.equal(42n);
 
         // Verify the token bound the predicted engine as FLASH_FEE_SINK
-        const token = await ethers.getContractAt("NARAToken", tokenAddr);
+        const token: any = await ethers.getContractAt("NARAToken", tokenAddr);
         expect(await token.FLASH_FEE_SINK()).to.equal(engineAddr);
         expect(await token.balanceOf(treasury.address)).to.equal(MAX_SUPPLY);
         expect(await token.name()).to.equal(TOKEN_NAME);

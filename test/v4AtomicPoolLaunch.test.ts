@@ -117,7 +117,7 @@ describe("atomic v4 pool launch batch", function () {
       to: NARA,
       value: "0",
       data: "0x",
-      operation: 1,
+      operation: 1 as any,
     }])).to.throw("CALL operation 0");
   });
 

@@ -1,6 +1,6 @@
 # NARA v4 — NFT Protocol Role Audit
 
-Last updated: 2026-06-29.
+Last updated: 2026-08-21.
 Purpose: the protocol-wide map of where NFTs matter in NARA — what exists in code, what is
 missing, what is unnecessary, and what should never be built. Grounded in the actual v4 contracts,
 not assumptions.
@@ -16,7 +16,11 @@ Sources verified for this audit:
 `composability/NARAStakingPoolV4.sol`, `composability/NARAFractionalPositionV4.sol`,
 `NARAEngine.sol`, `NARAGenesisRewardDistributorV4.sol`.
 
-**Deployment status:** no v4 stack is on mainnet yet. Everything here is code-true, not live-true.
+**Deployment status:** the fixed-v4 core is deployed on Base, but the Position NFT suite is not.
+The exact seven-contract Phase-2 workflow is implemented locally and remains unmerged, without a
+verified NFT address or final manifest. Bonds, Genesis distribution, allocations, and router/lens
+surfaces remain Phase 3. The mechanics below describe code capability unless a verified deployment
+manifest is cited.
 
 ---
 
@@ -95,10 +99,14 @@ Realized Tier already encodes delivered-reward history.
 **History NFT** — do not build. History is captured by `lifetimeEthClaimed`/`lifetimeNaraClaimed` +
 events for indexers. Redundant.
 
-**Genesis / Eternal** — built and sound. Two risks: the 5× reward multiplier cap
-(`MAX_GENESIS_REWARD_MULTIPLIER_BPS = 50_000`) is large → publish per-round multipliers publicly;
-eternal = permanent until maturity → UI copy must never imply guaranteed/forever yield (state it as a
-fact: "non-exitable until maturity").
+**Genesis / Eternal** — implemented and test-covered in the active v4 source,
+but deferred from Position NFT Phase 2; an independent Phase-3 deployment,
+binding, economic-policy, and security review is still pending. Two known
+review points remain: the 5× reward multiplier cap
+(`MAX_GENESIS_REWARD_MULTIPLIER_BPS = 50_000`) is large, so publish per-round
+multipliers; and Eternal positions are permanent until maturity, so UI copy
+must never imply guaranteed/forever yield (state the fact as “non-exitable
+until maturity”).
 
 ---
 
@@ -139,8 +147,8 @@ expected return. See `NARA_V4_NFT_POSITIONS.md` (On-chain metadata) and the rend
 |---|---|---|---|
 | Pay-to-win (buy into high tier) | Low | Realized Tier keys off realized ETH claimed, not deposit | Keep tier = realized delivered rewards, never deposit size |
 | Whale/insider genesis multiplier | Medium | 5× cap, mint-fixed, reviewed terms, sync-before-change | Publish per-round multipliers |
-| Wash trading for status | Low | royalties default 0; tier not separately tradable | Keep royalty 0 + frozen at launch |
-| Claim-fee rug optics | Medium | cap 10%, inert by default, one-way `freezeClaimFees` | Launch with fees 0 and freeze, or publicly commit a ceiling |
+| Wash trading for status | Low | Realized Tier uses delivered ETH claims, not sale count; ERC-2981 is advisory and tier is not separately tradable | Do not describe the royalty as marketplace-enforced or as an anti-wash guarantee |
+| Claim-fee rug optics | Low only after verified freeze | 10% bytecode cap, but Phase-2 policy is `0 BPS` for NARA/token claims, zero recipient, and one-way `freezeClaimFees` | Verify both zero values, zero recipient, and frozen state in the finalized manifest |
 | "Rarity = value" securities framing | Medium | compliance rule in docs | Keep "realized facts, not projections" everywhere |
 | Too many tiers / confusion | Low | one collection, one ladder | Don't add streak/LP tiers unless the mechanic ships first |
 
@@ -160,9 +168,14 @@ The current architecture is right — do not expand the NFT surface.
 
 ## 9. Build plan
 
-**V1 (now):** ship what exists — single position NFT, genesis/eternal flags, Realized Tier art, claim
-fees inert + frozen at 0, royalties 0 + frozen. Publish genesis multipliers per round. (Spec drift
-between `NARA_V4_NFT_POSITIONS.md` and the renderer was reconciled 2026-06-29.)
+**Phase 2 (approved policy, not yet deployed):** ship the single Position NFT and modular renderer
+with exactly `1000 BPS` (10.00%) ERC-2981 royalties to the manifest-pinned production Treasury
+address, then permanently freeze that receiver/rate. Set both wrapper claim fees to `0 BPS`, set the
+recipient to zero, and permanently freeze them. The Admin Safe owner and Treasury destination are
+different manifest fields. ERC-2981 is marketplace-advisory, and Treasury controls later royalty
+use; royalties do not automatically reach lockers. Genesis distributor/minter bindings remain
+unset until the separately reviewed Phase-3 release. (Renderer spec drift was reconciled
+2026-06-29; the production policy was superseded on 2026-08-21.)
 
 **V2 (only if the underlying mechanic ships first):**
 - Streak mechanic in/around the engine → then a streak trait on the existing NFT (no new collection).
@@ -186,7 +199,8 @@ history NFT, duplicate genesis collection. Each duplicates one event across mult
 - **Not built (do not market as live):** streaks, boosts, access gates, governance, reputation,
   "first miner" badge.
 - **Unnecessary:** separate lock/mining/bond-cert/history NFTs, second genesis collection.
-- **Dangerous if mishandled:** 5× genesis multiplier (publish terms), claim fees (freeze/commit
-  ceiling), rarity-as-value framing (keep realized-facts language).
+- **Dangerous if mishandled:** 5× Genesis multiplier (publish Phase-3 terms), any mismatch from the
+  approved frozen 10% Treasury royalty or frozen zero claim fees, and rarity-as-value framing (keep
+  realized-facts language).
 - **Resolved this cycle:** documentation drift in `NARA_V4_NFT_POSITIONS.md` (claimed rarity-free /
   frozen metadata) now matches the realized-tier renderer.

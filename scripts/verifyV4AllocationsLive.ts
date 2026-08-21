@@ -45,6 +45,11 @@ function decodeJsonDataUri(label: string, uri: string): Record<string, unknown> 
 }
 
 async function main() {
+  throw new Error(
+    "QUARANTINED: this legacy allocation verifier assumes the retired broad NFT/bond/Genesis rollout. " +
+      "Use the strict staged Position NFT pending/source/final verifiers instead.",
+  );
+
   const connection = await hre.network.connect();
   const { ethers } = connection as any;
   const production = await assertProductionV4Runtime(ethers.provider, currentV4Config());
