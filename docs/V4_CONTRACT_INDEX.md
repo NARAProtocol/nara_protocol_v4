@@ -1,6 +1,6 @@
 # NARA v4 Contract Index
 
-Last updated: 2026-08-05.
+Last updated: 2026-08-21.
 **Start here for v4.** Maps every active v4 contract to its purpose, deploy step, and canonical doc.
 Active sources live **only** in `contracts/v4/`. Everything else is archived/retired.
 
@@ -35,20 +35,40 @@ Active sources live **only** in `contracts/v4/`. Everything else is archived/ret
 | `libraries/NARAEngineModelLib.sol` | Weight + emission model math. |
 | `interfaces/INARAEngine.sol` | Canonical engine interface for integrators. |
 
-## Allocation layer (deploy step 6 — `deploy:v4:allocations`)
+## Position NFT Phase 2 (exact seven — `deploy:v4:position-nft`)
+
+Use only
+`releases/NARA-20260821-v4-position-nft-phase2.md` and
+`NARA_V4_NFT_PRODUCTION_PLAN.md`. The seven contracts deploy in the table order.
+The historical `deploy:v4:allocations` alias now refuses execution; it is not a
+Phase-2 dry run or fallback and must not be bypassed.
 
 | Contract | Purpose | Doc |
 |---|---|---|
-| `NARAPositionNFTV4.sol` | ERC-721 lock positions ("veNARA NFT"). A lock **is** the NFT. The **single** NFT collection — genesis/eternal are flags inside it, not separate collections. Also holds **wrapper-level claim fees** (`naraClaimFeeBps`/`tokenClaimFeeBps`, default 0, cap 10%), per-position **lifetime earned** tracking, and ERC-4906 refresh emits. | **`NARA_V4_NFT_POSITIONS.md`**, `NARA_V4_NFT_PROTOCOL_ROLE_AUDIT.md`, `NARA_V4_POSITION_STATS_AND_CLAIM_FEES.md` |
+| `NARAArtMetadataV1.sol` | Immutable shared metadata fragments; first Phase-2 deployment. | `NARA_V4_NFT_ART_DESIGN_BIBLE.md` |
+| `NARAArtSecurityPrintV1.sol` | Immutable security-print art module. | `NARA_V4_NFT_ART_DESIGN_BIBLE.md` |
+| `NARAArtCorePlateV1.sol` | Immutable core-position plate module. | `NARA_V4_NFT_ART_DESIGN_BIBLE.md` |
+| `NARAArtGenesisPlateV1.sol` | Immutable Genesis-capable plate module; its presence does not deploy or bind the Genesis reward distributor. | `NARA_V4_NFT_ART_DESIGN_BIBLE.md` |
+| `NARAPositionRendererV5.sol` | Immutable modular on-chain art + metadata. Art **evolves** with realized **Realized Tier** (New -> Apex), claim/extension counts, and Genesis/Eternal flags; cache-safe (tx-driven drivers only). | `NARA_V4_NFT_ART_DESIGN_BIBLE.md`, `NARA_V4_POSITION_STATS_AND_CLAIM_FEES.md` |
 | `NARAPositionAccountV4.sol` | EIP-1167 clone account per NFT; owns the engine position. | `NARA_V4_NFT_POSITIONS.md` |
-| `NARAPositionRendererV5.sol` | Immutable modular on-chain art + metadata. Art **evolves** with realized **Realized Tier** (New -> Apex), claim/extension counts, and Genesis/Eternal flags; cache-safe (tx-driven drivers only). **Canonical art direction: `NARA_V4_NFT_ART_DESIGN_BIBLE.md`**. | `NARA_V4_NFT_ART_DESIGN_BIBLE.md`, `NARA_V4_POSITION_STATS_AND_CLAIM_FEES.md` |
+| `NARAPositionNFTV4.sol` | ERC-721 lock positions ("veNARA NFT"). A lock **is** the NFT. The **single** NFT collection — Genesis/Eternal are flags, not separate collections. Phase-2 final policy is a frozen advisory ERC-2981 royalty of `1000 BPS` to the manifest-pinned production Treasury, plus zero/frozen wrapper NARA and token claim fees. Also tracks per-position lifetime earned and emits ERC-4906 refreshes. | **`NARA_V4_NFT_POSITIONS.md`**, `NARA_V4_NFT_PROTOCOL_ROLE_AUDIT.md`, `NARA_V4_POSITION_STATS_AND_CLAIM_FEES.md` |
+
+## Phase 3 allocations, bonds, and Genesis (deferred)
+
+These contracts are active v4 source, but none belongs to Position NFT Phase 2.
+They require a separate approved deployment plan, manifest, verifier, funding
+decision, and any Engine/Genesis binding. Phase 2 permits no
+`GenesisMinterSet` event.
+
+| Contract | Purpose | Doc |
+|---|---|---|
 | `NARAGenesisRewardDistributorV4.sol` | Parallel ETH + USDC reward pool for genesis NFTs, weighted by reward weight. | `NARA_V4_NFT_POSITIONS.md` (rewards section) |
 | `NARABondVaultV4.sol` | Sealed bond NARA inventory. | `NARA_V4_BOND_OPENING_CRITERIA.md` |
 | `NARABondDepositoryV4NFT.sol` | **Canonical** bond path: sells discounted NARA, delivers vesting genesis NFTs. | `NARA_V4_BOND_OPENING_CRITERIA.md` |
 | `NARABondDepositoryV4.sol` | Raw bond path (non-NFT). Not the canonical public path. | `NARA_V4_BOND_OPENING_CRITERIA.md` |
 | `NARAOpsVaultV4.sol` | Ops/treasury NARA vault (vested ops allocation). | `NARA_V4_LAUNCH_RUNBOOK.md` |
 
-## Router layer (deploy step 7 — `deploy:v4:router:lens`)
+## Phase 3 Router layer (deferred — `deploy:v4:router:lens` only after approval)
 
 | Contract | Purpose | Doc |
 |---|---|---|
@@ -59,7 +79,7 @@ Active sources live **only** in `contracts/v4/`. Everything else is archived/ret
 | `router/BribeRouterV4.sol` | Dormant reference implementation. Do not deploy it for, or grant it a role on, the deployed engine. | `ROUTER_LENS.md` |
 | `router/NARACirculatingSupplyV1.sol` | Trustless **market** circulating-supply oracle for listings (CoinGecko/CMC/DexScreener). `circulatingSupply = cappedTotal − Σ(reserve+bonds+vesting+dead)`; user-locked AND treasury count as circulating (≠ engine's emission free-float). Genesis ≈ 110k. Immutable, ownerless, versioned. `excludedAccounts()` publishes the exact set for listing review. | `CIRCULATING_SUPPLY.md` |
 
-## Composability (deploy step 8 — code-complete, deploy only with a market + oracle)
+## Phase 3 Composability (deferred; deploy only with approval, a market, and an oracle)
 
 | Contract | Purpose | Doc |
 |---|---|---|
@@ -88,5 +108,7 @@ scheduled. A port writes a **new** file under `contracts/v4/`, never edits the a
 3. `CURRENT_STATE.md` — what's actually deployed/live.
 4. `PRD.md` + `ROADMAP.md` — what it is and where it's going.
 5. `NARA_V4_ECONOMIC_LAUNCH_ROADMAP.md` — launch order + economics.
-6. Per-contract docs above as needed.
-7. `../CLAUDE.md` (repo) for safety standards and v4-reset rules.
+6. `releases/NARA-20260821-v4-position-nft-phase2.md` — exact Position NFT
+   two-commit/deploy/Safe/finalization procedure.
+7. Per-contract docs above as needed.
+8. `../CLAUDE.md` (repo) for safety standards and v4-reset rules.

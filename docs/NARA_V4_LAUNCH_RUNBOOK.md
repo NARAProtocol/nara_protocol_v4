@@ -14,7 +14,14 @@
 > `CURRENT_STATE.md` and
 > `deployments/v4-compounder-activation-2026-08-09.json`.
 
-Last updated: 2026-08-09.
+> **2026-08-21 Position NFT boundary:** Phase 2 is the dedicated seven-contract
+> Position NFT release described in
+> [NARA_V4_NFT_PRODUCTION_PLAN.md](NARA_V4_NFT_PRODUCTION_PLAN.md) and
+> [NARA-20260821-v4-position-nft-phase2.md](releases/NARA-20260821-v4-position-nft-phase2.md).
+> The historical aggregate `deploy:v4:allocations` path is retired; its package
+> alias is a refusal guard and must not be bypassed or used as a Phase-2 dry run.
+
+Last updated: 2026-08-21.
 Source of truth: `CURRENT_STATE.md`, `ROADMAP.md`, deploy scripts.  
 This doc turns the roadmap phases into a concrete command-by-command operator sequence.
 
@@ -326,63 +333,109 @@ Runs a test buy and test sell through the hook pool. Both must pass.
 
 ---
 
-## Step 6 — Deploy Allocation Layer (NFT bonds closed)
+## Step 6 — Position NFT Phase 2 (exact seven-contract release)
 
-```powershell
-# Dry run first
-$env:V4_ALLOC_DRY_RUN = "1"
-npm run deploy:v4:allocations
-Remove-Item Env:V4_ALLOC_DRY_RUN
-```
+The former Step 6 combined the Position NFT with allocations, bonds, Ops Vault,
+and the Genesis distributor. That aggregate flow is retained only as historical
+context: `npm run deploy:v4:allocations` now refuses execution. Do not set
+`V4_ALLOC_DRY_RUN`, bypass the refusal helper, invoke the retired implementation
+directly, or use `verify:v4:allocations` as a Phase-2 verifier.
 
-Review output. If dry run is clean:
+Historical planning evidence (not current inputs) recorded `200,000 NARA` for
+bonds, `0 NARA` for Ops, and a `150,000 NARA` minimum Treasury float. That
+`350,000 NARA` combination exceeded the retired script's `300,000 NARA` guard
+and never became Phase-2 deployment authority. Preserve it only as the reason
+the old aggregate route was stopped; do not copy it into an environment.
+
+Phase 2 deploys exactly these contracts, in this nonce-locked order:
+
+1. `NARAArtMetadataV1`
+2. `NARAArtSecurityPrintV1`
+3. `NARAArtCorePlateV1`
+4. `NARAArtGenesisPlateV1`
+5. `NARAPositionRendererV5`
+6. `NARAPositionAccountV4`
+7. `NARAPositionNFTV4`
+
+`NARAOpsVaultV4`, both bond paths and their vault, the Genesis reward
+distributor/minter binding, Router/Lens contracts, and allocations are Phase 3.
+No Phase-3 contract, funding transfer, Engine bond binding, or
+`GenesisMinterSet` event belongs in Phase 2.
+
+Follow the complete gated operator procedure in
+[NARA-20260821-v4-position-nft-phase2.md](releases/NARA-20260821-v4-position-nft-phase2.md).
+The commands below are routing markers, not one uninterrupted shell sequence
+and not transaction authorization.
+
+Source-candidate and human art gates, before the protected source commit:
 
 ```bash
-npm run deploy:v4:allocations
-npm run verify:v4:allocations
+npm run preview:v4:position-nft-art
+npm run rehearse:v4:position-nft
 ```
 
-**Approved allocation overrides (set explicitly; do not rely on script defaults):**
-```
-V4_OPS_AMOUNT_NARA=0
-V4_BOND_AMOUNT_NARA=200000
-V4_MIN_TREASURY_FLOAT_NARA=150000
-V4_BOND_ACTIVE=false
+The rehearsal command deploys and verifies in one fresh ephemeral `baseFork`
+process. The rehearsal verifier alias repeats that entire flow; it is not a
+separate post-rehearsal command. After the audited source commit is immutable,
+use the dedicated idle one-attempt signer to produce the reviewed plan and
+evidence-only second commit:
+
+```bash
+npm run plan:v4:position-nft
+npm run build:v4:position-nft-plan-evidence
 ```
 
-**Phase 2 is currently stopped at these inputs.** `deployV4Allocations.ts`
-rejects any allocation plus required float above `300,000 NARA`, while the
-stated values total `200,000 + 0 + 150,000 = 350,000 NARA`. Do not alter the
-economics in this runbook and do not run the real allocation deploy until a
-separate human-approved decision resolves the mismatch and the dry run passes.
+Only after protected merge, external ignored attestation, exact plan validity,
+and explicit human deployment approval may the one-attempt deployment proceed.
 
-**Deploys:**
-- `NARAOpsVaultV4`
-- `NARABondVaultV4`
-- `NARAPositionAccountV4` (implementation)
-- `NARAArtMetadataV1`
-- `NARAArtSecurityPrintV1`
-- `NARAArtCorePlateV1`
-- `NARAArtGenesisPlateV1`
-- `NARAPositionRendererV5` (immutable modular on-chain art and metadata)
-- `NARAPositionNFTV4`
-- `NARAGenesisRewardDistributorV4`
-- `NARABondDepositoryV4NFT` (bonds closed by default)
+The attestation must include the exact `releaseControl` fields listed in the
+Phase-2 release runbook plus distinct `sourceCi` and evidence `ci` objects.
+Deployment live-checks both successful four-job CI runs, both signed commits,
+each exact merged PR to protected `main`, and classic branch protection
+including all four required CI contexts. Provide GitHub read access through `GH_TOKEN`,
+`GITHUB_TOKEN`, or authenticated `gh`; never print or record the credential.
 
-**Gate:**
+When all of those gates pass, run once:
+
+```bash
+npm run deploy:v4:position-nft
+npm run verify:v4:position-nft:pending
+npm run verify:v4:position-nft:sources
+npm run build:v4:position-nft-finalization
 ```
-□ Treasury float >= 150,000 NARA before the approved post-deploy allocation split
-□ Engine.bondVault == new NARABondVaultV4
-□ Bond depository is NARABondDepositoryV4NFT (not raw bond path)
-□ Bond terms inactive
-□ Bond capacity == 0
-□ NFT ownership assigned to intended Safe
-□ Bond roles assigned to intended admin
+
+The finalization builder is read-only and creates a nonce/state-bound
+`UNEXECUTED` Safe packet only after validating and hash-binding the canonical
+all-seven source-verification evidence and matching it to fresh live BaseScan
+proof. Human Safe owners must independently review and execute exactly these
+five calls, in order, against the deployed NFT:
+
+1. `setDefaultRoyalty(production.treasury, 1000)`
+2. `setClaimFees(0, 0)`
+3. `setClaimFeeRecipient(0x0000000000000000000000000000000000000000)`
+4. `freezeRoyalties()`
+5. `freezeClaimFees()`
+
+Any Safe nonce or pinned-state drift stops the workflow and requires review and
+regeneration. After the exact Safe transaction confirms:
+
+```bash
+npm run finalize:v4:position-nft-evidence
+npm run verify:v4:position-nft
 ```
+
+Minting is permissionless from NFT deployment, so every gate must reconcile the
+complete `PositionMinted` history. Final verification still leaves downstream
+integration quarantined until the approved production smoke, 48-hour hold,
+immutable final evidence, and explicit cross-repository handoff are complete.
 
 ---
 
-## Step 7 — Deploy Router + Lens
+## Step 7 — Phase 3 Router + Lens (deferred)
+
+This is not part of the Position NFT Phase-2 deployment. Run it only under a
+separate Phase-3 approval and verified final Position NFT handoff. The command
+below is a future Phase-3 entry point, not current authorization:
 
 ```bash
 ENGINE_V4=<engine_address> POSITION_NFT_V4=<nft_address> npm run deploy:v4:router:lens
@@ -413,7 +466,9 @@ NARA_LENS_ADDRESS   = "<deployed>"
 
 ## Step 8 — Deploy Composability Layer
 
-Run only after Steps 1–7 are verified and at least 48h of monitoring has passed.
+Run only under a separately approved Phase-3/composability release after the
+Position NFT final manifest, smoke evidence, 48-hour hold, and handoff are
+verified. It is not a Phase-2 action.
 
 ```bash
 NODE_OPTIONS="--require ./polyfill.cjs" \
@@ -449,8 +504,8 @@ All deployer-owned roles must be transferred to Safe/timelocked admin before pub
 □ NARALiquidityGrowthHook: Safe accepted ownership before Step 2c wiring
 □ NARALiquidityCompounderV4: owner == Safe (set at deploy — confirm, no transfer needed)
 □ vault.freezeCompounder() executed and receipt-verified before smoke — one-way lock of the compounder address
-□ NARABondVaultV4: all roles → Safe
-□ NARABondDepositoryV4NFT: all roles → Safe
+□ NARABondVaultV4: all roles → Safe (Phase 3, if separately deployed)
+□ NARABondDepositoryV4NFT: all roles → Safe (Phase 3, if separately deployed)
 □ NARAPositionNFTV4: owner → Safe
 □ NARAStakingPoolV4: CONFIG_ROLE, EMERGENCY_ROLE → Safe (if deployed)
 □ Deployer EOA has no remaining privileged roles
@@ -495,9 +550,13 @@ manifests as the integration source of truth.
 
 ---
 
-## Step 12 — Open Bonds (Separate Decision)
+## Step 12 — Phase 3 Bond Deployment/Opening (Separate Decision)
 
-Do NOT open bonds during launch day. See `NARA_V4_BOND_OPENING_CRITERIA.md` for the explicit criteria. Default state at launch: `V4_BOND_ACTIVE=false`, capacity = 0.
+Phase 2 deploys no bond contract and performs no Engine bond binding. In a
+separately approved Phase-3 release, deploy and verify the bond system before
+considering activation. Do NOT open bonds on deployment day. See
+`NARA_V4_BOND_OPENING_CRITERIA.md` for the explicit criteria; the required
+initial state remains inactive with zero capacity.
 
 ---
 
@@ -506,10 +565,10 @@ Do NOT open bonds during launch day. See `NARA_V4_BOND_OPENING_CRITERIA.md` for 
 | Condition | Action |
 |---|---|
 | Preflight fails | Stop. Fix address/config mismatch. Do not seed. |
-| Validation compound receipt is missing/unreconciled or Compounder is unfrozen | Stop. Do not smoke-test or proceed to allocations. |
-| Smoke test fails | Stop. Do not proceed to allocations. Investigate hook/vault/routing. |
-| Phase 2 still specifies 200k bond allocation plus 150k minimum float | Stop. The allocation script rejects the 350k total against its 300k guard; obtain a separate approved economics decision. |
-| Treasury float cannot satisfy the approved 70k LP + 40k vesting + 40k treasury split | Stop. Fix allocation inputs. |
+| Validation compound receipt is missing/unreconciled or Compounder is unfrozen | Stop. Do not smoke-test or proceed to the Position NFT release. |
+| Smoke test fails | Stop. Do not proceed to the Position NFT release. Investigate hook/vault/routing. |
+| Any Phase-2 plan invokes `deploy:v4:allocations`, `V4_ALLOC_DRY_RUN`, or `verify:v4:allocations` | Stop. The aggregate allocation path is retired; use the exact seven-contract Phase-2 runbook. |
+| A Phase-3 contract, allocation, bond binding, Genesis distributor/minter binding, router, or lens appears in the Phase-2 plan | Stop. Remove it and restart the two-commit Phase-2 review. |
 | Any role still owned by deployer at Step 9 | Block public promotion. Transfer first. |
 | epoch backlog > 8 during observation | Call `router.syncEpochs()`. Investigate if recurrent. |
 

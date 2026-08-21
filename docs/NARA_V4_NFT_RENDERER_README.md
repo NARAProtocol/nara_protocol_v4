@@ -1,6 +1,6 @@
 # NARA Position NFT — Renderer V5 (implementation README)
 
-Last updated: 2026-07-04.
+Last updated: 2026-08-22.
 Contract: `contracts/v4/NARAPositionRendererV5.sol` (fully on-chain SVG, no uploaded image).
 Art modules: `NARAArtMetadataV1`, `NARAArtCorePlateV1`, `NARAArtGenesisPlateV1`, and `NARAArtSecurityPrintV1`.
 Art direction: `NARA_V4_NFT_ART_DESIGN_BIBLE.md` (the *why*). This file is the *how*.
@@ -124,14 +124,28 @@ remote font, or external URL is required.
 ---
 
 ## Preview & tests
-- **Preview gallery:** `NODE_OPTIONS="--require ./polyfill.cjs" npx hardhat run scripts/previewPositionArt.ts`
-  → writes SVGs + `index.html` to the scratchpad (every tier + Genesis/Eternal + module variants).
+- **Canonical preview command:** `npm run preview:v4:position-nft-art`. It runs only on the local
+  Hardhat chain and writes SVGs plus `index.html` to the ignored repo-local directory
+  `.nara-art-qa/v4-position-nft-phase2/` (every tier + Genesis/Eternal + module variants).
+- **Optional output override:** `V4_POSITION_NFT_ART_QA_OUT` may select another location only when it
+  resolves inside this authoritative repository. The script refuses the repository root, absolute
+  escape, or parent-directory escape.
 - **Rare-hit showcase:** the same script writes `rare-showcase.html` with forced Double Strike and
   Golden Sigil predicates for visual QA. Real minted tokens only receive those marks from their
   deterministic seed.
 - **Thumbnail QA:** the same script writes `thumbnail-qa.html`, a 64/128/300px contact sheet on
   light, neutral, and dark surfaces. This is the pre-freeze marketplace legibility gate.
-- **Tests:** `npx hardhat test test/NARAPositionNFTV4.test.ts` - covers deterministic rendering
+- **Evidence boundary:** `.nara-art-qa/` is ignored regenerated scratch output and must not be
+  committed as release evidence. After browser and marketplace-decoder approval, copy the approved
+  QA record into the Phase-2 `release-evidence/` directory and bind its SHA-256 in the external gate
+  attestation.
+- **Local-only mock helpers:** `scripts/generate-mock-nfts.ts` and `scripts/print-svg-3.ts` are limited
+  to local Hardhat/chain `31337` and fail before signer access on a configured non-local network.
+  Their output is scratch material, never Phase-2 release evidence.
+- **Quarantined helper:** `scripts/generateNftPreview.ts` is historical, non-authoritative, and
+  non-executable. Its hard-coded external scratchpad output must not be used for Phase-2 renderer or
+  art-QA evidence.
+- **Tests:** `npm run test:nft:v4` covers deterministic rendering
   (same token -> identical SVG; different token -> distinct SVG), module/Scar/security-print presence,
   tier evolution, Genesis/Eternal, action accretion past the old six-event ceiling, ERC-4906, metadata
   stability vs live data, and lifetime tracking.

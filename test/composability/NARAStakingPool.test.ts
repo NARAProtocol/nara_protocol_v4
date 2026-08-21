@@ -1,6 +1,6 @@
 import hre from "hardhat";
 import { expect } from "chai";
-import { deployRenderer } from "../helpers/art";
+import { deployRenderer } from "../helpers/art.js";
 
 const ONE = 10n ** 18n;
 const USDC = 10n ** 6n;

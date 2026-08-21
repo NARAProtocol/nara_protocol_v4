@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-08-15.
+Last updated: 2026-08-22.
 
 This repository is v4-only. `contracts/v4/` is the sole active Solidity source.
 The experimental V5 stack, tests, scripts, and release plans have been deleted
@@ -26,6 +26,32 @@ sanitized evidence is `deployments/v4-production-activation-2026-08-09.json`,
 `deployments/v4-engine-epoch-recovery-2026-08-09.json`,
 `deployments/v4-compounder-activation-2026-08-09.json`, and
 `deployments/v4-engine-epoch-recovery-2026-08-14.json`.
+
+## PRE-DEPLOYMENT — Position NFT Phase 2
+
+The Position NFT Phase-2 release is implemented in this local release worktree
+but is not merged or deployed to Base. No production NFT address, receipt,
+runtime, source-verification record, or finalized manifest exists, so every
+consumer NFT surface remains blank or disabled.
+
+Phase 2 deploys exactly seven contracts, in order: `NARAArtMetadataV1`,
+`NARAArtSecurityPrintV1`, `NARAArtCorePlateV1`, `NARAArtGenesisPlateV1`,
+`NARAPositionRendererV5`, `NARAPositionAccountV4`, and `NARAPositionNFTV4`.
+Its approved final policy is exactly `1000 BPS` ERC-2981 royalties to the
+manifest-pinned production Treasury address, permanently frozen, plus zero and
+permanently frozen NARA/token wrapper claim fees with a zero recipient.
+ERC-2981 remains marketplace-advisory; Treasury controls later use and royalties
+do not automatically reach lockers. The Admin Safe and Treasury are distinct
+manifest fields.
+
+Bonds, allocations/Ops Vault, `NARAGenesisRewardDistributorV4` and Genesis
+binding, router, data/dashboard lenses, circulating-supply periphery, and
+composability remain separately reviewed Phase 3. Phase 2 must not emit
+`GenesisMinterSet`. See
+[`NARA_V4_NFT_PRODUCTION_PLAN.md`](NARA_V4_NFT_PRODUCTION_PLAN.md) for the release
+boundary and
+[`releases/NARA-20260821-v4-position-nft-phase2.md`](releases/NARA-20260821-v4-position-nft-phase2.md)
+for the exact operator sequence. Neither document authorizes deployment.
 
 ## Authoritative v4 release policy
 

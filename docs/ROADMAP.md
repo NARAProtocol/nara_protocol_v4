@@ -1,16 +1,17 @@
 # NARA Roadmap
 
-Last updated: 2026-08-09.
+Last updated: 2026-08-21.
 
 > **Current-state override:** the fresh v4 core and Compounder are deployed and
 > source-verified on Base mainnet. Hook/Vault ownership is accepted, and the
 > NARA/USDC pool is initialized and seeded with a Safe-owned LP NFT. Engine
 > epoch recovery and Compounder validation/freeze are receipt-pinned as
-> complete. Allocations, periphery, recurring operations, the Engine lifecycle
-> smoke, and downstream handoffs remain separate gates. The current product
-> launch scope is NARA Baskets only;
-> Baskets remain preview-only, Lockboard is deferred, and Lotto and Arena are
-> retired. Current authority includes
+> complete. The immediate contract-release step is the exact seven-contract
+> Position NFT Phase 2; its hardened workflow exists locally but is unmerged
+> and has no Base deployment manifest. Allocations, bonds, Genesis distribution,
+> router/lens periphery, the Engine lifecycle smoke, and downstream handoffs
+> remain separate later gates. Baskets remain preview-only, Lockboard is
+> deferred, and Lotto and Arena are retired. Current authority includes
 > `deployments/v4-compounder-activation-2026-08-09.json` together with
 > `docs/releases/NARA-20260809-v4-compounder-activation.md`. This file is
 > product direction, not a deployment runbook.
@@ -30,11 +31,12 @@ Current v4 thesis:
 - Base native USDC liquidity on Uniswap v4.
 - Dynamic liquidity-growth hook through `NARALiquidityGrowthHook`.
 - Fee routing through `NARALiquidityGrowthVault`.
-- Tradable lock positions through `NARAPositionNFTV4` and `NARAPositionAccountV4`, with immutable
-  on-chain art and stable marketplace metadata via the modular `NARAPositionRendererV5`.
-- Public bond path through `NARABondDepositoryV4NFT`, not raw direct-lock bonds.
-- Genesis reward accounting through `NARAGenesisRewardDistributorV4`.
-- Lazy UX + read layer: `NARARouter` (permit+sync+lock, permissionless
+- Phase-2 tradable lock positions through `NARAPositionNFTV4` and
+  `NARAPositionAccountV4`, with immutable on-chain art and stable marketplace metadata via the
+  modular `NARAPositionRendererV5`; not deployed yet.
+- Phase-3 public bond path through `NARABondDepositoryV4NFT`, not raw direct-lock bonds.
+- Phase-3 Genesis reward accounting through `NARAGenesisRewardDistributorV4`.
+- Phase-3 lazy UX + read layer: `NARARouter` (permit+sync+lock, permissionless
   `syncEpochs()`) and `NARADashboardLens` / `NARAPositionDataLensV1` (typed
   live reads). External ERC-20 bribes are disabled for the deployed engine.
 - Optional composability through `NARAStakingPoolV4`, `NARAStakingPoolSYV4`, and fractional position wrappers.
@@ -45,7 +47,7 @@ The frontend is a launch and education surface. The protocol thesis is the durab
 
 ## Current Starting Point
 
-As of 2026-08-09:
+As of 2026-08-21:
 
 - v3 is **retired**. All v3 mainnet contracts are archived at `archive/legacy-v3/`. See `archive/legacy-v3/README.md` for retired addresses.
 - The 2026-04-23 v4 incident stack is retired for launch purposes.
@@ -61,7 +63,10 @@ As of 2026-08-09:
   Compounder, not active LP.
 - Engine activation-backlog recovery is receipt-pinned. Recurring maintenance
   and the Engine lock/activation/claim/unlock lifecycle smoke remain gated.
-- The current product launch scope is the NARA basket app only.
+- The immediate deployment scope is the exact seven-contract Position NFT Phase 2. The workflow is
+  local/unmerged; there is no verified Base NFT address or final manifest, and every consumer remains
+  disabled.
+- Baskets remain preview-only and are not the origin for NFT deployment facts.
 - Do not repeat the core deployment.
 - Current v4 code uses `NARALiquidityGrowthHook` and `NARALiquidityGrowthVault`.
 - Current v4 launch pair is NARA/Base native USDC.
@@ -184,89 +189,142 @@ Success criteria:
 
 ---
 
-## Phase 2: Allocation Layer And NFT Bonds
+## Phase 2: Position NFT And Modular On-Chain Art
 
-Status: pending as a separate deployment after the activated-liquidity evidence.
+Status: active release preparation. The contracts and fail-closed deployment workflow exist in the
+local release worktree, but they are unmerged and not deployed. No planned address is a production
+address, and consumers remain disabled.
 
-Goal: deploy v4 allocation contracts and keep public bonds closed until reviewed.
+Goal: deploy and finalize exactly the optional Position NFT wrapper and its immutable art/account
+dependencies without coupling the release to allocations, bonds, Genesis distribution, or periphery.
 
-Required contracts:
+Exact deployment order:
 
-- `NARAOpsVaultV4`
-- `NARABondVaultV4`
-- `NARAPositionAccountV4`
-- `NARAPositionNFTV4`
-- `NARAGenesisRewardDistributorV4`
-- `NARABondDepositoryV4NFT`
+1. `NARAArtMetadataV1`
+2. `NARAArtSecurityPrintV1`
+3. `NARAArtCorePlateV1`
+4. `NARAArtGenesisPlateV1`
+5. `NARAPositionRendererV5`
+6. `NARAPositionAccountV4`
+7. `NARAPositionNFTV4`
 
-Required command path:
+Phase-2 policy:
 
-```powershell
-$env:V4_ALLOC_DRY_RUN = "1"
-npm run deploy:v4:allocations
-Remove-Item Env:V4_ALLOC_DRY_RUN
+- NFT owner is the manifest-pinned production Admin Safe from construction.
+- ERC-2981 royalties are exactly `1000 BPS` (10.00%) to the manifest-pinned production Treasury
+  address and are permanently frozen by the Safe.
+- NARA/token wrapper claim fees are both `0 BPS`, their recipient is zero, and those values are
+  permanently frozen.
+- ERC-2981 is marketplace-advisory. Treasury controls later royalty use; royalties do not
+  automatically reach lockers.
+- Genesis distributor/minter remains unset, no `GenesisMinterSet` event is allowed, and Genesis
+  configuration remains available only for a separately reviewed Phase-3 release.
+- Minting is permissionless from the confirmed NFT deployment block, so every verifier reconciles
+  the complete `PositionMinted` history and `nextTokenId`.
+
+Canonical flow:
+
+1. Complete source tests, current byte sizes, static analysis, local art QA, and the atomic fresh-fork
+   rehearsal on the exact source commit.
+2. Merge the audited source commit through protected `origin/main`; generate the nonce/address plan
+   and artifact evidence from that clean commit; then merge the evidence-only second commit.
+3. Bind exact source/evidence commits, CI, audit, art, roadmap, plan, royalty/fee policy, and explicit
+   human approval in the ignored external attestation.
+4. Use the dedicated idle one-attempt signer and `npm run deploy:v4:position-nft` once. Stop on nonce,
+   code, receipt-journal, runtime, or prior-attempt ambiguity; never retry blindly.
+5. Run strict pending verification, all-seven source verification, and the just-in-time Safe packet
+   builder. Any Safe nonce drift from the deployment snapshot is a stop-and-review condition.
+6. Human Safe signers execute only the exact five-call royalty/claim-fee reset-and-freeze batch.
+   Finalize and rerun the final verifier.
+7. Complete separately approved value-bearing smoke, the 48-hour monitored hold, immutable protocol
+   origin evidence, and the explicit downstream handoff before enabling any consumer.
+
+Canonical command names, separated by the human/evidence gates above:
+
+```text
+npm run preview:v4:position-nft-art
+npm run rehearse:v4:position-nft
+npm run plan:v4:position-nft
+npm run build:v4:position-nft-plan-evidence
+npm run deploy:v4:position-nft
+npm run verify:v4:position-nft:pending
+npm run verify:v4:position-nft:sources
+npm run build:v4:position-nft-finalization
+# human Safe review/sign/execute occurs here; no CLI signs or sends it
+npm run finalize:v4:position-nft-evidence
+npm run verify:v4:position-nft
 ```
 
-Then, if dry-run passes:
+This is not a single uninterrupted command sequence. Source/evidence commits, external attestation,
+explicit deployment approval, Safe review, and separate smoke approval remain mandatory boundaries.
 
-```bash
-npm run deploy:v4:allocations
-npm run verify:v4:allocations
-```
+The authoritative checklist and operator sequence are
+[`NARA_V4_NFT_PRODUCTION_PLAN.md`](NARA_V4_NFT_PRODUCTION_PLAN.md) and
+[`releases/NARA-20260821-v4-position-nft-phase2.md`](releases/NARA-20260821-v4-position-nft-phase2.md).
 
-Default allocation posture:
-
-- `V4_OPS_AMOUNT_NARA=0`
-- `V4_BOND_AMOUNT_NARA=200000`
-- `V4_MIN_TREASURY_FLOAT_NARA=150000`
-- `V4_BOND_ACTIVE=false`
+`npm run deploy:v4:allocations` is intentionally quarantined and refuses execution. It is not a
+Phase-2 dry-run or deployment path. Do not bypass that refusal or restore the former
+`V4_ALLOC_DRY_RUN` instructions.
 
 Success criteria:
 
-- Treasury float preserves the approved `70,000 NARA` LP allocation,
-  `40,000 NARA` external vesting allocation, and `40,000 NARA` treasury allocation.
-- Engine `bondVault` points to the new `NARABondVaultV4`.
-- Public bond depository is `NARABondDepositoryV4NFT`.
-- Bond terms remain inactive.
-- Bond capacity remains `0`.
-- Position NFT ownership and bond roles are assigned intentionally.
-- Public bond UI uses NFT bonds, not raw direct-lock bonds.
+- exact seven-contract receipts, runtime/source proofs, constructors, bindings, and start blocks are
+  recorded in the finalized manifest;
+- the royalty receiver/rate and both zero claim fees are read back as permanently frozen;
+- owner, Safe state/nonce continuity, Genesis-zero history, and complete permissionless mint history
+  reconcile;
+- smoke and the 48-hour observation hold pass; and
+- consumers remain quarantined until an immutable manifest/ABI/start-block handoff exists.
 
 ---
 
-## Phase 3: Launch UX And State Visibility
+## Phase 3: Allocations, Bonds, Genesis, Router/Lens, And Public Exposure
 
-Status: pending verified allocation/periphery addresses and explicit downstream
-handoff; the basket app remains preview-only.
+Status: deferred until Phase 2 has a finalized immutable origin, successful smoke and 48-hour hold,
+and an explicit downstream handoff. No combined Phase-3 production release is currently authorized;
+the old broad allocation command remains quarantined, and the presence of a narrower periphery
+script is not deployment approval.
 
-Goal: make fresh v4 understandable before promoting it.
+Goal: review and deploy the allocation/bond/Genesis and read/router layers as separate evidence-bound
+releases, keep bonds closed until their independent economic and role gates pass, and expose only
+verified state to users.
+
+Deferred Phase-3 contract surfaces include:
+
+- `NARAOpsVaultV4`, `NARABondVaultV4`, `NARABondDepositoryV4NFT`, and
+  `NARAGenesisRewardDistributorV4`;
+- `NARARouter`, `NARADashboardLens`, `NARAPositionDataLensV1`, `BribeRouterV4`, and
+  `NARACirculatingSupplyV1`; and
+- any Genesis distributor/minter binding on the Phase-2 Position NFT.
 
 Focus:
 
-- Fresh address display and chain checks.
-- NFT position mint, claim, extend, and unlock flows.
-- Genesis metadata display.
-- NARA/USDC pool and liquidity visibility.
-- Hook/vault fee routing visibility.
-- Bond status: inactive, active, capacity, terms, stale terms, and release cap.
-- Epoch status and JIT advancement expectations.
-- Reward panels for NARA, ETH, and ERC-20 rewards.
-- Clear fallback for users who cannot use sponsored transactions.
+- Build a new fail-closed plan and manifest schema for each Phase-3 release instead of reviving the
+  retired `deploy:v4:allocations` flow.
+- Preserve treasury float and keep bond terms/capacity inactive until the separately approved
+  valuation, terms, routing, roles, and Genesis metadata gates pass.
+- Verify every allocation, role, NFT minter/distributor binding, router/lens binding, address, runtime,
+  ABI, and indexed start block before handoff.
+- Show fresh addresses, chain checks, direct-versus-NFT lock paths, Genesis provenance, bond closed/
+  active state, pool/liquidity state, epoch state, reward routes, and clear self-directed exits.
+- Publish public discovery/documentation only after protocol and direct-consumer evidence is immutable.
 
 Success criteria:
 
-- Frontend never points to retired v4 addresses.
-- Users can distinguish direct locks from NFT-managed locks.
-- Users can see whether bonds are closed before attempting to buy.
-- Operators can see preflight, smoke, liquidity, and allocation status.
+- No Phase-3 address is copied from a plan, environment, old allocation script, or uncommitted tree.
+- Allocation, bond, Genesis, and router/lens releases each have protected origin, receipts, source and
+  runtime verification, post-state readback, smoke, observation, and handoff evidence.
+- Users can distinguish direct locks from NFT-managed locks and see that bonds are closed before
+  attempting any value-bearing action.
+- Consumers fail closed when a verified manifest, ABI, or start block is absent.
 
 ---
 
 ## Phase 4: Liquidity Growth Operations
 
-Status: pool fees are live, the first bounded compound and permanent binding
-freeze are complete, and routine maintenance is inactive pending separate
-keeper/workflow authorization and operational review.
+Status: pool fees are live, the first bounded compound and permanent binding freeze are complete,
+and the separately credentialed bounded liquidity maintainer is active under its verified policy,
+schedule, runtime guard, and heartbeat.
 
 Goal: operate `NARALiquidityGrowthVault` deliberately.
 
@@ -281,8 +339,9 @@ The `Engine` and `Split` enum values are unreachable and must remain disabled.
 Launch expectation:
 
 - Keep the current `Liquidity` mode.
-- Treat the validated Compounder as unavailable for routine automation until a
-  dedicated keeper and workflow are separately authorized.
+- Preserve the currently authorized liquidity maintainer's dedicated keeper, `17,47` UTC schedule,
+  token-use/price bounds, runtime binding, and heartbeat. Do not broaden, reuse, disable, or change
+  it without a new explicit order and deployment-specific review.
 - Distinguish active LP inputs from unmatched inventory banked in the
   Compounder.
 
@@ -431,18 +490,23 @@ If users do not understand rewards:
 
 ## Near-Term Build Order
 
-1. Merge the activation evidence through the protected origin pull request.
-2. Complete and receipt-pin the Engine lock, activation, claim, and unlock
-   lifecycle smoke.
-3. Complete the monitored observation period.
-4. Monitor both active maintainers and keep their keepers, schedules, bounds,
-   and deployment bindings separate unless a new explicit order and
-   deployment-specific review authorize a change.
-5. Deploy and verify allocations with NFT bonds closed.
-6. Deploy periphery separately and update frontend/monitor configuration only
-   through explicit fresh-address handoffs.
-7. Keep Baskets preview-only until its verified manifests and handoff exist.
-8. Open public lock flow through `NARAPositionNFTV4` only after its gates.
-9. Open bonds only after terms, capacity, and roles are reviewed.
-10. Deploy composability only after core and allocation verification, then
+1. Finish the exact Phase-2 Position NFT source, tests, current size/static-analysis evidence, local
+   art QA, atomic fork rehearsal, and operator documentation.
+2. Merge the audited source commit through protected CI, generate the deployment plan/artifact
+   evidence from that exact clean origin, and merge the evidence-only second commit.
+3. Complete the ignored external attestation and explicit human approval, then execute the dedicated
+   one-attempt seven-contract deployment without any blind retry.
+4. Complete strict pending verification, all-seven source verification, nonce/state-bound JIT Safe
+   preparation, exact five-call human Safe finalization, and final evidence/readback.
+5. Complete separately approved Position NFT smoke and the 48-hour monitored hold; commit the final
+   manifest/observation evidence and issue the immutable downstream handoff.
+6. Keep Swarm, baskets, analytics, frontends, and public documentation NFT surfaces disabled until
+   that handoff; keep Baskets preview-only until their own verified manifests exist.
+7. Continue monitoring both active maintainers while keeping credentials, schedules, bounds, and
+   deployment bindings separate unless a new explicit order authorizes a reviewed change.
+8. Only then design and review new Phase-3 allocation/bond/Genesis and router/lens release paths;
+   do not revive the quarantined broad allocation deployer.
+9. Open bonds only after the Phase-3 valuation, terms, capacity, treasury routing, Genesis metadata,
+   role, smoke, and observation gates pass.
+10. Deploy composability only after its dependencies have verified manifests and handoffs, then
     validate SY before Pendle outreach.

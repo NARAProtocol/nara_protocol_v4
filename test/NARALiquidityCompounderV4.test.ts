@@ -52,9 +52,9 @@ async function deployFixture(seedBalances = true) {
     const { ethers } = await hre.network.connect();
     const [owner, keeper, alice, attacker] = await ethers.getSigners();
 
-    const nara = await ethers.deployContract("MockERC20", ["NARA", "NARA", 18], owner);
+    const nara: any = await ethers.deployContract("MockERC20", ["NARA", "NARA", 18], owner);
     await nara.waitForDeployment();
-    const usdc = await ethers.deployContract("MockERC20", ["USD Coin", "USDC", 6], owner);
+    const usdc: any = await ethers.deployContract("MockERC20", ["USD Coin", "USDC", 6], owner);
     await usdc.waitForDeployment();
 
     const naraAddr = await nara.getAddress();
@@ -62,11 +62,11 @@ async function deployFixture(seedBalances = true) {
     const naraIsCurrency0 = BigInt(naraAddr) < BigInt(usdcAddr);
     const [currency0, currency1] = sortAddresses(naraAddr, usdcAddr);
 
-    const permit2 = await ethers.deployContract("MockPermit2", [], owner);
+    const permit2: any = await ethers.deployContract("MockPermit2", [], owner);
     await permit2.waitForDeployment();
     const permit2Addr = await permit2.getAddress();
 
-    const vault = await ethers.deployContract(
+    const vault: any = await ethers.deployContract(
         "NARALiquidityGrowthVault",
         [owner.address, naraAddr, usdcAddr],
         owner,
@@ -75,7 +75,7 @@ async function deployFixture(seedBalances = true) {
     const vaultAddr = await vault.getAddress();
     await vault.connect(owner).setCompoundKeeper(keeper.address, true);
 
-    const stack = await ethers.deployContract(
+    const stack: any = await ethers.deployContract(
         "MockV4PositionStack",
         [permit2Addr, naraAddr, usdcAddr, vaultAddr],
         owner,
@@ -88,7 +88,7 @@ async function deployFixture(seedBalances = true) {
     );
     await stack.setSqrtPrice(referenceSqrtPriceX96);
 
-    const compounder = await ethers.deployContract(
+    const compounder: any = await ethers.deployContract(
         "NARALiquidityCompounderV4",
         [
             owner.address,
@@ -157,7 +157,7 @@ describe("NARALiquidityCompounderV4", () => {
             [stackAddr, stackAddr, await fakePermit2.getAddress(), stackAddr],
             [stackAddr, stackAddr, permit2Addr, otherStackAddr],
         ] as const) {
-            await expect(deploy(...args)).to.be.revertedWithCustomError(f.compounder, "InvalidPeripheryBinding");
+            await expect(deploy(args[0], args[1], args[2], args[3])).to.be.revertedWithCustomError(f.compounder, "InvalidPeripheryBinding");
         }
     });
 

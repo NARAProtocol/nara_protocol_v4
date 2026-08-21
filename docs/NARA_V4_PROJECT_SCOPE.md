@@ -1,20 +1,24 @@
 # NARA v4 — Whole-Project Scope (Cold-AI Start Here)
 
-> **2026-08-09 v4-only release checkpoint:** [CURRENT_STATE.md](CURRENT_STATE.md)
+> **Core evidence dated 2026-08-09; Phase-2 scope updated 2026-08-21:**
+> [CURRENT_STATE.md](CURRENT_STATE.md)
 > is the broader workspace state index. The experimental protocol V5 proposal and its source,
 > tests, scripts, and plans are deleted and must not be restored. The fresh v4
 > core is deployed and source-verified from one immutable reviewed origin
 > commit with a new verified manifest and receipt reconciliation. Pool
 > activation, Engine epoch recovery, and Compounder validation/freeze are
-> confirmed. Allocations, periphery, recurring maintenance, the Engine
-> lifecycle smoke, and downstream handoffs remain pending. Current authority is
+> confirmed. The next contract release is the exact seven-contract Position NFT
+> Phase 2; its replacement workflow exists locally, while release evidence,
+> protected merge, deployment, Safe finalization, smoke, and the 48-hour hold
+> remain pending. Allocations, bonds, Genesis distributor/minter binding,
+> Router/Lens, and composability are Phase 3. Current core authority is
 > `deployments/v4-production-activation-2026-08-09.json` together with
 > `deployments/v4-compounder-activation-2026-08-09.json` and
 > `docs/releases/NARA-20260809-v4-compounder-activation.md`. Controlled
 > Stage A and the 2026-07-30 pool are historical incident/recovery evidence
 > only; none of their addresses may be reused in consumer configuration.
 
-Last updated: 2026-08-09. Produced by a full scope-coherence audit and updated
+Last updated: 2026-08-21. Produced by a full scope-coherence audit and updated
 for the fixed-v4 relaunch.
 
 **Audience:** any AI (Claude, GPT, Gemini, Cursor, Codex, …) or human starting cold on this workspace.
@@ -38,10 +42,12 @@ The source candidate is v4-only. The fresh core deployment, immutable origin
 commit, verified deployment manifest, and receipt reconciliation now exist.
 Hook/Vault Safe ownership, atomic pool activation, Safe-owned LP NFT `2898124`,
 receipt-pinned buy/sell and same-block tax evidence, Engine backlog recovery,
-and validated/frozen Compounder-owned LP NFT `2898486` now exist. Allocations,
-periphery, recurring maintenance, the Engine lifecycle smoke, and downstream
-handoffs remain separate; the publishable Baskets app remains in preview,
-Lockboard is deferred, and Lotto and Arena are retired.
+and validated/frozen Compounder-owned LP NFT `2898486` now exist. The next
+contract release is the exact seven-contract Position NFT Phase 2. Its local
+workflow is not deployment evidence: protected commits, external attestation,
+one-attempt deployment, Safe finalization, smoke, and a 48-hour hold remain.
+Allocations and the rest of the periphery are Phase 3; the publishable Baskets
+app remains in preview, Lockboard is deferred, and Lotto and Arena are retired.
 
 ---
 
@@ -63,7 +69,7 @@ protocol **only** via `engine.depositRewards()` / `engine.notifyEthRewards()` �
 Conceptually five pillars. Mechanically, layers that deploy in order. **Build order ≠ what users see.**
 
 ```
-build order:   token → engine → LIQUIDITY → NFT locks + router → baskets → buy/sell UI
+build order:   token → engine → LIQUIDITY → NFT locks → Phase-3 router/periphery → baskets → buy/sell UI
 user sees:     baskets (front door) sitting on top of everything beneath it
 ```
 
@@ -75,9 +81,10 @@ happen, baskets can't route. It is the foundation everything sits on.
 | **Core** | `deploy:v4:base:usdc` (`deployV4BaseUsdc.ts`) | Token, Engine, RewardReserve, LiquidityGrowthHook, LiquidityGrowthVault, Launcher, Create2HookDeployer |
 | **Liquidity controls** | `deployLiquidityCompounderV4.ts`, after the fresh core deployment creates the vault | LiquidityCompounder bound only to the fresh Hook/Vault pair |
 | **Liquidity** | `build:v4:atomic-pool-launch` + `smoke:v4` | (no new contract — one Safe batch registers and seeds the NARA/USDC v4 pool) |
-| **Allocation** | `deploy:v4:allocations` (`deployV4Allocations.ts`) | PositionNFT, PositionAccount, **PositionRenderer**, GenesisRewardDistributor, BondVault, BondDepository(NFT + raw), OpsVault |
-| **Router / Lens** | `deploy:v4:router:lens` (`deployRouterLens.ts`) | Router, DashboardLens, **PositionDataLensV1**, **ProtocolStatsLensV1**, **CirculatingSupplyV1**; BribeRouter intentionally skipped |
-| **Composability** | `deployComposabilityV4.ts` | StakingPool (stNARA), StakingPoolSY (Pendle), FractionalPosition + Factory |
+| **Position NFT Phase 2** | `deploy:v4:position-nft`, only through `releases/NARA-20260821-v4-position-nft-phase2.md` | ArtMetadata, ArtSecurityPrint, ArtCorePlate, ArtGenesisPlate, **PositionRenderer**, PositionAccount, PositionNFT — exactly seven |
+| **Allocations / bonds / Genesis (Phase 3)** | Separate future approved workflow; the retired `deploy:v4:allocations` alias refuses execution | OpsVault, BondVault, BondDepository NFT/raw paths, GenesisRewardDistributor, allocations and Engine/Genesis bindings |
+| **Router / Lens (Phase 3)** | `deploy:v4:router:lens` only after separate approval | Router, DashboardLens, **PositionDataLensV1**, **ProtocolStatsLensV1**, **CirculatingSupplyV1**; BribeRouter intentionally skipped |
+| **Composability (Phase 3)** | `deployComposabilityV4.ts` only after separate approval | StakingPool (stNARA), StakingPoolSY (Pendle), FractionalPosition + Factory |
 | **Baskets** (separate Foundry pkg) | `DeployMainnetReady.s.sol` | 4 immutable basket managers + fee collector + 5 DEX adapters |
 
 ---
@@ -100,23 +107,27 @@ new verified manifest produced from the immutable v4 origin commit. See
 | `NARALiquidityGrowthHook` | Core | ✅ `NARALiquidityGrowth.v4.test.ts` | hook address mining (`0x2088` low bits) |
 | `NARALiquidityGrowthVault` | Core | ✅ `NARALiquidityGrowth.v4.test.ts` | hook |
 | `NARALauncher` / `utils/Create2HookDeployer` | Core | ✅ (deploy-path) | none |
-| `NARAPositionNFTV4` | Allocation | ✅ `NARAPositionNFTV4.test.ts` | engine |
-| `NARAPositionAccountV4` | Allocation | ✅ (NFT tests) | deployed as clone impl |
-| `NARAPositionRendererV5` | Allocation | ✅ `NARAPositionNFTV4.test.ts` (art/metadata/fallback) | deploy **before** NFT (NFT references it) |
-| `NARAGenesisRewardDistributorV4` | Allocation | ✅ (NFT + genesis tests) | engine, NFT |
-| `NARABondVaultV4` | Allocation | ✅ `NARABondV4.test.ts` | engine |
-| `NARABondDepositoryV4NFT` (canonical bond path) | Allocation | ✅ `NARABondV4NFT.test.ts` | NFT, vault — **stays closed at launch** |
-| `NARABondDepositoryV4` (raw, non-canonical) | Allocation | ✅ `NARABondV4.test.ts` | not the public path |
-| `NARAOpsVaultV4` | Allocation | ✅ (alloc tests) | token |
-| `router/NARARouter` | Router | ✅ `NARARouter.test.ts` | engine |
-| `router/NARADashboardLens` | Router | ✅ `NARADashboardLens.test.ts` | engine, NFT |
-| `router/NARAPositionDataLensV1` | Router | ✅ `NARAPositionDataLensV1.test.ts` | engine, NFT; now incl. weight share / age / countdown / lifetime earned / realized return — see `NARA_V4_POSITION_STATS_AND_CLAIM_FEES.md` |
-| `router/NARAProtocolStatsLensV1` | Router | ✅ `NARAProtocolStatsLensV1.test.ts` | engine; one-call protocol headline stats (all-time ETH distributed, runway, totals). See `NARA_V4_POSITION_STATS_AND_CLAIM_FEES.md` |
+| `NARAArtMetadataV1` | Position NFT Phase 2 | ✅ (NFT/art tests) | first of the exact seven-contract release |
+| `NARAArtSecurityPrintV1` | Position NFT Phase 2 | ✅ (NFT/art tests) | metadata module |
+| `NARAArtCorePlateV1` | Position NFT Phase 2 | ✅ (NFT/art tests) | metadata + security-print modules |
+| `NARAArtGenesisPlateV1` | Position NFT Phase 2 | ✅ (NFT/art tests) | metadata + security-print modules; does not bind a Genesis distributor |
+| `NARAPositionRendererV5` | Position NFT Phase 2 | ✅ `NARAPositionNFTV4.test.ts` (art/metadata/fallback) | all four art modules; deploy **before** NFT |
+| `NARAPositionAccountV4` | Position NFT Phase 2 | ✅ (NFT tests) | clone implementation deployed before NFT |
+| `NARAPositionNFTV4` | Position NFT Phase 2 | ✅ `NARAPositionNFTV4.test.ts` | engine, account implementation, renderer; seventh and final Phase-2 contract |
+| `NARAGenesisRewardDistributorV4` | Phase 3 | ✅ (NFT + genesis tests) | engine, NFT; not deployed or bound in Phase 2 |
+| `NARABondVaultV4` | Phase 3 | ✅ `NARABondV4.test.ts` | engine; separate allocation/bond approval |
+| `NARABondDepositoryV4NFT` (canonical bond path) | Phase 3 | ✅ `NARABondV4NFT.test.ts` | NFT, vault — separate deployment and opening decisions |
+| `NARABondDepositoryV4` (raw, non-canonical) | Phase 3 | ✅ `NARABondV4.test.ts` | not the public path |
+| `NARAOpsVaultV4` | Phase 3 | ✅ (alloc tests) | token; separate allocation approval |
+| `router/NARARouter` | Phase 3 Router | ✅ `NARARouter.test.ts` | engine |
+| `router/NARADashboardLens` | Phase 3 Router | ✅ `NARADashboardLens.test.ts` | engine, NFT |
+| `router/NARAPositionDataLensV1` | Phase 3 Router | ✅ `NARAPositionDataLensV1.test.ts` | engine, NFT; now incl. weight share / age / countdown / lifetime earned / realized return — see `NARA_V4_POSITION_STATS_AND_CLAIM_FEES.md` |
+| `router/NARAProtocolStatsLensV1` | Phase 3 Router | ✅ `NARAProtocolStatsLensV1.test.ts` | engine; one-call protocol headline stats (all-time ETH distributed, runway, totals). See `NARA_V4_POSITION_STATS_AND_CLAIM_FEES.md` |
 | `router/BribeRouterV4` | Dormant reference | ✅ isolated transfer-path tests | Do not deploy or grant `REWARD_NOTIFIER_ROLE` for the deployed engine |
-| `router/NARACirculatingSupplyV1` | Router | ✅ `NARACirculatingSupplyV1.test.ts` (25) | token + the excluded wallet set (reserve/bonds/vesting/dead — treasury stays circulating). Genesis ≈ 110k. See `CIRCULATING_SUPPLY.md` |
-| `composability/NARAStakingPoolV4` (stNARA) | Composability | ✅ `composability/NARAStakingPool.test.ts` | core + allocation + **TVL** |
-| `composability/NARAStakingPoolSYV4` (Pendle SY) | Composability | ✅ (staking pool tests) | stNARA pool |
-| `composability/NARAFractionalPositionV4` + Factory | Composability | ✅ `composability/NARAFractionalPosition.test.ts` | standard (non-Genesis) NFT; wrapper binding must equal `factory.fractionalOf(positionId)` |
+| `router/NARACirculatingSupplyV1` | Phase 3 Router | ✅ `NARACirculatingSupplyV1.test.ts` (25) | token + the excluded wallet set (reserve/bonds/vesting/dead — treasury stays circulating). Genesis ≈ 110k. See `CIRCULATING_SUPPLY.md` |
+| `composability/NARAStakingPoolV4` (stNARA) | Phase 3 Composability | ✅ `composability/NARAStakingPool.test.ts` | core + Position NFT + **TVL** |
+| `composability/NARAStakingPoolSYV4` (Pendle SY) | Phase 3 Composability | ✅ (staking pool tests) | stNARA pool |
+| `composability/NARAFractionalPositionV4` + Factory | Phase 3 Composability | ✅ `composability/NARAFractionalPosition.test.ts` | standard (non-Genesis) NFT; wrapper binding must equal `factory.fractionalOf(positionId)` |
 
 ### Baskets (`nara-category-baskets-v1/src/`)
 
@@ -137,7 +148,8 @@ writing contracts**:
 | Item | Type | Why it's not a code task |
 |---|---|---|
 | Publish the activation evidence downstream | **release** | Use only the activation manifest and release record cited at the top; consumer changes require explicit handoff |
-| Deploy allocations and periphery | **ops/capital** | Separate deployment scope; use human-approved inputs and verified manifests |
+| Complete Position NFT Phase 2 | **release/ops** | Exact seven-contract workflow is local; immutable source/evidence commits, attestation, one-attempt deploy, Safe finalization, smoke, and 48-hour hold remain |
+| Deploy allocations, bonds, Genesis, Router/Lens, or composability | **Phase 3 ops/capital** | Separate future scopes; never route them through Position NFT Phase 2 or bypass the retired allocation refusal guard |
 | Validate and freeze compounder | **completed ops evidence** | Receipt-pinned in `deployments/v4-compounder-activation-2026-08-09.json`; do not replay the one-time activation sequence |
 | Lock UI rebuilt for v4 | **deferred frontend** | Lockboard is not part of the baskets-only launch |
 | Baskets buy/sell UI | **frontend** | The public front door app |
@@ -204,6 +216,7 @@ are retired. Other historical or experimental apps are not active v4 surfaces.
 | What's actually deployed / live state | `CURRENT_STATE.md` |
 | Product direction and phases | `ROADMAP.md` |
 | Operator deploy commands | `NARA_V4_LAUNCH_RUNBOOK.md`, `V4_LAUNCH_CHECKLIST.md` |
+| Position NFT Phase-2 operator release | `releases/NARA-20260821-v4-position-nft-phase2.md` |
 | NFT position spec | `NARA_V4_NFT_POSITIONS.md`, `NARA_V4_NFT_PRODUCTION_PLAN.md` |
 | NFT protocol-wide role / gap audit | `NARA_V4_NFT_PROTOCOL_ROLE_AUDIT.md` |
 | Router/lens spec | `ROUTER_LENS.md` |
@@ -270,3 +283,6 @@ What was stale/wrong before this audit, so a cold AI knows not to trust the old 
 5. When you add a contract, update: `V4_CONTRACT_INDEX.md`, `CURRENT_STATE.md`, this doc, and the
    relevant deploy script + tests in the same change.
 6. Two build systems. Check which project you're in before running `forge` or `hardhat`.
+7. `deploy:v4:allocations` is a retired refusal guard. Never bypass it or use it
+   as a Position NFT Phase-2 dry run; use the exact seven-contract release
+   runbook and dedicated verifiers.

@@ -1,7 +1,7 @@
 import hre from "hardhat";
 import { expect } from "chai";
 import type { Signer } from "ethers";
-import { deployRenderer } from "./helpers/art";
+import { deployRenderer } from "./helpers/art.js";
 
 const ONE = 10n ** 18n;
 const MAX_SUPPLY = 1_000_000n * ONE;
@@ -397,7 +397,7 @@ describe("NARA v4 invariant regression suite", () => {
     await expect(engine.connect(deployer).setRewardReserve(aliceAddr))
       .to.be.revertedWithCustomError(engine, "InvalidConfig");
 
-    const badReserve = await ethers.deployContract("NARARewardReserve", [await deployer.getAddress(), wad(100)], deployer);
+    const badReserve: any = await ethers.deployContract("NARARewardReserve", [await deployer.getAddress(), wad(100)], deployer);
     await badReserve.waitForDeployment();
     const wrongEngine = await ethers.deployContract("MockNARAEngineV4", [], deployer);
     await wrongEngine.waitForDeployment();

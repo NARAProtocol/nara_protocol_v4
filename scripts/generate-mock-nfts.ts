@@ -1,7 +1,8 @@
 import hre from "hardhat";
-import { deployRenderer } from "../test/helpers/art";
+import { deployRenderer } from "../test/helpers/art.js";
 import * as fs from "fs";
 import * as path from "path";
+import { POSITION_NFT_PHASE2_ROYALTY_BPS } from "./lib/v4PositionNftPhase2.js";
 
 const ONE = 10n ** 18n;
 const LOCK_FEE = 10n ** 14n;
@@ -12,7 +13,15 @@ function wad(x: bigint | number): bigint {
 }
 
 async function main() {
+  const networkName = hre.globalOptions.network ?? "default";
+  if (networkName !== "default" && networkName !== "hardhat") {
+    throw new Error("Mock Position NFT generation may run only on the local default/hardhat network");
+  }
   const { ethers } = await (hre.network as any).connect();
+  const network = await ethers.provider.getNetwork();
+  if (network.chainId !== 31_337n) {
+    throw new Error(`Mock Position NFT generation requires local chain 31337; connected ${network.chainId}`);
+  }
   const [deployer, alice] = await ethers.getSigners();
 
   console.log("Deploying Mock Nara NFT system...");
@@ -49,7 +58,7 @@ async function main() {
     rendererAddr,
     await deployer.getAddress(),
     await deployer.getAddress(),
-    500
+    POSITION_NFT_PHASE2_ROYALTY_BPS
   );
   await nft.waitForDeployment();
   const nftAddr = await nft.getAddress();

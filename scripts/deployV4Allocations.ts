@@ -289,6 +289,12 @@ async function estimateGasFloor(
 }
 
 async function main() {
+  throw new Error(
+    "QUARANTINED: this legacy all-in-one allocation deployer mixes Phase-2 NFT creation with " +
+      "Phase-3 bond/Genesis/lens actions and cannot complete against the live fee-bearing Vault. " +
+      "Use the staged, reviewed deployment entry points instead.",
+  );
+
   const connection = await hre.network.connect();
   const { ethers } = connection as any;
   const networkName = hre.globalOptions.network ?? "default";
