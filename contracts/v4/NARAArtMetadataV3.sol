@@ -102,9 +102,8 @@ contract NARAArtMetadataV3 {
                     boostLabel = "3.0x 6-Mo Lock (+10 Luck | Grail Unlocked)";
                 }
             } else {
-
-                if (amount < 9.9 ether && duration >= 17520) {
-                    boostLabel = "Standard Tier (Principal < 10 NARA: Grail Locked)";
+                if (amount < 99 ether && duration >= 17520) {
+                    boostLabel = "Standard Tier (Principal < 100 NARA: Grail Locked)";
                 } else if (duration < 17520) {
                     boostLabel = "Standard Tier (Duration < 6 Mo: Grail Locked)";
                 } else {

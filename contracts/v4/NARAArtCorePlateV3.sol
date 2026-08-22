@@ -11,7 +11,7 @@ contract NARAArtCorePlateV3 {
     uint256 public constant CORE_PLATE_VERSION = 5;
     uint64 public constant MIN_GRAIL_DURATION_EPOCHS = 17520; // 6 Months
     uint64 public constant MAX_LOCK_EPOCHS = 35040; // 1 Year
-    uint128 public constant MIN_GRAIL_AMOUNT = 9.9 ether; // 9.9 NARA net (10 NARA gross - 1% fee)
+    uint128 public constant MIN_GRAIL_AMOUNT = 99 ether; // 99 NARA net (100 NARA gross - 1% fee)
 
 
     struct ChassisTheme {
