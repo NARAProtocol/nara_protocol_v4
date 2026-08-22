@@ -1,0 +1,52 @@
+{
+  "version": "1.0",
+  "chainId": "8453",
+  "createdAt": 1787430830928,
+  "meta": {
+    "name": "Update NARA Engine Flat Lock Fee to ~1 USD in ETH",
+    "description": "Sets flat anti-spam lock fee on NARAEngine to 0.00035 ETH (~$1.00 USD) and unlock fee to 0.",
+    "txBuilderVersion": "1.16.5",
+    "createdFromSafeAddress": "0xd65c0e390Dc187A22c52c03816591CC736C0D755",
+    "createdFromOwnerAddress": ""
+  },
+  "transactions": [
+    {
+      "to": "0x98ab6406D6B548F37dEF7110961bb45A399e5aFC",
+      "value": "0",
+      "data": "0x8074fe4b00000000000000000000000000000000000000000000000000013e52b9abe000",
+      "contractMethod": {
+        "inputs": [
+          {
+            "name": "feeWei",
+            "type": "uint96",
+            "internalType": "uint96"
+          }
+        ],
+        "name": "setLockEthFee",
+        "payable": false
+      },
+      "contractInputsValues": {
+        "feeWei": "350000000000000"
+      }
+    },
+    {
+      "to": "0x98ab6406D6B548F37dEF7110961bb45A399e5aFC",
+      "value": "0",
+      "data": "0xd40367270000000000000000000000000000000000000000000000000000000000000000",
+      "contractMethod": {
+        "inputs": [
+          {
+            "name": "feeWei",
+            "type": "uint96",
+            "internalType": "uint96"
+          }
+        ],
+        "name": "setUnlockEthFee",
+        "payable": false
+      },
+      "contractInputsValues": {
+        "feeWei": "0"
+      }
+    }
+  ]
+}
