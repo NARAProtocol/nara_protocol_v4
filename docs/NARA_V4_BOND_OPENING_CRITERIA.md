@@ -13,12 +13,12 @@ The bond depository deploys with `V4_BOND_ACTIVE=false` and capacity=0. Bonds op
 □ NARA/USDC pool has at least $500 of real liquidity seeded.
 □ NARA/USDC TWAP is at least 24 hours old.
 □ `minOracleLiquidity` threshold in NARABondDepositoryV4NFT is set and enforced.
-□ NARABondVaultV4 is funded (289,970 NARA default).
+□ NARABondVaultV4 is funded (target 250,000 NARA; hard cap 290,000).
 □ NARABondDepositoryV4NFT is deployed and roles are assigned to Safe.
 □ NARAGenesisRewardDistributorV4 is deployed and bound to NARAPositionNFTV4.
 □ Bond terms are set with at least MIN_PRICE_DELAY = 1 day before opening.
 □ Bond capacity is explicitly set (non-zero) by Safe, not deployer.
-□ ETH split ratio (rewardSplitWad) is confirmed: at least 50% to notifyEthRewards().
+□ ETH split ratio (rewardSplitWad) is confirmed: configurable 0–100%, set at opening.
 □ All admin roles have been transferred from deployer to Safe.
 ```
 
@@ -84,7 +84,7 @@ Run this before setting each new bond term:
 □ TWAP > 24h history (verify twapSecondsAgo against bond pricing call)
 □ No active stale terms (MAX_TERMS_AGE expiry check)
 □ Capacity is non-zero and within vault balance
-□ rewardSplitWad confirmed (default: 50% to lockers)
+□ rewardSplitWad confirmed (configurable 0–100%; no fixed default)
 □ Genesis metadata confirmed for this round
 □ Term delay set (MIN_PRICE_DELAY = 1 day)
 □ Bond purchase fee (if any) reviewed

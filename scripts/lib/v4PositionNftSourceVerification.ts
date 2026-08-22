@@ -103,13 +103,21 @@ export async function queryBaseScanSourceProof(
   const apiReference =
     `https://api.etherscan.io/v2/api?chainid=${POSITION_NFT_PHASE2_CHAIN_ID}` +
     `&module=contract&action=getsourcecode&address=${normalizedAddress}`;
-  const response = await fetch(`${apiReference}&apikey=${encodeURIComponent(apiKey)}`, {
-    headers: { Accept: "application/json", "User-Agent": "nara-v4-position-nft-source-verifier" },
-  });
-  if (!response.ok) throw new Error(`BaseScan source verification lookup failed (${response.status})`);
-  const payload = await response.json() as { status?: unknown; message?: unknown; result?: unknown };
-  if (payload.status !== "1" || !Array.isArray(payload.result) || payload.result.length !== 1) {
-    throw new Error(`BaseScan did not return one verified source record (${String(payload.message)})`);
+  let payload: { status?: unknown; message?: unknown; result?: unknown } | undefined;
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const response = await fetch(`${apiReference}&apikey=${encodeURIComponent(apiKey)}`, {
+      headers: { Accept: "application/json", "User-Agent": "nara-v4-position-nft-source-verifier" },
+    });
+    if (response.ok) {
+      payload = await response.json() as { status?: unknown; message?: unknown; result?: unknown };
+      if (payload.status === "1" && Array.isArray(payload.result) && payload.result.length === 1) {
+        break;
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, 600 * (attempt + 1)));
+  }
+  if (payload?.status !== "1" || !Array.isArray(payload?.result) || payload?.result.length !== 1) {
+    throw new Error(`BaseScan did not return one verified source record (${String(payload?.message)})`);
   }
   const result = requireObject(payload.result[0], "BaseScan source record");
   const sourceCode = String(result.SourceCode ?? "");

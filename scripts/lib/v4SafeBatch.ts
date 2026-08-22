@@ -9,7 +9,7 @@ import {
 const SAFE_EXECUTION_ABI = [
   ...NARA_SAFE_ABI,
   "function execTransaction(address to,uint256 value,bytes data,uint8 operation,uint256 safeTxGas,uint256 baseGas,uint256 gasPrice,address gasToken,address payable refundReceiver,bytes signatures) returns (bool success)",
-  "event ExecutionSuccess(bytes32 txHash,uint256 payment)",
+  "event ExecutionSuccess(bytes32 indexed txHash,uint256 payment)",
 ] as const;
 const MULTISEND_ABI = ["function multiSend(bytes transactions)"] as const;
 

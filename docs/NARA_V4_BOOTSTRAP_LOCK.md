@@ -70,8 +70,8 @@ variable / can be zero / never promised".
 
 - Share each epoch = `position.weight / activeTotalWeight`
   (`NARAEngineModelLib.weightedLockShareWad`).
-- Max-duration weight multiplier ≈ **3×** per token
-  (`computeWeight`: `1 + 0.8·r + 1.2·r²`, r = duration/maxLockEpochs, r=1 → 3.0).
+- Max-duration weight multiplier ≈ **4×** per token
+  (`computeWeight`: `1 + 0.5·r + 2.5·r²`, r = duration/maxLockEpochs, r=1 → 4.0).
 - On unlock/maturity the position's weight is removed from `activeTotalWeight`
   (scheduled deactivation), lowering the denominator for all remaining holders.
 - The engine has **no early-exit**; the 1-year lock is enforced in code.

@@ -170,6 +170,11 @@ curve up to the contract's absolute 50% ceiling, but it cannot activate until th
 seven-day fee-update delay has elapsed. Operational material must therefore report
 the active onchain curve rather than describe 20% as an immutable contract ceiling.
 
+**Current active curve (post-timelock):** production later optimized the fee
+curves via the seven-day timelock. Active buy curve: base 3% → medium 5% →
+high 8% → extreme 12% (cap 12%). Active sell curve: base 5% → medium 8% →
+high 12% → extreme 20% (cap 20%).
+
 ---
 
 ## 5. Vault routing — `NARALiquidityGrowthVault`

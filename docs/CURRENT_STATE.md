@@ -27,31 +27,59 @@ sanitized evidence is `deployments/v4-production-activation-2026-08-09.json`,
 `deployments/v4-compounder-activation-2026-08-09.json`, and
 `deployments/v4-engine-epoch-recovery-2026-08-14.json`.
 
-## PRE-DEPLOYMENT — Position NFT Phase 2
+## DEPLOYED AND FINALIZED — Position NFT Phase 2
 
-The Position NFT Phase-2 release is implemented in this local release worktree
-but is not merged or deployed to Base. No production NFT address, receipt,
-runtime, source-verification record, or finalized manifest exists, so every
-consumer NFT surface remains blank or disabled.
+The Position NFT Phase-2 release is deployed on Base Mainnet, fully source-verified on
+BaseScan, and finalized under production Safe governance.
+Canonical sanitized evidence: `deployments/v4-position-nft-phase2-finalized-2026-08-21.json`
+(SHA-256: `68d9df51f9bc222437252e3628c6c7c593ef96088a518b99b17a50965504c06b`) and
+`deployments/v4-position-nft-phase2-source-verification-2026-08-21.json`.
 
-Phase 2 deploys exactly seven contracts, in order: `NARAArtMetadataV1`,
-`NARAArtSecurityPrintV1`, `NARAArtCorePlateV1`, `NARAArtGenesisPlateV1`,
-`NARAPositionRendererV5`, `NARAPositionAccountV4`, and `NARAPositionNFTV4`.
-Its approved final policy is exactly `1000 BPS` ERC-2981 royalties to the
-manifest-pinned production Treasury address, permanently frozen, plus zero and
-permanently frozen NARA/token wrapper claim fees with a zero recipient.
-ERC-2981 remains marketplace-advisory; Treasury controls later use and royalties
-do not automatically reach lockers. The Admin Safe and Treasury are distinct
-manifest fields.
+Phase 2 deployed exactly seven contracts, in order:
+1. `NARAArtMetadataV1`: `0xAE0Da2B2066FF0c1409A2aC4053699E75dd00633`
+2. `NARAArtSecurityPrintV1`: `0x0640dd2B545348eC91826ab7c58DD88EcE81f353`
+3. `NARAArtCorePlateV1`: `0x476b69f490C17a5500c4Eb9b6cB49302cef4bE4A`
+4. `NARAArtGenesisPlateV1`: `0x20520115546c28F99aE581d62935e62D9E8B9022`
+5. `NARAPositionRendererV5`: `0x607b08365C23a983C542898a79E670e6D4B80673`
+6. `NARAPositionAccountV4`: `0x3a8c9cA4f95E94751774810B33caF01bb992A55F`
+7. `NARAPositionNFTV4`: `0xCcBD8c59664958636369F8fe24B927aEBc3DF7cC`
 
-Bonds, allocations/Ops Vault, `NARAGenesisRewardDistributorV4` and Genesis
-binding, router, data/dashboard lenses, circulating-supply periphery, and
-composability remain separately reviewed Phase 3. Phase 2 must not emit
-`GenesisMinterSet`. See
-[`NARA_V4_NFT_PRODUCTION_PLAN.md`](NARA_V4_NFT_PRODUCTION_PLAN.md) for the release
-boundary and
-[`releases/NARA-20260821-v4-position-nft-phase2.md`](releases/NARA-20260821-v4-position-nft-phase2.md)
-for the exact operator sequence. Neither document authorizes deployment.
+Safe finalization transaction `0xfb83cb4cb4b8a2c30216f46be69b519628ad74259795806e30d158a7736c6e8f`
+(mined in block `50296367`) executed the atomic batch:
+- `setDefaultRoyalty(production.treasury, 1000)` — permanently frozen at 10.00% (`1000 BPS`)
+- `setClaimFees(0, 0)` & `setClaimFeeRecipient(address(0))` — permanently frozen at 0 BPS
+- `freezeRoyalties()` (`royaltiesFrozen = true`)
+- `freezeClaimFees()` (`claimFeesFrozen = true`)
+
+### Live Minting Verification & Generative Art Upgrade (2026-08-22)
+- **Live Mainnet Tokens:** Tokens #1, #2, #3, and #4 were minted and verified on Base Mainnet.
+- **Empirical System Audit:** `scripts/audit-live-nfts.js` verified 100.00% exact mathematical match against `NARAEngineModelLib.computeWeight()`, verified ERC-6551 clone bytecodes (45 bytes), Engine-TBA ownership equivalence, bidirectional token-position indexing, and 100% Engine contract solvency (5,465.98 NARA balance vs 5,465.44 NARA locked).
+- **Luxury Architectural Fat Frame Upgrade (V7 Stack with Lock-Duration Luck Boost):** 
+  - `NARAPositionNFTV4`: `0x01D3AC0acda01FE5D6788fA0B4062de94C8DE52b` (with upgradeable `setRenderer` and one-way `freezeRenderer`).
+  - `NARAPositionRendererV7`: `0xDE0D4442f7cFEF38b3DE2fd03A9EbB32fD28F797` (with Lock-Duration Luck Multiplier).
+  - `NARAArtGenesisPlateV2`: `0xe072A5bf40072dB1D8af12c8D21B1b6A98e16E65` (Luxury titanium-gold chassis with zero text collisions).
+  - `NARAArtCorePlateV3`: `0x317d11816F1ddd3ff1B35f99e5Ea2C39175DC2c5` (5-alloy generative engine: Prismatic Holo, 24K Gold, Obsidian Stealth, Cyber Emerald, Titanium Slate).
+  - `NARAArtMetadataV3`: `0xC8f1d3037290729671c06e019ef653cf98509067` (OpenSea rarity traits + `Lock Duration Boost`).
+  - `NARAArtSecurityPrintV2`: `0x88F69C994FE22dB6d31682604DAC29948c7C3728` (Clean banner with luminous Base Blue & Ivory NARA precision medallion).
+  - `NARAGenesisRewardDistributorV4`: `0x1A6E7B52Db9738622b835059F8C0B2f146829EC8` (5.00x boost Genesis distributor).
+- **Verified Live Mints & Rare Pulls:**
+  - Token #2: Pulled **`24K Gilded Gold`** + God-Tier Eternal Lock!
+  - Token #3: Pulled **`Solar Flare Matrix (Rare)`**!
+  - Token #4: Pulled **`Obsidian Stealth (20.0% Rare)`** + **`Solar Flare Matrix (Rare)`** via 1-Year Max Lock (+350 Luck)!
+
+- **Console Web App Live:** Deployed to Cloudflare Pages (`https://nara-v4-console-preview.pages.dev`).
+
+### OpenSea Secondary Trading & Uniswap v4 Hook Swap Routing (2026-08-22)
+- **OpenSea NFT Secondary Trade Forensics:** Position NFT #3 (`Position #13`) sold via Seaport 1.6 in tx `0xb288ca5ac9d2ef5dfca788f1a73f09a7b0b834fdf928364a2c79fbdb77bfa703` for 0.001 ETH. Protocol received exact 10.00% royalty (0.0001 ETH). Buyer `0xC019...490d` took custody of Token-Bound Account `0x47Ea...bE43` with 9.90 NARA locked in `NARAEngine.sol` 100% intact.
+- **OpenSea Swap Native Uniswap v4 Hook Routing:** OpenSea Swap natively routes to NARA's Uniswap v4 Hook pool (`[USDC, NARA, 3000, 60, NARALiquidityGrowthHook]`). Supports single-hop (`USDC -> NARA`) and multi-hop (`ETH -> WETH -> USDC -> NARA`) atomic swaps.
+- **Hook Fee Banking:** Verified live swap fee captures (3.00% to 5.00%). Banked fees in `NARALiquidityGrowthVault.sol` (`0xD7f7b44BF65EBa3E90fDe0642687ed22A323084D`) reached 190.80 NARA and 24.92 USDC for protocol POL compounding.
+- **Direct OpenSea Swap Endpoint:** `https://opensea.io/swap?fromChain=base&fromAddress=0x833589fcd6edb6e08f4c7c32d4f71b54bda02913&toChain=base&toAddress=0xb6333f5d4ced8dffa80f3f13697d6aa3bb3f19c1`.
+
+
+Bonds, allocations/Ops Vault, `NARAGenesisRewardDistributorV4` and Genesis binding, router,
+data/dashboard lenses, circulating-supply periphery, and composability remain Phase 3.
+
+
 
 ## Authoritative v4 release policy
 

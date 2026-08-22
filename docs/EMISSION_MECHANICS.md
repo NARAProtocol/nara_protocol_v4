@@ -47,7 +47,7 @@ More ETH in → higher betaWad (yield temperature) → higher emission
 **The bond market opening is the primary activation event.**
 Once bonds are live and ETH flows in, emission climbs and every committed participant benefits proportionally.
 
-> v3 used a 70/30 split (70% to rewards). v4 default is `rewardSplitWad = 0.30` (30% to engine rewards, 70% to treasury). The split is set in `BondTerms` by the `TERMS_ROLE` via `executeTerms()`.
+> v3 used a 70/30 split (70% to rewards). v4 `rewardSplitWad` is configurable at bond opening (0–100%, not yet decided). The split is set in `BondTerms` by the `TERMS_ROLE` via `executeTerms()`.
 
 ---
 
