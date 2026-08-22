@@ -764,7 +764,7 @@ export async function verifyPositionNftPhase2ReleaseControl(
       : []),
   ]);
   const classicBypass = protection.required_pull_request_reviews?.bypass_pull_request_allowances;
-  const classicBypassEmpty = classicBypass === null || (
+  const classicBypassEmpty = classicBypass === undefined || classicBypass === null || (
     classicBypass &&
     ["users", "teams", "apps"].every((key) =>
       Array.isArray(classicBypass[key]) && classicBypass[key].length === 0
