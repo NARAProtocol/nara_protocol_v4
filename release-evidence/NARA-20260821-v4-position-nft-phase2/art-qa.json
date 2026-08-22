@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "changeId": "NARA-20260821-v4-position-nft-phase2",
-  "sourceCommit": "f55e1afab1e689513dc24bbee3c13ba0909507c5",
+  "sourceCommit": "fa0535bea277e8961944d0d70ca1d5e06e0a64fe",
   "sourceArtifacts": {
     "NARAArtMetadataV1": {
       "fullyQualifiedName": "contracts/v4/NARAArtMetadataV1.sol:NARAArtMetadataV1",
