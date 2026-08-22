@@ -61,6 +61,7 @@ contract NARAArtMetadataV3 {
 
         uint8 rank = corePlate.rankOf(lifetimeEthWei);
         string memory rName = corePlate.rankName(rank);
+        uint64 duration = unlockEpoch > createdEpoch ? (unlockEpoch - createdEpoch) : 0;
 
         string memory themeName = "Titanium Slate";
         string memory themeRarity = "Common (45%)";
@@ -92,7 +93,6 @@ contract NARAArtMetadataV3 {
                 themeRarity = "Common (45%)";
             }
 
-            uint64 duration = unlockEpoch > createdEpoch ? (unlockEpoch - createdEpoch) : 0;
             bool eligible = corePlate.isGrailEligible(amount, createdEpoch, unlockEpoch, isEternal);
 
             if (eligible) {
@@ -102,6 +102,7 @@ contract NARAArtMetadataV3 {
                     boostLabel = "3.0x 6-Mo Lock (+10 Luck | Grail Unlocked)";
                 }
             } else {
+
                 if (amount < 9.9 ether && duration >= 17520) {
                     boostLabel = "Standard Tier (Principal < 10 NARA: Grail Locked)";
                 } else if (duration < 17520) {
@@ -121,10 +122,13 @@ contract NARAArtMetadataV3 {
         else if (sigilVariant == 3) sigilName = "Singularity Accretion (Ultra-Rare)";
         else sigilName = "Concentric Telemetry Radar (Standard)";
 
+            string memory multiplierVal = isEternal ? "5.0X Sovereign Anchor" : (duration >= 35040 ? "4.0X (1-Year Lock)" : (duration >= 17520 ? "3.0X (6-Month Lock)" : "1.0X (Standard Lock)"));
+
         return string.concat(
             '[',
             '{"trait_type":"Chassis Finish","value":"', themeName, '"},',
             '{"trait_type":"Finish Rarity","value":"', themeRarity, '"},',
+            '{"trait_type":"Reward Multiplier","value":"', multiplierVal, '"},',
             '{"trait_type":"Evolution Rank","value":"Rank ', uint256(rank).toString(), ' // ', rName, '"},',
             '{"trait_type":"Capacitor Charge","value":"', uint256(rank).toString(), '/10 Cells"},',
             '{"trait_type":"Lock Duration Boost","value":"', boostLabel, '"},',
@@ -136,6 +140,7 @@ contract NARAArtMetadataV3 {
             '{"trait_type":"Storage Engine","value":"Fully On-Chain SVG (No IPFS)"}',
             ']'
         );
+
     }
 
     function _pad6(uint256 v) internal pure returns (string memory) {
