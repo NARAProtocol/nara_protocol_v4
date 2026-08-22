@@ -6,11 +6,11 @@ import {Base64} from "@openzeppelin/contracts/utils/Base64.sol";
 import {NARAArtCorePlateV3} from "./NARAArtCorePlateV3.sol";
 
 /// @title NARAArtMetadataV3
-/// @notice Generates rich OpenSea metadata with High-Stakes Grail Gate traits and rarity scores.
+/// @notice Generates rich OpenSea metadata with 10-Rank Multi-Vector Evolution traits.
 contract NARAArtMetadataV3 {
     using Strings for uint256;
 
-    uint256 public constant METADATA_VERSION = 4;
+    uint256 public constant METADATA_VERSION = 5;
     NARAArtCorePlateV3 public immutable corePlate;
 
     constructor(address corePlate_) {
@@ -44,7 +44,7 @@ contract NARAArtMetadataV3 {
     }
 
     function attributes(
-        uint8 tier,
+        uint256 lifetimeEthWei,
         uint256 seed,
         uint8 moduleIdx,
         uint256 tokenId,
@@ -58,6 +58,9 @@ contract NARAArtMetadataV3 {
     ) public view returns (string memory) {
         moduleIdx;
         tokenId;
+
+        uint8 rank = corePlate.rankOf(lifetimeEthWei);
+        string memory rName = corePlate.rankName(rank);
 
         string memory themeName = "Titanium Slate";
         string memory themeRarity = "Common (45%)";
@@ -94,9 +97,9 @@ contract NARAArtMetadataV3 {
 
             if (eligible) {
                 if (duration >= 35040) {
-                    boostLabel = "4.0x Max 1-Yr Lock (+150 Luck | Grail Unlocked)";
+                    boostLabel = "4.0x Max 1-Yr Lock (+30 Luck | Grail Unlocked)";
                 } else {
-                    boostLabel = "3.0x 6-Mo Lock (+50 Luck | Grail Unlocked)";
+                    boostLabel = "3.0x 6-Mo Lock (+10 Luck | Grail Unlocked)";
                 }
             } else {
                 if (amount < 10 ether && duration >= 17520) {
@@ -117,24 +120,18 @@ contract NARAArtMetadataV3 {
         else if (sigilVariant == 3) sigilName = "Singularity Accretion (Ultra-Rare)";
         else sigilName = "Concentric Telemetry Radar (Standard)";
 
-        string memory tierName;
-        if (tier == 4) tierName = "Apex Radiant";
-        else if (tier == 3) tierName = "Calibrated";
-        else if (tier == 2) tierName = "Rewarded";
-        else if (tier == 1) tierName = "Activated";
-        else tierName = "New Position";
-
         return string.concat(
             '[',
             '{"trait_type":"Chassis Finish","value":"', themeName, '"},',
             '{"trait_type":"Finish Rarity","value":"', themeRarity, '"},',
+            '{"trait_type":"Evolution Rank","value":"Rank ', uint256(rank).toString(), ' // ', rName, '"},',
+            '{"trait_type":"Capacitor Charge","value":"', uint256(rank).toString(), '/10 Cells"},',
             '{"trait_type":"Lock Duration Boost","value":"', boostLabel, '"},',
             '{"trait_type":"Core Sigil Array","value":"', sigilName, '"},',
-            '{"trait_type":"Yield Status","value":"', tierName, '"},',
+            '{"trait_type":"Claim Scars (Provenance)","value":"', uint256(claimCount).toString(), ' Claims"},',
+            '{"trait_type":"Armor Reinforcements","value":"', uint256(extendCount).toString(), ' Extensions"},',
             '{"trait_type":"Position ID","value":', positionId.toString(), '},',
             '{"trait_type":"Created Epoch","value":', uint256(createdEpoch).toString(), '},',
-            '{"trait_type":"Claims Executed","value":', uint256(claimCount).toString(), '},',
-            '{"trait_type":"Extensions Executed","value":', uint256(extendCount).toString(), '},',
             '{"trait_type":"Storage Engine","value":"Fully On-Chain SVG (No IPFS)"}',
             ']'
         );

@@ -4,14 +4,14 @@ pragma solidity 0.8.34;
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 /// @title NARAArtCorePlateV3
-/// @notice Top 1% luxury generative art plate with 5 legendary chassis materials, holographic foils, and High-Stakes Grail Gate (≥10 NARA & ≥6 Mo Lock).
+/// @notice Top 1% luxury generative art plate with 5 legendary chassis materials, 10-Rank Multi-Vector Evolution, and High-Stakes Grail Gate.
 contract NARAArtCorePlateV3 {
     using Strings for uint256;
 
-    uint256 public constant CORE_PLATE_VERSION = 4;
-    uint64 public constant MIN_GRAIL_DURATION_EPOCHS = 17520; // 6 Months (17,520 * 15m)
-    uint64 public constant MAX_LOCK_EPOCHS = 35040; // 1 Year (35,040 * 15m)
-    uint128 public constant MIN_GRAIL_AMOUNT = 10 ether; // 10 NARA minimum for Gold/Holo
+    uint256 public constant CORE_PLATE_VERSION = 5;
+    uint64 public constant MIN_GRAIL_DURATION_EPOCHS = 17520; // 6 Months
+    uint64 public constant MAX_LOCK_EPOCHS = 35040; // 1 Year
+    uint128 public constant MIN_GRAIL_AMOUNT = 10 ether; // 10 NARA min for Gold/Holo
 
     struct ChassisTheme {
         string name;
@@ -33,10 +33,8 @@ contract NARAArtCorePlateV3 {
         uint64 duration = unlockEpoch - createdEpoch;
         if (duration > MAX_LOCK_EPOCHS) duration = MAX_LOCK_EPOCHS;
         if (duration < MIN_GRAIL_DURATION_EPOCHS) {
-            // Standard short luck bonus (0 to 10)
             return (uint256(duration) * 10) / MIN_GRAIL_DURATION_EPOCHS;
         }
-        // High-stakes bonus (10 to 30)
         uint64 extraDuration = duration - MIN_GRAIL_DURATION_EPOCHS;
         uint64 maxExtra = MAX_LOCK_EPOCHS - MIN_GRAIL_DURATION_EPOCHS;
         return 10 + (uint256(extraDuration) * 20) / maxExtra;
@@ -47,6 +45,34 @@ contract NARAArtCorePlateV3 {
         if (amount < MIN_GRAIL_AMOUNT) return false;
         if (unlockEpoch <= createdEpoch) return false;
         return (unlockEpoch - createdEpoch) >= MIN_GRAIL_DURATION_EPOCHS;
+    }
+
+    function rankOf(uint256 lifetimeEthWei) public pure returns (uint8) {
+        if (lifetimeEthWei >= 10 ether) return 10;
+        if (lifetimeEthWei >= 5 ether) return 9;
+        if (lifetimeEthWei >= 2.5 ether) return 8;
+        if (lifetimeEthWei >= 1 ether) return 7;
+        if (lifetimeEthWei >= 0.5 ether) return 6;
+        if (lifetimeEthWei >= 0.25 ether) return 5;
+        if (lifetimeEthWei >= 0.1 ether) return 4;
+        if (lifetimeEthWei >= 0.05 ether) return 3;
+        if (lifetimeEthWei >= 0.02 ether) return 2;
+        if (lifetimeEthWei >= 0.005 ether) return 1;
+        return 0;
+    }
+
+    function rankName(uint8 rank) public pure returns (string memory) {
+        if (rank == 10) return "APEX SUPERNOVA";
+        if (rank == 9) return "DIMENSIONAL CORONA";
+        if (rank == 8) return "PLASMA SUPER-RING";
+        if (rank == 7) return "TACHYON STARBURST";
+        if (rank == 6) return "GRAVITATIONAL WARP";
+        if (rank == 5) return "ORBITAL GYROSCOPE";
+        if (rank == 4) return "STATOR TURBINE";
+        if (rank == 3) return "DOUBLE CONDUIT";
+        if (rank == 2) return "CIRCUIT IGNITION";
+        if (rank == 1) return "SENSOR ACTIVE";
+        return "DORMANT CHASSIS";
     }
 
     function getTheme(
@@ -62,7 +88,6 @@ contract NARAArtCorePlateV3 {
         bool eligible = isGrailEligible(amount, createdEpoch, unlockEpoch, isEternal);
 
         if (eligible && roll < 5) {
-            // 0.5% Base / 3.5% Max Lock Holy Grail: Prismatic Holographic Foil
             return ChassisTheme({
                 name: "Prismatic Holo Foil",
                 frameOuter: "url(#holoFrame)",
@@ -77,7 +102,6 @@ contract NARAArtCorePlateV3 {
                 isHolo: true
             });
         } else if (eligible && roll < 55) {
-            // 5.0% Base / 8.5% Max Lock Ultra-Rare: 24K Gilded Gold
             return ChassisTheme({
                 name: "24K Gilded Gold",
                 frameOuter: "url(#goldFrame)",
@@ -92,7 +116,6 @@ contract NARAArtCorePlateV3 {
                 isHolo: false
             });
         } else if (roll < 200) {
-            // 15.0% - 20.0% Rare: Obsidian Stealth
             return ChassisTheme({
                 name: "Obsidian Stealth",
                 frameOuter: "#181A20",
@@ -107,7 +130,6 @@ contract NARAArtCorePlateV3 {
                 isHolo: false
             });
         } else if (roll < 500) {
-            // 30.0% Uncommon: Cybernetic Emerald
             return ChassisTheme({
                 name: "Cybernetic Emerald",
                 frameOuter: "#11261E",
@@ -122,7 +144,6 @@ contract NARAArtCorePlateV3 {
                 isHolo: false
             });
         } else {
-            // 41.5% - 50.0% Common: Titanium Slate
             return ChassisTheme({
                 name: "Titanium Slate",
                 frameOuter: "#2B323D",
@@ -139,9 +160,8 @@ contract NARAArtCorePlateV3 {
         }
     }
 
-
     function svg(
-        uint8 tier,
+        uint256 lifetimeEthWei,
         uint256 seed,
         uint8 moduleIdx,
         uint256 tokenId,
@@ -154,25 +174,27 @@ contract NARAArtCorePlateV3 {
         uint32 extendCount
     ) external pure returns (string memory) {
         moduleIdx;
-        claimCount;
-        extendCount;
+        uint8 rank = rankOf(lifetimeEthWei);
         ChassisTheme memory t = getTheme(seed, amount, createdEpoch, unlockEpoch, isEternal);
 
         return string.concat(
-            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="1000" height="1000" style="background:#000;">',
-            _defs(t),
-            _chassis(t),
-            _header(tier, t, createdEpoch),
-            _energyCore(tier, seed, t),
-            _identityBand(tokenId, positionId, t),
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="1000" height="1000" style="background:#07090C;">',
+            _defs(t, rank),
+            _chassis(t, rank, extendCount),
+            _claimNotches(t, claimCount),
+            _header(rank, t, createdEpoch),
+            _capacitorHUD(t, rank),
+            _energyCore(rank, seed, t),
+            _identityBand(tokenId, positionId, t, rank),
             "</svg>"
         );
     }
 
-    function _defs(ChassisTheme memory t) internal pure returns (string memory) {
+    function _defs(ChassisTheme memory t, uint8 rank) internal pure returns (string memory) {
+        string memory opacity = rank >= 8 ? "0.45" : (rank >= 4 ? "0.32" : "0.20");
         return string.concat(
             '<defs>',
-            '<radialGradient id="coronaglow" cx="50%" cy="48%" r="48%"><stop offset="0%" stop-color="', t.glowColor, '" stop-opacity="0.28"/><stop offset="100%" stop-color="#07090C" stop-opacity="0"/></radialGradient>',
+            '<radialGradient id="coronaglow" cx="50%" cy="49%" r="49%"><stop offset="0%" stop-color="', t.glowColor, '" stop-opacity="', opacity, '"/><stop offset="100%" stop-color="#07090C" stop-opacity="0"/></radialGradient>',
             '<linearGradient id="goldFrame" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FFE072"/><stop offset="25%" stop-color="#C59B27"/><stop offset="50%" stop-color="#FFF0A0"/><stop offset="75%" stop-color="#9E7A1A"/><stop offset="100%" stop-color="#FFE072"/></linearGradient>',
             '<linearGradient id="holoFrame" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FF0080"/><stop offset="20%" stop-color="#7928CA"/><stop offset="40%" stop-color="#0070F3"/><stop offset="60%" stop-color="#00DFD8"/><stop offset="80%" stop-color="#79FFE1"/><stop offset="100%" stop-color="#FF0080"/></linearGradient>',
             '<linearGradient id="holoPin" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#00DFD8"/><stop offset="50%" stop-color="#FF0080"/><stop offset="100%" stop-color="#79FFE1"/></linearGradient>',
@@ -181,99 +203,119 @@ contract NARAArtCorePlateV3 {
         );
     }
 
-    function _chassis(ChassisTheme memory t) internal pure returns (string memory) {
+    function _chassis(ChassisTheme memory t, uint8 rank, uint32 extendCount) internal pure returns (string memory) {
+        uint256 strokeW = 48 + (extendCount > 10 ? 10 : extendCount);
+        string memory armorFins = "";
+        if (rank >= 4) {
+            armorFins = string.concat(
+                '<polygon points="58,58 160,58 120,120 58,160" fill="', t.bracket, '" opacity="0.75"/>',
+                '<polygon points="942,58 840,58 880,120 942,160" fill="', t.bracket, '" opacity="0.75"/>',
+                '<polygon points="58,942 160,942 120,880 58,840" fill="', t.bracket, '" opacity="0.75"/>',
+                '<polygon points="942,942 840,942 880,880 942,840" fill="', t.bracket, '" opacity="0.75"/>'
+            );
+        }
+
         return string.concat(
             '<rect width="1000" height="1000" fill="#07090C"/>',
             '<rect width="1000" height="1000" fill="url(#coronaglow)"/>',
-            '<rect x="24" y="24" width="952" height="952" rx="28" fill="none" stroke="', t.frameOuter, '" stroke-width="48"/>',
+            '<rect x="24" y="24" width="952" height="952" rx="28" fill="none" stroke="', t.frameOuter, '" stroke-width="', strokeW.toString(), '"/>',
             '<rect x="48" y="48" width="904" height="904" rx="16" fill="none" stroke="', t.frameInner, '" stroke-width="6"/>',
-            '<rect x="54" y="54" width="892" height="892" rx="12" fill="none" stroke="', t.pinStripe, '" stroke-width="2" opacity="0.65"/>',
-            '<path d="M58 140 V58 H140" fill="none" stroke="', t.bracket, '" stroke-width="8" stroke-linecap="round"/>',
-            '<path d="M942 140 V58 H860" fill="none" stroke="', t.bracket, '" stroke-width="8" stroke-linecap="round"/>',
-            '<path d="M58 860 V942 H140" fill="none" stroke="', t.bracket, '" stroke-width="8" stroke-linecap="round"/>',
-            '<path d="M942 860 V942 H860" fill="none" stroke="', t.bracket, '" stroke-width="8" stroke-linecap="round"/>',
-            '<circle cx="72" cy="72" r="6" fill="', t.bracket, '"/>',
-            '<circle cx="928" cy="72" r="6" fill="', t.bracket, '"/>',
-            '<circle cx="72" cy="928" r="6" fill="', t.bracket, '"/>',
-            '<circle cx="928" cy="928" r="6" fill="', t.bracket, '"/>'
+            '<rect x="54" y="54" width="892" height="892" rx="12" fill="none" stroke="', t.pinStripe, '" stroke-width="2" opacity="0.75"/>',
+            armorFins,
+            '<path d="M58 150 V58 H150" fill="none" stroke="', t.bracket, '" stroke-width="10" stroke-linecap="round"/>',
+            '<path d="M942 150 V58 H850" fill="none" stroke="', t.bracket, '" stroke-width="10" stroke-linecap="round"/>',
+            '<path d="M58 850 V942 H150" fill="none" stroke="', t.bracket, '" stroke-width="10" stroke-linecap="round"/>',
+            '<path d="M942 850 V942 H850" fill="none" stroke="', t.bracket, '" stroke-width="10" stroke-linecap="round"/>',
+            '<circle cx="72" cy="72" r="7" fill="', t.bracket, '"/>',
+            '<circle cx="928" cy="72" r="7" fill="', t.bracket, '"/>',
+            '<circle cx="72" cy="928" r="7" fill="', t.bracket, '"/>',
+            '<circle cx="928" cy="928" r="7" fill="', t.bracket, '"/>'
         );
     }
 
-    function _header(uint8 tier, ChassisTheme memory t, uint64 createdEpoch) internal pure returns (string memory) {
-        string memory tierLabel;
-        if (tier == 4) tierLabel = unicode"● APEX RADIANT";
-        else if (tier == 3) tierLabel = unicode"● CALIBRATED";
-        else if (tier == 2) tierLabel = unicode"● REWARDED";
-        else if (tier == 1) tierLabel = unicode"● ACTIVATED";
-        else tierLabel = string.concat(unicode"● ", t.name);
+    function _claimNotches(ChassisTheme memory t, uint32 claimCount) internal pure returns (string memory) {
+        if (claimCount == 0) return "";
+        uint32 notches = claimCount > 10 ? 10 : claimCount;
+        string memory leftRails = "";
+        string memory rightRails = "";
 
+        for (uint32 i = 0; i < notches; i++) {
+            uint32 y = 280 + i * 40;
+            leftRails = string.concat(leftRails, '<line x1="50" y1="', uint256(y).toString(), '" x2="60" y2="', uint256(y).toString(), '" stroke="', t.sigilColor, '" stroke-width="3"/>');
+            rightRails = string.concat(rightRails, '<line x1="940" y1="', uint256(y).toString(), '" x2="950" y2="', uint256(y).toString(), '" stroke="', t.sigilColor, '" stroke-width="3"/>');
+        }
+        return string.concat(leftRails, rightRails);
+    }
+
+    function _header(uint8 rank, ChassisTheme memory t, uint64 createdEpoch) internal pure returns (string memory) {
+        string memory rName = rankName(rank);
         return string.concat(
             '<g transform="translate(80, 114)">',
-            '<rect x="-8" y="-24" width="380" height="42" rx="8" fill="', t.badgeBg, '" opacity="0.85"/>',
-            '<circle cx="12" cy="-3" r="8" fill="', t.sigilColor, '"/>',
-            '<text x="28" y="5" fill="', t.badgeText, '" font-family="\'IBM Plex Mono\', monospace" font-size="22" font-weight="900" letter-spacing="2">',
-            tierLabel,
+            '<rect x="-8" y="-24" width="370" height="42" rx="8" fill="', t.badgeBg, '" opacity="0.9"/>',
+            '<circle cx="12" cy="-3" r="7" fill="', t.sigilColor, '"/>',
+            '<text x="28" y="5" fill="', t.badgeText, '" font-family="\'IBM Plex Mono\', monospace" font-size="18" font-weight="900" letter-spacing="2">',
+            unicode"● RANK ", uint256(rank).toString(), " // ", rName,
             '</text></g>',
-            '<text x="920" y="121" fill="#F4EFE6" font-family="\'IBM Plex Mono\', monospace" font-size="28" font-weight="800" letter-spacing="2" text-anchor="end">EPOCH #',
+            '<text x="920" y="121" fill="#F4EFE6" font-family="\'IBM Plex Mono\', monospace" font-size="26" font-weight="800" letter-spacing="2" text-anchor="end">EPOCH #',
             uint256(createdEpoch).toString(),
             '</text>',
             '<line x1="80" y1="150" x2="920" y2="150" stroke="', t.accentColor, '" stroke-width="2" opacity="0.45"/>'
         );
     }
 
-    function _energyCore(uint8 tier, uint256 seed, ChassisTheme memory t) internal pure returns (string memory) {
-        uint256 sigilVariant = (seed / 1000) % 5;
+    function _capacitorHUD(ChassisTheme memory t, uint8 rank) internal pure returns (string memory) {
+        string memory cells = "";
+        for (uint8 i = 0; i < 10; i++) {
+            uint256 x = 660 + uint256(i) * 26;
+            string memory fillCol = (i < rank) ? t.sigilColor : "#1E2430";
+            cells = string.concat(cells, '<rect x="', x.toString(), '" y="162" width="20" height="12" rx="2" fill="', fillCol, '"/>');
+        }
+        return string.concat(
+            '<text x="645" y="173" fill="', t.sigilColor, '" font-family="\'IBM Plex Mono\', monospace" font-size="13" font-weight="800" text-anchor="end">CAPACITOR</text>',
+            cells
+        );
+    }
+
+    function _energyCore(uint8 rank, uint256 seed, ChassisTheme memory t) internal pure returns (string memory) {
+        seed;
         string memory rings = "";
 
-        if (sigilVariant == 0) {
-            // Solar Flare Matrix
+
+        if (rank >= 7) {
+            // Tachyon Starburst Spikes (Rank 7+)
             rings = string.concat(
-                '<circle cx="0" cy="0" r="270" fill="none" stroke="', t.accentColor, '" stroke-width="2" opacity="0.35" stroke-dasharray="12 12"/>',
-                '<circle cx="0" cy="0" r="220" fill="none" stroke="', t.sigilColor, '" stroke-width="3" opacity="0.8" stroke-dasharray="24 8"/>'
+                '<polygon points="0,-320 40,-70 320,0 40,70 0,320 -40,70 -320,0 -40,-70" fill="none" stroke="', t.sigilColor, '" stroke-width="2.5" opacity="0.75"/>',
+                '<circle cx="0" cy="0" r="280" fill="none" stroke="', t.accentColor, '" stroke-width="3" stroke-dasharray="16 8"/>'
             );
-        } else if (sigilVariant == 1) {
-            // Dual Orbital Gyroscope
+        } else if (rank >= 5) {
+            // Dual Orbital Gyroscope (Rank 5-6)
             rings = string.concat(
-                '<ellipse cx="0" cy="0" rx="270" ry="120" fill="none" stroke="', t.accentColor, '" stroke-width="3" opacity="0.6" transform="rotate(-30)"/>',
-                '<ellipse cx="0" cy="0" rx="270" ry="120" fill="none" stroke="', t.sigilColor, '" stroke-width="3" opacity="0.8" transform="rotate(30)"/>'
+                '<ellipse cx="0" cy="0" rx="270" ry="110" fill="none" stroke="', t.accentColor, '" stroke-width="3" transform="rotate(-35)"/>',
+                '<ellipse cx="0" cy="0" rx="270" ry="110" fill="none" stroke="', t.sigilColor, '" stroke-width="3" transform="rotate(35)"/>'
             );
-        } else if (sigilVariant == 2) {
-            // Tachyon Starburst Array
+        } else if (rank >= 3) {
+            // High-voltage double conduit (Rank 3-4)
             rings = string.concat(
-                '<circle cx="0" cy="0" r="250" fill="none" stroke="', t.accentColor, '" stroke-width="2" opacity="0.4"/>',
-                '<polygon points="0,-270 70,-70 270,0 70,70 0,270 -70,70 -270,0 -70,-70" fill="none" stroke="', t.sigilColor, '" stroke-width="2.5" opacity="0.7"/>'
-            );
-        } else if (sigilVariant == 3) {
-            // Singularity Accretion
-            rings = string.concat(
-                '<circle cx="0" cy="0" r="270" fill="none" stroke="', t.accentColor, '" stroke-width="3" opacity="0.5" stroke-dasharray="4 16"/>',
-                '<circle cx="0" cy="0" r="230" fill="none" stroke="', t.sigilColor, '" stroke-width="4" opacity="0.85" stroke-dasharray="32 8"/>',
-                '<circle cx="0" cy="0" r="190" fill="none" stroke="', t.accentColor, '" stroke-width="2" opacity="0.6"/>'
+                '<circle cx="0" cy="0" r="260" fill="none" stroke="', t.accentColor, '" stroke-width="2" stroke-dasharray="24 12"/>',
+                '<circle cx="0" cy="0" r="220" fill="none" stroke="', t.sigilColor, '" stroke-width="3" stroke-dasharray="8 8"/>'
             );
         } else {
-            // Concentric Telemetry Radar
+            // Standard Radar (Rank 0-2)
             rings = string.concat(
-                '<circle cx="0" cy="0" r="280" fill="none" stroke="', t.accentColor, '" stroke-width="2" opacity="0.3" stroke-dasharray="6 8"/>',
-                '<circle cx="0" cy="0" r="210" fill="none" stroke="', t.sigilColor, '" stroke-width="3" opacity="0.75" stroke-dasharray="16 6"/>'
+                '<circle cx="0" cy="0" r="240" fill="none" stroke="', t.accentColor, '" stroke-width="2" opacity="0.4" stroke-dasharray="6 8"/>',
+                '<circle cx="0" cy="0" r="200" fill="none" stroke="', t.sigilColor, '" stroke-width="2.5" opacity="0.6"/>'
             );
         }
 
-        string memory tierRadiance = "";
-        if (tier >= 2) {
-            tierRadiance = string.concat(
-                '<circle cx="0" cy="0" r="175" fill="none" stroke="', t.sigilColor, '" stroke-width="4" opacity="0.9"/>'
-            );
-        }
-
+        uint256 coreR = 140 + uint256(rank) * 3;
         return string.concat(
-            '<g transform="translate(500, 475)">',
+            '<g transform="translate(500, 480)">',
             rings,
-            tierRadiance,
-            '<circle cx="0" cy="0" r="140" fill="#0B0E14" stroke="', t.sigilColor, '" stroke-width="6"/>',
-            '<line x1="-290" y1="0" x2="-210" y2="0" stroke="', t.sigilColor, '" stroke-width="3" opacity="0.85"/>',
-            '<line x1="210" y1="0" x2="290" y2="0" stroke="', t.sigilColor, '" stroke-width="3" opacity="0.85"/>',
-            '<line x1="0" y1="-290" x2="0" y2="-210" stroke="', t.sigilColor, '" stroke-width="3" opacity="0.85"/>',
-            '<line x1="0" y1="210" x2="0" y2="290" stroke="', t.sigilColor, '" stroke-width="3" opacity="0.85"/>',
+            '<circle cx="0" cy="0" r="', coreR.toString(), '" fill="#0B0E14" stroke="', t.sigilColor, '" stroke-width="6"/>',
+            '<line x1="-290" y1="0" x2="-200" y2="0" stroke="', t.sigilColor, '" stroke-width="3"/>',
+            '<line x1="200" y1="0" x2="290" y2="0" stroke="', t.sigilColor, '" stroke-width="3"/>',
+            '<line x1="0" y1="-290" x2="0" y2="-200" stroke="', t.sigilColor, '" stroke-width="3"/>',
+            '<line x1="0" y1="200" x2="0" y2="290" stroke="', t.sigilColor, '" stroke-width="3"/>',
             '<g stroke="', t.sigilColor, '" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" fill="none">',
             '<path d="M-38 56 L-38 -56"/>',
             '<path d="M38 56 L38 -56"/>',
@@ -284,12 +326,12 @@ contract NARAArtCorePlateV3 {
         );
     }
 
-    function _identityBand(uint256 tokenId, uint256 positionId, ChassisTheme memory t) internal pure returns (string memory) {
+    function _identityBand(uint256 tokenId, uint256 positionId, ChassisTheme memory t, uint8 rank) internal pure returns (string memory) {
         return string.concat(
             '<line x1="80" y1="784" x2="920" y2="784" stroke="', t.accentColor, '" stroke-width="2" opacity="0.45"/>',
-            '<text x="80" y="874" fill="#FFFFFF" font-family="\'Satoshi\', \'Inter\', sans-serif" font-size="88" font-weight="900" letter-spacing="4">NARA</text>',
-            '<text x="84" y="918" fill="', t.sigilColor, '" font-family="\'IBM Plex Mono\', monospace" font-size="22" font-weight="800" letter-spacing="3">',
-            t.name,
+            '<text x="80" y="874" fill="#FFFFFF" font-family="\'Satoshi\', sans-serif" font-size="88" font-weight="900" letter-spacing="4">NARA</text>',
+            '<text x="84" y="918" fill="', t.sigilColor, '" font-family="\'IBM Plex Mono\', monospace" font-size="20" font-weight="800" letter-spacing="2">',
+            t.name, " // RANK ", uint256(rank).toString(),
             '</text>',
             '<text x="920" y="856" fill="', t.sigilColor, '" font-family="\'IBM Plex Mono\', monospace" font-size="34" font-weight="900" letter-spacing="3" text-anchor="end">POS #',
             _pad6(positionId),

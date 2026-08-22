@@ -3,10 +3,8 @@ pragma solidity 0.8.34;
 
 import {Base64} from "@openzeppelin/contracts/utils/Base64.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
-
 import {Position} from "./NARAEngineTypes.sol";
 import {INARAPositionRendererV4} from "./interfaces/INARAPositionRendererV4.sol";
-
 
 interface INARAPositionNFTV7Render {
     function positionIdOf(uint256 tokenId) external view returns (uint256);
@@ -32,7 +30,7 @@ interface INARAArtMetadataV3 {
     function tierIndex(uint256 lifetimeEthWei) external pure returns (uint8);
     function name(uint8 tier, bool isGenesis, bool isEternal, uint256 tokenId) external pure returns (string memory);
     function attributes(
-        uint8 tier,
+        uint256 lifetimeEthWei,
         uint256 seed,
         uint8 moduleIdx,
         uint256 tokenId,
@@ -49,7 +47,7 @@ interface INARAArtMetadataV3 {
 
 interface INARAArtCorePlateV3 {
     function svg(
-        uint8 tier,
+        uint256 lifetimeEthWei,
         uint256 seed,
         uint8 moduleIdx,
         uint256 tokenId,
@@ -83,11 +81,12 @@ interface INARAArtSecurityPrintV2 {
 }
 
 /// @title NARAPositionRendererV7
-/// @notice Top 1% luxury modular renderer assembling generative chassis materials, holographic foils, and High-Stakes Grail Gating.
+/// @notice Top 1% luxury modular renderer assembling generative chassis materials, 10-Rank Multi-Vector Evolution, and High-Stakes Grail Gating.
 contract NARAPositionRendererV7 is INARAPositionRendererV4 {
     uint256 public constant RENDERER_VERSION = 7;
 
     struct RenderInputs {
+        uint256 lifetimeEth;
         uint8 tier;
         uint256 seed;
         uint8 moduleIdx;
@@ -158,10 +157,11 @@ contract NARAPositionRendererV7 is INARAPositionRendererV4 {
         INARAPositionNFTV7Render nft = INARAPositionNFTV7Render(positionNft);
         inp.positionId = nft.positionIdOf(tokenId);
         inp.p = nft.positionInfo(tokenId);
+        inp.lifetimeEth = nft.lifetimeEthClaimed(tokenId);
         uint256 rewardWeight;
         (inp.isGenesis, inp.isEternal, inp.roundId, inp.tierId, inp.mult, inp.mintedAt, rewardWeight) = nft.genesisMetadataOf(tokenId);
         rewardWeight;
-        inp.tier = METADATA.tierIndex(nft.lifetimeEthClaimed(tokenId));
+        inp.tier = METADATA.tierIndex(inp.lifetimeEth);
         inp.seed = uint256(keccak256(abi.encodePacked(tokenId, inp.positionId, uint256(inp.p.createdEpoch), "NARA_ELITE_V7")));
         inp.moduleIdx = uint8(inp.seed % 6);
         inp.claimCount = nft.lifetimeClaimCount(tokenId);
@@ -187,7 +187,7 @@ contract NARAPositionRendererV7 is INARAPositionRendererV4 {
         }
 
         return CORE_PLATE.svg(
-            inp.tier,
+            inp.lifetimeEth,
             inp.seed,
             inp.moduleIdx,
             tokenId,
@@ -210,7 +210,7 @@ contract NARAPositionRendererV7 is INARAPositionRendererV4 {
             : string.concat("NARA Position #", _pad6(tokenId));
 
         string memory attrs = METADATA.attributes(
-            inp.tier,
+            inp.lifetimeEth,
             inp.seed,
             inp.moduleIdx,
             tokenId,
@@ -225,7 +225,7 @@ contract NARAPositionRendererV7 is INARAPositionRendererV4 {
 
         return string.concat(
             '{"name":"', tokenName,
-            '","description":"Top-tier sovereign on-chain financial hardware terminal securing locked NARA principal and streaming protocol dividends on Base. Features procedural aerospace alloys, quantum telemetry core sigils, dynamic yield progression, and ERC-6551 token-bound account governance.",',
+            '","description":"Top-tier sovereign on-chain financial hardware terminal securing locked NARA principal and streaming protocol dividends on Base. Features procedural aerospace alloys, 10-Rank Multi-Vector Evolution, and ERC-6551 token-bound account governance.",',
             '"image":"', image, '",',
             '"attributes":', attrs, "}"
         );
