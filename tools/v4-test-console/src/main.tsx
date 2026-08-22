@@ -12,7 +12,7 @@ import {
 } from "@rainbow-me/rainbowkit/wallets";
 import { WagmiProvider, createConfig } from "wagmi";
 import { base } from "wagmi/chains";
-import { http } from "viem";
+import { http, fallback } from "viem";
 
 import App from "./app";
 import { initializeTelemetry } from "./telemetry";
@@ -42,13 +42,21 @@ const connectors = connectorsForWallets(
   { appName: "NARA v4 Test Console", projectId },
 );
 
+const transport = fallback([
+  http(rpcUrl, { batch: { batchSize: 50, wait: 12 } }),
+  http("https://mainnet.base.org", { batch: { batchSize: 50, wait: 12 } }),
+  http("https://base.publicnode.com", { batch: { batchSize: 50, wait: 12 } }),
+  http("https://1rpc.io/base", { batch: { batchSize: 50, wait: 12 } }),
+]);
+
 const config = createConfig({
   connectors,
   chains: [base],
   transports: {
-    [base.id]: http(rpcUrl, { batch: { batchSize: 50, wait: 12 } }),
+    [base.id]: transport,
   },
 });
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
