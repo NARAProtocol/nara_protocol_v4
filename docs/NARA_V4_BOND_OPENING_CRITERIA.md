@@ -120,3 +120,50 @@ Monitor each 24h window:
 ```
 
 If purchases are suspiciously concentrated in a single block: inspect for TWAP manipulation. If detected, close the term immediately via the Safe.
+
+---
+
+## Pilot Batch #1 Strategic Blueprint (Capital Formation Round 1)
+
+Bonds function as decentralized on-chain Series fundraising rounds, swapping discounted future tokens for real ETH cash flow without market sell pressure.
+
+### Strategic Gates for Batch #1
+1. **Valuation Gate:** $NARA Spot Price $\ge \mathbf{\$1.00\text{ USD}}$. Prevents exhausting the 250k reserve at micro-cap levels.
+2. **Pilot Batch Capacity:** **`20,000 NARA`** (2.0% of total supply / 8% of bond reserve).
+3. **Discount Setting:** `15% – 20%` (e.g. `$0.80 – $0.85 / NARA`).
+4. **Lock Structure:** Mandatory 365-day (1-Year) lock minted as **Genesis Position NFTs** at `4.00x` duration multiplier.
+
+### Cash Flow Impact of Pilot Batch #1
+* **Gross ETH Raised:** `~$16,000 – $17,000 USD in ETH`.
+* **50% Direct Locker Dividend:** `~$8,000+ USD in ETH` sent to `engine.notifyEthRewards()`, generating instant real-yield cash flow to active lockers.
+* **50% Treasury Growth:** `~$8,000+ USD in ETH` to protocol reserves.
+* **0 AMM Sell Pressure:** 100% of tokens locked for 1 year.
+
+---
+
+## Macro Reserve Scale Reference (250,000 NARA Vault)
+
+| $NARA Spot Price | Gross 250k Vault Value | Raised at 20% Discount | 50% Direct Locker ETH Yield | 50% Treasury Reserve |
+| :---: | :---: | :---: | :---: | :---: |
+| **$1.00** | $250,000 | $200,000 | **$100,000 in ETH** | $100,000 in ETH |
+| **$5.00** | $1,250,000 | $1,000,000 | **$500,000 in ETH** | $500,000 in ETH |
+| **$10.00** | $2,500,000 | $2,000,000 | **$1,000,000 in ETH** | $1,000,000 in ETH |
+| **$50.00** | $12,500,000 | $10,000,000 | **$5,000,000 in ETH** | $5,000,000 in ETH |
+| **$100.00** | $25,000,000 | $20,000,000 | **$10,000,000 in ETH** | $10,000,000 in ETH |
+
+---
+
+## The Phased AMM USDC Fee-Sharing Switch (Bond NFT Superpower)
+
+Inside `NARALiquidityGrowthVault.sol`, dynamic routing allows protocol governance to switch Uniswap v4 AMM trading fees to Genesis Bond NFT holders:
+
+```
+[Phase 1: Liquidity Launch] ──► [Phase 2: Bond Sale] ──► [Phase 3: Activate USDC Cash Flow]
+     RouteMode.Liquidity           Mint Genesis NFTs          Safe calls vault.setRouteMode(
+ (100% Fees -> POL Depth)       (Reward Weight Stamped)          RouteMode.GenesisSplit)
+```
+
+### Key Operating Invariants
+1. **Decoupled Deployment:** Bonds can be issued while the Vault is compounding 100% into POL (`RouteMode.Liquidity`). Genesis reward weights are permanently recorded at mint time.
+2. **The Safe Switch:** When trading volume on Uniswap v4 grows, the Safe multisig executes `vault.setRouteMode(RouteMode.GenesisSplit)` with e.g. `splitGenesisShareBps = 5000` (50% split).
+3. **Direct USDC Dividend Streams:** From that block forward, 50% of all USDC buy swap fees are delivered directly to `NARAGenesisRewardDistributorV4`, allowing Genesis Bond NFT holders to claim continuous real USDC cash flow directly from Uniswap trading volume!

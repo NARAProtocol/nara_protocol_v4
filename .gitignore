@@ -2,6 +2,8 @@ node_modules
 artifacts
 cache
 dist
+dist-swap
+.wrangler
 .env
 .env.*
 !.env.example
