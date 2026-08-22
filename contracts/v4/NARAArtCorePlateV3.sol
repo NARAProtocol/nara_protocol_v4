@@ -4,12 +4,14 @@ pragma solidity 0.8.34;
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 /// @title NARAArtCorePlateV3
-/// @notice Top 1% luxury generative art plate with 5 legendary chassis materials, holographic foils, and Lock-Duration Luck Multiplier.
+/// @notice Top 1% luxury generative art plate with 5 legendary chassis materials, holographic foils, and High-Stakes Grail Gate (≥10 NARA & ≥6 Mo Lock).
 contract NARAArtCorePlateV3 {
     using Strings for uint256;
 
-    uint256 public constant CORE_PLATE_VERSION = 3;
+    uint256 public constant CORE_PLATE_VERSION = 4;
+    uint64 public constant MIN_GRAIL_DURATION_EPOCHS = 17520; // 6 Months (17,520 * 15m)
     uint64 public constant MAX_LOCK_EPOCHS = 35040; // 1 Year (35,040 * 15m)
+    uint128 public constant MIN_GRAIL_AMOUNT = 10 ether; // 10 NARA minimum for Gold/Holo
 
     struct ChassisTheme {
         string name;
@@ -26,20 +28,41 @@ contract NARAArtCorePlateV3 {
     }
 
     function computeLuckBonus(uint64 createdEpoch, uint64 unlockEpoch, bool isEternal) public pure returns (uint256) {
-        if (isEternal) return 350;
+        if (isEternal) return 30;
         if (unlockEpoch <= createdEpoch) return 0;
         uint64 duration = unlockEpoch - createdEpoch;
         if (duration > MAX_LOCK_EPOCHS) duration = MAX_LOCK_EPOCHS;
-        return (uint256(duration) * 350) / MAX_LOCK_EPOCHS;
+        if (duration < MIN_GRAIL_DURATION_EPOCHS) {
+            // Standard short luck bonus (0 to 10)
+            return (uint256(duration) * 10) / MIN_GRAIL_DURATION_EPOCHS;
+        }
+        // High-stakes bonus (10 to 30)
+        uint64 extraDuration = duration - MIN_GRAIL_DURATION_EPOCHS;
+        uint64 maxExtra = MAX_LOCK_EPOCHS - MIN_GRAIL_DURATION_EPOCHS;
+        return 10 + (uint256(extraDuration) * 20) / maxExtra;
     }
 
-    function getTheme(uint256 seed, uint64 createdEpoch, uint64 unlockEpoch, bool isEternal) public pure returns (ChassisTheme memory t) {
+    function isGrailEligible(uint128 amount, uint64 createdEpoch, uint64 unlockEpoch, bool isEternal) public pure returns (bool) {
+        if (isEternal) return true;
+        if (amount < MIN_GRAIL_AMOUNT) return false;
+        if (unlockEpoch <= createdEpoch) return false;
+        return (unlockEpoch - createdEpoch) >= MIN_GRAIL_DURATION_EPOCHS;
+    }
+
+    function getTheme(
+        uint256 seed,
+        uint128 amount,
+        uint64 createdEpoch,
+        uint64 unlockEpoch,
+        bool isEternal
+    ) public pure returns (ChassisTheme memory t) {
         uint256 rawRoll = seed % 1000;
         uint256 luckBonus = computeLuckBonus(createdEpoch, unlockEpoch, isEternal);
         uint256 roll = rawRoll > luckBonus ? (rawRoll - luckBonus) : 0;
+        bool eligible = isGrailEligible(amount, createdEpoch, unlockEpoch, isEternal);
 
-        if (roll < 50) {
-            // 5.0% Base (up to 40% with 1-Year Max Lock): Prismatic Holographic Foil
+        if (eligible && roll < 5) {
+            // 0.5% Base / 3.5% Max Lock Holy Grail: Prismatic Holographic Foil
             return ChassisTheme({
                 name: "Prismatic Holo Foil",
                 frameOuter: "url(#holoFrame)",
@@ -53,8 +76,8 @@ contract NARAArtCorePlateV3 {
                 badgeText: "#000000",
                 isHolo: true
             });
-        } else if (roll < 150) {
-            // 10.0% Base (up to 45% with 1-Year Max Lock): 24K Gilded Gold
+        } else if (eligible && roll < 55) {
+            // 5.0% Base / 8.5% Max Lock Ultra-Rare: 24K Gilded Gold
             return ChassisTheme({
                 name: "24K Gilded Gold",
                 frameOuter: "url(#goldFrame)",
@@ -68,8 +91,8 @@ contract NARAArtCorePlateV3 {
                 badgeText: "#FFD700",
                 isHolo: false
             });
-        } else if (roll < 350) {
-            // 20.0% Base: Obsidian Stealth
+        } else if (roll < 200) {
+            // 15.0% - 20.0% Rare: Obsidian Stealth
             return ChassisTheme({
                 name: "Obsidian Stealth",
                 frameOuter: "#181A20",
@@ -83,8 +106,8 @@ contract NARAArtCorePlateV3 {
                 badgeText: "#FF2A4B",
                 isHolo: false
             });
-        } else if (roll < 600) {
-            // 25.0% Base: Cybernetic Emerald
+        } else if (roll < 500) {
+            // 30.0% Uncommon: Cybernetic Emerald
             return ChassisTheme({
                 name: "Cybernetic Emerald",
                 frameOuter: "#11261E",
@@ -99,7 +122,7 @@ contract NARAArtCorePlateV3 {
                 isHolo: false
             });
         } else {
-            // 40.0% Base (<1% with 1-Year Max Lock): Titanium Slate
+            // 41.5% - 50.0% Common: Titanium Slate
             return ChassisTheme({
                 name: "Titanium Slate",
                 frameOuter: "#2B323D",
@@ -116,12 +139,14 @@ contract NARAArtCorePlateV3 {
         }
     }
 
+
     function svg(
         uint8 tier,
         uint256 seed,
         uint8 moduleIdx,
         uint256 tokenId,
         uint256 positionId,
+        uint128 amount,
         uint64 createdEpoch,
         uint64 unlockEpoch,
         bool isEternal,
@@ -131,7 +156,7 @@ contract NARAArtCorePlateV3 {
         moduleIdx;
         claimCount;
         extendCount;
-        ChassisTheme memory t = getTheme(seed, createdEpoch, unlockEpoch, isEternal);
+        ChassisTheme memory t = getTheme(seed, amount, createdEpoch, unlockEpoch, isEternal);
 
         return string.concat(
             '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="1000" height="1000" style="background:#000;">',
@@ -217,6 +242,13 @@ contract NARAArtCorePlateV3 {
             rings = string.concat(
                 '<circle cx="0" cy="0" r="250" fill="none" stroke="', t.accentColor, '" stroke-width="2" opacity="0.4"/>',
                 '<polygon points="0,-270 70,-70 270,0 70,70 0,270 -70,70 -270,0 -70,-70" fill="none" stroke="', t.sigilColor, '" stroke-width="2.5" opacity="0.7"/>'
+            );
+        } else if (sigilVariant == 3) {
+            // Singularity Accretion
+            rings = string.concat(
+                '<circle cx="0" cy="0" r="270" fill="none" stroke="', t.accentColor, '" stroke-width="3" opacity="0.5" stroke-dasharray="4 16"/>',
+                '<circle cx="0" cy="0" r="230" fill="none" stroke="', t.sigilColor, '" stroke-width="4" opacity="0.85" stroke-dasharray="32 8"/>',
+                '<circle cx="0" cy="0" r="190" fill="none" stroke="', t.accentColor, '" stroke-width="2" opacity="0.6"/>'
             );
         } else {
             // Concentric Telemetry Radar

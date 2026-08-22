@@ -2,14 +2,20 @@
 pragma solidity 0.8.34;
 
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+import {Base64} from "@openzeppelin/contracts/utils/Base64.sol";
+import {NARAArtCorePlateV3} from "./NARAArtCorePlateV3.sol";
 
 /// @title NARAArtMetadataV3
-/// @notice Top 1% luxury metadata vocabulary with collector chassis finishes, sigil architectures, and Lock-Duration Luck Boosts.
+/// @notice Generates rich OpenSea metadata with High-Stakes Grail Gate traits and rarity scores.
 contract NARAArtMetadataV3 {
     using Strings for uint256;
 
-    uint256 public constant METADATA_VERSION = 3;
-    uint64 public constant MAX_LOCK_EPOCHS = 35040; // 1 Year (35,040 * 15m)
+    uint256 public constant METADATA_VERSION = 4;
+    NARAArtCorePlateV3 public immutable corePlate;
+
+    constructor(address corePlate_) {
+        corePlate = NARAArtCorePlateV3(corePlate_);
+    }
 
     function tierIndex(uint256 lifetimeEthWei) external pure returns (uint8) {
         if (lifetimeEthWei >= 10 ether) return 4;
@@ -19,128 +25,118 @@ contract NARAArtMetadataV3 {
         return 0;
     }
 
-    function tierName(uint8 tier) public pure returns (string memory) {
-        tier = _clampTier(tier);
-        if (tier == 4) return "Apex Radiant";
-        if (tier == 3) return "Calibrated (1+ ETH)";
-        if (tier == 2) return "Rewarded (0.1+ ETH)";
-        if (tier == 1) return "Activated";
-        return "New Position";
-    }
-
-    function computeLuckBonus(uint64 createdEpoch, uint64 unlockEpoch, bool isEternal) public pure returns (uint256) {
-        if (isEternal) return 350;
-        if (unlockEpoch <= createdEpoch) return 0;
-        uint64 duration = unlockEpoch - createdEpoch;
-        if (duration > MAX_LOCK_EPOCHS) duration = MAX_LOCK_EPOCHS;
-        return (uint256(duration) * 350) / MAX_LOCK_EPOCHS;
-    }
-
-    function lockBoostLabel(uint64 createdEpoch, uint64 unlockEpoch, bool isEternal) public pure returns (string memory) {
-        if (isEternal) return "God-Tier Eternal (Max +350 Luck)";
-        if (unlockEpoch <= createdEpoch) return "1.0x Base Luck";
-        uint64 duration = unlockEpoch - createdEpoch;
-        if (duration >= 35040) return "4.0x Max 1-Yr Lock (+350 Luck)";
-        if (duration >= 17520) return "3.0x 6-Mo Lock (+175 Luck)";
-        if (duration >= 2880) return "1.5x 1-Mo Lock (+28 Luck)";
-        if (duration >= 672) return "1.2x 1-Wk Lock (+6 Luck)";
-        return "1.0x Base Luck";
-    }
-
-    function chassisName(uint256 seed, uint64 createdEpoch, uint64 unlockEpoch, bool isEternal) public pure returns (string memory) {
-        uint256 rawRoll = seed % 1000;
-        uint256 luckBonus = computeLuckBonus(createdEpoch, unlockEpoch, isEternal);
-        uint256 roll = rawRoll > luckBonus ? (rawRoll - luckBonus) : 0;
-
-        if (roll < 50) return "Prismatic Holo Foil (5.0% Base / 40.0% Max Boost)";
-        if (roll < 150) return "24K Gilded Gold (10.0% Base / 45.0% Max Boost)";
-        if (roll < 350) return "Obsidian Stealth (20.0% Rare)";
-        if (roll < 600) return "Cybernetic Emerald (25.0% Uncommon)";
-        return "Titanium Slate (40.0% Common)";
-    }
-
-    function sigilArchitecture(uint256 seed) public pure returns (string memory) {
-        uint256 v = (seed / 1000) % 5;
-        if (v == 0) return "Solar Flare Matrix (Rare)";
-        if (v == 1) return "Dual Orbital Gyroscope (Uncommon)";
-        if (v == 2) return "Tachyon Starburst (Rare)";
-        if (v == 3) return "Singularity Accretion (Ultra-Rare)";
-        return "Concentric Telemetry Radar (Standard)";
-    }
-
-    function name(uint8 tier, bool isGenesis, bool isEternal, uint256 tokenId)
-        external
-        pure
-        returns (string memory)
-    {
+    function name(uint8 tier, bool isGenesis, bool isEternal, uint256 tokenId) external pure returns (string memory) {
         tier;
-        if (isEternal) return string.concat("NARA Eternal Position #", _pad6(tokenId));
-        if (isGenesis) return string.concat("NARA Genesis Position #", _pad6(tokenId));
+        isGenesis;
+        if (isEternal) {
+            return string.concat("NARA Eternal Position #", _pad6(tokenId));
+        }
         return string.concat("NARA Position #", _pad6(tokenId));
-    }
-
-    function attributes(
-        uint256 seed,
-        uint8 tier,
-        uint8 moduleIdx,
-        bool isGenesis,
-        bool isEternal,
-        uint256 positionId,
-        uint64 createdEpoch,
-        uint64 unlockEpoch,
-        uint16 roundId,
-        uint16 tierId,
-        uint32 mult,
-        uint64 mintedAt,
-        uint32 claimCount,
-        uint32 extendCount
-    ) external pure returns (string memory) {
-        moduleIdx;
-        return string.concat(
-            '[{"trait_type":"Instrument Type","value":"Proof-of-Position Bearer Bond"',
-            '},{"trait_type":"Chassis Finish","value":"', chassisName(seed, createdEpoch, unlockEpoch, isEternal),
-            '"},{"trait_type":"Lock Duration Boost","value":"', lockBoostLabel(createdEpoch, unlockEpoch, isEternal),
-            '"},{"trait_type":"Core Sigil Array","value":"', sigilArchitecture(seed),
-            '"},{"display_type":"number","trait_type":"Position ID","value":', positionId.toString(),
-            '},{"trait_type":"Network","value":"Base Mainnet (8453)"',
-            '},{"trait_type":"Account Architecture","value":"ERC-6551 Token-Bound"',
-            '},{"trait_type":"Yield Status","value":"', tierName(tier),
-            '"},{"display_type":"number","trait_type":"Created Epoch","value":', uint256(createdEpoch).toString(),
-            '},{"display_type":"number","trait_type":"Unlock Epoch","value":', uint256(unlockEpoch).toString(),
-            '},{"display_type":"number","trait_type":"Lifetime Claims","value":', uint256(claimCount).toString(),
-            '},{"display_type":"number","trait_type":"Lock Extensions","value":', uint256(extendCount).toString(),
-            '},{"trait_type":"Storage","value":"100% Fully On-Chain"',
-            '},{"trait_type":"Royalty Standard","value":"10.00% Immutable (ERC-2981)"',
-            "}",
-            _genesisAttributes(isGenesis, isEternal, roundId, tierId, mult, mintedAt),
-            "]"
-        );
     }
 
     function collectionJSON(string calldata image) external pure returns (string memory) {
         return string.concat(
-            '{"name":"NARA Positions","symbol":"NARAPOS",',
-            '"description":"Top-tier sovereign on-chain financial instruments securing locked NARA principal and streaming protocol dividends on Base. Features generative luxury materials, holographic foils, Lock-Duration Luck Boosts, and ERC-6551 Token-Bound Accounts.",',
-            '"image":"', image, '","banner_image":"', image, '","featured_image":"', image,
-            '","external_link":"https://www.naraprotocol.io/"}'
+            '{"name":"NARA Position NFTs",',
+            '"description":"Top-tier sovereign on-chain financial hardware terminals securing locked NARA principal on Base.",',
+            '"image":"', image, '",',
+            '"external_link":"https://naraprotocol.io"} '
         );
     }
 
-    function _genesisAttributes(
-        bool isGenesis,
+    function attributes(
+        uint8 tier,
+        uint256 seed,
+        uint8 moduleIdx,
+        uint256 tokenId,
+        uint256 positionId,
+        uint128 amount,
+        uint64 createdEpoch,
+        uint64 unlockEpoch,
         bool isEternal,
-        uint16 roundId,
-        uint16 tierId,
-        uint32 rewardMultiplierBps,
-        uint64 mintedAt
-    ) internal pure returns (string memory) {
-        if (!isGenesis) return "";
+        uint32 claimCount,
+        uint32 extendCount
+    ) public view returns (string memory) {
+        moduleIdx;
+        tokenId;
+
+        string memory themeName = "Titanium Slate";
+        string memory themeRarity = "Common (45%)";
+        string memory boostLabel = "Standard Tier";
+
+        if (isEternal) {
+            themeName = "24K Gilded Gold";
+            themeRarity = "Legendary Anchor";
+            boostLabel = "God-Tier Eternal (Max Multiplier)";
+        } else {
+            NARAArtCorePlateV3.ChassisTheme memory t = corePlate.getTheme(
+                seed,
+                amount,
+                createdEpoch,
+                unlockEpoch,
+                isEternal
+            );
+            themeName = t.name;
+
+            if (t.isHolo) {
+                themeRarity = "Holy Grail (3.5% Gated)";
+            } else if (keccak256(bytes(t.name)) == keccak256(bytes("24K Gilded Gold"))) {
+                themeRarity = "Ultra-Rare (8.5% Gated)";
+            } else if (keccak256(bytes(t.name)) == keccak256(bytes("Obsidian Stealth"))) {
+                themeRarity = "Rare (25%)";
+            } else if (keccak256(bytes(t.name)) == keccak256(bytes("Cybernetic Emerald"))) {
+                themeRarity = "Uncommon (35%)";
+            } else {
+                themeRarity = "Common (45%)";
+            }
+
+            uint64 duration = unlockEpoch > createdEpoch ? (unlockEpoch - createdEpoch) : 0;
+            bool eligible = corePlate.isGrailEligible(amount, createdEpoch, unlockEpoch, isEternal);
+
+            if (eligible) {
+                if (duration >= 35040) {
+                    boostLabel = "4.0x Max 1-Yr Lock (+150 Luck | Grail Unlocked)";
+                } else {
+                    boostLabel = "3.0x 6-Mo Lock (+50 Luck | Grail Unlocked)";
+                }
+            } else {
+                if (amount < 10 ether && duration >= 17520) {
+                    boostLabel = "Standard Tier (Principal < 10 NARA: Grail Locked)";
+                } else if (duration < 17520) {
+                    boostLabel = "Standard Tier (Duration < 6 Mo: Grail Locked)";
+                } else {
+                    boostLabel = "Standard Tier (Grail Locked)";
+                }
+            }
+        }
+
+        uint256 sigilVariant = (seed / 1000) % 5;
+        string memory sigilName;
+        if (sigilVariant == 0) sigilName = "Solar Flare Matrix (Rare)";
+        else if (sigilVariant == 1) sigilName = "Dual Orbital Gyroscope (Uncommon)";
+        else if (sigilVariant == 2) sigilName = "Tachyon Starburst Array (Rare)";
+        else if (sigilVariant == 3) sigilName = "Singularity Accretion (Ultra-Rare)";
+        else sigilName = "Concentric Telemetry Radar (Standard)";
+
+        string memory tierName;
+        if (tier == 4) tierName = "Apex Radiant";
+        else if (tier == 3) tierName = "Calibrated";
+        else if (tier == 2) tierName = "Rewarded";
+        else if (tier == 1) tierName = "Activated";
+        else tierName = "New Position";
+
         return string.concat(
-            ',{"display_type":"number","trait_type":"Genesis Round","value":', uint256(roundId).toString(),
-            '},{"display_type":"number","trait_type":"Genesis Tier","value":', uint256(tierId).toString(),
-            '},{"display_type":"number","trait_type":"Genesis Reward Multiplier Bps","value":', uint256(rewardMultiplierBps).toString(),
-            '},{"display_type":"date","trait_type":"Genesis Minted At","value":', uint256(mintedAt).toString(),
-            '},{"trait_type":"Eternal Lock","value":"', isEternal ? "True" : "False", '"}'
+            '[',
+            '{"trait_type":"Chassis Finish","value":"', themeName, '"},',
+            '{"trait_type":"Finish Rarity","value":"', themeRarity, '"},',
+            '{"trait_type":"Lock Duration Boost","value":"', boostLabel, '"},',
+            '{"trait_type":"Core Sigil Array","value":"', sigilName, '"},',
+            '{"trait_type":"Yield Status","value":"', tierName, '"},',
+            '{"trait_type":"Position ID","value":', positionId.toString(), '},',
+            '{"trait_type":"Created Epoch","value":', uint256(createdEpoch).toString(), '},',
+            '{"trait_type":"Claims Executed","value":', uint256(claimCount).toString(), '},',
+            '{"trait_type":"Extensions Executed","value":', uint256(extendCount).toString(), '},',
+            '{"trait_type":"Storage Engine","value":"Fully On-Chain SVG (No IPFS)"}',
+            ']'
         );
     }
 
@@ -156,9 +152,5 @@ contract NARAArtMetadataV3 {
             out[pad + i] = b[i];
         }
         return string(out);
-    }
-
-    function _clampTier(uint8 tier) internal pure returns (uint8) {
-        return tier > 4 ? 4 : tier;
     }
 }

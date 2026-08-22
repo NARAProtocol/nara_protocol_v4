@@ -16,8 +16,8 @@ export default defineConfig(({ mode }) => {
     || rootEnv.VITE_WALLETCONNECT_PROJECT_ID
     || rootEnv.VITE_RAINBOW_PROJECT_ID
     || "";
-  const rawRpc = rootEnv.BASE_MAINNET_RPC_URL || rootEnv.BASE_RPC_URL;
-  const proxy = rawRpc ? (() => {
+  const rawRpc = rootEnv.BASE_MAINNET_RPC_URL || rootEnv.BASE_RPC_URL || "https://mainnet.base.org";
+  const proxy = (() => {
     const upstream = new URL(rawRpc);
     const upstreamPath = `${upstream.pathname}${upstream.search}`;
     return {
@@ -25,10 +25,11 @@ export default defineConfig(({ mode }) => {
         target: upstream.origin,
         changeOrigin: true,
         secure: true,
-        rewrite: () => upstreamPath,
+        rewrite: () => upstreamPath || "/",
       },
     };
-  })() : undefined;
+  })();
+
 
   return {
     plugins: [react()],

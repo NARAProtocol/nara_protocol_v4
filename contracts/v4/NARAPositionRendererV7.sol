@@ -2,8 +2,11 @@
 pragma solidity 0.8.34;
 
 import {Base64} from "@openzeppelin/contracts/utils/Base64.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+
 import {Position} from "./NARAEngineTypes.sol";
 import {INARAPositionRendererV4} from "./interfaces/INARAPositionRendererV4.sol";
+
 
 interface INARAPositionNFTV7Render {
     function positionIdOf(uint256 tokenId) external view returns (uint256);
@@ -29,21 +32,18 @@ interface INARAArtMetadataV3 {
     function tierIndex(uint256 lifetimeEthWei) external pure returns (uint8);
     function name(uint8 tier, bool isGenesis, bool isEternal, uint256 tokenId) external pure returns (string memory);
     function attributes(
-        uint256 seed,
         uint8 tier,
+        uint256 seed,
         uint8 moduleIdx,
-        bool isGenesis,
-        bool isEternal,
+        uint256 tokenId,
         uint256 positionId,
+        uint128 amount,
         uint64 createdEpoch,
         uint64 unlockEpoch,
-        uint16 roundId,
-        uint16 tierId,
-        uint32 mult,
-        uint64 mintedAt,
+        bool isEternal,
         uint32 claimCount,
         uint32 extendCount
-    ) external pure returns (string memory);
+    ) external view returns (string memory);
     function collectionJSON(string calldata image) external pure returns (string memory);
 }
 
@@ -54,6 +54,7 @@ interface INARAArtCorePlateV3 {
         uint8 moduleIdx,
         uint256 tokenId,
         uint256 positionId,
+        uint128 amount,
         uint64 createdEpoch,
         uint64 unlockEpoch,
         bool isEternal,
@@ -82,7 +83,7 @@ interface INARAArtSecurityPrintV2 {
 }
 
 /// @title NARAPositionRendererV7
-/// @notice Top 1% luxury modular renderer assembling generative chassis materials, holographic foils, and Lock-Duration Luck Boosts.
+/// @notice Top 1% luxury modular renderer assembling generative chassis materials, holographic foils, and High-Stakes Grail Gating.
 contract NARAPositionRendererV7 is INARAPositionRendererV4 {
     uint256 public constant RENDERER_VERSION = 7;
 
@@ -191,6 +192,7 @@ contract NARAPositionRendererV7 is INARAPositionRendererV4 {
             inp.moduleIdx,
             tokenId,
             inp.positionId,
+            inp.p.amount,
             inp.p.createdEpoch,
             inp.p.unlockEpoch,
             inp.isEternal,
@@ -203,29 +205,43 @@ contract NARAPositionRendererV7 is INARAPositionRendererV4 {
         RenderInputs memory inp = _inputs(positionNft, tokenId);
 
         string memory image = string.concat("data:image/svg+xml;base64,", Base64.encode(bytes(_tokenSVG(positionNft, tokenId))));
-        string memory tokenName = METADATA.name(inp.tier, inp.isGenesis, inp.isEternal, tokenId);
+        string memory tokenName = inp.isEternal
+            ? string.concat("NARA Eternal Position #", _pad6(tokenId))
+            : string.concat("NARA Position #", _pad6(tokenId));
+
         string memory attrs = METADATA.attributes(
-            inp.seed,
             inp.tier,
+            inp.seed,
             inp.moduleIdx,
-            inp.isGenesis,
-            inp.isEternal,
+            tokenId,
             inp.positionId,
+            inp.p.amount,
             inp.p.createdEpoch,
             inp.p.unlockEpoch,
-            inp.roundId,
-            inp.tierId,
-            inp.mult,
-            inp.mintedAt,
+            inp.isEternal,
             inp.claimCount,
             inp.extendCount
         );
 
         return string.concat(
             '{"name":"', tokenName,
-            '","description":"Top-tier sovereign on-chain financial instrument securing locked NARA principal and streaming protocol dividends on Base. Features generative luxury materials, holographic foils, Lock-Duration Luck Boosts, and ERC-6551 Token-Bound Accounts.",',
+            '","description":"Top-tier sovereign on-chain financial hardware terminal securing locked NARA principal and streaming protocol dividends on Base. Features procedural aerospace alloys, quantum telemetry core sigils, dynamic yield progression, and ERC-6551 token-bound account governance.",',
             '"image":"', image, '",',
             '"attributes":', attrs, "}"
         );
+    }
+
+    function _pad6(uint256 v) internal pure returns (string memory) {
+        bytes memory b = bytes(Strings.toString(v));
+        if (b.length >= 6) return string(b);
+        bytes memory out = new bytes(6);
+        uint256 pad = 6 - b.length;
+        for (uint256 i = 0; i < pad; i++) {
+            out[i] = "0";
+        }
+        for (uint256 i = 0; i < b.length; i++) {
+            out[pad + i] = b[i];
+        }
+        return string(out);
     }
 }
