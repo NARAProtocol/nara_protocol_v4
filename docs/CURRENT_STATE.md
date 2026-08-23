@@ -35,14 +35,15 @@ Canonical sanitized evidence: `deployments/v4-position-nft-phase2-finalized-2026
 (SHA-256: `68d9df51f9bc222437252e3628c6c7c593ef96088a518b99b17a50965504c06b`) and
 `deployments/v4-position-nft-phase2-source-verification-2026-08-21.json`.
 
-Phase 2 deployed exactly seven contracts, in order:
+### Initial Verification Deployment (Phase 2 Baseline — Historical Evidence)
+Phase 2 initially deployed and verified the static baseline stack on Base Mainnet:
 1. `NARAArtMetadataV1`: `0xAE0Da2B2066FF0c1409A2aC4053699E75dd00633`
 2. `NARAArtSecurityPrintV1`: `0x0640dd2B545348eC91826ab7c58DD88EcE81f353`
 3. `NARAArtCorePlateV1`: `0x476b69f490C17a5500c4Eb9b6cB49302cef4bE4A`
 4. `NARAArtGenesisPlateV1`: `0x20520115546c28F99aE581d62935e62D9E8B9022`
 5. `NARAPositionRendererV5`: `0x607b08365C23a983C542898a79E670e6D4B80673`
 6. `NARAPositionAccountV4`: `0x3a8c9cA4f95E94751774810B33caF01bb992A55F`
-7. `NARAPositionNFTV4`: `0xCcBD8c59664958636369F8fe24B927aEBc3DF7cC`
+7. `NARAPositionNFTV4` (Initial Baseline): `0xCcBD8c59664958636369F8fe24B927aEBc3DF7cC` (Superseded by `0x01D3...`)
 
 Safe finalization transaction `0xfb83cb4cb4b8a2c30216f46be69b519628ad74259795806e30d158a7736c6e8f`
 (mined in block `50296367`) executed the atomic batch:
@@ -50,6 +51,12 @@ Safe finalization transaction `0xfb83cb4cb4b8a2c30216f46be69b519628ad74259795806
 - `setClaimFees(0, 0)` & `setClaimFeeRecipient(address(0))` — permanently frozen at 0 BPS
 - `freezeRoyalties()` (`royaltiesFrozen = true`)
 - `freezeClaimFees()` (`claimFeesFrozen = true`)
+
+### ACTIVE CANONICAL PRODUCTION STACK — V7 10-Rank Generative Engine (`0x01D3...`)
+To support the modular **10-Rank Multi-Vector Evolution Engine**, **Lock Duration Multipliers**, and **100 NARA Grail Gate**, the active production contract is:
+* **Active Position NFT (`NARAPOS`):** `0x01D3AC0acda01FE5D6788fA0B4062de94C8DE52b`
+* **Active Renderer (V7):** `0x767abcbbE20aF3917D51DFE96A94F1aC26172Fc1`
+
 
 ### Live Minting Verification & Generative Art Upgrade (2026-08-22)
 - **Live Mainnet Tokens:** Tokens #1, #2, #3, and #4 were minted and verified on Base Mainnet.
