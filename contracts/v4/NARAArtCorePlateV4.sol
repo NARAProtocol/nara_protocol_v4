@@ -5,11 +5,11 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 /// @title NARAArtCorePlateV4
 /// @notice Master luxury Swiss chronometer & aerospace generative art engine.
-/// @dev 100% Pure On-Chain SVG rendering with zero external dependencies.
+/// @dev 100% Pure On-Chain SVG rendering with commitment scaling (1 Day vs 365 Days).
 contract NARAArtCorePlateV4 {
     using Strings for uint256;
 
-    uint256 public constant CORE_PLATE_VERSION = 9;
+    uint256 public constant CORE_PLATE_VERSION = 10;
     uint64 public constant EPOCHS_PER_DAY = 96;
     uint64 public constant EPOCHS_PER_YEAR = 35040;
 
@@ -25,7 +25,6 @@ contract NARAArtCorePlateV4 {
         string badgeBg;
         string badgeText;
         string hexGridColor;
-        bool isHolo;
     }
 
     struct ProgressionState {
@@ -35,11 +34,15 @@ contract NARAArtCorePlateV4 {
         string ascensionLabel;
         string fleetTitle;
         uint256 ageInEpochs;
+        uint8 lockTier; // 1 = 1d (1.0x), 2 = 30d (1.25x), 3 = 90d (1.75x), 4 = 180d (2.5x), 5 = 365d (4.0x)
+        string lockBoostLabel;
+        uint8 chargedCells;
     }
 
     function calculateProgression(
         uint64 currentEpoch,
         uint64 createdEpoch,
+        uint64 unlockEpoch,
         uint32 extendCount,
         uint256 walletActiveSlots,
         bool isEternal
@@ -50,41 +53,64 @@ contract NARAArtCorePlateV4 {
             p.ageInEpochs = 0;
         }
 
-        if (isEternal || p.ageInEpochs >= EPOCHS_PER_YEAR) {
-            p.rank = 10;
-            p.rankTitle = "APEX VETERAN";
-        } else if (p.ageInEpochs >= 32120) {
-            p.rank = 9;
-            p.rankTitle = "DIMENSIONAL CORONA";
-        } else if (p.ageInEpochs >= 29200) {
-            p.rank = 8;
-            p.rankTitle = "PLASMA SUPER-RING";
-        } else if (p.ageInEpochs >= 23360) {
+        uint256 lockDays = (unlockEpoch > createdEpoch) ? (uint256(unlockEpoch - createdEpoch) / EPOCHS_PER_DAY) : 0;
+        if (isEternal) lockDays = 9999;
+
+        // Lock Commitment Horizon Tier & Boost
+        if (isEternal || lockDays >= 365) {
+            p.lockTier = 5;
+            p.lockBoostLabel = "4.0X MAX BOOST";
+            p.chargedCells = 10;
+        } else if (lockDays >= 180) {
+            p.lockTier = 4;
+            p.lockBoostLabel = "2.5X BOOST";
+            p.chargedCells = 7;
+        } else if (lockDays >= 90) {
+            p.lockTier = 3;
+            p.lockBoostLabel = "1.75X BOOST";
+            p.chargedCells = 5;
+        } else if (lockDays >= 30) {
+            p.lockTier = 2;
+            p.lockBoostLabel = "1.25X BOOST";
+            p.chargedCells = 3;
+        } else {
+            p.lockTier = 1;
+            p.lockBoostLabel = "1.0X TRIAL";
+            p.chargedCells = 1;
+        }
+
+        // Age increases charged cells if initial wasn't full
+        uint8 ageBonus = uint8((p.ageInEpochs * 10) / EPOCHS_PER_YEAR);
+        if (p.chargedCells + ageBonus > 10 || isEternal) {
+            p.chargedCells = 10;
+        } else {
+            p.chargedCells += ageBonus;
+        }
+
+        // Aging Ranks
+        if (isEternal || p.ageInEpochs >= EPOCHS_PER_YEAR || p.lockTier == 5) {
+            if (isEternal || p.ageInEpochs >= EPOCHS_PER_YEAR) {
+                p.rank = 10;
+                p.rankTitle = "APEX VETERAN";
+            } else {
+                p.rank = 10;
+                p.rankTitle = "1-YEAR MAX LOCK";
+            }
+        } else if (p.ageInEpochs >= 23360 || p.lockTier == 4) {
             p.rank = 7;
-            p.rankTitle = "TACHYON STARBURST";
-        } else if (p.ageInEpochs >= 17520) {
-            p.rank = 6;
-            p.rankTitle = "GRAVITATIONAL WARP";
-        } else if (p.ageInEpochs >= 11520) {
+            p.rankTitle = "TACHYON WARP";
+        } else if (p.ageInEpochs >= 11520 || p.lockTier == 3) {
             p.rank = 5;
             p.rankTitle = "ORBITAL GYROSCOPE";
-        } else if (p.ageInEpochs >= 8640) {
-            p.rank = 4;
-            p.rankTitle = "STATOR TURBINE";
-        } else if (p.ageInEpochs >= 5760) {
+        } else if (p.ageInEpochs >= 2880 || p.lockTier == 2) {
             p.rank = 3;
-            p.rankTitle = "DOUBLE CONDUIT";
-        } else if (p.ageInEpochs >= 2880) {
-            p.rank = 2;
             p.rankTitle = "CIRCUIT IGNITION";
-        } else if (p.ageInEpochs >= 672) {
-            p.rank = 1;
-            p.rankTitle = "SENSOR ACTIVE";
         } else {
             p.rank = 0;
             p.rankTitle = "DORMANT NODE";
         }
 
+        // Ascensions
         if (isEternal || p.ageInEpochs >= (EPOCHS_PER_YEAR * 3) || extendCount >= 4) {
             p.ascensionTier = 2;
             p.ascensionLabel = "ASCENSION II: IMMORTAL QUANTUM";
@@ -96,6 +122,7 @@ contract NARAArtCorePlateV4 {
             p.ascensionLabel = "STANDARD ERA";
         }
 
+        // Fleet Grids
         if (walletActiveSlots >= 64) {
             p.fleetTitle = "FLEET 64/64: SOVEREIGN MASTER";
         } else if (walletActiveSlots >= 32) {
@@ -127,8 +154,7 @@ contract NARAArtCorePlateV4 {
                 accentColor: "#38BDF8",
                 badgeBg: "rgba(56,189,248,0.18)",
                 badgeText: "#38BDF8",
-                hexGridColor: "rgba(56,189,248,0.06)",
-                isHolo: false
+                hexGridColor: "rgba(56,189,248,0.06)"
             });
         }
         if (roll < 65) {
@@ -144,8 +170,7 @@ contract NARAArtCorePlateV4 {
                 accentColor: "#FFD700",
                 badgeBg: "rgba(255,215,0,0.18)",
                 badgeText: "#FFD700",
-                hexGridColor: "rgba(255,215,0,0.05)",
-                isHolo: false
+                hexGridColor: "rgba(255,215,0,0.05)"
             });
         }
         if (roll < 220) {
@@ -161,8 +186,7 @@ contract NARAArtCorePlateV4 {
                 accentColor: "#FF2A55",
                 badgeBg: "rgba(255,42,85,0.16)",
                 badgeText: "#FF456A",
-                hexGridColor: "rgba(255,42,85,0.05)",
-                isHolo: false
+                hexGridColor: "rgba(255,42,85,0.05)"
             });
         }
         if (roll < 560) {
@@ -178,8 +202,7 @@ contract NARAArtCorePlateV4 {
                 accentColor: "#00FF88",
                 badgeBg: "rgba(0,255,136,0.16)",
                 badgeText: "#00FF88",
-                hexGridColor: "rgba(0,255,136,0.05)",
-                isHolo: false
+                hexGridColor: "rgba(0,255,136,0.05)"
             });
         }
         // Titanium Slate (Common Baseline)
@@ -194,46 +217,28 @@ contract NARAArtCorePlateV4 {
             accentColor: "#388BFF",
             badgeBg: "rgba(56,139,255,0.16)",
             badgeText: "#58A6FF",
-            hexGridColor: "rgba(56,139,255,0.05)",
-            isHolo: false
+            hexGridColor: "rgba(56,139,255,0.05)"
         });
     }
 
     function _renderHexBolts(string memory bracketColor) internal pure returns (string memory) {
         return string.concat(
-            // Top Left Hex Bolt
-            '<g transform="translate(38, 38)">',
-            '<circle cx="0" cy="0" r="7" fill="#0D1117" stroke="', bracketColor, '" stroke-width="1.5"/>',
-            '<polygon points="0,-4 3.5,-2 3.5,2 0,4 -3.5,2 -3.5,-2" fill="', bracketColor, '"/>',
-            '</g>',
-            // Top Right Hex Bolt
-            '<g transform="translate(462, 38)">',
-            '<circle cx="0" cy="0" r="7" fill="#0D1117" stroke="', bracketColor, '" stroke-width="1.5"/>',
-            '<polygon points="0,-4 3.5,-2 3.5,2 0,4 -3.5,2 -3.5,-2" fill="', bracketColor, '"/>',
-            '</g>',
-            // Bottom Left Hex Bolt
-            '<g transform="translate(38, 662)">',
-            '<circle cx="0" cy="0" r="7" fill="#0D1117" stroke="', bracketColor, '" stroke-width="1.5"/>',
-            '<polygon points="0,-4 3.5,-2 3.5,2 0,4 -3.5,2 -3.5,-2" fill="', bracketColor, '"/>',
-            '</g>',
-            // Bottom Right Hex Bolt
-            '<g transform="translate(462, 662)">',
-            '<circle cx="0" cy="0" r="7" fill="#0D1117" stroke="', bracketColor, '" stroke-width="1.5"/>',
-            '<polygon points="0,-4 3.5,-2 3.5,2 0,4 -3.5,2 -3.5,-2" fill="', bracketColor, '"/>',
-            '</g>'
+            '<g transform="translate(38, 38)"><circle cx="0" cy="0" r="7" fill="#0D1117" stroke="', bracketColor, '" stroke-width="1.5"/><polygon points="0,-4 3.5,-2 3.5,2 0,4 -3.5,2 -3.5,-2" fill="', bracketColor, '"/></g>',
+            '<g transform="translate(462, 38)"><circle cx="0" cy="0" r="7" fill="#0D1117" stroke="', bracketColor, '" stroke-width="1.5"/><polygon points="0,-4 3.5,-2 3.5,2 0,4 -3.5,2 -3.5,-2" fill="', bracketColor, '"/></g>',
+            '<g transform="translate(38, 662)"><circle cx="0" cy="0" r="7" fill="#0D1117" stroke="', bracketColor, '" stroke-width="1.5"/><polygon points="0,-4 3.5,-2 3.5,2 0,4 -3.5,2 -3.5,-2" fill="', bracketColor, '"/></g>',
+            '<g transform="translate(462, 662)"><circle cx="0" cy="0" r="7" fill="#0D1117" stroke="', bracketColor, '" stroke-width="1.5"/><polygon points="0,-4 3.5,-2 3.5,2 0,4 -3.5,2 -3.5,-2" fill="', bracketColor, '"/></g>'
         );
     }
 
-    function _renderBatteryHUD(uint8 rank, string memory glowColor) internal pure returns (string memory) {
+    function _renderBatteryHUD(uint8 chargedCells, string memory glowColor) internal pure returns (string memory) {
         string memory cells = '<g transform="translate(145, 36)">';
-        // Enclosing glass battery frame
         cells = string.concat(
             cells,
             '<rect x="0" y="0" width="200" height="22" rx="6" fill="#0A0E17" stroke="#21262D" stroke-width="1"/>'
         );
         for (uint8 i = 1; i <= 10; i++) {
             uint256 x = 6 + (uint256(i - 1) * 19);
-            if (i <= rank) {
+            if (i <= chargedCells) {
                 cells = string.concat(
                     cells,
                     '<rect x="', x.toString(), '" y="4" width="15" height="14" rx="2" fill="', glowColor, '" filter="url(#glow)"/>'
@@ -249,34 +254,24 @@ contract NARAArtCorePlateV4 {
         return cells;
     }
 
-    function _renderExtensionNotches(uint32 extendCount, string memory accentColor) internal pure returns (string memory) {
-        string memory notches = "";
-        uint32 displayCount = extendCount > 8 ? 8 : extendCount;
-        for (uint32 i = 0; i < 8; i++) {
-            uint256 y = 175 + (uint256(i) * 32);
-            if (i < displayCount) {
-                notches = string.concat(
-                    notches,
-                    '<rect x="14" y="', y.toString(), '" width="14" height="8" rx="2" fill="', accentColor, '" filter="url(#glow)"/>',
-                    '<circle cx="21" cy="', (y + 4).toString(), '" r="2" fill="#FFFFFF"/>'
-                );
-            } else {
-                notches = string.concat(
-                    notches,
-                    '<rect x="14" y="', y.toString(), '" width="14" height="8" rx="2" fill="#0F141C" stroke="#21262D" stroke-width="1"/>'
-                );
-            }
-        }
-        return notches;
-    }
-
-    function _renderYieldConduit(string memory glowColor) internal pure returns (string memory) {
+    function _renderYieldConduit(uint8 lockTier, string memory glowColor) internal pure returns (string memory) {
         string memory busbar = '<g transform="translate(472, 175)">';
+        uint256 activeSegments = (lockTier >= 5) ? 8 : (lockTier * 2);
         for (uint256 i = 0; i < 8; i++) {
             uint256 y = i * 32;
+            if (i < activeSegments) {
+                busbar = string.concat(
+                    busbar,
+                    '<rect x="0" y="', y.toString(), '" width="14" height="16" rx="3" fill="', glowColor, '" opacity="0.85" filter="url(#glow)"/>'
+                );
+            } else {
+                busbar = string.concat(
+                    busbar,
+                    '<rect x="0" y="', y.toString(), '" width="14" height="16" rx="3" fill="#0D121C" stroke="#21262D" stroke-width="1"/>'
+                );
+            }
             busbar = string.concat(
                 busbar,
-                '<rect x="0" y="', y.toString(), '" width="14" height="16" rx="3" fill="', glowColor, '" opacity="0.85" filter="url(#glow)"/>',
                 '<line x1="7" y1="', (y + 16).toString(), '" x2="7" y2="', (y + 32).toString(), '" stroke="#21262D" stroke-width="1.5"/>'
             );
         }
@@ -298,7 +293,7 @@ contract NARAArtCorePlateV4 {
         uint256 walletActiveSlots
     ) external pure returns (string memory) {
         ChassisTheme memory t = getTheme(seed, isEternal);
-        ProgressionState memory p = calculateProgression(currentEpoch, createdEpoch, extendCount, walletActiveSlots, isEternal);
+        ProgressionState memory p = calculateProgression(currentEpoch, createdEpoch, unlockEpoch, extendCount, walletActiveSlots, isEternal);
 
         uint256 naraWhole = uint256(amount) / 1e18;
         uint256 lockDays = (unlockEpoch > createdEpoch) ? (uint256(unlockEpoch - createdEpoch) / EPOCHS_PER_DAY) : 0;
@@ -324,44 +319,44 @@ contract NARAArtCorePlateV4 {
             '</pattern>',
             '</defs>',
 
-            // 1. Heavy Machined Beveled Outer Chassis (3D Drop Shadow)
+            // 1. Outer Heavy Chassis Plate
             '<rect x="8" y="8" width="484" height="684" rx="26" fill="', t.frameOuter, '" filter="url(#shadow)"/>',
             '<rect x="18" y="18" width="464" height="664" rx="20" fill="', t.frameInner, '" stroke="', t.pinStripe, '" stroke-width="1.2"/>',
-
-            // 2. Background Guilloche Watermark Grid
             '<rect x="20" y="20" width="460" height="660" rx="18" fill="url(#hexGrid)"/>',
 
-            // 3. Heavy Corner Reinforcement Plates & 3D Hex-Bolts
+            // 2. Heavy Corner Reinforcement Plates & 3D Hex-Bolts
             '<path d="M 18 64 L 64 18 M 436 18 L 482 64 M 18 636 L 64 682 M 436 682 L 482 636" stroke="', t.bracket, '" stroke-width="3"/>',
             _renderHexBolts(t.bracket),
 
-            // 4. Top Status Header (Embossed Coin + Battery Gauge + Fleet Radar Tag)
+            // 3. Top Status Header
             '<g transform="translate(42, 34)">',
             '<circle cx="14" cy="13" r="14" fill="#0D1117" stroke="', t.bracket, '" stroke-width="1.5"/>',
             '<circle cx="14" cy="13" r="10" fill="', t.badgeBg, '" stroke="', t.glowColor, '" stroke-width="1"/>',
-            '<text x="14" y="17" fill="#FFFFFF" font-size="11" font-weight="bold" text-anchor="middle">N</text>',
+            '<text x="14" y="17" fill="', t.sigilColor, '" font-size="11" font-weight="bold" text-anchor="middle">N</text>',
             '</g>',
-            _renderBatteryHUD(p.rank, t.glowColor),
+            _renderBatteryHUD(p.chargedCells, t.glowColor),
             '<rect x="360" y="36" width="98" height="22" rx="6" fill="', t.badgeBg, '" stroke="', t.accentColor, '" stroke-width="1"/>',
             '<circle cx="370" cy="47" r="3" fill="', t.accentColor, '" filter="url(#glow)"/>',
             '<text x="378" y="51" fill="', t.accentColor, '" font-size="8" font-weight="bold">', p.fleetTitle, '</text>',
 
-            // 5. Aerospace Alloy & Era Header Ribbon
+            // 4. Alloy Header with 4.0X Lock Boost Badge
             '<g transform="translate(36, 74)">',
             '<rect x="0" y="0" width="428" height="34" rx="8" fill="#0D1117" stroke="#21262D" stroke-width="1"/>',
             '<rect x="8" y="7" width="180" height="20" rx="4" fill="', t.badgeBg, '" stroke="', t.badgeText, '" stroke-width="1"/>',
             '<text x="14" y="21" fill="', t.badgeText, '" font-size="10" font-weight="bold">ALLOY: ', t.name, '</text>',
-            '<text x="418" y="21" fill="#8B949E" font-size="10" font-weight="bold" text-anchor="end">RANK ', uint256(p.rank).toString(), ' // ', p.rankTitle, '</text>',
+            // Multiplier Badge
+            '<rect x="200" y="7" width="95" height="20" rx="4" fill="', (p.lockTier >= 5 ? t.glowColor : "#161B22"), '" stroke="', t.accentColor, '" stroke-width="1"/>',
+            '<text x="247" y="21" fill="', (p.lockTier >= 5 ? "#FFFFFF" : t.accentColor), '" font-size="9" font-weight="bold" text-anchor="middle">', p.lockBoostLabel, '</text>',
+            '<text x="418" y="21" fill="#8B949E" font-size="9" font-weight="bold" text-anchor="end">', p.rankTitle, '</text>',
             '</g>',
 
-            // 6. Master Swiss Chronometer Quantum Reactor Core (Isolated Stage Y: 115 to 455)
-            _renderMasterReactor(t, p),
+            // 5. Dynamic Swiss Chronometer Quantum Reactor (Scaled by Lock Tier & Age)
+            _renderScaledReactor(t, p),
 
-            // 7. Tactical Side Conduits (Extension Cartridges & Liquid Yield Busbar)
-            _renderExtensionNotches(extendCount, t.accentColor),
-            _renderYieldConduit(t.glowColor),
+            // 6. Side Conduits
+            _renderYieldConduit(p.lockTier, t.glowColor),
 
-            // 8. Luxury Financial Instrument Panel (Y: 462 to 542)
+            // 7. Luxury Financial Instrument Panel
             '<g transform="translate(36, 462)">',
             '<rect x="0" y="0" width="428" height="78" rx="10" fill="#090D14" stroke="#21262D" stroke-width="1"/>',
             // Pod 1: Locked Principal
@@ -374,7 +369,7 @@ contract NARAArtCorePlateV4 {
             '<text x="234" y="56" fill="', t.accentColor, '" font-size="18" font-weight="bold">', lockDays.toString(), ' DAYS</text>',
             '</g>',
 
-            // 9. Ascension Seal & Provenance Deck (Y: 550 to 660)
+            // 8. Ascension Seal
             '<g transform="translate(36, 550)">',
             '<rect x="0" y="0" width="428" height="42" rx="8" fill="', t.badgeBg, '" stroke="', t.pinStripe, '" stroke-width="1.2"/>',
             '<text x="214" y="26" fill="', t.sigilColor, '" font-size="12" font-weight="bold" text-anchor="middle">', unicode"★ ", p.ascensionLabel, unicode" ★", '</text>',
@@ -387,41 +382,80 @@ contract NARAArtCorePlateV4 {
         );
     }
 
-    function _renderMasterReactor(ChassisTheme memory t, ProgressionState memory p) internal pure returns (string memory) {
+    function _renderScaledReactor(ChassisTheme memory t, ProgressionState memory p) internal pure returns (string memory) {
+        // If 365 Days (Lock Tier 5) or Ascension: Full 8 Stator Turbines + Outer Ratchet + Plasma Core
+        if (p.lockTier >= 5 || p.ascensionTier >= 1) {
+            return string.concat(
+                '<g transform="translate(250, 285)">',
+                '<circle cx="0" cy="0" r="132" fill="none" stroke="#161B22" stroke-width="4" stroke-dasharray="6 11"/>',
+                '<circle cx="0" cy="0" r="126" fill="none" stroke="', t.pinStripe, '" stroke-width="1" opacity="0.85"/>',
+                '<circle cx="0" cy="0" r="118" fill="none" stroke="#21262D" stroke-width="1" stroke-dasharray="2 4"/>',
+                '<text x="0" y="-120" fill="#8B949E" font-size="8" font-weight="bold" text-anchor="middle">', unicode"000°", '</text>',
+                '<text x="88" y="-88" fill="#484F58" font-size="7" text-anchor="middle">', unicode"045°", '</text>',
+                '<text x="122" y="3" fill="#8B949E" font-size="8" font-weight="bold" text-anchor="start">', unicode"090°", '</text>',
+                '<text x="88" y="92" fill="#484F58" font-size="7" text-anchor="middle">', unicode"135°", '</text>',
+                '<text x="0" y="125" fill="#8B949E" font-size="8" font-weight="bold" text-anchor="middle">', unicode"180°", '</text>',
+                '<text x="-88" y="92" fill="#484F58" font-size="7" text-anchor="middle">', unicode"225°", '</text>',
+                '<text x="-122" y="3" fill="#8B949E" font-size="8" font-weight="bold" text-anchor="end">', unicode"270°", '</text>',
+                '<text x="-88" y="-88" fill="#484F58" font-size="7" text-anchor="middle">', unicode"315°", '</text>',
+                // 8 Turbines
+                '<path d="M 0 -115 L 0 -85 M 0 115 L 0 85 M -115 0 L -85 0 M 115 0 L 85 0 M -81 -81 L -60 -60 M 81 81 L 60 60 M -81 81 L -60 60 M 81 -81 L 60 -60" stroke="', t.bracket, '" stroke-width="2.5"/>',
+                '<circle cx="0" cy="0" r="85" fill="#060910" stroke="', t.glowColor, '" stroke-width="2" filter="url(#glow)" opacity="0.9"/>',
+                '<circle cx="0" cy="0" r="68" fill="none" stroke="', t.pinStripe, '" stroke-width="1.5" stroke-dasharray="14 8"/>',
+                '<circle cx="0" cy="0" r="50" fill="#0A0E17" stroke="', t.bracket, '" stroke-width="2"/>',
+                '<polygon points="0,-48 34,-34 48,0 34,34 0,48 -34,34 -48,0 -34,-34" fill="none" stroke="', t.pinStripe, '" stroke-width="3" filter="url(#glow)"/>',
+                '<circle cx="0" cy="0" r="28" fill="', t.glowColor, '" opacity="0.45" filter="url(#glow)"/>',
+                '<circle cx="0" cy="0" r="14" fill="#FFFFFF" filter="url(#glow)"/>',
+                '<circle cx="0" cy="0" r="8" fill="', t.sigilColor, '"/>',
+                '</g>'
+            );
+        }
+        // 180 Days (Lock Tier 4): 6 Stator Fins + Dual Ring
+        if (p.lockTier == 4) {
+            return string.concat(
+                '<g transform="translate(250, 285)">',
+                '<circle cx="0" cy="0" r="118" fill="none" stroke="#21262D" stroke-width="1"/>',
+                '<path d="M 0 -110 L 0 -80 M 0 110 L 0 80 M -80 -46 L -60 -34 M 80 46 L 60 34 M -80 46 L -60 34 M 80 -46 L 60 -34" stroke="', t.bracket, '" stroke-width="2"/>',
+                '<circle cx="0" cy="0" r="80" fill="#060910" stroke="', t.glowColor, '" stroke-width="1.5"/>',
+                '<circle cx="0" cy="0" r="52" fill="#0A0E17" stroke="', t.bracket, '" stroke-width="1.5"/>',
+                '<polygon points="0,-36 25,-18 25,18 0,36 -25,18 -25,-18" fill="none" stroke="', t.sigilColor, '" stroke-width="2"/>',
+                '<circle cx="0" cy="0" r="18" fill="', t.glowColor, '" opacity="0.3"/>',
+                '<circle cx="0" cy="0" r="8" fill="', t.sigilColor, '"/>',
+                '</g>'
+            );
+        }
+        // 90 Days (Lock Tier 3): 4 Stator Fins
+        if (p.lockTier == 3) {
+            return string.concat(
+                '<g transform="translate(250, 285)">',
+                '<circle cx="0" cy="0" r="105" fill="none" stroke="#21262D" stroke-width="1"/>',
+                '<path d="M 0 -100 L 0 -75 M 0 100 L 0 75 M -100 0 L -75 0 M 100 0 L 75 0" stroke="', t.bracket, '" stroke-width="2"/>',
+                '<circle cx="0" cy="0" r="75" fill="#060910" stroke="', t.glowColor, '" stroke-width="1.2"/>',
+                '<circle cx="0" cy="0" r="48" fill="#0A0E17" stroke="', t.bracket, '" stroke-width="1.2"/>',
+                '<polygon points="0,-30 21,-15 21,15 0,30 -21,15 -21,-15" fill="none" stroke="', t.sigilColor, '" stroke-width="1.5"/>',
+                '<circle cx="0" cy="0" r="6" fill="', t.sigilColor, '"/>',
+                '</g>'
+            );
+        }
+        // 30 Days (Lock Tier 2): Dual Rings
+        if (p.lockTier == 2) {
+            return string.concat(
+                '<g transform="translate(250, 285)">',
+                '<circle cx="0" cy="0" r="90" fill="none" stroke="#21262D" stroke-width="1"/>',
+                '<circle cx="0" cy="0" r="65" fill="#060910" stroke="', t.glowColor, '" stroke-width="1"/>',
+                '<circle cx="0" cy="0" r="42" fill="#0A0E17" stroke="', t.bracket, '" stroke-width="1"/>',
+                '<polygon points="0,-24 17,-12 17,12 0,24 -17,12 -17,-12" fill="none" stroke="', t.sigilColor, '" stroke-width="1.5"/>',
+                '<circle cx="0" cy="0" r="5" fill="', t.sigilColor, '"/>',
+                '</g>'
+            );
+        }
+        // 1 Day (Lock Tier 1 - Trial): Minimal Single Ring
         return string.concat(
             '<g transform="translate(250, 285)">',
-            // Outer Gear-Teeth Ratchet Ring (24 Precision Mechanical Teeth)
-            '<circle cx="0" cy="0" r="132" fill="none" stroke="#161B22" stroke-width="4" stroke-dasharray="6 11"/>',
-            '<circle cx="0" cy="0" r="126" fill="none" stroke="', t.pinStripe, '" stroke-width="1" opacity="0.7"/>',
-
-            // Swiss Tachymeter Degree Markings (000°, 045°, 090°, 135°, 180°, 225°, 270°, 315°)
-            '<circle cx="0" cy="0" r="118" fill="none" stroke="#21262D" stroke-width="1" stroke-dasharray="2 4"/>',
-            '<text x="0" y="-120" fill="#8B949E" font-size="8" font-weight="bold" text-anchor="middle">', unicode"000°", '</text>',
-            '<text x="88" y="-88" fill="#484F58" font-size="7" text-anchor="middle">', unicode"045°", '</text>',
-            '<text x="122" y="3" fill="#8B949E" font-size="8" font-weight="bold" text-anchor="start">', unicode"090°", '</text>',
-            '<text x="88" y="92" fill="#484F58" font-size="7" text-anchor="middle">', unicode"135°", '</text>',
-            '<text x="0" y="125" fill="#8B949E" font-size="8" font-weight="bold" text-anchor="middle">', unicode"180°", '</text>',
-            '<text x="-88" y="92" fill="#484F58" font-size="7" text-anchor="middle">', unicode"225°", '</text>',
-            '<text x="-122" y="3" fill="#8B949E" font-size="8" font-weight="bold" text-anchor="end">', unicode"270°", '</text>',
-            '<text x="-88" y="-88" fill="#484F58" font-size="7" text-anchor="middle">', unicode"315°", '</text>',
-
-            // 8-Directional Stator Turbine Fins
-            '<path d="M 0 -115 L 0 -85 M 0 115 L 0 85 M -115 0 L -85 0 M 115 0 L 85 0 M -81 -81 L -60 -60 M 81 81 L 60 60 M -81 81 L -60 60 M 81 -81 L 60 -60" stroke="', t.bracket, '" stroke-width="2.5"/>',
-
-            // Concentric Gyroscope Inner Stator Rings
-            '<circle cx="0" cy="0" r="85" fill="#060910" stroke="', t.glowColor, '" stroke-width="2" filter="url(#glow)" opacity="0.9"/>',
-            '<circle cx="0" cy="0" r="68" fill="none" stroke="', t.pinStripe, '" stroke-width="1.5" stroke-dasharray="14 8"/>',
-            '<circle cx="0" cy="0" r="50" fill="#0A0E17" stroke="', t.bracket, '" stroke-width="2"/>',
-
-            // Center Ascension Quantum Singularity
-            (p.ascensionTier >= 1)
-                ? string.concat('<polygon points="0,-48 34,-34 48,0 34,34 0,48 -34,34 -48,0 -34,-34" fill="none" stroke="', t.pinStripe, '" stroke-width="3" filter="url(#glow)"/>')
-                : string.concat('<polygon points="0,-40 28,-20 28,20 0,40 -28,20 -28,-20" fill="none" stroke="', t.sigilColor, '" stroke-width="2"/>'),
-
-            // Radiating Energy Core
-            '<circle cx="0" cy="0" r="28" fill="', t.glowColor, '" opacity="0.35" filter="url(#glow)"/>',
-            '<circle cx="0" cy="0" r="14" fill="#FFFFFF" filter="url(#glow)"/>',
-            '<circle cx="0" cy="0" r="8" fill="', t.sigilColor, '"/>',
+            '<circle cx="0" cy="0" r="60" fill="none" stroke="#161B22" stroke-width="1"/>',
+            '<circle cx="0" cy="0" r="35" fill="#070A10" stroke="#21262D" stroke-width="1"/>',
+            '<polygon points="0,-18 13,-9 13,9 0,18 -13,9 -13,-9" fill="none" stroke="#484F58" stroke-width="1"/>',
+            '<circle cx="0" cy="0" r="4" fill="#484F58"/>',
             '</g>'
         );
     }

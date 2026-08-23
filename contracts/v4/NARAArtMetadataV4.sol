@@ -74,12 +74,24 @@ contract NARAArtMetadataV4 {
         uint256 lockDays = unlockEpoch > createdEpoch ? ((unlockEpoch - createdEpoch) / EPOCHS_PER_DAY) : 0;
         if (isEternal) lockDays = 9999;
 
+        string memory boostStr = "1.0X Trial";
+        if (isEternal || lockDays >= 365) {
+            boostStr = "4.0X Max Boost";
+        } else if (lockDays >= 180) {
+            boostStr = "2.5X Boost";
+        } else if (lockDays >= 90) {
+            boostStr = "1.75X Boost";
+        } else if (lockDays >= 30) {
+            boostStr = "1.25X Boost";
+        }
+
         uint256 naraWhole = uint256(amount) / 1e18;
 
         return string.concat(
             '[',
             '{"trait_type":"Chassis Alloy","value":"', alloyName(seed, isEternal), '"},',
             '{"trait_type":"Staking Era","value":"', ascensionTitle(ageInEpochs, extendCount, isEternal), '"},',
+            '{"trait_type":"Conviction Multiplier","value":"', boostStr, '"},',
             '{"trait_type":"Progression Rank","value":"', tierTitle(ageInEpochs, isEternal), '"},',
             '{"trait_type":"Fleet Grid","value":"', fleetTitle(walletActiveSlots), '"},',
             '{"trait_type":"Time Commitment","value":"', lockDays.toString(), ' Days"},',

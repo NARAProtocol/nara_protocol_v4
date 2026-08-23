@@ -82,53 +82,52 @@ describe("NARAPositionRendererV8 & Multi-Vector Progression Suite", function () 
     await nara.mint(await alice.getAddress(), wad(100_000));
   });
 
-  it("Should calculate correct progression ranks based on age in epochs", async function () {
-    const p0 = await corePlate.calculateProgression(100, 100, 0, 1, false);
+  it("Should calculate correct progression ranks based on age and lock commitment", async function () {
+    // 1-Day lock (96 epochs)
+    const p0 = await corePlate.calculateProgression(100, 100, 196, 0, 1, false);
     expect(p0.rank).to.equal(0);
     expect(p0.rankTitle).to.equal("DORMANT NODE");
+    expect(p0.lockTier).to.equal(1);
+    expect(p0.lockBoostLabel).to.equal("1.0X TRIAL");
 
-    const p1 = await corePlate.calculateProgression(3000, 100, 0, 1, false);
-    expect(p1.rank).to.equal(2);
-    expect(p1.rankTitle).to.equal("CIRCUIT IGNITION");
-
-    const p6 = await corePlate.calculateProgression(18000, 100, 0, 1, false);
-    expect(p6.rank).to.equal(6);
-    expect(p6.rankTitle).to.equal("GRAVITATIONAL WARP");
-
-    const p10 = await corePlate.calculateProgression(36000, 100, 0, 1, false);
-    expect(p10.rank).to.equal(10);
-    expect(p10.rankTitle).to.equal("APEX VETERAN");
+    // 365-Day lock (35040 epochs)
+    const p1yr = await corePlate.calculateProgression(100, 100, 35140, 0, 1, false);
+    expect(p1yr.rank).to.equal(10);
+    expect(p1yr.rankTitle).to.equal("1-YEAR MAX LOCK");
+    expect(p1yr.lockTier).to.equal(5);
+    expect(p1yr.lockBoostLabel).to.equal("4.0X MAX BOOST");
+    expect(p1yr.chargedCells).to.equal(10);
   });
 
   it("Should unlock Ascension I (Supernova) on Year 2 extension or 2+ extensions", async function () {
-    const pAsc1 = await corePlate.calculateProgression(71000, 100, 0, 1, false);
+    const pAsc1 = await corePlate.calculateProgression(71000, 100, 71096, 0, 1, false);
     expect(pAsc1.ascensionTier).to.equal(1);
     expect(pAsc1.ascensionLabel).to.equal("ASCENSION I: SUPERNOVA");
 
-    const pExt2 = await corePlate.calculateProgression(5000, 100, 2, 1, false);
+    const pExt2 = await corePlate.calculateProgression(5000, 100, 5096, 2, 1, false);
     expect(pExt2.ascensionTier).to.equal(1);
   });
 
   it("Should unlock Ascension II (Immortal Quantum Sovereign) on Year 3 or 4+ extensions", async function () {
-    const pAsc2 = await corePlate.calculateProgression(106000, 100, 0, 1, false);
+    const pAsc2 = await corePlate.calculateProgression(106000, 100, 106096, 0, 1, false);
     expect(pAsc2.ascensionTier).to.equal(2);
     expect(pAsc2.ascensionLabel).to.equal("ASCENSION II: IMMORTAL QUANTUM");
 
-    const pExt4 = await corePlate.calculateProgression(5000, 100, 4, 1, false);
+    const pExt4 = await corePlate.calculateProgression(5000, 100, 5096, 4, 1, false);
     expect(pExt4.ascensionTier).to.equal(2);
   });
 
   it("Should scale Fleet Grid ranks according to active wallet slots", async function () {
-    const f1 = await corePlate.calculateProgression(100, 100, 0, 1, false);
+    const f1 = await corePlate.calculateProgression(100, 100, 196, 0, 1, false);
     expect(f1.fleetTitle).to.equal("FLEET: SOLO VANGUARD");
 
-    const f4 = await corePlate.calculateProgression(100, 100, 0, 4, false);
+    const f4 = await corePlate.calculateProgression(100, 100, 196, 0, 4, false);
     expect(f4.fleetTitle).to.equal("FLEET: SQUADRON");
 
-    const f16 = await corePlate.calculateProgression(100, 100, 0, 16, false);
+    const f16 = await corePlate.calculateProgression(100, 100, 196, 0, 16, false);
     expect(f16.fleetTitle).to.equal("FLEET: ARMADA");
 
-    const f64 = await corePlate.calculateProgression(100, 100, 0, 64, false);
+    const f64 = await corePlate.calculateProgression(100, 100, 196, 0, 64, false);
     expect(f64.fleetTitle).to.equal("FLEET 64/64: SOVEREIGN MASTER");
   });
 
