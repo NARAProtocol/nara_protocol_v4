@@ -17,22 +17,22 @@ contract NARAArtMetadataV4 {
 
     function tierTitle(uint256 ageInEpochs, uint256 mWad, bool isEternal) public pure returns (string memory) {
         if (isEternal || ageInEpochs >= EPOCHS_PER_YEAR) return "Rank 10 (Apex Veteran)";
-        if (mWad == 3 * WAD) return "Rank 10 (1-Year Horizon)";
-        if (ageInEpochs >= 23360 || mWad >= 2.25e18) return "Rank 7 (Tachyon Warp)";
-        if (ageInEpochs >= 11520 || mWad >= 1.75e18) return "Rank 5 (Orbital Gyro)";
+        if (mWad == 4 * WAD) return "Rank 10 (1-Year Horizon)";
+        if (ageInEpochs >= 23360 || mWad >= 2.75e18) return "Rank 7 (Tachyon Warp)";
+        if (ageInEpochs >= 11520 || mWad >= 1.85e18) return "Rank 5 (Orbital Gyro)";
         if (ageInEpochs >= 2880 || mWad >= 1.25e18) return "Rank 3 (Circuit Ignition)";
         return "Rank 0 (Dormant Node)";
     }
 
     function calculateMultiplierWad(uint64 createdEpoch, uint64 unlockEpoch, bool isEternal) public pure returns (uint256) {
-        if (isEternal) return 3 * WAD;
+        if (isEternal) return 4 * WAD;
         if (unlockEpoch <= createdEpoch) return WAD;
         uint64 duration = unlockEpoch - createdEpoch;
         if (duration > EPOCHS_PER_YEAR) duration = EPOCHS_PER_YEAR;
 
         uint256 r = Math.mulDiv(uint256(duration), WAD, uint256(EPOCHS_PER_YEAR));
         uint256 r2 = Math.mulDiv(r, r, WAD);
-        return WAD + r + r2;
+        return WAD + Math.mulDiv(0.5e18, r, WAD) + Math.mulDiv(2.5e18, r2, WAD);
     }
 
     function formatMultiplier(uint256 mWad) public pure returns (string memory) {

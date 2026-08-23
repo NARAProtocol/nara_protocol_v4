@@ -99,7 +99,7 @@ describe("NARAPositionRendererV8 & Multi-Vector Progression Suite", function () 
     const p1yr = await corePlate.calculateProgression(100, 100, 35140, wad(1000), 7, 0, 1, false);
     expect(p1yr.rank).to.equal(10);
     expect(p1yr.rankTitle).to.equal("1-YEAR HORIZON");
-    expect(p1yr.multiplierLabel).to.equal("3.00X");
+    expect(p1yr.multiplierLabel).to.equal("4.00X");
     expect(p1yr.amountTier).to.equal(5); // Sovereign Whale (1000+ NARA)
     expect(p1yr.chargedCells).to.equal(10);
   });

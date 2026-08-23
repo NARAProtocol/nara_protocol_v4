@@ -45,16 +45,16 @@ contract NARAArtCorePlateV4 {
     }
 
     /// @notice Calculates the exact continuous quadratic multiplier matching NARAEngineModelLib
-    /// @dev Formula: m(r) = 1.0 + r + r^2, where r = min(duration, 1 year) / 1 year.
+    /// @dev Formula: m(r) = 1.0 + 0.5r + 2.5r^2, where r = min(duration, 1 year) / 1 year.
     function calculateMultiplierWad(uint64 createdEpoch, uint64 unlockEpoch, bool isEternal) public pure returns (uint256) {
-        if (isEternal) return 3 * WAD;
+        if (isEternal) return 4 * WAD;
         if (unlockEpoch <= createdEpoch) return WAD;
         uint64 duration = unlockEpoch - createdEpoch;
         if (duration > EPOCHS_PER_YEAR) duration = EPOCHS_PER_YEAR;
 
         uint256 r = Math.mulDiv(uint256(duration), WAD, uint256(EPOCHS_PER_YEAR));
         uint256 r2 = Math.mulDiv(r, r, WAD);
-        return WAD + r + r2; // Ranges from 1.00e18 to 3.00e18
+        return WAD + Math.mulDiv(0.5e18, r, WAD) + Math.mulDiv(2.5e18, r2, WAD); // Ranges from 1.00e18 to 4.00e18
     }
 
     function formatMultiplier(uint256 mWad) public pure returns (string memory) {
@@ -86,8 +86,8 @@ contract NARAArtCorePlateV4 {
         p.multiplierWad = calculateMultiplierWad(createdEpoch, unlockEpoch, isEternal);
         p.multiplierLabel = formatMultiplier(p.multiplierWad);
 
-        // 1. Continuous Battery HUD mapping: 1.0X-3.0X mapped across 10 cells
-        uint256 cellProgress = Math.mulDiv(p.multiplierWad - WAD, 9, 2 * WAD);
+        // 1. Continuous Battery HUD mapping: 1.0X-4.0X mapped across 10 cells
+        uint256 cellProgress = Math.mulDiv(p.multiplierWad - WAD, 9, 3 * WAD);
         p.chargedCells = uint8(1 + cellProgress);
 
         // Aging adds bonus charge up to 10
@@ -120,13 +120,13 @@ contract NARAArtCorePlateV4 {
         if (isEternal || p.ageInEpochs >= EPOCHS_PER_YEAR) {
             p.rank = 10;
             p.rankTitle = "APEX VETERAN";
-        } else if (p.multiplierWad == 3 * WAD) {
+        } else if (p.multiplierWad == 4 * WAD) {
             p.rank = 10;
             p.rankTitle = "1-YEAR HORIZON";
-        } else if (p.ageInEpochs >= 23360 || p.multiplierWad >= 2.25e18) {
+        } else if (p.ageInEpochs >= 23360 || p.multiplierWad >= 2.75e18) {
             p.rank = 7;
             p.rankTitle = "TACHYON WARP";
-        } else if (p.ageInEpochs >= 11520 || p.multiplierWad >= 1.75e18) {
+        } else if (p.ageInEpochs >= 11520 || p.multiplierWad >= 1.85e18) {
             p.rank = 5;
             p.rankTitle = "ORBITAL GYRO";
         } else if (p.ageInEpochs >= 2880 || p.multiplierWad >= 1.25e18) {

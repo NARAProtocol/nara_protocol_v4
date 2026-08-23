@@ -99,21 +99,21 @@ describe("NARAFleetDeckLensV1 & Quadratic Multiplier Suite", function () {
   });
 
   describe("1. Granular Multiplier & Horology Verification", function () {
-    it("computes exact continuous quadratic multipliers from 1.00X to 3.00X", async function () {
+    it("computes exact continuous quadratic multipliers from 1.00X to 4.00X", async function () {
       // 0 Days -> 1.00X
       const m0 = await corePlate.calculateMultiplierWad(1000n, 1000n, false);
       expect(m0).to.equal(wad(1));
       expect(await corePlate.formatMultiplier(m0)).to.equal("1.00X");
 
-      // 180 Days (17,520 epochs) -> 1.75X
+      // 180 Days (17,520 epochs) -> 1.875X
       const m180 = await corePlate.calculateMultiplierWad(1000n, 1000n + 17520n, false);
-      expect(m180).to.equal((175n * ONE) / 100n);
-      expect(await corePlate.formatMultiplier(m180)).to.equal("1.75X");
+      expect(m180).to.equal((1875n * ONE) / 1000n);
+      expect(await corePlate.formatMultiplier(m180)).to.equal("1.87X");
 
-      // 365 Days (35,040 epochs) -> 3.00X
+      // 365 Days (35,040 epochs) -> 4.00X
       const m365 = await corePlate.calculateMultiplierWad(1000n, 1000n + 35040n, false);
-      expect(m365).to.equal(wad(3));
-      expect(await corePlate.formatMultiplier(m365)).to.equal("3.00X");
+      expect(m365).to.equal(wad(4));
+      expect(await corePlate.formatMultiplier(m365)).to.equal("4.00X");
     });
   });
 
