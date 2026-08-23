@@ -135,16 +135,10 @@ export const DEPLOYMENT = ${JSON.stringify(
     poolFee: addresses.poolFee,
     tickSpacing: addresses.tickSpacing,
     positionNft: "0x01D3AC0acda01FE5D6788fA0B4062de94C8DE52b",
-    positionRenderer: "0x767abcbbE20aF3917D51DFE96A94F1aC26172Fc1",
+    positionRenderer: "0x8567f3A8AE361E87d9441E4AA8B7B55ACBe93159",
     positionAccountImpl: "0x3a8c9cA4f95E94751774810B33caF01bb992A55F",
-
-
-
-
-    artMetadata: "0xC8f1d3037290729671c06e019ef653cf98509067",
-    artSecurityPrint: "0x88F69C994FE22dB6d31682604DAC29948c7C3728",
-    artCorePlate: "0x317d11816F1ddd3ff1B35f99e5Ea2C39175DC2c5",
-    artGenesisPlate: "0xe072A5bf40072dB1D8af12c8D21B1b6A98e16E65",
+    artMetadata: "0x0787167D575Ae7e0EDe15d77f8924Ac86597D72a",
+    artCorePlate: "0x21024A9be0380d710161Bf7329E22A8cfFFAf19b",
 
     codeHashes: {
       engine: manifest.contracts.engine.runtimeCodeHash,

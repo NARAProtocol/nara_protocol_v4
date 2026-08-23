@@ -52,27 +52,23 @@ Safe finalization transaction `0xfb83cb4cb4b8a2c30216f46be69b519628ad74259795806
 - `freezeRoyalties()` (`royaltiesFrozen = true`)
 - `freezeClaimFees()` (`claimFeesFrozen = true`)
 
-### ACTIVE CANONICAL PRODUCTION STACK — V7 10-Rank Generative Engine (`0x01D3...`)
-To support the modular **10-Rank Multi-Vector Evolution Engine**, **Lock Duration Multipliers**, and **100 NARA Grail Gate**, the active production contract is:
+### ACTIVE CANONICAL PRODUCTION STACK — V8 Master On-Chain Progression Engine (`0x01D3...`)
+To support the **3-Vector Staking Progression (Time, Stake, Fleet Grid)**, **Multi-Year Ascensions (Supernova & Immortal Quantum Sovereign)**, and **Anti-Slop Zero-Collision SVG Architecture**, the active production contract is:
 * **Active Position NFT (`NARAPOS`):** `0x01D3AC0acda01FE5D6788fA0B4062de94C8DE52b`
-* **Active Renderer (V7):** `0x767abcbbE20aF3917D51DFE96A94F1aC26172Fc1`
+* **Active Master Renderer (V8):** `0x8567f3A8AE361E87d9441E4AA8B7B55ACBe93159`
+* **Master Art Core Plate V4:** `0x21024A9be0380d710161Bf7329E22A8cfFFAf19b`
+* **Master Art Metadata V4:** `0x0787167D575Ae7e0EDe15d77f8924Ac86597D72a`
+* **Account Implementation (EIP-1167):** `0x3a8c9cA4f95E94751774810B33caF01bb992A55F`
 
-
-### Live Minting Verification & Generative Art Upgrade (2026-08-22)
-- **Live Mainnet Tokens:** Tokens #1, #2, #3, and #4 were minted and verified on Base Mainnet.
-- **Empirical System Audit:** `scripts/audit-live-nfts.js` verified 100.00% exact mathematical match against `NARAEngineModelLib.computeWeight()`, verified ERC-6551 clone bytecodes (45 bytes), Engine-TBA ownership equivalence, bidirectional token-position indexing, and 100% Engine contract solvency (5,465.98 NARA balance vs 5,465.44 NARA locked).
-- **Luxury Architectural Fat Frame Upgrade (V7 Stack with 10-Rank Evolution & 100 NARA Grail Gate):** 
-  - `NARAPositionNFTV4`: `0x01D3AC0acda01FE5D6788fA0B4062de94C8DE52b` (with upgradeable `setRenderer` and one-way `freezeRenderer`).
-  - `NARAPositionRendererV7`: `0x767abcbbE20aF3917D51DFE96A94F1aC26172Fc1` (with 10-Rank Multi-Vector Evolution & 100 NARA Grail Gate).
-  - `NARAArtCorePlateV3`: `0xDbc0a5DB70F59B7cB698CE09A6EE0929c0606543` (10-Rank procedural engine, Capacitor HUD, Laser Notches, Reinforcement Plates).
-  - `NARAArtMetadataV3`: `0x72F4fe25859ad924b0CAceA2f312405f6f783A3E` (OpenSea rarity traits + `Reward Multiplier` + `Lock Duration Boost`).
-  - `NARAPositionAccountV4`: `0x3a8c9cA4f95E94751774810B33caF01bb992A55F` (ERC-6551 TBA clone master).
-  - `NARAGenesisRewardDistributorV4`: `0x1A6E7B52Db9738622b835059F8C0B2f146829EC8` (5.00x boost Genesis distributor).
-- **Verified Live Mints & Rare Pulls (19 Tokens Active):**
-  - Token #2: Pulled **`24K Gilded Gold (Legendary Anchor)`** + God-Tier 5.0X Sovereign Anchor!
-  - Token #16: Pulled **`Prismatic Holo Foil (Holy Grail 3.5% Gated)`** + 4.0X 1-Year Max Lock Boost!
-  - Tokens #10, #18, #19: Pulled **`Obsidian Stealth (Rare 25%)`**!
-  - Tokens #5, #7, #12, #15, #17: Pulled **`Cybernetic Emerald (Uncommon 35%)`**!
+### Live Minting Verification & Master V8 Upgrades (2026-08-23)
+- **Live Mainnet Tokens:** Tokens #1 through #20 minted and verified on Base Mainnet.
+- **Empirical System Audit:** `scripts/audit-live-nfts.js` verified 100.00% exact mathematical match against `NARAEngineModelLib.computeWeight()`, verified ERC-6551 clone bytecodes (45 bytes), Engine-TBA ownership equivalence, bidirectional token-position indexing, and 100% Engine contract solvency.
+- **Master V8 Architectural Features:**
+  - **10-Cell LED Battery Capacitor HUD:** Lights up cell-by-cell as the card ages from Day 1 to Day 365.
+  - **Multi-Year Ascension Eras:** Unlocks `Ascension I: Supernova` on Year 2 and `Ascension II: Immortal Quantum Sovereign` on Year 3+.
+  - **64-Slot Fleet Grid Synergy:** Reads the holder's wallet staking count and scales from Solo Vanguard to 64/64 Sovereign Grid Master.
+  - **WCAG AAA Maximum Contrast:** 18.2:1 contrast white typography (`#F0F6FC`), Super-Cyan lasers (`#00F5FF`), and 24K Molten Gold (`#FFD700`) on solid Onyx (`#06080F`).
+  - **Zero-Collision 500x700 Bounding Box:** Isolated center reactor stage ($Y: 120-460$) guaranteeing zero text overlaps.
 
 - **Console Web App Live:** Deployed to Cloudflare Pages (`https://nara-v4-console-preview.pages.dev`).
 
