@@ -40,14 +40,15 @@ error NARAFleetDeckLensV1__ZeroAddress();
 error NARAFleetDeckLensV1__NotAContract();
 error NARAFleetDeckLensV1__PairingMismatch();
 error NARAFleetDeckLensV1__DeckCapacityExceeded(uint256 provided, uint256 maxAllowed);
+error NARAFleetDeckLensV1__DuplicateTokenId(uint256 tokenId);
 
 /// @title NARAFleetDeckLensV1
 /// @notice Pure read-only periphery view contract aggregating wallet tactical fleet decks (max 6 active positions).
-/// @dev 100% Stateless, admin-free, reentrancy-immune. Leaves NARAEngine and NARAPositionNFTV4 untouched.
+/// @dev 100% Stateless, admin-free, reentrancy-immune with strict duplicate token ID prevention and fail-closed try/catch safety.
 contract NARAFleetDeckLensV1 {
     using Strings for uint256;
 
-    uint256 public constant LENS_VERSION = 1;
+    uint256 public constant LENS_VERSION = 2;
     uint256 public constant MAX_DECK_SLOTS = 6;
     uint256 internal constant WAD = 1e18;
     uint256 internal constant BPS = 10_000;
@@ -79,7 +80,7 @@ contract NARAFleetDeckLensV1 {
         uint8 synergyTier;              // 0 to 5
         string synergyTierName;         // e.g. "Hexa Armada Sovereign"
         uint16 synergyBonusBps;         // e.g. 2500 (25.00%)
-        bool hasGenesisAura;            // True if >= 1 Genesis position present
+        bool hasGenesisAura;            // True if >= 1 Genesis active position present
         uint256 activeSlotsCount;       // 0 to 6
     }
 
@@ -112,83 +113,99 @@ contract NARAFleetDeckLensV1 {
         view
         returns (FleetDeckSummary memory deck)
     {
-        if (tokenIds.length > MAX_DECK_SLOTS) {
-            revert NARAFleetDeckLensV1__DeckCapacityExceeded(tokenIds.length, MAX_DECK_SLOTS);
+        uint256 len = tokenIds.length;
+        if (len > MAX_DECK_SLOTS) {
+            revert NARAFleetDeckLensV1__DeckCapacityExceeded(len, MAX_DECK_SLOTS);
         }
 
         deck.user = user;
         uint64 currentEpoch = ENGINE.currentEpoch();
-        deck.positions = new DeckPositionSummary[](tokenIds.length);
+        deck.positions = new DeckPositionSummary[](len);
 
         uint256 activeCount = 0;
         bool genesisFound = false;
 
-        for (uint256 i = 0; i < tokenIds.length; i++) {
+        for (uint256 i = 0; i < len; i++) {
             uint256 tid = tokenIds[i];
+
+            // 1. Strict Duplicate Token ID Prevention
+            for (uint256 j = 0; j < i; j++) {
+                if (tokenIds[j] == tid) {
+                    revert NARAFleetDeckLensV1__DuplicateTokenId(tid);
+                }
+            }
+
             DeckPositionSummary memory posSummary;
             posSummary.tokenId = tid;
 
-            // Validate token ownership
+            // 2. Validate token ownership safely
             address tokenOwner = address(0);
             try POSITION_NFT.ownerOf(tid) returns (address o) {
                 tokenOwner = o;
             } catch {}
 
             if (tokenOwner == user && tokenOwner != address(0)) {
-                posSummary.positionId = POSITION_NFT.positionIdOf(tid);
-                Position memory p = POSITION_NFT.positionInfo(tid);
-
-                posSummary.amount = p.amount;
-                posSummary.weight = p.weight;
-                posSummary.createdEpoch = p.createdEpoch;
-                posSummary.activationEpoch = p.activationEpoch;
-                posSummary.unlockEpoch = p.unlockEpoch;
-
-                // Multiplier calculation
-                if (p.amount > 0) {
-                    posSummary.multiplierWad = Math.mulDiv(uint256(p.weight), WAD, uint256(p.amount));
-                    posSummary.multiplierBps = uint16(Math.mulDiv(uint256(p.weight), BPS, uint256(p.amount)));
-                } else {
-                    posSummary.multiplierWad = WAD;
-                    posSummary.multiplierBps = uint16(BPS);
-                }
-                posSummary.formattedMultiplier = _formatMultiplier(posSummary.multiplierWad);
-
-                // Genesis metadata
-                try POSITION_NFT.genesisMetadataOf(tid) returns (
-                    bool isGen, bool isEt, uint16, uint16, uint32, uint64, uint256
-                ) {
-                    posSummary.isGenesis = isGen;
-                    posSummary.isEternal = isEt;
-                    if (isGen) genesisFound = true;
+                // 3. Protected Position Info Resolution
+                try POSITION_NFT.positionIdOf(tid) returns (uint256 pid) {
+                    posSummary.positionId = pid;
                 } catch {}
 
-                // Active lifecycle check
-                if (currentEpoch >= p.activationEpoch && (posSummary.isEternal || currentEpoch < p.unlockEpoch)) {
-                    posSummary.isActive = true;
-                    activeCount++;
-                    deck.totalLockedNara += p.amount;
-                    deck.totalWeight += p.weight;
-                }
+                try POSITION_NFT.positionInfo(tid) returns (Position memory p) {
+                    posSummary.amount = p.amount;
+                    posSummary.weight = p.weight;
+                    posSummary.createdEpoch = p.createdEpoch;
+                    posSummary.activationEpoch = p.activationEpoch;
+                    posSummary.unlockEpoch = p.unlockEpoch;
 
-                // Claimable rewards aggregation
-                try ENGINE.claimableRewards(posSummary.positionId) returns (uint256 nara, uint256 eth) {
-                    posSummary.claimableNara = nara;
-                    posSummary.claimableEth = eth;
-                    deck.aggregateClaimableNara += nara;
-                    deck.aggregateClaimableEth += eth;
+                    if (p.amount > 0) {
+                        posSummary.multiplierWad = Math.mulDiv(uint256(p.weight), WAD, uint256(p.amount));
+                        posSummary.multiplierBps = uint16(Math.mulDiv(uint256(p.weight), BPS, uint256(p.amount)));
+                    } else {
+                        posSummary.multiplierWad = WAD;
+                        posSummary.multiplierBps = uint16(BPS);
+                    }
+                    posSummary.formattedMultiplier = _formatMultiplier(posSummary.multiplierWad);
+
+                    // Genesis metadata
+                    try POSITION_NFT.genesisMetadataOf(tid) returns (
+                        bool isGen, bool isEt, uint16, uint16, uint32, uint64, uint256
+                    ) {
+                        posSummary.isGenesis = isGen;
+                        posSummary.isEternal = isEt;
+                    } catch {}
+
+                    // Active lifecycle check (Genesis aura only active if position is active)
+                    if (currentEpoch >= p.activationEpoch && (posSummary.isEternal || currentEpoch < p.unlockEpoch)) {
+                        posSummary.isActive = true;
+                        activeCount++;
+                        deck.totalLockedNara += p.amount;
+                        deck.totalWeight += p.weight;
+                        if (posSummary.isGenesis) {
+                            genesisFound = true;
+                        }
+                    }
+
+                    // Claimable rewards aggregation
+                    if (posSummary.positionId != 0) {
+                        try ENGINE.claimableRewards(posSummary.positionId) returns (uint256 nara, uint256 eth) {
+                            posSummary.claimableNara = nara;
+                            posSummary.claimableEth = eth;
+                            deck.aggregateClaimableNara += nara;
+                            deck.aggregateClaimableEth += eth;
+                        } catch {}
+                    }
+
+                    if (posSummary.isGenesis) {
+                        try POSITION_NFT.claimableGenesisEth(tid) returns (uint256 gEth) {
+                            posSummary.claimableGenesisEth = gEth;
+                            deck.aggregateClaimableGenesisEth += gEth;
+                        } catch {}
+                        try POSITION_NFT.claimableGenesisToken(tid) returns (uint256 gToken) {
+                            posSummary.claimableGenesisToken = gToken;
+                            deck.aggregateClaimableGenesisToken += gToken;
+                        } catch {}
+                    }
                 } catch {}
-
-                if (posSummary.isGenesis) {
-                    try POSITION_NFT.claimableGenesisEth(tid) returns (uint256 gEth) {
-                        posSummary.claimableGenesisEth = gEth;
-                        deck.aggregateClaimableGenesisEth += gEth;
-                    } catch {}
-                    try POSITION_NFT.claimableGenesisToken(tid) returns (uint256 gToken) {
-                        posSummary.claimableGenesisToken = gToken;
-                        deck.aggregateClaimableGenesisToken += gToken;
-                    } catch {}
-                }
             }
 
             deck.positions[i] = posSummary;

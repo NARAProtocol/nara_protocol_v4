@@ -15,17 +15,12 @@ contract NARAArtMetadataV4 {
     uint64 public constant EPOCHS_PER_YEAR = 35040;
     uint256 internal constant WAD = 1e18;
 
-    function tierTitle(uint256 ageInEpochs, bool isEternal) public pure returns (string memory) {
+    function tierTitle(uint256 ageInEpochs, uint256 mWad, bool isEternal) public pure returns (string memory) {
         if (isEternal || ageInEpochs >= EPOCHS_PER_YEAR) return "Rank 10 (Apex Veteran)";
-        if (ageInEpochs >= 32120) return "Rank 9 (Dimensional Corona)";
-        if (ageInEpochs >= 29200) return "Rank 8 (Plasma Super-Ring)";
-        if (ageInEpochs >= 23360) return "Rank 7 (Tachyon Starburst)";
-        if (ageInEpochs >= 17520) return "Rank 6 (Gravitational Warp)";
-        if (ageInEpochs >= 11520) return "Rank 5 (Orbital Gyroscope)";
-        if (ageInEpochs >= 8640) return "Rank 4 (Stator Turbine)";
-        if (ageInEpochs >= 5760) return "Rank 3 (Double Conduit)";
-        if (ageInEpochs >= 2880) return "Rank 2 (Circuit Ignition)";
-        if (ageInEpochs >= 672) return "Rank 1 (Sensor Active)";
+        if (mWad == 3 * WAD) return "Rank 10 (1-Year Horizon)";
+        if (ageInEpochs >= 23360 || mWad >= 2.25e18) return "Rank 7 (Tachyon Warp)";
+        if (ageInEpochs >= 11520 || mWad >= 1.75e18) return "Rank 5 (Orbital Gyro)";
+        if (ageInEpochs >= 2880 || mWad >= 1.25e18) return "Rank 3 (Circuit Ignition)";
         return "Rank 0 (Dormant Node)";
     }
 
@@ -124,7 +119,7 @@ contract NARAArtMetadataV4 {
             '{"trait_type":"Chassis Alloy","value":"', alloyName(seed, isEternal, amount, createdEpoch, unlockEpoch), '"},',
             '{"trait_type":"Conviction Multiplier","value":"', boostStr, '"},',
             '{"trait_type":"Staking Era","value":"', ascensionTitle(ageInEpochs, extendCount, isEternal), '"},',
-            '{"trait_type":"Progression Rank","value":"', tierTitle(ageInEpochs, isEternal), '"},',
+            '{"trait_type":"Progression Rank","value":"', tierTitle(ageInEpochs, mWad, isEternal), '"},',
             '{"trait_type":"Fleet Deck Formation","value":"', fleetTitle(walletActiveSlots), '"},',
             '{"trait_type":"Time Commitment","value":"', lockDays.toString(), ' Days"},',
             '{"trait_type":"Age in Epochs","value":"', ageInEpochs.toString(), ' Epochs"},',

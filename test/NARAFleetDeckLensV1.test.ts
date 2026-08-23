@@ -156,5 +156,14 @@ describe("NARAFleetDeckLensV1 & Quadratic Multiplier Suite", function () {
         fleetLens.getFleetDeckSummary(aliceAddr, invalidDeck)
       ).to.be.revertedWithCustomError(fleetLens, "NARAFleetDeckLensV1__DeckCapacityExceeded");
     });
+
+    it("reverts when duplicate token IDs are passed (Sybil attack prevention)", async function () {
+      const aliceAddr = await alice.getAddress();
+      const duplicateDeck = [1n, 1n, 2n, 3n];
+
+      await expect(
+        fleetLens.getFleetDeckSummary(aliceAddr, duplicateDeck)
+      ).to.be.revertedWithCustomError(fleetLens, "NARAFleetDeckLensV1__DuplicateTokenId");
+    });
   });
 });
