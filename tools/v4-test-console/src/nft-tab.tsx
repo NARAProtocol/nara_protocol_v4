@@ -464,11 +464,16 @@ export function NftTab(props: NftTabProps = {}) {
       setActionBusy("approve");
       setError(null);
       setActionSuccess(null);
+      const amt = parseEther(lockAmount || "0");
+      if (amt === 0n) {
+        setError("Please enter a valid lock amount.");
+        return;
+      }
       const hash = await writeContractAsync({
         address: DEPLOYMENT.nara,
         abi: erc20Abi,
         functionName: "approve",
-        args: [DEPLOYMENT.positionNft, parseEther("1000000000")],
+        args: [DEPLOYMENT.positionNft, amt],
       });
       setActionSuccess(`Approval submitted: ${hash.slice(0, 10)}…`);
       await fetchState();
