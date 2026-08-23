@@ -18,7 +18,10 @@ typechain-types/
 archive/
 
 # dev / analysis artifacts (regenerated; not source)
-tools/
+tools/v4-test-console/dist/
+tools/v4-test-console/dist-swap/
+tools/v4-test-console/.wrangler/
+tools/v4-test-console/node_modules/
 audit-runs/
 broadcast/
 deployments/*
