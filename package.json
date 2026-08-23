@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "hardhat compile",
-    "build:pages": "npm --prefix tools/v4-test-console ci && npm --prefix tools/v4-test-console run build && node -e \"const fs = require('fs'); fs.cpSync('tools/v4-test-console/dist', 'dist', { recursive: true });\"",
+    "build:pages": "npm run build && npm --prefix tools/v4-test-console ci && npm --prefix tools/v4-test-console run build && node -e \"const fs = require('fs'); fs.cpSync('tools/v4-test-console/dist', 'dist', { recursive: true });\"",
     "clean": "hardhat clean",
     "test": "hardhat test",
     "test:token:v4": "hardhat test test/NARAToken.v4.test.ts",
