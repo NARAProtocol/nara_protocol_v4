@@ -3400,6 +3400,10 @@ footer {
   margin-bottom: 20px;
 }
 
+.section-title-row .bay-title {
+  color: var(--text, #14120f);
+}
+
 .refresh-btn {
   background: #161b22;
   border: 1px solid #30363d;
