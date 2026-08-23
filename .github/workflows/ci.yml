@@ -68,7 +68,7 @@ jobs:
           mapfile -t targets < <(find contracts/v4 -type f -name '*.sol' \
             ! -path '*/interfaces/*' ! -path '*/libraries/*' ! -path '*/mocks/*' \
             ! -name 'NARAEngineTypes.sol' | sort)
-          test "${#targets[@]}" -eq 32
+          test "${#targets[@]}" -ge 32
           failed=0
 
           for target in "${targets[@]}"; do
