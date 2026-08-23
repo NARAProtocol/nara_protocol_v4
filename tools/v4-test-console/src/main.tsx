@@ -43,10 +43,9 @@ const connectors = connectorsForWallets(
 );
 
 const transport = fallback([
-  http(rpcUrl, { batch: { batchSize: 50, wait: 12 } }),
-  http("https://mainnet.base.org", { batch: { batchSize: 50, wait: 12 } }),
-  http("https://base.publicnode.com", { batch: { batchSize: 50, wait: 12 } }),
+  http("https://base-rpc.publicnode.com", { batch: { batchSize: 50, wait: 12 } }),
   http("https://1rpc.io/base", { batch: { batchSize: 50, wait: 12 } }),
+  http("https://mainnet.base.org", { batch: { batchSize: 50, wait: 12 } }),
 ]);
 
 const config = createConfig({
