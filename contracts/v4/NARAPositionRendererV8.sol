@@ -7,6 +7,7 @@ import {Position, EpochSnapshot} from "./NARAEngineTypes.sol";
 import {INARAPositionRendererV4} from "./interfaces/INARAPositionRendererV4.sol";
 import {NARAArtCorePlateV4} from "./NARAArtCorePlateV4.sol";
 import {NARAArtMetadataV4} from "./NARAArtMetadataV4.sol";
+import {NARAArtCollectionBannerV4} from "./NARAArtCollectionBannerV4.sol";
 
 interface INARAEngineV8Render {
     function epochState() external view returns (EpochSnapshot memory);
@@ -45,18 +46,22 @@ contract NARAPositionRendererV8 is INARAPositionRendererV4 {
     address public immutable ENGINE;
     NARAArtCorePlateV4 public immutable CORE_PLATE;
     NARAArtMetadataV4 public immutable METADATA;
+    NARAArtCollectionBannerV4 public immutable BANNER;
 
     constructor(
         address engine_,
         address corePlate_,
-        address metadata_
+        address metadata_,
+        address banner_
     ) {
         require(engine_ != address(0), "Engine zero");
         require(corePlate_ != address(0), "CorePlate zero");
         require(metadata_ != address(0), "Metadata zero");
+        require(banner_ != address(0), "Banner zero");
         ENGINE = engine_;
         CORE_PLATE = NARAArtCorePlateV4(corePlate_);
         METADATA = NARAArtMetadataV4(metadata_);
+        BANNER = NARAArtCollectionBannerV4(banner_);
     }
 
     struct RenderState {
@@ -165,12 +170,23 @@ contract NARAPositionRendererV8 is INARAPositionRendererV4 {
         return string.concat("data:application/json;base64,", Base64.encode(bytes(tokenJSON(positionNft, tokenId))));
     }
 
-    function collectionURI(address) external pure returns (string memory) {
+    function collectionURI(address) external view returns (string memory) {
+        string memory bannerSvg = BANNER.bannerSVG();
+        string memory bannerImage = string.concat("data:image/svg+xml;base64,", Base64.encode(bytes(bannerSvg)));
         return string.concat(
             'data:application/json;base64,',
             Base64.encode(
                 bytes(
-                    '{"name":"NARA Position Artifacts","description":"Living On-Chain Financial Organisms bonded to ERC-6551 Token-Bound Vaults on Base Mainnet. Each artifact commands real yield-bearing NARA capital in NARAEngine.sol. Featuring 3-Vector dynamic staking progression, multi-year ascensions, 64-slot wallet fleet grid synergy, and 100% pure on-chain Swiss chronometer SVG horology across 5 aerospace physical alloys.","image":"https://nara.money/logo.png","external_link":"https://nara.finance","fee_recipient":"0xfe3A8678A9c729438BB11718bD1391E7Ab491E8e","seller_fee_basis_points":1000}'
+                    string.concat(
+                        '{"name":"NARA Position Artifacts","symbol":"NARAPOS",',
+                        '"description":"Living On-Chain Financial Organisms bonded to ERC-6551 Token-Bound Vaults on Base Mainnet. Each artifact commands real yield-bearing NARA capital in NARAEngine.sol. Featuring 3-Vector dynamic staking progression, multi-year ascensions, 64-slot wallet fleet grid synergy, and 100% pure on-chain Swiss chronometer SVG horology across 5 aerospace physical alloys.",',
+                        '"image":"', bannerImage, '",',
+                        '"banner_image":"', bannerImage, '",',
+                        '"featured_image":"', bannerImage, '",',
+                        '"external_link":"https://nara.finance",',
+                        '"fee_recipient":"0xfe3A8678A9c729438BB11718bD1391E7Ab491E8e",',
+                        '"seller_fee_basis_points":1000}'
+                    )
                 )
             )
         );

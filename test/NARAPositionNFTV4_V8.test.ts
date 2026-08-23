@@ -58,11 +58,16 @@ describe("NARAPositionRendererV8 & Multi-Vector Progression Suite", function () 
     accountImpl = await Account.deploy();
     await accountImpl.waitForDeployment();
 
+    const BannerFactory = await ethers.getContractFactory("NARAArtCollectionBannerV4");
+    const banner = await BannerFactory.deploy();
+    await banner.waitForDeployment();
+
     const RendererV8Factory = await ethers.getContractFactory("NARAPositionRendererV8", deployer);
     renderer = await RendererV8Factory.deploy(
       await engine.getAddress(),
       await corePlate.getAddress(),
-      await metadata.getAddress()
+      await metadata.getAddress(),
+      await banner.getAddress()
     );
     await renderer.waitForDeployment();
 
