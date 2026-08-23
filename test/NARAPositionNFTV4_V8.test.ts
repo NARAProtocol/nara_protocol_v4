@@ -92,16 +92,14 @@ describe("NARAPositionRendererV8 & Multi-Vector Progression Suite", function () 
     const p0 = await corePlate.calculateProgression(100, 100, 196, wad(10), 0, 0, 1, false);
     expect(p0.rank).to.equal(0);
     expect(p0.rankTitle).to.equal("DORMANT NODE");
-    expect(p0.lockTier).to.equal(1);
-    expect(p0.lockBoostLabel).to.equal("1.0X TRIAL");
+    expect(p0.multiplierLabel).to.equal("1.00X");
     expect(p0.amountTier).to.equal(1);
 
     // 365-Day lock (35040 epochs), 1000 NARA (Sovereign Whale), seed 7
     const p1yr = await corePlate.calculateProgression(100, 100, 35140, wad(1000), 7, 0, 1, false);
     expect(p1yr.rank).to.equal(10);
     expect(p1yr.rankTitle).to.equal("1-YEAR HORIZON");
-    expect(p1yr.lockTier).to.equal(5);
-    expect(p1yr.lockBoostLabel).to.equal("4.0X MAX BOOST");
+    expect(p1yr.multiplierLabel).to.equal("3.00X");
     expect(p1yr.amountTier).to.equal(5); // Sovereign Whale (1000+ NARA)
     expect(p1yr.chargedCells).to.equal(10);
   });
@@ -129,10 +127,10 @@ describe("NARAPositionRendererV8 & Multi-Vector Progression Suite", function () 
     expect(f1.fleetTitle).to.equal("FLEET: SOLO VANGUARD");
 
     const f4 = await corePlate.calculateProgression(100, 100, 196, wad(100), 0, 0, 4, false);
-    expect(f4.fleetTitle).to.equal("FLEET: SQUADRON");
+    expect(f4.fleetTitle).to.equal("FLEET: QUAD SQUADRON (+15%)");
 
     const f16 = await corePlate.calculateProgression(100, 100, 196, wad(100), 0, 0, 16, false);
-    expect(f16.fleetTitle).to.equal("FLEET: ARMADA");
+    expect(f16.fleetTitle).to.equal("FLEET: HEXA ARMADA (+25%)");
 
     const f64 = await corePlate.calculateProgression(100, 100, 196, wad(100), 0, 0, 64, false);
     expect(f64.fleetTitle).to.equal("FLEET 64/64: SOVEREIGN MASTER");
