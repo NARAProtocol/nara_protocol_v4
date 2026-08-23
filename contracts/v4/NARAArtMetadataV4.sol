@@ -27,13 +27,18 @@ contract NARAArtMetadataV4 {
         return "Rank 0 (Dormant Node)";
     }
 
-    function alloyName(uint256 seed, bool isEternal) public pure returns (string memory) {
+    function alloyName(uint256 seed, bool isEternal, uint128 amount) public pure returns (string memory) {
         if (isEternal) return "24K Gilded Gold (Sovereign Anchor)";
         uint256 roll = seed % 1000;
-        if (roll < 15) return "Forged Damascus Meteorite (Apex Grail)";
-        if (roll < 55) return "24K Gilded Gold (Legendary)";
-        if (roll < 200) return "Obsidian Stealth (Rare)";
-        if (roll < 550) return "Cybernetic Emerald (Uncommon)";
+        uint256 naraWhole = uint256(amount) / 1e18;
+
+        uint256 damascusThreshold = (naraWhole >= 100) ? 40 : 20;
+        uint256 goldThreshold = (naraWhole >= 100) ? 130 : 65;
+
+        if (roll < damascusThreshold) return "Forged Damascus Meteorite (Apex Grail)";
+        if (roll < goldThreshold) return "24K Gilded Gold (Legendary)";
+        if (roll < 260) return "Obsidian Stealth (Rare)";
+        if (roll < 580) return "Cybernetic Emerald (Uncommon)";
         return "Titanium Slate (Common)";
     }
 
@@ -89,7 +94,7 @@ contract NARAArtMetadataV4 {
 
         return string.concat(
             '[',
-            '{"trait_type":"Chassis Alloy","value":"', alloyName(seed, isEternal), '"},',
+            '{"trait_type":"Chassis Alloy","value":"', alloyName(seed, isEternal, amount), '"},',
             '{"trait_type":"Staking Era","value":"', ascensionTitle(ageInEpochs, extendCount, isEternal), '"},',
             '{"trait_type":"Conviction Multiplier","value":"', boostStr, '"},',
             '{"trait_type":"Progression Rank","value":"', tierTitle(ageInEpochs, isEternal), '"},',

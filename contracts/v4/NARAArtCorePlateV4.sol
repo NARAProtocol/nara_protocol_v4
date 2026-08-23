@@ -9,7 +9,7 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 contract NARAArtCorePlateV4 {
     using Strings for uint256;
 
-    uint256 public constant CORE_PLATE_VERSION = 11;
+    uint256 public constant CORE_PLATE_VERSION = 12;
     uint64 public constant EPOCHS_PER_DAY = 96;
     uint64 public constant EPOCHS_PER_YEAR = 35040;
 
@@ -37,7 +37,7 @@ contract NARAArtCorePlateV4 {
         uint8 lockTier;
         string lockBoostLabel;
         uint8 chargedCells;
-        uint8 amountTier; // 1 = <50, 2 = 50-249, 3 = 250-999, 4 = 1k-4.9k, 5 = 5k+ NARA
+        uint8 amountTier; // 1 = <25, 2 = 25-99, 3 = 100-499, 4 = 500-999, 5 = 1000+ NARA
         uint16 rotationAngle;
         uint8 coreShape; // 0 = Octagon, 1 = Hexagon, 2 = Dodecagon, 3 = Sacred Star
     }
@@ -92,18 +92,18 @@ contract NARAArtCorePlateV4 {
             p.chargedCells += ageBonus;
         }
 
-        // 2. Amount / Capital Depth Tier
+        // 2. Realistic Calibrated Amount / Capital Depth Tier
         uint256 naraWhole = uint256(amount) / 1e18;
-        if (naraWhole >= 5000) {
-            p.amountTier = 5; // Whale Singularity
-        } else if (naraWhole >= 1000) {
-            p.amountTier = 4; // High Conviction Heavy
-        } else if (naraWhole >= 250) {
-            p.amountTier = 3; // Mid-High Core
-        } else if (naraWhole >= 50) {
-            p.amountTier = 2; // Mid Core
+        if (naraWhole >= 1000) {
+            p.amountTier = 5; // Apex Whale Sovereign (1,000+ NARA)
+        } else if (naraWhole >= 500) {
+            p.amountTier = 4; // Heavy Believer (500-999 NARA)
+        } else if (naraWhole >= 100) {
+            p.amountTier = 3; // High Conviction & Lucky Mint (100-499 NARA)
+        } else if (naraWhole >= 25) {
+            p.amountTier = 2; // Builder Staker (25-99 NARA)
         } else {
-            p.amountTier = 1; // Standard
+            p.amountTier = 1; // Micro / Trial (<25 NARA)
         }
 
         // 3. Unique Procedural Fingerprint (Seed)
@@ -159,10 +159,15 @@ contract NARAArtCorePlateV4 {
         }
     }
 
-    function getTheme(uint256 seed, bool isEternal) public pure returns (ChassisTheme memory t) {
+    function getTheme(uint256 seed, bool isEternal, uint128 amount) public pure returns (ChassisTheme memory t) {
         uint256 roll = seed % 1000;
+        uint256 naraWhole = uint256(amount) / 1e18;
 
-        if (isEternal || roll < 20) {
+        // 100+ NARA Lucky Mint Bonus: 2X probability boost for 24K Gold and Damascus Meteorite
+        uint256 damascusThreshold = (naraWhole >= 100) ? 40 : 20;
+        uint256 goldThreshold = (naraWhole >= 100) ? 130 : 65;
+
+        if (isEternal || roll < damascusThreshold) {
             // Forged Damascus Meteorite (Apex Grail)
             return ChassisTheme({
                 name: "Forged Damascus Meteorite",
@@ -178,7 +183,7 @@ contract NARAArtCorePlateV4 {
                 hexGridColor: "rgba(56,189,248,0.06)"
             });
         }
-        if (roll < 65) {
+        if (roll < goldThreshold) {
             // 24K Gilded Gold (Legendary)
             return ChassisTheme({
                 name: "24K Gilded Gold",
@@ -194,7 +199,7 @@ contract NARAArtCorePlateV4 {
                 hexGridColor: "rgba(255,215,0,0.05)"
             });
         }
-        if (roll < 220) {
+        if (roll < 260) {
             // Obsidian Stealth (Rare)
             return ChassisTheme({
                 name: "Obsidian Stealth",
@@ -210,7 +215,7 @@ contract NARAArtCorePlateV4 {
                 hexGridColor: "rgba(255,42,85,0.05)"
             });
         }
-        if (roll < 560) {
+        if (roll < 580) {
             // Cybernetic Emerald (Uncommon)
             return ChassisTheme({
                 name: "Cybernetic Emerald",
@@ -337,7 +342,7 @@ contract NARAArtCorePlateV4 {
         uint32 extendCount,
         uint256 walletActiveSlots
     ) external pure returns (string memory) {
-        ChassisTheme memory t = getTheme(seed, isEternal);
+        ChassisTheme memory t = getTheme(seed, isEternal, amount);
         ProgressionState memory p = calculateProgression(currentEpoch, createdEpoch, unlockEpoch, amount, seed, extendCount, walletActiveSlots, isEternal);
 
         uint256 naraWhole = uint256(amount) / 1e18;

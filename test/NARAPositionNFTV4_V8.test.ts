@@ -96,13 +96,13 @@ describe("NARAPositionRendererV8 & Multi-Vector Progression Suite", function () 
     expect(p0.lockBoostLabel).to.equal("1.0X TRIAL");
     expect(p0.amountTier).to.equal(1);
 
-    // 365-Day lock (35040 epochs), 5000 NARA (Whale), seed 7
-    const p1yr = await corePlate.calculateProgression(100, 100, 35140, wad(5000), 7, 0, 1, false);
+    // 365-Day lock (35040 epochs), 1000 NARA (Sovereign Whale), seed 7
+    const p1yr = await corePlate.calculateProgression(100, 100, 35140, wad(1000), 7, 0, 1, false);
     expect(p1yr.rank).to.equal(10);
     expect(p1yr.rankTitle).to.equal("1-YEAR HORIZON");
     expect(p1yr.lockTier).to.equal(5);
     expect(p1yr.lockBoostLabel).to.equal("4.0X MAX BOOST");
-    expect(p1yr.amountTier).to.equal(5); // Whale
+    expect(p1yr.amountTier).to.equal(5); // Sovereign Whale (1000+ NARA)
     expect(p1yr.chargedCells).to.equal(10);
   });
 
