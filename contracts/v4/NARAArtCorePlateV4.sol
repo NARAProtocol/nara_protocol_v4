@@ -5,11 +5,11 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 /// @title NARAArtCorePlateV4
 /// @notice Master luxury Swiss chronometer & aerospace generative art engine.
-/// @dev 100% Pure On-Chain SVG rendering with commitment scaling (1 Day vs 365 Days).
+/// @dev 100% Pure On-Chain SVG rendering with Multi-Dimensional Staking Scaling (Time, Amount, Seed, Ascensions).
 contract NARAArtCorePlateV4 {
     using Strings for uint256;
 
-    uint256 public constant CORE_PLATE_VERSION = 10;
+    uint256 public constant CORE_PLATE_VERSION = 11;
     uint64 public constant EPOCHS_PER_DAY = 96;
     uint64 public constant EPOCHS_PER_YEAR = 35040;
 
@@ -34,15 +34,20 @@ contract NARAArtCorePlateV4 {
         string ascensionLabel;
         string fleetTitle;
         uint256 ageInEpochs;
-        uint8 lockTier; // 1 = 1d (1.0x), 2 = 30d (1.25x), 3 = 90d (1.75x), 4 = 180d (2.5x), 5 = 365d (4.0x)
+        uint8 lockTier;
         string lockBoostLabel;
         uint8 chargedCells;
+        uint8 amountTier; // 1 = <50, 2 = 50-249, 3 = 250-999, 4 = 1k-4.9k, 5 = 5k+ NARA
+        uint16 rotationAngle;
+        uint8 coreShape; // 0 = Octagon, 1 = Hexagon, 2 = Dodecagon, 3 = Sacred Star
     }
 
     function calculateProgression(
         uint64 currentEpoch,
         uint64 createdEpoch,
         uint64 unlockEpoch,
+        uint128 amount,
+        uint256 seed,
         uint32 extendCount,
         uint256 walletActiveSlots,
         bool isEternal
@@ -56,7 +61,7 @@ contract NARAArtCorePlateV4 {
         uint256 lockDays = (unlockEpoch > createdEpoch) ? (uint256(unlockEpoch - createdEpoch) / EPOCHS_PER_DAY) : 0;
         if (isEternal) lockDays = 9999;
 
-        // Lock Commitment Horizon Tier & Boost
+        // 1. Lock Commitment Horizon Tier & Boost
         if (isEternal || lockDays >= 365) {
             p.lockTier = 5;
             p.lockBoostLabel = "4.0X MAX BOOST";
@@ -79,7 +84,7 @@ contract NARAArtCorePlateV4 {
             p.chargedCells = 1;
         }
 
-        // Age increases charged cells if initial wasn't full
+        // Aging adds bonus charge
         uint8 ageBonus = uint8((p.ageInEpochs * 10) / EPOCHS_PER_YEAR);
         if (p.chargedCells + ageBonus > 10 || isEternal) {
             p.chargedCells = 10;
@@ -87,21 +92,37 @@ contract NARAArtCorePlateV4 {
             p.chargedCells += ageBonus;
         }
 
-        // Aging Ranks
-        if (isEternal || p.ageInEpochs >= EPOCHS_PER_YEAR || p.lockTier == 5) {
-            if (isEternal || p.ageInEpochs >= EPOCHS_PER_YEAR) {
-                p.rank = 10;
-                p.rankTitle = "APEX VETERAN";
-            } else {
-                p.rank = 10;
-                p.rankTitle = "1-YEAR MAX LOCK";
-            }
+        // 2. Amount / Capital Depth Tier
+        uint256 naraWhole = uint256(amount) / 1e18;
+        if (naraWhole >= 5000) {
+            p.amountTier = 5; // Whale Singularity
+        } else if (naraWhole >= 1000) {
+            p.amountTier = 4; // High Conviction Heavy
+        } else if (naraWhole >= 250) {
+            p.amountTier = 3; // Mid-High Core
+        } else if (naraWhole >= 50) {
+            p.amountTier = 2; // Mid Core
+        } else {
+            p.amountTier = 1; // Standard
+        }
+
+        // 3. Unique Procedural Fingerprint (Seed)
+        p.rotationAngle = uint16((seed % 12) * 30);
+        p.coreShape = uint8(seed % 4);
+
+        // 4. Aging Titles
+        if (isEternal || p.ageInEpochs >= EPOCHS_PER_YEAR) {
+            p.rank = 10;
+            p.rankTitle = "APEX VETERAN";
+        } else if (p.lockTier == 5) {
+            p.rank = 10;
+            p.rankTitle = "1-YEAR HORIZON";
         } else if (p.ageInEpochs >= 23360 || p.lockTier == 4) {
             p.rank = 7;
             p.rankTitle = "TACHYON WARP";
         } else if (p.ageInEpochs >= 11520 || p.lockTier == 3) {
             p.rank = 5;
-            p.rankTitle = "ORBITAL GYROSCOPE";
+            p.rankTitle = "ORBITAL GYRO";
         } else if (p.ageInEpochs >= 2880 || p.lockTier == 2) {
             p.rank = 3;
             p.rankTitle = "CIRCUIT IGNITION";
@@ -110,7 +131,7 @@ contract NARAArtCorePlateV4 {
             p.rankTitle = "DORMANT NODE";
         }
 
-        // Ascensions
+        // 5. Multi-Year Ascensions
         if (isEternal || p.ageInEpochs >= (EPOCHS_PER_YEAR * 3) || extendCount >= 4) {
             p.ascensionTier = 2;
             p.ascensionLabel = "ASCENSION II: IMMORTAL QUANTUM";
@@ -122,7 +143,7 @@ contract NARAArtCorePlateV4 {
             p.ascensionLabel = "STANDARD ERA";
         }
 
-        // Fleet Grids
+        // 6. Fleet Grids
         if (walletActiveSlots >= 64) {
             p.fleetTitle = "FLEET 64/64: SOVEREIGN MASTER";
         } else if (walletActiveSlots >= 32) {
@@ -279,6 +300,30 @@ contract NARAArtCorePlateV4 {
         return busbar;
     }
 
+    function _renderLeftArmor(uint8 amountTier, uint32 extendCount, string memory accentColor) internal pure returns (string memory) {
+        string memory notches = "";
+        uint256 activeCount = (amountTier >= 4) ? 8 : (amountTier * 2);
+        if (extendCount > 0) activeCount += extendCount;
+        if (activeCount > 8) activeCount = 8;
+
+        for (uint256 i = 0; i < 8; i++) {
+            uint256 y = 175 + (i * 32);
+            if (i < activeCount) {
+                notches = string.concat(
+                    notches,
+                    '<rect x="14" y="', y.toString(), '" width="14" height="10" rx="2" fill="', accentColor, '" filter="url(#glow)"/>',
+                    '<circle cx="21" cy="', (y + 5).toString(), '" r="2" fill="#FFFFFF"/>'
+                );
+            } else {
+                notches = string.concat(
+                    notches,
+                    '<rect x="14" y="', y.toString(), '" width="14" height="10" rx="2" fill="#0F141C" stroke="#21262D" stroke-width="1"/>'
+                );
+            }
+        }
+        return notches;
+    }
+
     function svg(
         uint64 currentEpoch,
         uint256 seed,
@@ -293,7 +338,7 @@ contract NARAArtCorePlateV4 {
         uint256 walletActiveSlots
     ) external pure returns (string memory) {
         ChassisTheme memory t = getTheme(seed, isEternal);
-        ProgressionState memory p = calculateProgression(currentEpoch, createdEpoch, unlockEpoch, extendCount, walletActiveSlots, isEternal);
+        ProgressionState memory p = calculateProgression(currentEpoch, createdEpoch, unlockEpoch, amount, seed, extendCount, walletActiveSlots, isEternal);
 
         uint256 naraWhole = uint256(amount) / 1e18;
         uint256 lockDays = (unlockEpoch > createdEpoch) ? (uint256(unlockEpoch - createdEpoch) / EPOCHS_PER_DAY) : 0;
@@ -350,10 +395,11 @@ contract NARAArtCorePlateV4 {
             '<text x="418" y="21" fill="#8B949E" font-size="9" font-weight="bold" text-anchor="end">', p.rankTitle, '</text>',
             '</g>',
 
-            // 5. Dynamic Swiss Chronometer Quantum Reactor (Scaled by Lock Tier & Age)
-            _renderScaledReactor(t, p),
+            // 5. Dynamic Swiss Chronometer Quantum Reactor (Scaled by Amount, Lock Tier, Seed, and Ascensions)
+            _renderDynamicReactor(t, p),
 
-            // 6. Side Conduits
+            // 6. Side Conduits (Left Armor Clamps + Right Yield Busbars)
+            _renderLeftArmor(p.amountTier, extendCount, t.accentColor),
             _renderYieldConduit(p.lockTier, t.glowColor),
 
             // 7. Luxury Financial Instrument Panel
@@ -382,80 +428,68 @@ contract NARAArtCorePlateV4 {
         );
     }
 
-    function _renderScaledReactor(ChassisTheme memory t, ProgressionState memory p) internal pure returns (string memory) {
-        // If 365 Days (Lock Tier 5) or Ascension: Full 8 Stator Turbines + Outer Ratchet + Plasma Core
-        if (p.lockTier >= 5 || p.ascensionTier >= 1) {
-            return string.concat(
-                '<g transform="translate(250, 285)">',
-                '<circle cx="0" cy="0" r="132" fill="none" stroke="#161B22" stroke-width="4" stroke-dasharray="6 11"/>',
-                '<circle cx="0" cy="0" r="126" fill="none" stroke="', t.pinStripe, '" stroke-width="1" opacity="0.85"/>',
-                '<circle cx="0" cy="0" r="118" fill="none" stroke="#21262D" stroke-width="1" stroke-dasharray="2 4"/>',
-                '<text x="0" y="-120" fill="#8B949E" font-size="8" font-weight="bold" text-anchor="middle">', unicode"000°", '</text>',
-                '<text x="88" y="-88" fill="#484F58" font-size="7" text-anchor="middle">', unicode"045°", '</text>',
-                '<text x="122" y="3" fill="#8B949E" font-size="8" font-weight="bold" text-anchor="start">', unicode"090°", '</text>',
-                '<text x="88" y="92" fill="#484F58" font-size="7" text-anchor="middle">', unicode"135°", '</text>',
-                '<text x="0" y="125" fill="#8B949E" font-size="8" font-weight="bold" text-anchor="middle">', unicode"180°", '</text>',
-                '<text x="-88" y="92" fill="#484F58" font-size="7" text-anchor="middle">', unicode"225°", '</text>',
-                '<text x="-122" y="3" fill="#8B949E" font-size="8" font-weight="bold" text-anchor="end">', unicode"270°", '</text>',
-                '<text x="-88" y="-88" fill="#484F58" font-size="7" text-anchor="middle">', unicode"315°", '</text>',
-                // 8 Turbines
-                '<path d="M 0 -115 L 0 -85 M 0 115 L 0 85 M -115 0 L -85 0 M 115 0 L 85 0 M -81 -81 L -60 -60 M 81 81 L 60 60 M -81 81 L -60 60 M 81 -81 L 60 -60" stroke="', t.bracket, '" stroke-width="2.5"/>',
-                '<circle cx="0" cy="0" r="85" fill="#060910" stroke="', t.glowColor, '" stroke-width="2" filter="url(#glow)" opacity="0.9"/>',
-                '<circle cx="0" cy="0" r="68" fill="none" stroke="', t.pinStripe, '" stroke-width="1.5" stroke-dasharray="14 8"/>',
-                '<circle cx="0" cy="0" r="50" fill="#0A0E17" stroke="', t.bracket, '" stroke-width="2"/>',
-                '<polygon points="0,-48 34,-34 48,0 34,34 0,48 -34,34 -48,0 -34,-34" fill="none" stroke="', t.pinStripe, '" stroke-width="3" filter="url(#glow)"/>',
-                '<circle cx="0" cy="0" r="28" fill="', t.glowColor, '" opacity="0.45" filter="url(#glow)"/>',
-                '<circle cx="0" cy="0" r="14" fill="#FFFFFF" filter="url(#glow)"/>',
-                '<circle cx="0" cy="0" r="8" fill="', t.sigilColor, '"/>',
-                '</g>'
-            );
+    function _renderDynamicReactor(ChassisTheme memory t, ProgressionState memory p) internal pure returns (string memory) {
+        string memory corePoly = "";
+        if (p.coreShape == 0) {
+            // Octagon
+            corePoly = '<polygon points="0,-48 34,-34 48,0 34,34 0,48 -34,34 -48,0 -34,-34" fill="none" stroke="';
+        } else if (p.coreShape == 1) {
+            // Hexagon
+            corePoly = '<polygon points="0,-46 40,-23 40,23 0,46 -40,23 -40,-23" fill="none" stroke="';
+        } else if (p.coreShape == 2) {
+            // Dodecagon
+            corePoly = '<polygon points="0,-48 24,-42 42,-24 48,0 42,24 24,42 0,48 -24,42 -42,24 -48,0 -42,-24 -24,-42" fill="none" stroke="';
+        } else {
+            // 8-Point Star
+            corePoly = '<polygon points="0,-50 14,-20 45,-20 22,-4 35,28 0,12 -35,28 -22,-4 -45,-20 -14,-20" fill="none" stroke="';
         }
-        // 180 Days (Lock Tier 4): 6 Stator Fins + Dual Ring
-        if (p.lockTier == 4) {
-            return string.concat(
-                '<g transform="translate(250, 285)">',
-                '<circle cx="0" cy="0" r="118" fill="none" stroke="#21262D" stroke-width="1"/>',
-                '<path d="M 0 -110 L 0 -80 M 0 110 L 0 80 M -80 -46 L -60 -34 M 80 46 L 60 34 M -80 46 L -60 34 M 80 -46 L 60 -34" stroke="', t.bracket, '" stroke-width="2"/>',
-                '<circle cx="0" cy="0" r="80" fill="#060910" stroke="', t.glowColor, '" stroke-width="1.5"/>',
-                '<circle cx="0" cy="0" r="52" fill="#0A0E17" stroke="', t.bracket, '" stroke-width="1.5"/>',
-                '<polygon points="0,-36 25,-18 25,18 0,36 -25,18 -25,-18" fill="none" stroke="', t.sigilColor, '" stroke-width="2"/>',
-                '<circle cx="0" cy="0" r="18" fill="', t.glowColor, '" opacity="0.3"/>',
-                '<circle cx="0" cy="0" r="8" fill="', t.sigilColor, '"/>',
-                '</g>'
-            );
-        }
-        // 90 Days (Lock Tier 3): 4 Stator Fins
-        if (p.lockTier == 3) {
-            return string.concat(
-                '<g transform="translate(250, 285)">',
-                '<circle cx="0" cy="0" r="105" fill="none" stroke="#21262D" stroke-width="1"/>',
-                '<path d="M 0 -100 L 0 -75 M 0 100 L 0 75 M -100 0 L -75 0 M 100 0 L 75 0" stroke="', t.bracket, '" stroke-width="2"/>',
-                '<circle cx="0" cy="0" r="75" fill="#060910" stroke="', t.glowColor, '" stroke-width="1.2"/>',
-                '<circle cx="0" cy="0" r="48" fill="#0A0E17" stroke="', t.bracket, '" stroke-width="1.2"/>',
-                '<polygon points="0,-30 21,-15 21,15 0,30 -21,15 -21,-15" fill="none" stroke="', t.sigilColor, '" stroke-width="1.5"/>',
-                '<circle cx="0" cy="0" r="6" fill="', t.sigilColor, '"/>',
-                '</g>'
-            );
-        }
-        // 30 Days (Lock Tier 2): Dual Rings
-        if (p.lockTier == 2) {
-            return string.concat(
-                '<g transform="translate(250, 285)">',
-                '<circle cx="0" cy="0" r="90" fill="none" stroke="#21262D" stroke-width="1"/>',
-                '<circle cx="0" cy="0" r="65" fill="#060910" stroke="', t.glowColor, '" stroke-width="1"/>',
-                '<circle cx="0" cy="0" r="42" fill="#0A0E17" stroke="', t.bracket, '" stroke-width="1"/>',
-                '<polygon points="0,-24 17,-12 17,12 0,24 -17,12 -17,-12" fill="none" stroke="', t.sigilColor, '" stroke-width="1.5"/>',
-                '<circle cx="0" cy="0" r="5" fill="', t.sigilColor, '"/>',
-                '</g>'
-            );
-        }
-        // 1 Day (Lock Tier 1 - Trial): Minimal Single Ring
+
+        // Plasma Core Radius scales with Amount Tier (6 to 34 px)
+        uint256 coreR = 6 + (uint256(p.amountTier) * 5);
+        uint256 glowR = coreR * 2;
+
         return string.concat(
             '<g transform="translate(250, 285)">',
-            '<circle cx="0" cy="0" r="60" fill="none" stroke="#161B22" stroke-width="1"/>',
-            '<circle cx="0" cy="0" r="35" fill="#070A10" stroke="#21262D" stroke-width="1"/>',
-            '<polygon points="0,-18 13,-9 13,9 0,18 -13,9 -13,-9" fill="none" stroke="#484F58" stroke-width="1"/>',
-            '<circle cx="0" cy="0" r="4" fill="#484F58"/>',
+            // Outer Gear-Teeth Ring (Rotated uniquely by seed!)
+            '<g transform="rotate(', uint256(p.rotationAngle).toString(), ')">',
+            (p.lockTier >= 4 || p.amountTier >= 4)
+                ? '<circle cx="0" cy="0" r="132" fill="none" stroke="#161B22" stroke-width="4" stroke-dasharray="6 11"/>'
+                : '',
+            '<circle cx="0" cy="0" r="126" fill="none" stroke="', t.pinStripe, '" stroke-width="1" opacity="0.85"/>',
+            '</g>',
+
+            // Swiss Tachymeter Degree Markings
+            '<circle cx="0" cy="0" r="118" fill="none" stroke="#21262D" stroke-width="1" stroke-dasharray="2 4"/>',
+            '<text x="0" y="-120" fill="#8B949E" font-size="8" font-weight="bold" text-anchor="middle">', unicode"000°", '</text>',
+            '<text x="88" y="-88" fill="#484F58" font-size="7" text-anchor="middle">', unicode"045°", '</text>',
+            '<text x="122" y="3" fill="#8B949E" font-size="8" font-weight="bold" text-anchor="start">', unicode"090°", '</text>',
+            '<text x="88" y="92" fill="#484F58" font-size="7" text-anchor="middle">', unicode"135°", '</text>',
+            '<text x="0" y="125" fill="#8B949E" font-size="8" font-weight="bold" text-anchor="middle">', unicode"180°", '</text>',
+            '<text x="-88" y="92" fill="#484F58" font-size="7" text-anchor="middle">', unicode"225°", '</text>',
+            '<text x="-122" y="3" fill="#8B949E" font-size="8" font-weight="bold" text-anchor="end">', unicode"270°", '</text>',
+            '<text x="-88" y="-88" fill="#484F58" font-size="7" text-anchor="middle">', unicode"315°", '</text>',
+
+            // Stator Turbine Fins (Scaled by Lock Tier & Rotated by seed!)
+            '<g transform="rotate(', uint256(p.rotationAngle).toString(), ')">',
+            (p.lockTier >= 5)
+                ? string.concat('<path d="M 0 -115 L 0 -85 M 0 115 L 0 85 M -115 0 L -85 0 M 115 0 L 85 0 M -81 -81 L -60 -60 M 81 81 L 60 60 M -81 81 L -60 60 M 81 -81 L 60 -60" stroke="', t.bracket, '" stroke-width="2.5"/>')
+                : (p.lockTier >= 3
+                    ? string.concat('<path d="M 0 -110 L 0 -80 M 0 110 L 0 80 M -110 0 L -80 0 M 110 0 L 80 0" stroke="', t.bracket, '" stroke-width="2"/>')
+                    : '<path d="M 0 -95 L 0 -75 M 0 95 L 0 75" stroke="#21262D" stroke-width="1.5"/>'),
+            '</g>',
+
+            // Concentric Gyroscope Inner Rings
+            '<circle cx="0" cy="0" r="85" fill="#060910" stroke="', t.glowColor, '" stroke-width="2" filter="url(#glow)" opacity="0.9"/>',
+            '<circle cx="0" cy="0" r="68" fill="none" stroke="', t.pinStripe, '" stroke-width="1.5" stroke-dasharray="14 8"/>',
+            '<circle cx="0" cy="0" r="50" fill="#0A0E17" stroke="', t.bracket, '" stroke-width="2"/>',
+
+            // Procedural Core Polygon
+            corePoly, t.pinStripe, '" stroke-width="2.5" filter="url(#glow)"/>',
+
+            // Amount-Scaled Plasma Core Output
+            '<circle cx="0" cy="0" r="', glowR.toString(), '" fill="', t.glowColor, '" opacity="0.45" filter="url(#glow)"/>',
+            '<circle cx="0" cy="0" r="', coreR.toString(), '" fill="#FFFFFF" filter="url(#glow)"/>',
+            '<circle cx="0" cy="0" r="', (coreR / 2).toString(), '" fill="', t.sigilColor, '"/>',
             '</g>'
         );
     }
