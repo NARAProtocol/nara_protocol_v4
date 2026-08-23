@@ -170,7 +170,7 @@ contract NARAPositionRendererV8 is INARAPositionRendererV4 {
             'data:application/json;base64,',
             Base64.encode(
                 bytes(
-                    '{"name":"NARA Positions","description":"NARA Protocol Immortal Staking Positions with 3-Vector Dynamic Evolution, Multi-Year Ascensions, and 64-Slot Fleet Grid.","image":"https://nara.money/logo.png"}'
+                    '{"name":"NARA Position Artifacts","description":"Living On-Chain Financial Organisms bonded to ERC-6551 Token-Bound Vaults on Base Mainnet. Each artifact commands real yield-bearing NARA capital in NARAEngine.sol. Featuring 3-Vector dynamic staking progression, multi-year ascensions, 64-slot wallet fleet grid synergy, and 100% pure on-chain Swiss chronometer SVG horology across 5 aerospace physical alloys.","image":"https://nara.money/logo.png","external_link":"https://nara.finance","fee_recipient":"0xfe3A8678A9c729438BB11718bD1391E7Ab491E8e","seller_fee_basis_points":1000}'
                 )
             )
         );
