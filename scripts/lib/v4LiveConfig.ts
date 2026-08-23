@@ -401,7 +401,20 @@ export async function assertProductionV4Runtime(
         ["compounder", deployment.compounder],
         ["safe", deployment.safe],
     ] as const;
-    const codes = await Promise.all(targets.map(([, address]) => provider.getCode(address)));
+    const codes: string[] = [];
+    for (const [, address] of targets) {
+        for (let i = 0; i < 5; i++) {
+            try {
+                const code = await provider.getCode(address);
+                await new Promise((r) => setTimeout(r, 100));
+                codes.push(code);
+                break;
+            } catch (err: any) {
+                if (i === 4) throw err;
+                await new Promise((r) => setTimeout(r, 1000 * Math.pow(1.5, i)));
+            }
+        }
+    }
     for (let index = 0; index < targets.length; index += 1) {
         const [label, address] = targets[index];
         const code = codes[index];

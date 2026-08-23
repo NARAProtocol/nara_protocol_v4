@@ -54,8 +54,10 @@ error NARAPositionNFTV4__PositionNotMatured();
 error NARAPositionNFTV4__NativeTransferFailed();
 error NARAPositionNFTV4__RoyaltiesFrozen();
 error NARAPositionNFTV4__GenesisMintersFrozen();
+error NARAPositionNFTV4__RendererFrozen();
 error NARAPositionNFTV4__ClaimFeeTooHigh(uint16 max, uint16 provided);
 error NARAPositionNFTV4__ClaimFeesFrozen();
+
 
 /// @title NARAPositionNFTV4
 /// @notice ERC-721 wrapper for tradable NARA v4 engine positions.
@@ -83,10 +85,11 @@ contract NARAPositionNFTV4 is ERC721, ERC2981, IERC4906, ReentrancyGuard, Ownabl
     address public immutable engine;
     address public immutable nara;
     address public immutable accountImplementation;
-    address public immutable renderer;
+    address public renderer;
     address public genesisRewardDistributor;
     bool public royaltyFrozen;
     bool public genesisMintersFrozen;
+    bool public rendererFrozen;
 
     // Wrapper-level claim fees. The engine is immutable and at its size limit, so
     // these live here instead. They tax reward claims that flow through the NFT
@@ -136,6 +139,8 @@ contract NARAPositionNFTV4 is ERC721, ERC2981, IERC4906, ReentrancyGuard, Ownabl
     event ClaimFeesSet(uint16 naraClaimFeeBps, uint16 tokenClaimFeeBps);
     event ClaimFeeRecipientSet(address indexed recipient);
     event ClaimFeesFrozen();
+    event RendererSet(address indexed renderer);
+    event RendererFrozen();
     event PositionRewardsClaimed(uint256 indexed tokenId, uint256 indexed positionId, address indexed to, uint256 naraAmount, uint256 ethAmount);
     event PositionTokenRewardsClaimed(uint256 indexed tokenId, uint256 indexed positionId, address indexed token, address to, uint256 amount);
     event ClosedPositionTokenRewardsClaimed(uint256 indexed positionId, address indexed token, address indexed to, uint256 amount);
@@ -158,6 +163,7 @@ contract NARAPositionNFTV4 is ERC721, ERC2981, IERC4906, ReentrancyGuard, Ownabl
     event NativeSwept(address indexed to, uint256 amount);
     event RoyaltiesFrozen();
     event GenesisMintersFrozen();
+
 
     constructor(
         address engine_,
@@ -283,6 +289,21 @@ contract NARAPositionNFTV4 is ERC721, ERC2981, IERC4906, ReentrancyGuard, Ownabl
         genesisMintersFrozen = true;
         emit GenesisMintersFrozen();
     }
+
+    function setRenderer(address newRenderer) external onlyOwner {
+        if (rendererFrozen) revert NARAPositionNFTV4__RendererFrozen();
+        if (newRenderer == address(0)) revert NARAPositionNFTV4__ZeroAddress();
+        if (newRenderer.code.length == 0) revert NARAPositionNFTV4__NotAContract();
+        renderer = newRenderer;
+        emit RendererSet(newRenderer);
+    }
+
+    function freezeRenderer() external onlyOwner {
+        if (rendererFrozen) revert NARAPositionNFTV4__RendererFrozen();
+        rendererFrozen = true;
+        emit RendererFrozen();
+    }
+
 
     function setGenesisRewardDistributor(address distributor) external onlyOwner {
         if (genesisRewardDistributor != address(0)) revert NARAPositionNFTV4__GenesisRewardDistributorAlreadySet();

@@ -75,7 +75,7 @@ _v3 state: `pendingEthForNextEpoch = 0` at time of snapshot._ When the bond mark
   locked ratio, and protocol health. 0.51 NARA/epoch is the current live rate.
 - `activeTotalWeight` grows as more NARA is locked. Higher participation = lower individual share.
 - APY quoted here uses a v3 snapshot. After v4 deploy, read live state from v4 engine address in `CURRENT_STATE.md`.
-- The weight multiplier formula is `m = 1 + durationLinearWad*r + durationQuadraticWad*r²` where `r = dur/maxLockEpochs`. v4 defaults: linear 0.8, quadratic 1.2 → max 3× at max lock. Read `contracts/v4/NARAEngine.sol` and `contracts/v4/libraries/NARAEngineModelLib.sol` for the exact formula.
+- The weight multiplier formula is `m = 1 + durationLinearWad*r + durationQuadraticWad*r²` where `r = dur/maxLockEpochs`. v4 production defaults: linear 0.5, quadratic 2.5 → max 4× at max lock. Read `contracts/v4/NARAEngine.sol` and `contracts/v4/libraries/NARAEngineModelLib.sol` for the exact formula.
 
 ## How to Recalculate
 

@@ -36,11 +36,11 @@ Duration is measured in epochs. Default epoch length: 900 seconds (15 min).
 
 | Duration | Approximate real time | Weight multiplier vs 1-epoch |
 |---|---|---|
-| 4 epochs | 1 hour | 1× (minimum) |
-| 96 epochs | 1 day | ~1.07× |
-| 672 epochs | 1 week | ~1.5× |
-| 2,880 epochs | 30 days | ~2× |
-| 35,040 epochs | ~1 year | ~3× |
+| 4 epochs | 1 hour | ~1× (minimum) |
+| 8,760 epochs | 90 days | ~1.28× |
+| 17,520 epochs | 180 days | ~1.88× |
+| 26,280 epochs | 270 days | ~2.78× |
+| 35,040 epochs | 1 year | 4× (max) |
 
 Longer duration produces more modeled weight per NARA. That does not guarantee
 more rewards or any return. The source relationship is quadratic, so doubling
@@ -54,7 +54,7 @@ sale are not guaranteed.
 
 ## Activation delay
 
-Source behavior applies `activationDelayEpochs` (configured as 3 epochs in the
+Source behavior applies `activationDelayEpochs` (configured as 8 epochs in the
 fresh Engine) before weight becomes active. This has not yet completed a
 receipt-pinned public lifecycle smoke.
 

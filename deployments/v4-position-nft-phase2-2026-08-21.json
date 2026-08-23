@@ -1,0 +1,847 @@
+{
+  "schemaVersion": 1,
+  "changeId": "NARA-20260821-v4-position-nft-phase2",
+  "evidenceState": "deployed_pending_safe_finalization",
+  "integrationReady": false,
+  "onchainMinting": "permissionless_from_position_nft_deployment",
+  "createdAt": "2026-08-22T06:17:18.003Z",
+  "mode": "execute",
+  "network": "base",
+  "chainId": "8453",
+  "release": {
+    "releaseCommit": "2e584e66d4ce97c09fd8b4fff740c17e9d3cca13",
+    "sourceCommit": "fa0535bea277e8961944d0d70ca1d5e06e0a64fe",
+    "evidenceCommit": "2e584e66d4ce97c09fd8b4fff740c17e9d3cca13",
+    "headCommit": "2e584e66d4ce97c09fd8b4fff740c17e9d3cca13",
+    "originMainCommit": "2e584e66d4ce97c09fd8b4fff740c17e9d3cca13",
+    "originRemote": "NARAProtocol/nara_protocol_v4",
+    "cleanWorkingTree": true,
+    "exactProtectedMain": true,
+    "gateAttestationSha256": "7032ad764ac004b1a1734a6733ed46950f8fdf762e056fa68cd5b9a1fe279d62",
+    "gateAttestation": {
+      "schemaVersion": 1,
+      "changeId": "NARA-20260821-v4-position-nft-phase2",
+      "sourceCommit": "fa0535bea277e8961944d0d70ca1d5e06e0a64fe",
+      "evidenceCommit": "2e584e66d4ce97c09fd8b4fff740c17e9d3cca13",
+      "ci": {
+        "status": "pass",
+        "repository": "NARAProtocol/nara_protocol_v4",
+        "headSha": "2e584e66d4ce97c09fd8b4fff740c17e9d3cca13",
+        "workflowPath": ".github/workflows/ci.yml",
+        "runUrl": "https://github.com/NARAProtocol/nara_protocol_v4/actions/runs/32554686068",
+        "requiredJobs": [
+          "build · test · size",
+          "slither (advisory)",
+          "aderyn (advisory)",
+          "echidna (advisory)"
+        ]
+      },
+      "sourceCi": {
+        "status": "pass",
+        "repository": "NARAProtocol/nara_protocol_v4",
+        "headSha": "fa0535bea277e8961944d0d70ca1d5e06e0a64fe",
+        "workflowPath": ".github/workflows/ci.yml",
+        "runUrl": "https://github.com/NARAProtocol/nara_protocol_v4/actions/runs/32553810204",
+        "requiredJobs": [
+          "build · test · size",
+          "slither (advisory)",
+          "aderyn (advisory)",
+          "echidna (advisory)"
+        ]
+      },
+      "releaseControl": {
+        "status": "pass",
+        "repository": "NARAProtocol/nara_protocol_v4",
+        "protectedBranch": "main",
+        "sourceCommitSignatureVerified": true,
+        "evidenceCommitSignatureVerified": true,
+        "sourcePullRequestNumber": 36,
+        "sourcePullRequestUrl": "https://github.com/NARAProtocol/nara_protocol_v4/pull/36",
+        "evidencePullRequestNumber": 37,
+        "evidencePullRequestUrl": "https://github.com/NARAProtocol/nara_protocol_v4/pull/37",
+        "mergedToProtectedMain": true,
+        "administratorsEnforced": true,
+        "signedCommitsRequired": true,
+        "linearHistoryRequired": true,
+        "forcePushesAllowed": false,
+        "branchDeletionAllowed": false,
+        "conversationResolutionRequired": true,
+        "canonicalCiRequired": true,
+        "noBypassActors": true
+      },
+      "staticAnalysis": {
+        "status": "pass",
+        "analyzedCommit": "fa0535bea277e8961944d0d70ca1d5e06e0a64fe",
+        "slitherReportSha256": "079bbaa2c1f27ebf953adb5e8c113874b1578367540a6246aef614e13494dbf7",
+        "slitherReportPath": "release-evidence/NARA-20260821-v4-position-nft-phase2/slither.json",
+        "aderynReportSha256": "079bbaa2c1f27ebf953adb5e8c113874b1578367540a6246aef614e13494dbf7",
+        "aderynReportPath": "release-evidence/NARA-20260821-v4-position-nft-phase2/aderyn.json",
+        "echidnaReportSha256": "ffe32f15ed104465291f8eaf91ec3009b96e57c8df8eddc976726c5bef08e4b8",
+        "echidnaReportPath": "release-evidence/NARA-20260821-v4-position-nft-phase2/echidna.json",
+        "allFindingsReconciled": true
+      },
+      "artifactBuild": {
+        "status": "pass",
+        "sourceCommit": "fa0535bea277e8961944d0d70ca1d5e06e0a64fe",
+        "evidencePath": "release-evidence/NARA-20260821-v4-position-nft-phase2/artifact-build.json",
+        "evidenceSha256": "25506dc33493e3b5896d9037d815094130c7bce8ac557899ad491dc5423f11ef"
+      },
+      "independentAudit": {
+        "status": "pass",
+        "auditedCommit": "fa0535bea277e8961944d0d70ca1d5e06e0a64fe",
+        "reportPath": "release-evidence/NARA-20260821-v4-position-nft-phase2/independent-audit.md",
+        "reportSha256": "5d4332b803905c9e243d3e625df0fe08632fc0966cfe761412cc17b5e391ea2e",
+        "unresolvedConfirmedIssues": 0
+      },
+      "artQa": {
+        "status": "pass",
+        "reviewedCommit": "fa0535bea277e8961944d0d70ca1d5e06e0a64fe",
+        "evidencePath": "release-evidence/NARA-20260821-v4-position-nft-phase2/art-qa.json",
+        "evidenceSha256": "93d71fbcff3f94e9bb2fd7b7f9f573a36dfd5b3c2b64fa20196c6f74f6cca4ab",
+        "browser": "Chromium",
+        "marketplaceDecoder": "OpenSea-compatible metadata decoder",
+        "thumbnailSizes": [
+          64,
+          128,
+          300
+        ],
+        "backgrounds": [
+          "light",
+          "neutral",
+          "dark"
+        ]
+      },
+      "roadmapGate": {
+        "status": "approved",
+        "evidencePath": "release-evidence/NARA-20260821-v4-position-nft-phase2/roadmap-gate.json",
+        "evidenceSha256": "5bacf92c181a1cf15768514b034434aab393358020c44f7f021db0980ca56c35",
+        "marketCapFloorTargetUsd": 100000,
+        "sequenceDecision": "nft_deployment_authorized_before_floor",
+        "strategicBufferReviewed": true,
+        "observedAtBlock": 50281948,
+        "observedAtBlockHash": "0x76fe439f1f5233652970691c0bd7d1600f27736131828ec4176db841ee68b243"
+      },
+      "deploymentPlan": {
+        "status": "approved",
+        "deployer": "0xAE9D1667B45558232BeD9d45DcCA53940F892aB5",
+        "expectedStartNonce": 157,
+        "predictedAddresses": {
+          "NARAArtMetadataV1": "0xAE0Da2B2066FF0c1409A2aC4053699E75dd00633",
+          "NARAArtSecurityPrintV1": "0x0640dd2B545348eC91826ab7c58DD88EcE81f353",
+          "NARAArtCorePlateV1": "0x476b69f490C17a5500c4Eb9b6cB49302cef4bE4A",
+          "NARAArtGenesisPlateV1": "0x20520115546c28F99aE581d62935e62D9E8B9022",
+          "NARAPositionRendererV5": "0x607b08365C23a983C542898a79E670e6D4B80673",
+          "NARAPositionAccountV4": "0x3a8c9cA4f95E94751774810B33caF01bb992A55F",
+          "NARAPositionNFTV4": "0xCcBD8c59664958636369F8fe24B927aEBc3DF7cC"
+        },
+        "dedicatedIdleSigner": true,
+        "noPriorPhase2Attempt": true,
+        "observedAtBlock": 50281948,
+        "observedAtBlockHash": "0x76fe439f1f5233652970691c0bd7d1600f27736131828ec4176db841ee68b243",
+        "validUntilBlock": 50325148,
+        "evidencePath": "release-evidence/NARA-20260821-v4-position-nft-phase2/deployment-plan.json",
+        "evidenceSha256": "be2c1df0f32ea05e4429fb31d201e262e08a390dda02b5c4d4310e01bee0bba0"
+      },
+      "productionPolicy": {
+        "status": "approved",
+        "ownerSafe": "0xd65c0e390Dc187A22c52c03816591CC736C0D755",
+        "royaltyReceiver": "0xfe3A8678A9c729438BB11718bD1391E7Ab491E8e",
+        "royaltyBps": 1000,
+        "naraClaimFeeBps": 0,
+        "tokenClaimFeeBps": 0,
+        "claimFeeRecipient": "0x0000000000000000000000000000000000000000",
+        "resetThenFreezeFees": true,
+        "genesisDistributorDeferred": true,
+        "dataLensDeferred": true,
+        "genesisMintersRemainConfigurable": true,
+        "permissionlessMintFromDeploymentAcknowledged": true
+      },
+      "humanApproval": {
+        "status": "approved",
+        "reference": "human deployer authorization",
+        "approvedAt": "2026-08-21T23:05:00.000Z"
+      }
+    }
+  },
+  "coreDependency": {
+    "changeId": "NARA-20260809-v4-production-activation",
+    "originCommit": "027af3f06bbe6dea2c187dfd8062e50c228f1c35",
+    "manifestPath": "deployments/v4-production-activation-2026-08-09.json",
+    "manifestSha256": "e525b8c6508c454b951fdb422eb6ad03b51a120827b22efc4ae64a3862ddd066",
+    "engine": "0x98ab6406D6B548F37dEF7110961bb45A399e5aFC",
+    "token": "0xB6333F5D4cEd8dffA80F3F13697D6aA3BB3f19c1"
+  },
+  "ownerSafe": "0xd65c0e390Dc187A22c52c03816591CC736C0D755",
+  "safePreflight": {
+    "address": "0xd65c0e390Dc187A22c52c03816591CC736C0D755",
+    "version": "1.4.1",
+    "threshold": "2",
+    "owners": [
+      "0xfe3A8678A9c729438BB11718bD1391E7Ab491E8e",
+      "0xC019Dc79412c4b20103ac4ce97B2615FF45D490d",
+      "0x42365cAE9abB6cb357dd485734CAd75a2d3c6664"
+    ],
+    "nonce": "44",
+    "modules": [],
+    "guard": "0x0000000000000000000000000000000000000000",
+    "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+    "singleton": "0x29fcB43b46531BcA003ddC8FCB67FFE91900C762",
+    "safeRuntimeCodeHash": "0xd7d408ebcd99b2b70be43e20253d6d92a8ea8fab29bd3be7f55b10032331fb4c",
+    "singletonRuntimeCodeHash": "0xb1f926978a0f44a2c0ec8fe822418ae969bd8c3f18d61e5103100339894f81ff",
+    "fallbackHandlerRuntimeCodeHash": "0x7c6007a5d711cea8dfd5d91f5940ec29c7f200fe511eb1fc1397b367af3c42f9",
+    "verifiedAtBlock": 50293938,
+    "verifiedAtBlockHash": "0xfe596869c20040d7f10f2a35afa88ff7ff1f546df9c0db1fc379f79eb2351b07"
+  },
+  "coreContainment": {
+    "engine": "0x98ab6406D6B548F37dEF7110961bb45A399e5aFC",
+    "launcher": "0xb8CF0274d0Fb2dB2Ba5dC58b0Ab378F3b8f35BA2",
+    "token": "0xB6333F5D4cEd8dffA80F3F13697D6aA3BB3f19c1",
+    "treasury": "0xfe3A8678A9c729438BB11718bD1391E7Ab491E8e",
+    "role": "0x76345641021c0e4c51a3e752176a1536de2809b273da674bb2f0ba00ce1f3023",
+    "deploymentBlock": 49718979,
+    "deploymentBlockHash": "0x9108ca9b587933a87e98574433155b1fb9254ff061faf156ac3911cc091aacdd",
+    "deploymentTransactionHash": "0x00955909b2fc299fe010c72ecd9988dc8802ad0569a3964453287e221ff5076c",
+    "verifiedAtBlock": 50293938,
+    "verifiedAtBlockHash": "0xfe596869c20040d7f10f2a35afa88ff7ff1f546df9c0db1fc379f79eb2351b07",
+    "historyLogCount": 2,
+    "grantCount": 1,
+    "revokeCount": 1,
+    "everGrantedAccounts": [
+      "0xAE9D1667B45558232BeD9d45DcCA53940F892aB5"
+    ],
+    "reconstructedActiveHolders": [],
+    "onchainActiveHolders": []
+  },
+  "deployer": "0xAE9D1667B45558232BeD9d45DcCA53940F892aB5",
+  "startBlock": 50293883,
+  "positionNftStartBlock": 50293938,
+  "verificationBlock": 50293938,
+  "verificationBlockHash": "0xfe596869c20040d7f10f2a35afa88ff7ff1f546df9c0db1fc379f79eb2351b07",
+  "deploymentOrder": [
+    "NARAArtMetadataV1",
+    "NARAArtSecurityPrintV1",
+    "NARAArtCorePlateV1",
+    "NARAArtGenesisPlateV1",
+    "NARAPositionRendererV5",
+    "NARAPositionAccountV4",
+    "NARAPositionNFTV4"
+  ],
+  "contracts": {
+    "NARAArtMetadataV1": {
+      "address": "0xAE0Da2B2066FF0c1409A2aC4053699E75dd00633",
+      "constructorArguments": [],
+      "receipt": {
+        "transactionHash": "0x081db2d16ce99d4bec23aa8d3ef3c7e32ccdf561fd9c2b21bf4465ef7457cf58",
+        "blockNumber": 50293883,
+        "blockHash": "0xc898ddbf179f46034bd46b39ba83c0eefeda2fa0d8cee53f07f3ab8c465a06b1",
+        "status": 1,
+        "gasUsed": "1188416",
+        "contractAddress": "0xae0da2b2066ff0c1409a2ac4053699e75dd00633"
+      }
+    },
+    "NARAArtSecurityPrintV1": {
+      "address": "0x0640dd2B545348eC91826ab7c58DD88EcE81f353",
+      "constructorArguments": [],
+      "receipt": {
+        "transactionHash": "0xb2a52f71eb49bceb720386dd35c10a0f120aa9b1e0391949300ca030a162388f",
+        "blockNumber": 50293886,
+        "blockHash": "0xd7cf81e8f293400ec675244c56a1a9d861e446c25a345d1e42dfd2281185e5cc",
+        "status": 1,
+        "gasUsed": "2149423",
+        "contractAddress": "0x0640dd2b545348ec91826ab7c58dd88ece81f353"
+      }
+    },
+    "NARAArtCorePlateV1": {
+      "address": "0x476b69f490C17a5500c4Eb9b6cB49302cef4bE4A",
+      "constructorArguments": [
+        "0x0640dd2B545348eC91826ab7c58DD88EcE81f353"
+      ],
+      "receipt": {
+        "transactionHash": "0x9742314c89cdafd9d27c2c9418c25525b54fec6588afa7162edf0a47c759927e",
+        "blockNumber": 50293889,
+        "blockHash": "0x8dcfaee9c45817b18a3f442ea88912ca7b2211ec112a450f97c6239eb549f019",
+        "status": 1,
+        "gasUsed": "3417010",
+        "contractAddress": "0x476b69f490c17a5500c4eb9b6cb49302cef4be4a"
+      }
+    },
+    "NARAArtGenesisPlateV1": {
+      "address": "0x20520115546c28F99aE581d62935e62D9E8B9022",
+      "constructorArguments": [],
+      "receipt": {
+        "transactionHash": "0x703ce0be340b805f168cb8147d6a39e8d13c3b9184cfa4240aa869fa51de5493",
+        "blockNumber": 50293892,
+        "blockHash": "0xe4b0891f60fd3352ce4e3bdc840bebafb3c7bceb8bfd96a34cc1e3cddcb97c46",
+        "status": 1,
+        "gasUsed": "2793551",
+        "contractAddress": "0x20520115546c28f99ae581d62935e62d9e8b9022"
+      }
+    },
+    "NARAPositionRendererV5": {
+      "address": "0x607b08365C23a983C542898a79E670e6D4B80673",
+      "constructorArguments": [
+        "0xAE0Da2B2066FF0c1409A2aC4053699E75dd00633",
+        "0x476b69f490C17a5500c4Eb9b6cB49302cef4bE4A",
+        "0x20520115546c28F99aE581d62935e62D9E8B9022",
+        "0x0640dd2B545348eC91826ab7c58DD88EcE81f353"
+      ],
+      "receipt": {
+        "transactionHash": "0xeece9668b7fa20ddc0e00dc626f6dde69042d532470e5363261ff54fa5d40a35",
+        "blockNumber": 50293895,
+        "blockHash": "0x76dd4f99cf810b67e07a87e05a7e928afa39e0fb85894370843dac89b5777df7",
+        "status": 1,
+        "gasUsed": "1143280",
+        "contractAddress": "0x607b08365c23a983c542898a79e670e6d4b80673"
+      }
+    },
+    "NARAPositionAccountV4": {
+      "address": "0x3a8c9cA4f95E94751774810B33caF01bb992A55F",
+      "constructorArguments": [],
+      "receipt": {
+        "transactionHash": "0x37791e642b253b6b05e648396611778e06d6eb46d427be5921a1ac7b5033e94e",
+        "blockNumber": 50293898,
+        "blockHash": "0x299290aaeaf237f4847be8dabb86bca8a104eb8f49f54e321899c984a2fa9f67",
+        "status": 1,
+        "gasUsed": "862112",
+        "contractAddress": "0x3a8c9ca4f95e94751774810b33caf01bb992a55f"
+      }
+    },
+    "NARAPositionNFTV4": {
+      "address": "0xCcBD8c59664958636369F8fe24B927aEBc3DF7cC",
+      "constructorArguments": [
+        "0x98ab6406D6B548F37dEF7110961bb45A399e5aFC",
+        "0xB6333F5D4cEd8dffA80F3F13697D6aA3BB3f19c1",
+        "0x3a8c9cA4f95E94751774810B33caF01bb992A55F",
+        "0x607b08365C23a983C542898a79E670e6D4B80673",
+        "0xd65c0e390Dc187A22c52c03816591CC736C0D755",
+        "0xfe3A8678A9c729438BB11718bD1391E7Ab491E8e",
+        1000
+      ],
+      "receipt": {
+        "transactionHash": "0x20d8e0a3fa62c1628c9fcb66055de631cfbf5519b988e2d98d5f713b63aa1f45",
+        "blockNumber": 50293938,
+        "blockHash": "0xfe596869c20040d7f10f2a35afa88ff7ff1f546df9c0db1fc379f79eb2351b07",
+        "status": 1,
+        "gasUsed": "4888067",
+        "contractAddress": "0xccbd8c59664958636369f8fe24b927aebc3df7cc"
+      }
+    }
+  },
+  "sourceArtifacts": {
+    "NARAArtMetadataV1": {
+      "fullyQualifiedName": "contracts/v4/NARAArtMetadataV1.sol:NARAArtMetadataV1",
+      "sourceName": "contracts/v4/NARAArtMetadataV1.sol",
+      "contractName": "NARAArtMetadataV1",
+      "sourceSha256": "48d9f0aceb64735f3f1dec236cd3e40095beea9f53ca3e86bbfbf167f80b92e2",
+      "artifactSha256": "9ef55807c1ef28090093e586d42019311c7bd0467ba7f0b2926a293f6ba4e4ec",
+      "abiSha256": "07ac262c2d542f42565b029ac8c1fe77fd7b5be59c5cb6ec08fb540cdfd7abac",
+      "creationBytecodeHash": "0x997dfce927d61a4f1a8ca80979995a4f47a59b47eddc39000c1e4e171730373b",
+      "deployedBytecodeTemplateHash": "0x77490cee6084f15827e4e07b36d646da7099f6a7b7106798c30b02b6706a5fce",
+      "compilerInputSha256": "9a959df427c55992d587aa0de5625dd89a6c0a2e88c2b3b9a9c72af6575bfa83",
+      "compilerSourcesSha256": "5c272f111cbcfe21cc1261d8a779ffad042fced2001ea95a4006397b4cdb41b3",
+      "contractMetadataSha256": "d2aa0e63f59eb7102424dcbd92e00cf3ade452e6b523dd932eb89b5bebe30017",
+      "solcVersion": "0.8.34",
+      "solcLongVersion": "0.8.34+commit.80d5c536",
+      "compilerSettings": {
+        "optimizer": {
+          "enabled": true,
+          "runs": 1
+        },
+        "viaIR": true,
+        "evmVersion": "cancun",
+        "metadata": null
+      }
+    },
+    "NARAArtSecurityPrintV1": {
+      "fullyQualifiedName": "contracts/v4/NARAArtSecurityPrintV1.sol:NARAArtSecurityPrintV1",
+      "sourceName": "contracts/v4/NARAArtSecurityPrintV1.sol",
+      "contractName": "NARAArtSecurityPrintV1",
+      "sourceSha256": "ff4885db0664e88bca28e2f6dfa271b30066a7ada5f1edd00ce639c1a11e2bde",
+      "artifactSha256": "8c1ee2e50fcf5e1f787e8e29e18ef108edb213e7ea36cb8689b89c9e2766212c",
+      "abiSha256": "1d92f673b0eaa1f5891d1dbe84b3c1d14bfcb9d333ac12ca2a286dc2ccd8cdb5",
+      "creationBytecodeHash": "0x8a522754b3d3dbb12e768fcdf790d1550d990323b50254d789a0ad83cb67d89e",
+      "deployedBytecodeTemplateHash": "0xca56b4908e1f916f2371aa96d04edb367d2f86936932445fa505827589983708",
+      "compilerInputSha256": "9a959df427c55992d587aa0de5625dd89a6c0a2e88c2b3b9a9c72af6575bfa83",
+      "compilerSourcesSha256": "5c272f111cbcfe21cc1261d8a779ffad042fced2001ea95a4006397b4cdb41b3",
+      "contractMetadataSha256": "3a4823d87edbce7f9b317c095953087f227c420e4a1756c5be7fca6e4e2aaeac",
+      "solcVersion": "0.8.34",
+      "solcLongVersion": "0.8.34+commit.80d5c536",
+      "compilerSettings": {
+        "optimizer": {
+          "enabled": true,
+          "runs": 1
+        },
+        "viaIR": true,
+        "evmVersion": "cancun",
+        "metadata": null
+      }
+    },
+    "NARAArtCorePlateV1": {
+      "fullyQualifiedName": "contracts/v4/NARAArtCorePlateV1.sol:NARAArtCorePlateV1",
+      "sourceName": "contracts/v4/NARAArtCorePlateV1.sol",
+      "contractName": "NARAArtCorePlateV1",
+      "sourceSha256": "17131740a3e4a6bb1e20555f3195dc91b147cbc3491845d48d1de077065da691",
+      "artifactSha256": "186c091b39563a6d17bcf322a133ed2ceb281045c8b3ec537d411cb31b0d3ff4",
+      "abiSha256": "60a5e7ca2869b0dc1b2f6a07d8b22e33521d0623f0fe001a96389a32c2857cdb",
+      "creationBytecodeHash": "0xf984bfa57c17037aad4c178ceb9b5900a86d1ed98349eb49b1627225cd87acbc",
+      "deployedBytecodeTemplateHash": "0xbf8bfe149f6a5e9635844f0c75c1027543ed9eb09c8c77475d9cdc2c5919d12f",
+      "compilerInputSha256": "9a959df427c55992d587aa0de5625dd89a6c0a2e88c2b3b9a9c72af6575bfa83",
+      "compilerSourcesSha256": "5c272f111cbcfe21cc1261d8a779ffad042fced2001ea95a4006397b4cdb41b3",
+      "contractMetadataSha256": "66f6b6077bcd8c591e99e0e877457889e4df94ae1fa7acd03d360c6442a782a7",
+      "solcVersion": "0.8.34",
+      "solcLongVersion": "0.8.34+commit.80d5c536",
+      "compilerSettings": {
+        "optimizer": {
+          "enabled": true,
+          "runs": 1
+        },
+        "viaIR": true,
+        "evmVersion": "cancun",
+        "metadata": null
+      }
+    },
+    "NARAArtGenesisPlateV1": {
+      "fullyQualifiedName": "contracts/v4/NARAArtGenesisPlateV1.sol:NARAArtGenesisPlateV1",
+      "sourceName": "contracts/v4/NARAArtGenesisPlateV1.sol",
+      "contractName": "NARAArtGenesisPlateV1",
+      "sourceSha256": "e545f2b993e602ecd28d11e4b87740534585e7d16b6b5de3aa3d258d5f5d2482",
+      "artifactSha256": "0fa4a9fec2cad7939ad62679664ee9fcc9af5e1afac871d8f4e7e63b13ba1284",
+      "abiSha256": "6891a4eacdccfc0b6c15192945db785bf1bd37ba33d27003fc7c6455ee197f15",
+      "creationBytecodeHash": "0x02235584ffff3b54a9d343433fa12c93ff9c7d6f4be839084e64c6d820b1dfde",
+      "deployedBytecodeTemplateHash": "0x24229f1144f782e7064ee0afb8e87bb2cf1b567576880ac5d4f80bb6103ebe90",
+      "compilerInputSha256": "9a959df427c55992d587aa0de5625dd89a6c0a2e88c2b3b9a9c72af6575bfa83",
+      "compilerSourcesSha256": "5c272f111cbcfe21cc1261d8a779ffad042fced2001ea95a4006397b4cdb41b3",
+      "contractMetadataSha256": "06e56f85bc8543cad956b64d1286f458f085f53beec50564d77478825b840c51",
+      "solcVersion": "0.8.34",
+      "solcLongVersion": "0.8.34+commit.80d5c536",
+      "compilerSettings": {
+        "optimizer": {
+          "enabled": true,
+          "runs": 1
+        },
+        "viaIR": true,
+        "evmVersion": "cancun",
+        "metadata": null
+      }
+    },
+    "NARAPositionRendererV5": {
+      "fullyQualifiedName": "contracts/v4/NARAPositionRendererV5.sol:NARAPositionRendererV5",
+      "sourceName": "contracts/v4/NARAPositionRendererV5.sol",
+      "contractName": "NARAPositionRendererV5",
+      "sourceSha256": "c039129d2ebea38383709e6e4ae4897d5edc8a4d9e3b646481e5979c28161331",
+      "artifactSha256": "13b7bd8e8c0ebbec4e9196629ee7190d94c3220820d776c57a1bc5622490baa5",
+      "abiSha256": "9196d009691e9567796851a9e13afbf18163962ba645346e9387037679fd404b",
+      "creationBytecodeHash": "0xf79f1fa597c07a6316241450f4c5383b53a750ec6c674f94df2084120a116b07",
+      "deployedBytecodeTemplateHash": "0xa5ab7fc7ce7e841943339cb47dbb66db722216a6c63fdeba7d3bdb9d307a8598",
+      "compilerInputSha256": "9a959df427c55992d587aa0de5625dd89a6c0a2e88c2b3b9a9c72af6575bfa83",
+      "compilerSourcesSha256": "5c272f111cbcfe21cc1261d8a779ffad042fced2001ea95a4006397b4cdb41b3",
+      "contractMetadataSha256": "5813b75697c5e1e492c4662fe7bb6e155e6ad0545e76e7ddfaf1af6e70570a7e",
+      "solcVersion": "0.8.34",
+      "solcLongVersion": "0.8.34+commit.80d5c536",
+      "compilerSettings": {
+        "optimizer": {
+          "enabled": true,
+          "runs": 1
+        },
+        "viaIR": true,
+        "evmVersion": "cancun",
+        "metadata": null
+      }
+    },
+    "NARAPositionAccountV4": {
+      "fullyQualifiedName": "contracts/v4/NARAPositionAccountV4.sol:NARAPositionAccountV4",
+      "sourceName": "contracts/v4/NARAPositionAccountV4.sol",
+      "contractName": "NARAPositionAccountV4",
+      "sourceSha256": "ecea39ae3065a83f6ea56fc670bbbb0af369d9bda4ff15a91141cd8541415eb9",
+      "artifactSha256": "1eceb148c4abdbc5c68ed99ae3e8ff5fd7240b56852597731c8d7ac7c434b791",
+      "abiSha256": "5b7126893cd5b6e686ebb869ddff0b5fb0265340b6a9f32a524f7dede07e0373",
+      "creationBytecodeHash": "0xd4e5eabcc3cc24e6417fd75269acefae329e3865b68df9bafecb1aabf8fc4748",
+      "deployedBytecodeTemplateHash": "0xee221a58eed85fbd3817f5460faa7eff78e277471ea6a6ba5f4f961f11eda73b",
+      "compilerInputSha256": "9a959df427c55992d587aa0de5625dd89a6c0a2e88c2b3b9a9c72af6575bfa83",
+      "compilerSourcesSha256": "5c272f111cbcfe21cc1261d8a779ffad042fced2001ea95a4006397b4cdb41b3",
+      "contractMetadataSha256": "37e0afdd9996e8bf1df902d775e61f8b840b5fee22a1b58617f89ad4f32bc2e8",
+      "solcVersion": "0.8.34",
+      "solcLongVersion": "0.8.34+commit.80d5c536",
+      "compilerSettings": {
+        "optimizer": {
+          "enabled": true,
+          "runs": 1
+        },
+        "viaIR": true,
+        "evmVersion": "cancun",
+        "metadata": null
+      }
+    },
+    "NARAPositionNFTV4": {
+      "fullyQualifiedName": "contracts/v4/NARAPositionNFTV4.sol:NARAPositionNFTV4",
+      "sourceName": "contracts/v4/NARAPositionNFTV4.sol",
+      "contractName": "NARAPositionNFTV4",
+      "sourceSha256": "ff74f790fb43c23b6dc2e7014352edc949fa14af4063f8bf8a33b8f82d88e669",
+      "artifactSha256": "ac56ff3aa496cabe07472392765cfdb7feb96d697a84d57d865fc4c597a8dea4",
+      "abiSha256": "1ca2a78575b317c0e034ac725e31ec5579d1fc38eca5b36b6e8f59d606bb987d",
+      "creationBytecodeHash": "0x8e3870364089467eb7a318791954a273d7650abf8d9220fcc9d3c0258c743ae7",
+      "deployedBytecodeTemplateHash": "0x17d0706659d5f4e14552e169b05882d3b1fc852866125d6c89f0cabe5b939c09",
+      "compilerInputSha256": "9a959df427c55992d587aa0de5625dd89a6c0a2e88c2b3b9a9c72af6575bfa83",
+      "compilerSourcesSha256": "5c272f111cbcfe21cc1261d8a779ffad042fced2001ea95a4006397b4cdb41b3",
+      "contractMetadataSha256": "afa6dff17bb68cd5af1b296add8cac24ab1bce2eb2ba2baf923669e2e9975cf9",
+      "solcVersion": "0.8.34",
+      "solcLongVersion": "0.8.34+commit.80d5c536",
+      "compilerSettings": {
+        "optimizer": {
+          "enabled": true,
+          "runs": 1
+        },
+        "viaIR": true,
+        "evmVersion": "cancun",
+        "metadata": null
+      }
+    }
+  },
+  "runtimeCode": {
+    "NARAArtMetadataV1": {
+      "address": "0xAE0Da2B2066FF0c1409A2aC4053699E75dd00633",
+      "codeHash": "0x77490cee6084f15827e4e07b36d646da7099f6a7b7106798c30b02b6706a5fce",
+      "codeSizeBytes": 5252,
+      "verifiedAtBlock": 50293938
+    },
+    "NARAArtSecurityPrintV1": {
+      "address": "0x0640dd2B545348eC91826ab7c58DD88EcE81f353",
+      "codeHash": "0xca56b4908e1f916f2371aa96d04edb367d2f86936932445fa505827589983708",
+      "codeSizeBytes": 9694,
+      "verifiedAtBlock": 50293938
+    },
+    "NARAArtCorePlateV1": {
+      "address": "0x476b69f490C17a5500c4Eb9b6cB49302cef4bE4A",
+      "codeHash": "0x49feec42a2fbbdd4ad8a81b1053ee809a269f9cc111f94d03a16482d2f3c2187",
+      "codeSizeBytes": 15530,
+      "verifiedAtBlock": 50293938
+    },
+    "NARAArtGenesisPlateV1": {
+      "address": "0x20520115546c28F99aE581d62935e62D9E8B9022",
+      "codeHash": "0x24229f1144f782e7064ee0afb8e87bb2cf1b567576880ac5d4f80bb6103ebe90",
+      "codeSizeBytes": 12676,
+      "verifiedAtBlock": 50293938
+    },
+    "NARAPositionRendererV5": {
+      "address": "0x607b08365C23a983C542898a79E670e6D4B80673",
+      "codeHash": "0xe45e6824a7ac00bad824e3bbe9d42ea13a1ff1c4d476762dab295191f47ecbed",
+      "codeSizeBytes": 4972,
+      "verifiedAtBlock": 50293938
+    },
+    "NARAPositionAccountV4": {
+      "address": "0x3a8c9cA4f95E94751774810B33caF01bb992A55F",
+      "codeHash": "0xee221a58eed85fbd3817f5460faa7eff78e277471ea6a6ba5f4f961f11eda73b",
+      "codeSizeBytes": 3636,
+      "verifiedAtBlock": 50293938
+    },
+    "NARAPositionNFTV4": {
+      "address": "0xCcBD8c59664958636369F8fe24B927aEBc3DF7cC",
+      "codeHash": "0xa4caddce2f18f51793755e72c950bad949fdea98cbce5f48aa7fea282b3e12af",
+      "codeSizeBytes": 21562,
+      "verifiedAtBlock": 50293938
+    }
+  },
+  "policy": {
+    "owner": "0xd65c0e390Dc187A22c52c03816591CC736C0D755",
+    "royaltyReceiver": "0xfe3A8678A9c729438BB11718bD1391E7Ab491E8e",
+    "royaltyBps": 1000,
+    "naraClaimFeeBps": 0,
+    "tokenClaimFeeBps": 0,
+    "claimFeeRecipient": "0x0000000000000000000000000000000000000000",
+    "freezeRoyalties": true,
+    "freezeClaimFees": true,
+    "deployGenesisDistributor": false,
+    "deployDataLens": false,
+    "freezeGenesisMinters": false,
+    "royaltiesFrozen": false,
+    "claimFeesFrozen": false,
+    "finalizationRequired": true,
+    "genesisRewardDistributor": "0x0000000000000000000000000000000000000000",
+    "genesisMintersFrozen": false
+  },
+  "readback": {
+    "name": "NARA Position",
+    "symbol": "NARAPOS",
+    "nextTokenId": "1",
+    "rendererVersion": "5",
+    "supportsErc721": true,
+    "supportsErc2981": true,
+    "supportsErc4906": true,
+    "collectionMetadataOnchain": true,
+    "collectionName": "NARA Positions",
+    "collectionImageSha256": "3604df1de290d0651be5170d11d65b8ee72d99011a9fc8c13dab9149638f63b2",
+    "accountImplementationInitialized": true,
+    "genesisMinterEventCount": 0
+  },
+  "publicMintSurface": {
+    "permissionlessFromBlock": 50293938,
+    "observedThroughBlock": 50293938,
+    "observedMintCount": 0,
+    "nextTokenId": "1",
+    "mints": []
+  },
+  "safeFinalization": {
+    "status": "unexecuted",
+    "batchArtifact": {
+      "status": "embedded_only_pending_source_verification",
+      "path": null,
+      "instruction": "Do not extract or import. The JIT builder emits the only production Safe import after source verification."
+    },
+    "batchSha256": "5ce68e772fa3401f2d2df60cbbb857badd0ba82e808da4b40aa28e3dfb27ff1a",
+    "batch": {
+      "version": "1.0",
+      "chainId": "8453",
+      "createdAt": 1787377223000,
+      "meta": {
+        "name": "UNEXECUTED - NARA v4 Position NFT Phase-2 fixed-royalty finalization",
+        "description": "Five calls pin ERC-2981 royalties at 10% to the production treasury, reset wrapper claim fees to zero, and permanently freeze both policies. Re-verify the target, full batch, and simulation immediately before Safe signing.",
+        "txBuilderVersion": "1.18.0",
+        "createdFromSafeAddress": "0xd65c0e390Dc187A22c52c03816591CC736C0D755",
+        "createdFromOwnerAddress": ""
+      },
+      "transactions": [
+        {
+          "to": "0xCcBD8c59664958636369F8fe24B927aEBc3DF7cC",
+          "value": "0",
+          "data": "0x04634d8d000000000000000000000000fe3a8678a9c729438bb11718bd1391e7ab491e8e00000000000000000000000000000000000000000000000000000000000003e8",
+          "contractMethod": null,
+          "contractInputsValues": null
+        },
+        {
+          "to": "0xCcBD8c59664958636369F8fe24B927aEBc3DF7cC",
+          "value": "0",
+          "data": "0x1457a29800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "contractMethod": null,
+          "contractInputsValues": null
+        },
+        {
+          "to": "0xCcBD8c59664958636369F8fe24B927aEBc3DF7cC",
+          "value": "0",
+          "data": "0xffc8c8760000000000000000000000000000000000000000000000000000000000000000",
+          "contractMethod": null,
+          "contractInputsValues": null
+        },
+        {
+          "to": "0xCcBD8c59664958636369F8fe24B927aEBc3DF7cC",
+          "value": "0",
+          "data": "0x3769b95a",
+          "contractMethod": null,
+          "contractInputsValues": null
+        },
+        {
+          "to": "0xCcBD8c59664958636369F8fe24B927aEBc3DF7cC",
+          "value": "0",
+          "data": "0x643d23af",
+          "contractMethod": null,
+          "contractInputsValues": null
+        }
+      ],
+      "naraEvidence": {
+        "deploymentMode": "execute",
+        "verificationBlock": 50293938,
+        "verificationBlockHash": "0xfe596869c20040d7f10f2a35afa88ff7ff1f546df9c0db1fc379f79eb2351b07",
+        "releaseCommit": "2e584e66d4ce97c09fd8b4fff740c17e9d3cca13",
+        "changeId": "NARA-20260821-v4-position-nft-phase2",
+        "positionNft": "0xCcBD8c59664958636369F8fe24B927aEBc3DF7cC",
+        "intendedPostState": {
+          "royaltyReceiver": "0xfe3A8678A9c729438BB11718bD1391E7Ab491E8e",
+          "royaltyBps": 1000,
+          "royaltiesFrozen": true,
+          "naraClaimFeeBps": 0,
+          "tokenClaimFeeBps": 0,
+          "claimFeeRecipient": "0x0000000000000000000000000000000000000000",
+          "claimFeesFrozen": true,
+          "genesisMintersFrozen": false
+        },
+        "exactCallOrder": [
+          "setDefaultRoyalty(production.treasury,1000)",
+          "setClaimFees(0,0)",
+          "setClaimFeeRecipient(0x0000000000000000000000000000000000000000)",
+          "freezeRoyalties()",
+          "freezeClaimFees()"
+        ]
+      }
+    },
+    "safeSnapshot": {
+      "address": "0xd65c0e390Dc187A22c52c03816591CC736C0D755",
+      "version": "1.4.1",
+      "threshold": "2",
+      "owners": [
+        "0xfe3A8678A9c729438BB11718bD1391E7Ab491E8e",
+        "0xC019Dc79412c4b20103ac4ce97B2615FF45D490d",
+        "0x42365cAE9abB6cb357dd485734CAd75a2d3c6664"
+      ],
+      "nonce": "44",
+      "modules": [],
+      "guard": "0x0000000000000000000000000000000000000000",
+      "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+      "singleton": "0x29fcB43b46531BcA003ddC8FCB67FFE91900C762",
+      "safeRuntimeCodeHash": "0xd7d408ebcd99b2b70be43e20253d6d92a8ea8fab29bd3be7f55b10032331fb4c",
+      "singletonRuntimeCodeHash": "0xb1f926978a0f44a2c0ec8fe822418ae969bd8c3f18d61e5103100339894f81ff",
+      "fallbackHandlerRuntimeCodeHash": "0x7c6007a5d711cea8dfd5d91f5940ec29c7f200fe511eb1fc1397b367af3c42f9",
+      "verifiedAtBlock": 50293938,
+      "verifiedAtBlockHash": "0xfe596869c20040d7f10f2a35afa88ff7ff1f546df9c0db1fc379f79eb2351b07"
+    },
+    "safeBatchPlan": {
+      "safeTransaction": {
+        "to": "0x9641d764fc13c8B624c04430C7356C1C7C8102e2",
+        "value": "0",
+        "data": "0x8d80ff0a0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000025d00ccbd8c59664958636369f8fe24b927aebc3df7cc0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004404634d8d000000000000000000000000fe3a8678a9c729438bb11718bd1391e7ab491e8e00000000000000000000000000000000000000000000000000000000000003e800ccbd8c59664958636369f8fe24b927aebc3df7cc000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000441457a2980000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ccbd8c59664958636369f8fe24b927aebc3df7cc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000024ffc8c876000000000000000000000000000000000000000000000000000000000000000000ccbd8c59664958636369f8fe24b927aebc3df7cc000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000043769b95a00ccbd8c59664958636369f8fe24b927aebc3df7cc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004643d23af000000",
+        "operation": 1,
+        "safeTxGas": "0",
+        "baseGas": "0",
+        "gasPrice": "0",
+        "gasToken": "0x0000000000000000000000000000000000000000",
+        "refundReceiver": "0x0000000000000000000000000000000000000000",
+        "nonce": "44"
+      },
+      "safeTxHash": "0xc70cdddc476a004a9e2781a9a30ae35f30efc17a0d45054005877526c2e0f423",
+      "packedTransactionsHash": "0xa9380b75c87a9b58c87fcdbfcccc8af7b693b7f6fdbe24c216454b1ffa7826c3",
+      "multiSendCallOnly": "0x9641d764fc13c8B624c04430C7356C1C7C8102e2",
+      "multiSendCallOnlyCodeHash": "0xecd5bd14a08c5d2122379900b2f272bdf107a7e92423c10dd5fe3254386c9939",
+      "simulatedAtBlock": 50293938,
+      "simulation": "PASS: Safe.simulateAndRevert -> canonical MultiSendCallOnly.multiSend"
+    },
+    "simulatedFromSafeAtBlock": 50293938,
+    "calls": [
+      "setDefaultRoyalty(production.treasury,1000)",
+      "setClaimFees(0,0)",
+      "setClaimFeeRecipient(0x0000000000000000000000000000000000000000)",
+      "freezeRoyalties()",
+      "freezeClaimFees()"
+    ],
+    "requiredPostState": {
+      "owner": "0xd65c0e390Dc187A22c52c03816591CC736C0D755",
+      "pendingOwner": "0x0000000000000000000000000000000000000000",
+      "royaltyReceiver": "0xfe3A8678A9c729438BB11718bD1391E7Ab491E8e",
+      "royaltyBps": 1000,
+      "royaltiesFrozen": true,
+      "naraClaimFeeBps": 0,
+      "tokenClaimFeeBps": 0,
+      "claimFeeRecipient": "0x0000000000000000000000000000000000000000",
+      "claimFeesFrozen": true,
+      "genesisMintersFrozen": false
+    }
+  },
+  "sourceVerification": {
+    "status": "pending",
+    "requiredContracts": [
+      "NARAArtMetadataV1",
+      "NARAArtSecurityPrintV1",
+      "NARAArtCorePlateV1",
+      "NARAArtGenesisPlateV1",
+      "NARAPositionRendererV5",
+      "NARAPositionAccountV4",
+      "NARAPositionNFTV4"
+    ]
+  },
+  "smokeEvidence": {
+    "liveMintTransferClaimUnlock": "not_performed",
+    "reason": "Value-bearing smoke transactions require a separate reviewed user action after Safe finalization."
+  },
+  "receiptJournal": {
+    "status": "transactions_complete",
+    "retryPolicy": "NO_BLIND_RETRY: reconcile every recorded transaction and address before another attempt.",
+    "checkpointPath": "deployments/v4-position-nft-phase2-in-progress.json",
+    "transactions": [
+      {
+        "index": 0,
+        "label": "NARAArtMetadataV1",
+        "expectedContractAddress": "0xAE0Da2B2066FF0c1409A2aC4053699E75dd00633",
+        "transactionHash": "0x081db2d16ce99d4bec23aa8d3ef3c7e32ccdf561fd9c2b21bf4465ef7457cf58",
+        "receipt": {
+          "transactionHash": "0x081db2d16ce99d4bec23aa8d3ef3c7e32ccdf561fd9c2b21bf4465ef7457cf58",
+          "blockNumber": 50293883,
+          "blockHash": "0xc898ddbf179f46034bd46b39ba83c0eefeda2fa0d8cee53f07f3ab8c465a06b1",
+          "status": 1,
+          "gasUsed": "1188416",
+          "contractAddress": "0xae0da2b2066ff0c1409a2ac4053699e75dd00633"
+        }
+      },
+      {
+        "index": 1,
+        "label": "NARAArtSecurityPrintV1",
+        "expectedContractAddress": "0x0640dd2B545348eC91826ab7c58DD88EcE81f353",
+        "transactionHash": "0xb2a52f71eb49bceb720386dd35c10a0f120aa9b1e0391949300ca030a162388f",
+        "receipt": {
+          "transactionHash": "0xb2a52f71eb49bceb720386dd35c10a0f120aa9b1e0391949300ca030a162388f",
+          "blockNumber": 50293886,
+          "blockHash": "0xd7cf81e8f293400ec675244c56a1a9d861e446c25a345d1e42dfd2281185e5cc",
+          "status": 1,
+          "gasUsed": "2149423",
+          "contractAddress": "0x0640dd2b545348ec91826ab7c58dd88ece81f353"
+        }
+      },
+      {
+        "index": 2,
+        "label": "NARAArtCorePlateV1",
+        "expectedContractAddress": "0x476b69f490C17a5500c4Eb9b6cB49302cef4bE4A",
+        "transactionHash": "0x9742314c89cdafd9d27c2c9418c25525b54fec6588afa7162edf0a47c759927e",
+        "receipt": {
+          "transactionHash": "0x9742314c89cdafd9d27c2c9418c25525b54fec6588afa7162edf0a47c759927e",
+          "blockNumber": 50293889,
+          "blockHash": "0x8dcfaee9c45817b18a3f442ea88912ca7b2211ec112a450f97c6239eb549f019",
+          "status": 1,
+          "gasUsed": "3417010",
+          "contractAddress": "0x476b69f490c17a5500c4eb9b6cb49302cef4be4a"
+        }
+      },
+      {
+        "index": 3,
+        "label": "NARAArtGenesisPlateV1",
+        "expectedContractAddress": "0x20520115546c28F99aE581d62935e62D9E8B9022",
+        "transactionHash": "0x703ce0be340b805f168cb8147d6a39e8d13c3b9184cfa4240aa869fa51de5493",
+        "receipt": {
+          "transactionHash": "0x703ce0be340b805f168cb8147d6a39e8d13c3b9184cfa4240aa869fa51de5493",
+          "blockNumber": 50293892,
+          "blockHash": "0xe4b0891f60fd3352ce4e3bdc840bebafb3c7bceb8bfd96a34cc1e3cddcb97c46",
+          "status": 1,
+          "gasUsed": "2793551",
+          "contractAddress": "0x20520115546c28f99ae581d62935e62d9e8b9022"
+        }
+      },
+      {
+        "index": 4,
+        "label": "NARAPositionRendererV5",
+        "expectedContractAddress": "0x607b08365C23a983C542898a79E670e6D4B80673",
+        "transactionHash": "0xeece9668b7fa20ddc0e00dc626f6dde69042d532470e5363261ff54fa5d40a35",
+        "receipt": {
+          "transactionHash": "0xeece9668b7fa20ddc0e00dc626f6dde69042d532470e5363261ff54fa5d40a35",
+          "blockNumber": 50293895,
+          "blockHash": "0x76dd4f99cf810b67e07a87e05a7e928afa39e0fb85894370843dac89b5777df7",
+          "status": 1,
+          "gasUsed": "1143280",
+          "contractAddress": "0x607b08365c23a983c542898a79e670e6d4b80673"
+        }
+      },
+      {
+        "index": 5,
+        "label": "NARAPositionAccountV4",
+        "expectedContractAddress": "0x3a8c9cA4f95E94751774810B33caF01bb992A55F",
+        "transactionHash": "0x37791e642b253b6b05e648396611778e06d6eb46d427be5921a1ac7b5033e94e",
+        "receipt": {
+          "transactionHash": "0x37791e642b253b6b05e648396611778e06d6eb46d427be5921a1ac7b5033e94e",
+          "blockNumber": 50293898,
+          "blockHash": "0x299290aaeaf237f4847be8dabb86bca8a104eb8f49f54e321899c984a2fa9f67",
+          "status": 1,
+          "gasUsed": "862112",
+          "contractAddress": "0x3a8c9ca4f95e94751774810b33caf01bb992a55f"
+        }
+      },
+      {
+        "index": 6,
+        "label": "NARAPositionNFTV4",
+        "expectedContractAddress": "0xCcBD8c59664958636369F8fe24B927aEBc3DF7cC",
+        "transactionHash": "0x20d8e0a3fa62c1628c9fcb66055de631cfbf5519b988e2d98d5f713b63aa1f45",
+        "receipt": {
+          "transactionHash": "0x20d8e0a3fa62c1628c9fcb66055de631cfbf5519b988e2d98d5f713b63aa1f45",
+          "blockNumber": 50293938,
+          "blockHash": "0xfe596869c20040d7f10f2a35afa88ff7ff1f546df9c0db1fc379f79eb2351b07",
+          "status": 1,
+          "gasUsed": "4888067",
+          "contractAddress": "0xccbd8c59664958636369f8fe24b927aebc3df7cc"
+        }
+      }
+    ]
+  }
+}

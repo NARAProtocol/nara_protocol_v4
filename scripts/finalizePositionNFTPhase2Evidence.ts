@@ -118,6 +118,24 @@ async function canonicalBlock(provider: any, blockNumber: number, expectedHash: 
   return block;
 }
 
+async function serialExecution<T>(fns: Array<() => Promise<T>>): Promise<T[]> {
+  const results: T[] = [];
+  for (const fn of fns) {
+    for (let i = 0; i < 6; i++) {
+      try {
+        const res = await fn();
+        await new Promise((r) => setTimeout(r, 120));
+        results.push(res);
+        break;
+      } catch (err: any) {
+        if (i === 5) throw err;
+        await new Promise((r) => setTimeout(r, 1000 * Math.pow(1.5, i)));
+      }
+    }
+  }
+  return results;
+}
+
 async function pinnedProductionRuntimeEvidence(
   ethers: any,
   production: ProductionV4Deployment,
@@ -131,7 +149,20 @@ async function pinnedProductionRuntimeEvidence(
     ["compounder", production.compounder],
     ["safe", production.safe],
   ] as const;
-  const codes = await Promise.all(targets.map(([, address]) => ethers.provider.getCode(address, blockNumber)));
+  const codes: string[] = [];
+  for (const [, address] of targets) {
+    for (let i = 0; i < 5; i++) {
+      try {
+        const code = await ethers.provider.getCode(address, blockNumber);
+        await new Promise((r) => setTimeout(r, 100));
+        codes.push(code);
+        break;
+      } catch (err: any) {
+        if (i === 4) throw err;
+        await new Promise((r) => setTimeout(r, 1000 * Math.pow(1.5, i)));
+      }
+    }
+  }
   return Object.fromEntries(targets.map(([label, address], index) => {
     const code = codes[index];
     if (code === "0x") throw new Error(`Production ${label} has no code at the signing block`);
@@ -359,23 +390,23 @@ async function main(): Promise<void> {
   const [signingCode, signingEngine, signingNara, signingAccountImplementation, signingRenderer,
     signingOwner, signingPendingOwner, signingRoyaltyFrozen, signingRoyaltyInfo, signingNaraFee,
     signingTokenFee, signingRecipient, signingClaimFrozen, signingGenesisDistributor,
-    signingGenesisFrozen, signingNextTokenId] = await Promise.all([
-    ethers.provider.getCode(nftAddress, signingBlock),
-    nft.engine(atSigningBlock),
-    nft.nara(atSigningBlock),
-    nft.accountImplementation(atSigningBlock),
-    nft.renderer(atSigningBlock),
-    nft.owner(atSigningBlock),
-    nft.pendingOwner(atSigningBlock),
-    nft.royaltyFrozen(atSigningBlock),
-    nft.royaltyInfo(1, 10_000, atSigningBlock),
-    nft.naraClaimFeeBps(atSigningBlock),
-    nft.tokenClaimFeeBps(atSigningBlock),
-    nft.claimFeeRecipient(atSigningBlock),
-    nft.claimFeesFrozen(atSigningBlock),
-    nft.genesisRewardDistributor(atSigningBlock),
-    nft.genesisMintersFrozen(atSigningBlock),
-    nft.nextTokenId(atSigningBlock),
+    signingGenesisFrozen, signingNextTokenId] = await serialExecution([
+    () => ethers.provider.getCode(nftAddress, signingBlock),
+    () => nft.engine(atSigningBlock),
+    () => nft.nara(atSigningBlock),
+    () => nft.accountImplementation(atSigningBlock),
+    () => nft.renderer(atSigningBlock),
+    () => nft.owner(atSigningBlock),
+    () => nft.pendingOwner(atSigningBlock),
+    () => nft.royaltyFrozen(atSigningBlock),
+    () => nft.royaltyInfo(1, 10_000, atSigningBlock),
+    () => nft.naraClaimFeeBps(atSigningBlock),
+    () => nft.tokenClaimFeeBps(atSigningBlock),
+    () => nft.claimFeeRecipient(atSigningBlock),
+    () => nft.claimFeesFrozen(atSigningBlock),
+    () => nft.genesisRewardDistributor(atSigningBlock),
+    () => nft.genesisMintersFrozen(atSigningBlock),
+    () => nft.nextTokenId(atSigningBlock),
   ]);
   if (
     signingCode === "0x" ||
@@ -498,20 +529,20 @@ async function main(): Promise<void> {
   );
   const atFinalBlock = { blockTag: finalBlockNumber };
   const [owner, pendingOwner, royaltyFrozen, royaltyInfo, naraFee, tokenFee, recipient, claimFrozen,
-    genesisDistributor, genesisFrozen, nextTokenId, name, symbol] = await Promise.all([
-    nft.owner(atFinalBlock),
-    nft.pendingOwner(atFinalBlock),
-    nft.royaltyFrozen(atFinalBlock),
-    nft.royaltyInfo(1, 10_000, atFinalBlock),
-    nft.naraClaimFeeBps(atFinalBlock),
-    nft.tokenClaimFeeBps(atFinalBlock),
-    nft.claimFeeRecipient(atFinalBlock),
-    nft.claimFeesFrozen(atFinalBlock),
-    nft.genesisRewardDistributor(atFinalBlock),
-    nft.genesisMintersFrozen(atFinalBlock),
-    nft.nextTokenId(atFinalBlock),
-    nft.name(atFinalBlock),
-    nft.symbol(atFinalBlock),
+    genesisDistributor, genesisFrozen, nextTokenId, name, symbol] = await serialExecution([
+    () => nft.owner(atFinalBlock),
+    () => nft.pendingOwner(atFinalBlock),
+    () => nft.royaltyFrozen(atFinalBlock),
+    () => nft.royaltyInfo(1, 10_000, atFinalBlock),
+    () => nft.naraClaimFeeBps(atFinalBlock),
+    () => nft.tokenClaimFeeBps(atFinalBlock),
+    () => nft.claimFeeRecipient(atFinalBlock),
+    () => nft.claimFeesFrozen(atFinalBlock),
+    () => nft.genesisRewardDistributor(atFinalBlock),
+    () => nft.genesisMintersFrozen(atFinalBlock),
+    () => nft.nextTokenId(atFinalBlock),
+    () => nft.name(atFinalBlock),
+    () => nft.symbol(atFinalBlock),
   ]);
   if (
     ethers.getAddress(owner) !== ethers.getAddress(production.safe) ||

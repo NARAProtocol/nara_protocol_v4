@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/vite-env.d.ts",
+    "src/generated/contracts.ts",
+    "src/funding.ts",
+    "src/sponsorship.ts",
+    "src/trade.ts",
+    "src/wallets.ts",
+    "src/swap-flow.ts",
+    "swap-site/src",
+    "vite.swap.config.ts"
+  ]
+}

@@ -91,7 +91,8 @@
     "ts-node": "10.9.2",
     "tsx": "4.23.1",
     "typechain": "8.3.2",
-    "typescript": "6.0.2"
+    "typescript": "6.0.2",
+    "viem": "^2.55.19"
   },
   "overrides": {
     "hardhat": {

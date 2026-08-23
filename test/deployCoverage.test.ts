@@ -25,6 +25,11 @@ const INTENTIONALLY_NOT_DEPLOYED: Record<string, string> = {
   NARABondDepositoryV4: "raw-position bond path superseded by NARABondDepositoryV4NFT",
   NARAFractionalPositionV4: "deployed per-position by NARAFractionalPositionFactoryV4 at runtime, not at launch",
   NARAPositionRendererV4: "legacy renderer kept for artifact compatibility; launch uses modular NARAPositionRendererV5",
+  NARAArtCollectionBannerV4: "modular art layer for NFT banner SVG composition",
+  NARAArtCorePlateV4: "modular art layer for core card plate rendering",
+  NARAArtMetadataV4: "modular art metadata encoder",
+  NARAFleetDeckLensV1: "read-only on-chain deck lens helper for test console",
+  NARAPositionRendererV8: "upgraded on-chain SVG renderer for Position NFT",
 };
 
 function listSolFiles(dir: string, rel = ""): { name: string; rel: string }[] {

@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="1000" height="1000">
+  <defs>
+    <!-- Radial Core Glow -->
+    <radialGradient id="core-glow" cx="50%" cy="44%" r="50%">
+      <stop offset="0%" stop-color="#0052FF" stop-opacity="0.45"/>
+      <stop offset="50%" stop-color="#0052FF" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#0052FF" stop-opacity="0"/>
+    </radialGradient>
+    
+    <!-- Heavy Frame Metallic Bevel -->
+    <linearGradient id="frame-bevel" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#363D4A"/>
+      <stop offset="50%" stop-color="#181C22"/>
+      <stop offset="100%" stop-color="#0D0F13"/>
+    </linearGradient>
+
+    <linearGradient id="plate-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#13171F"/>
+      <stop offset="100%" stop-color="#0A0C10"/>
+    </linearGradient>
+
+    <!-- Blueprint Grid -->
+    <pattern id="tech-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#202630" stroke-width="1.2" stroke-opacity="0.75"/>
+      <circle cx="40" cy="40" r="1" fill="#202630" opacity="0.9"/>
+    </pattern>
+
+    <!-- Blur Filter for Glow -->
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- 1. LUXURY ARCHITECTURAL FAT FRAME (Heavy Outer Bezel: 48px wide) -->
+  <rect x="0" y="0" width="1000" height="1000" rx="36" fill="url(#frame-bevel)"/>
+  <rect x="8" y="8" width="984" height="984" rx="30" fill="#0B0D10" stroke="#2D3440" stroke-width="2"/>
+  <rect x="44" y="44" width="912" height="912" rx="18" fill="url(#plate-gradient)" stroke="#2A303C" stroke-width="3"/>
+  
+  <!-- Frame Corner Hardware Reinforcements / Industrial Rivets -->
+  <!-- Top Left -->
+  <path d="M20 54 L54 20 M20 20 L20 44 M20 20 L44 20" stroke="#F4EFE6" stroke-width="3" stroke-linecap="round" opacity="0.8"/>
+  <circle cx="32" cy="32" r="3.5" fill="#F4EFE6" opacity="0.9"/>
+  <line x1="24" y1="76" x2="24" y2="120" stroke="#404958" stroke-width="1.5"/>
+  <!-- Top Right -->
+  <path d="M980 54 L946 20 M980 20 L980 44 M980 20 L956 20" stroke="#F4EFE6" stroke-width="3" stroke-linecap="round" opacity="0.8"/>
+  <circle cx="968" cy="32" r="3.5" fill="#F4EFE6" opacity="0.9"/>
+  <line x1="976" y1="76" x2="976" y2="120" stroke="#404958" stroke-width="1.5"/>
+  <!-- Bottom Left -->
+  <path d="M20 946 L54 980 M20 980 L20 956 M20 980 L44 980" stroke="#F4EFE6" stroke-width="3" stroke-linecap="round" opacity="0.8"/>
+  <circle cx="32" cy="968" r="3.5" fill="#F4EFE6" opacity="0.9"/>
+  <line x1="24" y1="924" x2="24" y2="880" stroke="#404958" stroke-width="1.5"/>
+  <!-- Bottom Right -->
+  <path d="M980 946 L946 980 M980 980 L980 956 M980 980 L956 980" stroke="#F4EFE6" stroke-width="3" stroke-linecap="round" opacity="0.8"/>
+  <circle cx="968" cy="968" r="3.5" fill="#F4EFE6" opacity="0.9"/>
+  <line x1="976" y1="924" x2="976" y2="880" stroke="#404958" stroke-width="1.5"/>
+
+  <!-- Frame Scale Tick Marks (Top and Bottom Rulers) -->
+  <g stroke="#3D4656" stroke-width="1" opacity="0.7">
+    <line x1="200" y1="24" x2="200" y2="32"/><line x1="300" y1="24" x2="300" y2="32"/><line x1="400" y1="24" x2="400" y2="32"/>
+    <line x1="500" y1="20" x2="500" y2="36" stroke="#F4EFE6" stroke-width="1.5" opacity="0.9"/>
+    <line x1="600" y1="24" x2="600" y2="32"/><line x1="700" y1="24" x2="700" y2="32"/><line x1="800" y1="24" x2="800" y2="32"/>
+  </g>
+
+  <!-- 2. INNER SECURITY PLATE BACKGROUND GRID -->
+  <rect x="54" y="54" width="892" height="892" rx="12" fill="url(#tech-grid)"/>
+  <rect x="54" y="54" width="892" height="892" rx="12" fill="url(#core-glow)"/>
+
+  <!-- 3. TOP SPECIFICATION HEADER -->
+  <g transform="translate(80, 96)">
+    <circle cx="8" cy="8" r="7" fill="#0052FF" filter="url(#glow)"/>
+    <circle cx="8" cy="8" r="3.5" fill="#FFFFFF"/>
+    <text x="28" y="14" fill="#F4EFE6" font-family="'Satoshi', 'Inter', system-ui, sans-serif" font-size="20" font-weight="800" letter-spacing="3">ACTIVATED</text>
+    <text x="28" y="34" fill="#8E95A5" font-family="'IBM Plex Mono', monospace" font-size="12" letter-spacing="2">PROOF-OF-POSITION // ON-CHAIN ERC-721</text>
+    
+    <!-- Top Right Spec -->
+    <text x="840" y="14" fill="#F4EFE6" font-family="'IBM Plex Mono', monospace" font-size="14" font-weight="700" text-anchor="end" letter-spacing="1.5">EPOCH #4180</text>
+    <text x="840" y="34" fill="#8E95A5" font-family="'IBM Plex Mono', monospace" font-size="11" text-anchor="end" letter-spacing="1">BASE MAINNET [8453]</text>
+  </g>
+
+  <!-- 4. HIGH-CONTRAST CENTRAL GEOMETRIC RADAR AND SEAL -->
+  <g transform="translate(500, 450)">
+    <!-- Outer Precision Rings -->
+    <circle cx="0" cy="0" r="260" fill="none" stroke="#232830" stroke-width="1.5" stroke-dasharray="6 8"/>
+    <circle cx="0" cy="0" r="210" fill="none" stroke="#202630" stroke-width="2"/>
+    <circle cx="0" cy="0" r="160" fill="none" stroke="#0052FF" stroke-width="2" opacity="0.85" stroke-dasharray="12 6"/>
+
+    <!-- Crosshair Cardinal Marks -->
+    <line x1="-280" y1="0" x2="280" y2="0" stroke="#3D4656" stroke-width="1.5" opacity="0.6" stroke-dasharray="4 6"/>
+    <line x1="0" y1="-280" x2="0" y2="280" stroke="#3D4656" stroke-width="1.5" opacity="0.6" stroke-dasharray="4 6"/>
+    
+    <!-- Cardinal Compass Brackets -->
+    <path d="M-160 -10 L-160 10 M160 -10 L160 10 M-10 -160 L10 -160 M-10 160 L10 160" stroke="#F4EFE6" stroke-width="2.5"/>
+
+    <!-- Center Heavy Medallion Disc -->
+    <circle cx="0" cy="0" r="108" fill="#0A0C10" stroke="#0052FF" stroke-width="4.5" filter="url(#glow)"/>
+    <circle cx="0" cy="0" r="96" fill="none" stroke="#262D38" stroke-width="2"/>
+    <circle cx="0" cy="0" r="84" fill="none" stroke="#F4EFE6" stroke-width="1.5" stroke-dasharray="4 4" opacity="0.7"/>
+
+    <!-- ICONIC NARA 'N' SIGIL (Crisp, High-Contrast Ivory and Cobalt) -->
+    <g stroke="#F4EFE6" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" fill="none">
+      <path d="M-28 42 L-28 -42"/>
+      <path d="M28 42 L28 -42"/>
+      <path d="M-28 -42 L28 42"/>
+    </g>
+    <!-- Center Jewel Dot -->
+    <circle cx="0" cy="0" r="6" fill="#0052FF"/>
+  </g>
+
+  <!-- 5. BOTTOM MASTER IDENTITY AND FACT LEDGER -->
+  <g transform="translate(80, 780)">
+    <!-- Divider Line -->
+    <line x1="0" y1="0" x2="840" y2="0" stroke="#323A48" stroke-width="2"/>
+    <line x1="0" y1="0" x2="140" y2="0" stroke="#0052FF" stroke-width="3"/>
+
+    <!-- Left Brand Stack -->
+    <text x="0" y="58" fill="#FFFFFF" font-family="'Satoshi', 'Inter', system-ui, sans-serif" font-size="64" font-weight="900" letter-spacing="6">NARA</text>
+    <text x="4" y="92" fill="#8E95A5" font-family="'IBM Plex Mono', monospace" font-size="12" font-weight="500" letter-spacing="3">SECURE TOKEN-BOUND INSTRUMENT</text>
+
+    <!-- Right Technical Metadata Block -->
+    <g transform="translate(840, 30)" text-anchor="end" font-family="'IBM Plex Mono', monospace">
+      <text x="0" y="0" fill="#8E95A5" font-size="12" letter-spacing="1.5">POSITION ID</text>
+      <text x="0" y="20" fill="#F4EFE6" font-size="18" font-weight="700" letter-spacing="2">#000012</text>
+      
+      <text x="0" y="46" fill="#8E95A5" font-size="12" letter-spacing="1.5">TOKEN ID</text>
+      <text x="0" y="66" fill="#F4EFE6" font-size="18" font-weight="700" letter-spacing="2">#000002</text>
+
+      <text x="0" y="92" fill="#0052FF" font-size="13" font-weight="700" letter-spacing="2">PRINCIPAL: 99 NARA</text>
+    </g>
+  </g>
+
+</svg>

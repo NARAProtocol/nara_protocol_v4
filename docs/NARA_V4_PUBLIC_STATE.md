@@ -115,8 +115,8 @@ available from this release.
 - **Reward reserve:** 650,000 NARA sealed at deployment. The Engine source is designed to distribute it over time through the emission model after valid positions exist.
 - **Duration range:** 1 epoch minimum (activation delay + 1) up to 35,040 epochs (~1 year at 15-min epochs).
 - **Weight formula:** quadratic in duration. A max-duration lock receives up to
-  approximately 3x the modeled weight per NARA versus the shortest lock.
-- **Activation delay:** source behavior activates weight 3 epochs after locking.
+  approximately 4x the modeled weight per NARA versus the shortest lock.
+- **Activation delay:** source behavior activates weight 8 epochs after locking.
 - **ETH rewards:** the Engine source accounts ETH sent through `notifyEthRewards()` across active weight. No production funding action is authorized by this document.
 - **ERC-20 rewards:** the generic Engine rail exists in source but is disabled
   for this deployment. No `BribeRouterV4` deployment or notifier-role grant is

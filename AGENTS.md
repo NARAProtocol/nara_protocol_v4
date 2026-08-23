@@ -58,9 +58,11 @@ block when applicable, test results, and unresolved risks.
   same-block live tax paths reconciled, and the bounded Compounder validation
   minted Compounder-owned LP NFT `2898486` with liquidity `9455824137787`.
   The Vault binding is permanently frozen to the deployed Compounder. Engine
-  backlog recovery succeeded, but recurring Engine and liquidity maintenance
-  are not configured and the Engine lifecycle smoke remains pending. Baskets
-  remain preview-only. Do not claim whole-stack production readiness.
+  backlog recovery succeeded, and the separately hardened epoch maintainer is
+  active on its bounded twice-hourly schedule. Liquidity maintenance remains
+  disabled. Raw lock/activation/unlock and post-fee lock paths are exercised;
+  post-fee unlock and positive ETH-allocation claim evidence remain pending.
+  Baskets remain preview-only. Do not claim whole-stack production readiness.
 - **Read-first liquidity state:** read `docs/CURRENT_STATE.md`,
   `docs/releases/NARA-20260809-v4-production-activation.md`,
   `docs/releases/NARA-20260809-v4-compounder-activation.md`,
@@ -75,15 +77,17 @@ block when applicable, test results, and unresolved risks.
   are burned; the recovery is cleared; and the sealed reserve is unchanged.
   Never replay the consumed Safe batch, re-propose its `WindDown`, or use those
   historical addresses as a current manifest.
-- **GitHub operations bots disabled:** on 2026-08-09, workflow IDs `324678194`
-  (`NARA v4 epoch maintainer`, previously `NARA v4 operations keeper`) and
-  `324678196` (`NARA v4 liquidity maintainer`)
-  were set to `disabled_manually`. Repository variables
-  `V4_OPERATIONS_KEEPER_ENABLED` and `V4_LIQUIDITY_MAINTAINER_ENABLED` are both
-  `false`. The hardened epoch workflow uses the separate
-  `V4_EPOCH_MAINTAINER_ENABLED` variable, which is not configured. Do not
-  re-enable or dispatch either workflow, or set any enable variable, without a
-  new explicit user order and current deployment-specific review.
+- **GitHub operations boundary:** workflow `324678194` (`NARA v4 epoch
+  maintainer`) was explicitly reactivated on 2026-08-14 after backlog recovery,
+  dedicated-key provisioning, heartbeat setup, and dry runs. It runs at minutes
+  `7,37` with `V4_EPOCH_MAINTAINER_ENABLED=true` and the bounded production
+  routine guard. Workflow `324678196` (`NARA v4 liquidity maintainer`) remains
+  `disabled_manually`; `V4_OPERATIONS_KEEPER_ENABLED` and
+  `V4_LIQUIDITY_MAINTAINER_ENABLED` remain `false`. Do not broaden epoch-keeper
+  authority, change its deployment binding, or activate liquidity maintenance
+  without a new explicit user order and current deployment-specific review.
+  Read `docs/CURRENT_STATE.md` and
+  `docs/NARA_V4_TEST_CONSOLE_CHECKPOINT_2026-08-15.md` for current evidence.
 - **Product scope:** NARA Baskets only after a verified fresh-v4 deployment
   manifest and handoff exist. Baskets remain preview-only today. Lockboard and
   composability are deferred; Lotto and Arena are retired.
