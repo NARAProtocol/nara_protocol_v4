@@ -275,7 +275,7 @@ export function NftTab(props: NftTabProps = {}) {
             functionName: "lockFeeWei",
           }),
         ]);
-        const epoch = (epochStateRes as { epoch: bigint }).epoch;
+        const epoch = epochStateRes[0];
         setCurrentEpoch(epoch);
         if (typeof engineLockFee === "bigint") {
           setDynamicLockFeeWei(engineLockFee);
@@ -569,8 +569,8 @@ export function NftTab(props: NftTabProps = {}) {
       const hash = await writeContractAsync({
         address: DEPLOYMENT.positionNft,
         abi: positionNftAbi,
-        functionName: "extendPosition",
-        args: [tokenId, 35040n, 0n],
+        functionName: "extendLock",
+        args: [tokenId, 35040n],
       });
       setActionSuccess(`Duration extended: ${hash.slice(0, 10)}…`);
       await fetchState();
@@ -582,7 +582,7 @@ export function NftTab(props: NftTabProps = {}) {
   };
 
   const handleUnlock = async (tokenId: bigint) => {
-    if (!address) return;
+    if (!address || !client) return;
     const confirmBurn = window.confirm(
       "CONFIRM UNLOCK:\nUnlocking principal executes _burn(tokenId), permanently burning the Position NFT. Your locked principal will be returned to your wallet. Proceed?"
     );
@@ -591,11 +591,17 @@ export function NftTab(props: NftTabProps = {}) {
     try {
       setActionBusy(`unlock-${tokenId}`);
       setError(null);
+      const unlockFeeWei = await client.readContract({
+        address: DEPLOYMENT.engine,
+        abi: engineAbi,
+        functionName: "unlockFeeWei",
+      });
       const hash = await writeContractAsync({
         address: DEPLOYMENT.positionNft,
         abi: positionNftAbi,
-        functionName: "unlockPosition",
+        functionName: "unlockTo",
         args: [tokenId, address],
+        value: unlockFeeWei,
       });
       setActionSuccess(`Position unlocked: ${hash.slice(0, 10)}…`);
       await fetchState();

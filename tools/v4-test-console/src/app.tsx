@@ -1629,7 +1629,7 @@ export default function App() {
         address: DEPLOYMENT.permit2,
         abi: permit2Abi,
         functionName: "approve",
-        args: [input, DEPLOYMENT.universalRouter, parsedTradeInput, expiration],
+        args: [input, DEPLOYMENT.universalRouter, parsedTradeInput, Number(expiration)],
       });
       waitForWallet();
       const permitHash = await writeContractAsync(permitApproval.request);
@@ -1735,7 +1735,7 @@ export default function App() {
                 input,
                 DEPLOYMENT.universalRouter,
                 parsedTradeInput,
-                routerCall.deadline,
+                Number(routerCall.deadline),
               ],
             }),
           });
@@ -1850,7 +1850,7 @@ export default function App() {
           address: DEPLOYMENT.permit2,
           abi: permit2Abi,
           functionName: "approve",
-          args: [input, DEPLOYMENT.universalRouter, 0n, 0n],
+          args: [input, DEPLOYMENT.universalRouter, 0n, 0],
         });
         waitForWallet();
         const permitResetHash = await writeContractAsync(permitReset.request);
