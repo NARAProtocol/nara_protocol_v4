@@ -48,10 +48,12 @@ error NARAFleetDeckLensV1__DuplicateTokenId(uint256 tokenId);
 contract NARAFleetDeckLensV1 {
     using Strings for uint256;
 
-    uint256 public constant LENS_VERSION = 2;
+    uint256 public constant LENS_VERSION = 3;
     uint256 public constant MAX_DECK_SLOTS = 6;
     uint256 internal constant WAD = 1e18;
     uint256 internal constant BPS = 10_000;
+    uint256 public constant MAX_EFFECTIVE_MULTIPLIER_WAD = 10 * 1e18; // 10.00X WAD Hard Cap
+    uint16 public constant GENESIS_AURA_BONUS_BPS = 500;              // +5.00% Genesis Aura Bonus
 
     INARAEngineDeckLens public immutable ENGINE;
     INARAPositionNFTDeckLens public immutable POSITION_NFT;
@@ -61,8 +63,8 @@ contract NARAFleetDeckLensV1 {
         uint256 positionId;
         uint128 amount;
         uint128 weight;
-        uint256 multiplierWad;      // 1.00e18 - 3.00e18
-        uint16 multiplierBps;       // 10,000 - 30,000
+        uint256 multiplierWad;      // Individual base multiplier: 1.00e18 - 4.00e18
+        uint16 multiplierBps;       // 10,000 - 40,000
         string formattedMultiplier; // e.g. "2.45X"
         uint64 createdEpoch;
         uint64 activationEpoch;
@@ -77,20 +79,32 @@ contract NARAFleetDeckLensV1 {
     }
 
     struct DeckSynergyReport {
-        uint8 synergyTier;              // 0 to 5
-        string synergyTierName;         // e.g. "Hexa Armada Sovereign"
-        uint16 synergyBonusBps;         // e.g. 2500 (25.00%)
-        bool hasGenesisAura;            // True if >= 1 Genesis active position present
-        uint256 activeSlotsCount;       // 0 to 6
+        uint8 synergyTier;                  // 0 to 5
+        string synergyTierName;             // e.g. "Hexa Armada Sovereign"
+        uint16 formationBonusBps;           // 0 to 2500 BPS (0.00% to +25.00%)
+        uint16 genesisAuraBonusBps;         // 0 or 500 BPS (+5.00%)
+        uint16 synergyBonusBps;             // Alias for totalSynergyBonusBps
+        uint16 totalSynergyBonusBps;        // formationBonusBps + genesisAuraBonusBps (up to 3000 BPS = +30.00%)
+        uint256 synergyMultiplierWad;       // 1.00e18 to 1.30e18
+        string formattedSynergyMultiplier;  // e.g. "1.30X"
+        bool hasGenesisAura;                // True if >= 1 Genesis active position present
+        uint256 activeSlotsCount;           // 0 to 6
     }
 
     struct FleetDeckSummary {
         address user;
         uint256 totalLockedNara;
         uint256 totalWeight;
-        uint256 weightedAverageMultiplierWad;
+        uint256 weightedAverageMultiplierWad;   // Base weighted average multiplier across deck positions
         uint16 weightedAverageMultiplierBps;
         string formattedWeightedMultiplier;
+        uint256 deckSynergyMultiplierWad;       // Aggregated deck synergy multiplier
+        uint16 deckSynergyMultiplierBps;
+        string formattedDeckSynergyMultiplier;
+        uint256 totalEffectiveMultiplierWad;    // Capped at 10.00X WAD (10 * 1e18)
+        uint32 totalEffectiveMultiplierBps;     // up to 100,000 BPS
+        string formattedTotalEffectiveMultiplier;// e.g. "5.20X" or "10.00X"
+        uint256 effectiveTotalWeight;           // totalLockedNara * totalEffectiveMultiplierWad / WAD
         DeckSynergyReport synergy;
         uint256 aggregateClaimableNara;
         uint256 aggregateClaimableEth;
@@ -113,6 +127,7 @@ contract NARAFleetDeckLensV1 {
         view
         returns (FleetDeckSummary memory deck)
     {
+        if (user == address(0)) revert NARAFleetDeckLensV1__ZeroAddress();
         uint256 len = tokenIds.length;
         if (len > MAX_DECK_SLOTS) {
             revert NARAFleetDeckLensV1__DeckCapacityExceeded(len, MAX_DECK_SLOTS);
@@ -128,7 +143,7 @@ contract NARAFleetDeckLensV1 {
         for (uint256 i = 0; i < len; i++) {
             uint256 tid = tokenIds[i];
 
-            // 1. Strict Duplicate Token ID Prevention
+            // 1. Strict Anti-Sybil Duplicate Token ID Prevention
             for (uint256 j = 0; j < i; j++) {
                 if (tokenIds[j] == tid) {
                     revert NARAFleetDeckLensV1__DuplicateTokenId(tid);
@@ -138,7 +153,7 @@ contract NARAFleetDeckLensV1 {
             DeckPositionSummary memory posSummary;
             posSummary.tokenId = tid;
 
-            // 2. Validate token ownership safely
+            // 2. Validate token ownership safely (fail-closed)
             address tokenOwner = address(0);
             try POSITION_NFT.ownerOf(tid) returns (address o) {
                 tokenOwner = o;
@@ -211,7 +226,7 @@ contract NARAFleetDeckLensV1 {
             deck.positions[i] = posSummary;
         }
 
-        // Weighted Average Deck Multiplier
+        // 4. Weighted Average Multiplier Calculation
         if (deck.totalLockedNara > 0) {
             deck.weightedAverageMultiplierWad = Math.mulDiv(deck.totalWeight, WAD, deck.totalLockedNara);
             deck.weightedAverageMultiplierBps = uint16(Math.mulDiv(deck.totalWeight, BPS, deck.totalLockedNara));
@@ -221,8 +236,24 @@ contract NARAFleetDeckLensV1 {
         }
         deck.formattedWeightedMultiplier = _formatMultiplier(deck.weightedAverageMultiplierWad);
 
-        // Deck Synergy Evaluation
+        // 5. Pro-Community Deck Synergy Evaluation
         deck.synergy = _evaluateSynergy(activeCount, genesisFound);
+        deck.deckSynergyMultiplierWad = deck.synergy.synergyMultiplierWad;
+        deck.deckSynergyMultiplierBps = uint16(Math.mulDiv(deck.deckSynergyMultiplierWad, BPS, WAD));
+        deck.formattedDeckSynergyMultiplier = deck.synergy.formattedSynergyMultiplier;
+
+        // 6. Total Effective Multiplier (Capped at 10.00X WAD)
+        uint256 rawEffectiveMultiplierWad = Math.mulDiv(deck.weightedAverageMultiplierWad, deck.deckSynergyMultiplierWad, WAD);
+        if (rawEffectiveMultiplierWad > MAX_EFFECTIVE_MULTIPLIER_WAD) {
+            deck.totalEffectiveMultiplierWad = MAX_EFFECTIVE_MULTIPLIER_WAD;
+        } else {
+            deck.totalEffectiveMultiplierWad = rawEffectiveMultiplierWad;
+        }
+        deck.totalEffectiveMultiplierBps = uint32(Math.mulDiv(deck.totalEffectiveMultiplierWad, BPS, WAD));
+        deck.formattedTotalEffectiveMultiplier = _formatMultiplier(deck.totalEffectiveMultiplierWad);
+
+        // 7. Effective Total Deck Weight
+        deck.effectiveTotalWeight = Math.mulDiv(deck.totalLockedNara, deck.totalEffectiveMultiplierWad, WAD);
     }
 
     function _evaluateSynergy(uint256 activeSlots, bool hasGenesis)
@@ -236,28 +267,40 @@ contract NARAFleetDeckLensV1 {
         if (activeSlots == 6) {
             syn.synergyTier = 5;
             syn.synergyTierName = "Hexa Armada Sovereign";
-            syn.synergyBonusBps = 2500; // +25.00%
+            syn.formationBonusBps = 2500; // +25.00%
         } else if (activeSlots == 5) {
             syn.synergyTier = 4;
             syn.synergyTierName = "Penta Formation";
-            syn.synergyBonusBps = 2000; // +20.00%
+            syn.formationBonusBps = 2000; // +20.00%
         } else if (activeSlots == 4) {
             syn.synergyTier = 3;
             syn.synergyTierName = "Quad Squadron";
-            syn.synergyBonusBps = 1500; // +15.00%
+            syn.formationBonusBps = 1500; // +15.00%
         } else if (activeSlots == 3) {
             syn.synergyTier = 2;
             syn.synergyTierName = "Tri-Vanguard";
-            syn.synergyBonusBps = 1000; // +10.00%
+            syn.formationBonusBps = 1000; // +10.00%
         } else if (activeSlots == 2) {
             syn.synergyTier = 1;
             syn.synergyTierName = "Dual Strike";
-            syn.synergyBonusBps = 500;  // +5.00%
+            syn.formationBonusBps = 500;  // +5.00%
         } else {
             syn.synergyTier = 0;
             syn.synergyTierName = "Solo Scout";
-            syn.synergyBonusBps = 0;
+            syn.formationBonusBps = 0;
         }
+
+        // Genesis Aura Amplification
+        if (hasGenesis && activeSlots > 0) {
+            syn.genesisAuraBonusBps = GENESIS_AURA_BONUS_BPS; // +5.00%
+        } else {
+            syn.genesisAuraBonusBps = 0;
+        }
+
+        syn.totalSynergyBonusBps = syn.formationBonusBps + syn.genesisAuraBonusBps;
+        syn.synergyBonusBps = syn.totalSynergyBonusBps;
+        syn.synergyMultiplierWad = WAD + Math.mulDiv(uint256(syn.totalSynergyBonusBps), WAD, BPS);
+        syn.formattedSynergyMultiplier = _formatMultiplier(syn.synergyMultiplierWad);
     }
 
     function _formatMultiplier(uint256 mWad) internal pure returns (string memory) {

@@ -6,14 +6,15 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title NARAArtCorePlateV4
 /// @notice Master luxury Swiss chronometer & aerospace generative art engine.
-/// @dev 100% Pure On-Chain SVG rendering with Granular 1.00X-3.00X Quadratic Multipliers & Multi-Dimensional Staking Scaling.
+/// @dev 100% Pure On-Chain SVG rendering with Granular 1.00X-10.00X Multi-Vector Power Metrics & Battery HUD.
 contract NARAArtCorePlateV4 {
     using Strings for uint256;
 
-    uint256 public constant CORE_PLATE_VERSION = 15;
+    uint256 public constant CORE_PLATE_VERSION = 17;
     uint64 public constant EPOCHS_PER_DAY = 96;
     uint64 public constant EPOCHS_PER_YEAR = 35040;
     uint256 internal constant WAD = 1e18;
+    uint256 public constant MAX_POWER_MULTIPLIER_WAD = 10 * 1e18; // 10.00X WAD
 
     struct ChassisTheme {
         string name;
@@ -36,16 +37,17 @@ contract NARAArtCorePlateV4 {
         string ascensionLabel;
         string fleetTitle;
         uint256 ageInEpochs;
-        uint256 multiplierWad;      // 1.00e18 to 3.00e18
-        string multiplierLabel;     // e.g. "2.45X"
-        uint8 chargedCells;         // 1 to 10 HUD cells
-        uint8 amountTier;           // 1 (<25) to 5 (1000+)
+        uint256 baseMultiplierWad;      // Base Lock Multiplier: 1.00e18 to 4.00e18
+        uint256 totalPowerMultiplierWad;// Comprehensive Multi-Vector Power Multiplier: 1.00e18 to 10.00e18
+        string multiplierLabel;         // e.g. "4.00X"
+        string totalPowerLabel;         // e.g. "8.50X"
+        uint8 chargedCells;             // 1 to 10 Battery HUD cells
+        uint8 amountTier;               // 1 (<25) to 5 (1000+)
         uint16 rotationAngle;
-        uint8 coreShape;            // 0 = Octagon, 1 = Hexagon, 2 = Dodecagon, 3 = Star
+        uint8 coreShape;                // 0 = Octagon, 1 = Hexagon, 2 = Dodecagon, 3 = Star
     }
 
-    /// @notice Calculates the exact continuous quadratic multiplier matching NARAEngineModelLib
-    /// @dev Formula: m(r) = 1.0 + 0.5r + 2.5r^2, where r = min(duration, 1 year) / 1 year.
+    /// @notice Calculates the base continuous quadratic lock multiplier matching NARAEngineModelLib
     function calculateMultiplierWad(uint64 createdEpoch, uint64 unlockEpoch, bool isEternal) public pure returns (uint256) {
         if (isEternal) return 4 * WAD;
         if (unlockEpoch <= createdEpoch) return WAD;
@@ -54,7 +56,53 @@ contract NARAArtCorePlateV4 {
 
         uint256 r = Math.mulDiv(uint256(duration), WAD, uint256(EPOCHS_PER_YEAR));
         uint256 r2 = Math.mulDiv(r, r, WAD);
-        return WAD + Math.mulDiv(0.5e18, r, WAD) + Math.mulDiv(2.5e18, r2, WAD); // Ranges from 1.00e18 to 4.00e18
+        return WAD + Math.mulDiv(0.5e18, r, WAD) + Math.mulDiv(2.5e18, r2, WAD); // 1.00e18 to 4.00e18
+    }
+
+    /// @notice Calculates comprehensive 1.00X to 10.00X multi-vector power metrics across Time, Staking Longevity, and Fleet Synergy
+    function calculateComprehensivePowerWad(
+        uint256 baseMultiplierWad,
+        uint256 ageInEpochs,
+        uint32 extendCount,
+        uint256 walletActiveSlots,
+        bool isEternal
+    ) public pure returns (uint256) {
+        if (isEternal) return MAX_POWER_MULTIPLIER_WAD;
+
+        uint256 powerWad = baseMultiplierWad;
+
+        // Vector 2: Aging & Extension Loyalty Boost (up to +3.00X)
+        if (ageInEpochs >= (EPOCHS_PER_YEAR * 3) || extendCount >= 4) {
+            powerWad += 3.0e18; // Ascension II Sovereign Boost
+        } else if (ageInEpochs >= (EPOCHS_PER_YEAR * 2) || extendCount >= 2) {
+            powerWad += 2.0e18; // Ascension I Supernova Boost
+        } else if (ageInEpochs >= 23360) {
+            powerWad += 1.5e18; // Tachyon Warp
+        } else if (ageInEpochs >= 11520) {
+            powerWad += 1.0e18; // Orbital Gyro
+        } else if (ageInEpochs >= 2880) {
+            powerWad += 0.5e18; // Circuit Ignition
+        }
+
+        // Vector 3: Fleet Grid Formation Synergy Boost (up to +3.00X)
+        if (walletActiveSlots >= 64) {
+            powerWad += 3.0e18; // Sovereign Master Grid
+        } else if (walletActiveSlots >= 32) {
+            powerWad += 2.0e18; // Galactic Cluster
+        } else if (walletActiveSlots >= 16) {
+            powerWad += 1.5e18; // Armada Fleet
+        } else if (walletActiveSlots >= 6) {
+            powerWad += 1.0e18; // Hexa Armada
+        } else if (walletActiveSlots >= 4) {
+            powerWad += 0.6e18; // Quad Squadron
+        } else if (walletActiveSlots >= 2) {
+            powerWad += 0.2e18; // Dual Strike
+        }
+
+        if (powerWad > MAX_POWER_MULTIPLIER_WAD) {
+            return MAX_POWER_MULTIPLIER_WAD;
+        }
+        return powerWad;
     }
 
     function formatMultiplier(uint256 mWad) public pure returns (string memory) {
@@ -83,19 +131,17 @@ contract NARAArtCorePlateV4 {
         bool isEternal
     ) public pure returns (ProgressionState memory p) {
         p.ageInEpochs = currentEpoch > createdEpoch ? uint256(currentEpoch - createdEpoch) : 0;
-        p.multiplierWad = calculateMultiplierWad(createdEpoch, unlockEpoch, isEternal);
-        p.multiplierLabel = formatMultiplier(p.multiplierWad);
+        p.baseMultiplierWad = calculateMultiplierWad(createdEpoch, unlockEpoch, isEternal);
+        p.totalPowerMultiplierWad = calculateComprehensivePowerWad(p.baseMultiplierWad, p.ageInEpochs, extendCount, walletActiveSlots, isEternal);
+        
+        p.multiplierLabel = formatMultiplier(p.baseMultiplierWad);
+        p.totalPowerLabel = formatMultiplier(p.totalPowerMultiplierWad);
 
-        // 1. Continuous Battery HUD mapping: 1.0X-4.0X mapped across 10 cells
-        uint256 cellProgress = Math.mulDiv(p.multiplierWad - WAD, 9, 3 * WAD);
+        // 1. Continuous Battery HUD mapping: 1.00X - 10.00X mapped across 10 cells (1 cell per 1.00X)
+        uint256 cellProgress = Math.mulDiv(p.totalPowerMultiplierWad - WAD, 9, 9 * WAD);
         p.chargedCells = uint8(1 + cellProgress);
-
-        // Aging adds bonus charge up to 10
-        uint8 ageBonus = uint8((p.ageInEpochs * 10) / EPOCHS_PER_YEAR);
-        if (p.chargedCells + ageBonus > 10 || isEternal) {
+        if (p.chargedCells > 10 || isEternal || p.totalPowerMultiplierWad >= MAX_POWER_MULTIPLIER_WAD) {
             p.chargedCells = 10;
-        } else {
-            p.chargedCells += ageBonus;
         }
 
         // 2. Realistic Calibrated Amount / Capital Depth Tier
@@ -120,16 +166,16 @@ contract NARAArtCorePlateV4 {
         if (isEternal || p.ageInEpochs >= EPOCHS_PER_YEAR) {
             p.rank = 10;
             p.rankTitle = "APEX VETERAN";
-        } else if (p.multiplierWad == 4 * WAD) {
+        } else if (p.baseMultiplierWad == 4 * WAD) {
             p.rank = 10;
             p.rankTitle = "1-YEAR HORIZON";
-        } else if (p.ageInEpochs >= 23360 || p.multiplierWad >= 2.75e18) {
+        } else if (p.ageInEpochs >= 23360 || p.baseMultiplierWad >= 2.75e18) {
             p.rank = 7;
             p.rankTitle = "TACHYON WARP";
-        } else if (p.ageInEpochs >= 11520 || p.multiplierWad >= 1.85e18) {
+        } else if (p.ageInEpochs >= 11520 || p.baseMultiplierWad >= 1.85e18) {
             p.rank = 5;
             p.rankTitle = "ORBITAL GYRO";
-        } else if (p.ageInEpochs >= 2880 || p.multiplierWad >= 1.25e18) {
+        } else if (p.ageInEpochs >= 2880 || p.baseMultiplierWad >= 1.25e18) {
             p.rank = 3;
             p.rankTitle = "CIRCUIT IGNITION";
         } else {
@@ -149,9 +195,13 @@ contract NARAArtCorePlateV4 {
             p.ascensionLabel = "STANDARD ERA";
         }
 
-        // 6. 6-Slot Fleet Grid Synergy
+        // 6. Fleet Grid Synergy Title
         if (walletActiveSlots >= 64) {
             p.fleetTitle = "FLEET 64/64: SOVEREIGN MASTER";
+        } else if (walletActiveSlots >= 32) {
+            p.fleetTitle = "FLEET 32/64: GALACTIC CLUSTER";
+        } else if (walletActiveSlots >= 16) {
+            p.fleetTitle = "FLEET 16/64: ARMADA FLEET";
         } else if (walletActiveSlots >= 6) {
             p.fleetTitle = "FLEET: HEXA ARMADA (+25%)";
         } else if (walletActiveSlots == 5) {
@@ -179,12 +229,10 @@ contract NARAArtCorePlateV4 {
         uint256 roll = rawRoll > luck ? rawRoll - luck : 0;
         uint256 naraWhole = uint256(amount) / 1e18;
 
-        // 100+ NARA Lucky Mint Bonus: 2X probability boost for 24K Gold and Damascus Meteorite
         uint256 damascusThreshold = (naraWhole >= 100) ? 40 : 20;
         uint256 goldThreshold = (naraWhole >= 100) ? 130 : 65;
 
         if (isEternal || roll < damascusThreshold) {
-            // Forged Damascus Meteorite (Apex Grail)
             return ChassisTheme({
                 name: "Forged Damascus Meteorite",
                 frameOuter: "url(#damascusFrame)",
@@ -200,7 +248,6 @@ contract NARAArtCorePlateV4 {
             });
         }
         if (roll < goldThreshold) {
-            // 24K Gilded Gold (Legendary)
             return ChassisTheme({
                 name: "24K Gilded Gold",
                 frameOuter: "url(#goldFrame)",
@@ -216,7 +263,6 @@ contract NARAArtCorePlateV4 {
             });
         }
         if (roll < 260) {
-            // Obsidian Stealth (Rare)
             return ChassisTheme({
                 name: "Obsidian Stealth",
                 frameOuter: "url(#obsidianFrame)",
@@ -232,7 +278,6 @@ contract NARAArtCorePlateV4 {
             });
         }
         if (roll < 580) {
-            // Cybernetic Emerald (Uncommon)
             return ChassisTheme({
                 name: "Cybernetic Emerald",
                 frameOuter: "url(#emeraldFrame)",
@@ -247,7 +292,6 @@ contract NARAArtCorePlateV4 {
                 hexGridColor: "rgba(0,255,136,0.05)"
             });
         }
-        // Titanium Slate (Common Baseline)
         return ChassisTheme({
             name: "Titanium Slate",
             frameOuter: "url(#titaniumFrame)",
@@ -296,11 +340,10 @@ contract NARAArtCorePlateV4 {
         return cells;
     }
 
-    function _renderYieldConduit(uint256 multiplierWad, string memory glowColor) internal pure returns (string memory) {
+    function _renderYieldConduit(uint256 totalPowerWad, string memory glowColor) internal pure returns (string memory) {
         string memory busbar = '<g transform="translate(472, 175)">';
-        uint256 activeSegments = Math.mulDiv(multiplierWad - WAD, 8, 2 * WAD);
+        uint256 activeSegments = Math.mulDiv(totalPowerWad - WAD, 8, 9 * WAD) + 1;
         if (activeSegments > 8) activeSegments = 8;
-        if (activeSegments == 0) activeSegments = 1;
 
         for (uint256 i = 0; i < 8; i++) {
             uint256 y = i * 32;
@@ -382,7 +425,7 @@ contract NARAArtCorePlateV4 {
             '<linearGradient id="emeraldFrame" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00FF88"/><stop offset="35%" stop-color="#083321"/><stop offset="100%" stop-color="#020D08"/></linearGradient>',
             '<linearGradient id="titaniumFrame" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#3A4659"/><stop offset="50%" stop-color="#181F2C"/><stop offset="100%" stop-color="#0B0E14"/></linearGradient>',
 
-            // Background Guilloche Hex Lattice Pattern
+            // Background Hex Lattice Pattern
             '<pattern id="hexGrid" width="24" height="24" patternUnits="userSpaceOnUse">',
             '<path d="M 12 0 L 24 6.9 L 24 20.7 L 12 27.6 L 0 20.7 L 0 6.9 Z" fill="none" stroke="', t.hexGridColor, '" stroke-width="0.75"/>',
             '</pattern>',
@@ -408,25 +451,25 @@ contract NARAArtCorePlateV4 {
             '<circle cx="350" cy="47" r="3" fill="', t.accentColor, '" filter="url(#glow)"/>',
             '<text x="358" y="51" fill="', t.accentColor, '" font-size="7.5" font-weight="bold">', p.fleetTitle, '</text>',
 
-            // 4. Alloy Header with Continuous Multiplier Badge
+            // 4. Alloy Header with Comprehensive Multi-Vector Multiplier Badge
             '<g transform="translate(36, 74)">',
             '<rect x="0" y="0" width="428" height="34" rx="8" fill="#0D1117" stroke="#21262D" stroke-width="1"/>',
             '<rect x="8" y="7" width="180" height="20" rx="4" fill="', t.badgeBg, '" stroke="', t.badgeText, '" stroke-width="1"/>',
             '<text x="14" y="21" fill="', t.badgeText, '" font-size="10" font-weight="bold">ALLOY: ', t.name, '</text>',
-            // Multiplier Badge
-            '<rect x="200" y="7" width="95" height="20" rx="4" fill="', (p.multiplierWad >= 2.5e18 ? t.glowColor : "#161B22"), '" stroke="', t.accentColor, '" stroke-width="1"/>',
-            '<text x="247" y="21" fill="', (p.multiplierWad >= 2.5e18 ? "#FFFFFF" : t.accentColor), '" font-size="9" font-weight="bold" text-anchor="middle">', p.multiplierLabel, ' BOOST</text>',
+            // Multi-Vector Power Badge (1.00X - 10.00X)
+            '<rect x="200" y="7" width="105" height="20" rx="4" fill="', (p.totalPowerMultiplierWad >= 4.0e18 ? t.glowColor : "#161B22"), '" stroke="', t.accentColor, '" stroke-width="1"/>',
+            '<text x="252" y="21" fill="', (p.totalPowerMultiplierWad >= 4.0e18 ? "#FFFFFF" : t.accentColor), '" font-size="9" font-weight="bold" text-anchor="middle">', p.totalPowerLabel, ' POWER</text>',
             '<text x="418" y="21" fill="#8B949E" font-size="9" font-weight="bold" text-anchor="end">', p.rankTitle, '</text>',
             '</g>',
 
-            // 5. Dynamic Swiss Chronometer Quantum Reactor (Scaled by Amount, Multiplier, Seed, and Ascensions)
+            // 5. Dynamic Swiss Chronometer Quantum Reactor
             _renderDynamicReactor(t, p),
 
-            // 6. Side Conduits (Left Armor Clamps + Right Yield Busbars)
+            // 6. Side Conduits
             _renderLeftArmor(p.amountTier, extendCount, t.accentColor),
-            _renderYieldConduit(p.multiplierWad, t.glowColor),
+            _renderYieldConduit(p.totalPowerMultiplierWad, t.glowColor),
 
-            // 7. Luxury Financial Instrument Panel
+            // 7. Financial Instrument Panel
             '<g transform="translate(36, 462)">',
             '<rect x="0" y="0" width="428" height="78" rx="10" fill="#090D14" stroke="#21262D" stroke-width="1"/>',
             // Pod 1: Locked Principal
@@ -470,7 +513,7 @@ contract NARAArtCorePlateV4 {
         return string.concat(
             '<g transform="translate(250, 285)">',
             '<g transform="rotate(', uint256(p.rotationAngle).toString(), ')">',
-            (p.multiplierWad >= 2.0e18 || p.amountTier >= 4)
+            (p.totalPowerMultiplierWad >= 4.0e18 || p.amountTier >= 4)
                 ? '<circle cx="0" cy="0" r="132" fill="none" stroke="#161B22" stroke-width="4" stroke-dasharray="6 11"/>'
                 : '',
             '<circle cx="0" cy="0" r="126" fill="none" stroke="', t.pinStripe, '" stroke-width="1" opacity="0.85"/>',
@@ -487,9 +530,9 @@ contract NARAArtCorePlateV4 {
             '<text x="-88" y="-88" fill="#484F58" font-size="7" text-anchor="middle">', unicode"315°", '</text>',
 
             '<g transform="rotate(', uint256(p.rotationAngle).toString(), ')">',
-            (p.multiplierWad >= 2.5e18)
+            (p.totalPowerMultiplierWad >= 6.0e18)
                 ? string.concat('<path d="M 0 -115 L 0 -85 M 0 115 L 0 85 M -115 0 L -85 0 M 115 0 L 85 0 M -81 -81 L -60 -60 M 81 81 L 60 60 M -81 81 L -60 60 M 81 -81 L 60 -60" stroke="', t.bracket, '" stroke-width="2.5"/>')
-                : (p.multiplierWad >= 1.5e18
+                : (p.totalPowerMultiplierWad >= 3.0e18
                     ? string.concat('<path d="M 0 -110 L 0 -80 M 0 110 L 0 80 M -110 0 L -80 0 M 110 0 L 80 0" stroke="', t.bracket, '" stroke-width="2"/>')
                     : '<path d="M 0 -95 L 0 -75 M 0 95 L 0 75" stroke="#21262D" stroke-width="1.5"/>'),
             '</g>',

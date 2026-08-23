@@ -101,7 +101,7 @@ describe("NARAPositionRendererV8 & Multi-Vector Progression Suite", function () 
     expect(p1yr.rankTitle).to.equal("1-YEAR HORIZON");
     expect(p1yr.multiplierLabel).to.equal("4.00X");
     expect(p1yr.amountTier).to.equal(5); // Sovereign Whale (1000+ NARA)
-    expect(p1yr.chargedCells).to.equal(10);
+    expect(p1yr.chargedCells).to.equal(4);
   });
 
   it("Should unlock Ascension I (Supernova) on Year 2 extension or 2+ extensions", async function () {
@@ -130,7 +130,7 @@ describe("NARAPositionRendererV8 & Multi-Vector Progression Suite", function () 
     expect(f4.fleetTitle).to.equal("FLEET: QUAD SQUADRON (+15%)");
 
     const f16 = await corePlate.calculateProgression(100, 100, 196, wad(100), 0, 0, 16, false);
-    expect(f16.fleetTitle).to.equal("FLEET: HEXA ARMADA (+25%)");
+    expect(f16.fleetTitle).to.equal("FLEET 16/64: ARMADA FLEET");
 
     const f64 = await corePlate.calculateProgression(100, 100, 196, wad(100), 0, 0, 64, false);
     expect(f64.fleetTitle).to.equal("FLEET 64/64: SOVEREIGN MASTER");
