@@ -30,7 +30,7 @@ contract NARAArtMetadataV4 {
     function alloyName(uint256 seed, bool isEternal) public pure returns (string memory) {
         if (isEternal) return "24K Gilded Gold (Sovereign Anchor)";
         uint256 roll = seed % 1000;
-        if (roll < 15) return "Prismatic Holo Foil (Ultra-Grail)";
+        if (roll < 15) return "Forged Damascus Meteorite (Apex Grail)";
         if (roll < 55) return "24K Gilded Gold (Legendary)";
         if (roll < 200) return "Obsidian Stealth (Rare)";
         if (roll < 550) return "Cybernetic Emerald (Uncommon)";

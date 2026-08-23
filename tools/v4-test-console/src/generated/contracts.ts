@@ -20,10 +20,10 @@ export const DEPLOYMENT = {
   "poolFee": 3000,
   "tickSpacing": 60,
   "positionNft": "0x01D3AC0acda01FE5D6788fA0B4062de94C8DE52b",
-  "positionRenderer": "0x8567f3A8AE361E87d9441E4AA8B7B55ACBe93159",
+  "positionRenderer": "0x8312B3599d90F01386B2fBb5666896B762D3D11A",
   "positionAccountImpl": "0x3a8c9cA4f95E94751774810B33caF01bb992A55F",
-  "artMetadata": "0x0787167D575Ae7e0EDe15d77f8924Ac86597D72a",
-  "artCorePlate": "0x21024A9be0380d710161Bf7329E22A8cfFFAf19b",
+  "artMetadata": "0x02A5D2fE82C85fC0Cfa8791AF9aaCF175fEd1427",
+  "artCorePlate": "0x6f25241Fe5a3B4ED1A286EEcBeaCCe0046feAebD",
   "codeHashes": {
     "engine": "0x82e3d4e4558b2fafb29d3d9ffb9ac78076b9a4bcd03483bea6741d93bfcb11ee",
     "nara": "0x62ef7f0bc66a248bd2f3ceb829b785ab8a02029b38ed1645dbac19dfd404d5fd",
