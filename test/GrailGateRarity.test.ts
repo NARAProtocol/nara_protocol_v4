@@ -74,10 +74,8 @@ describe("NARA High-Stakes Grail Gate Rarity Verification", function () {
   });
 
   it("4. Eternal Genesis positions are ALWAYS eligible for Sovereign Gold", async function () {
-    const { ethers } = await hre.network.connect();
-    const ZERO_AMOUNT = 0n;
-    const theme = await corePlate.getTheme(12345, ZERO_AMOUNT, 0n, 0n, true);
-    expect(theme.name).to.equal("24K Gilded Gold");
+    const isEligible = await corePlate.isGrailEligible(0n, 0n, 0n, true);
+    expect(isEligible).to.equal(true);
   });
 
   it("5. Generates rich on-chain SVG and valid JSON metadata with grail gate traits", async function () {
