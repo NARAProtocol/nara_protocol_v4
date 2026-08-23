@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { formatEther, formatUnits, parseEther, type Address } from "viem";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 import {
   BASE_CHAIN_ID,
   DEPLOYMENT,
@@ -202,6 +203,7 @@ export function NftTab(props: NftTabProps = {}) {
   const [deckReport, setDeckReport] = useState<FleetDeckLensReport | null>(null);
   const [naraBalance, setNaraBalance] = useState<bigint>(0n);
   const [naraAllowance, setNaraAllowance] = useState<bigint>(0n);
+  const [dynamicLockFeeWei, setDynamicLockFeeWei] = useState<bigint>(props.lockFeeWei || 1000000000000n);
   const [loading, setLoading] = useState(false);
   const [showStakingModal, setShowStakingModal] = useState(false);
 
@@ -259,14 +261,28 @@ export function NftTab(props: NftTabProps = {}) {
       setLoading(true);
       setError(null);
 
-      // 1. Current Epoch
-      const epochStateRes = await client.readContract({
-        address: DEPLOYMENT.engine,
-        abi: engineAbi,
-        functionName: "epochState",
-      });
-      const epoch = (epochStateRes as { epoch: bigint }).epoch;
-      setCurrentEpoch(epoch);
+      // 1. Current Epoch & Engine Fees
+      try {
+        const [epochStateRes, engineLockFee] = await Promise.all([
+          client.readContract({
+            address: DEPLOYMENT.engine,
+            abi: engineAbi,
+            functionName: "epochState",
+          }),
+          client.readContract({
+            address: DEPLOYMENT.engine,
+            abi: engineAbi,
+            functionName: "lockFeeWei",
+          }),
+        ]);
+        const epoch = (epochStateRes as { epoch: bigint }).epoch;
+        setCurrentEpoch(epoch);
+        if (typeof engineLockFee === "bigint") {
+          setDynamicLockFeeWei(engineLockFee);
+        }
+      } catch (err) {
+        console.warn("Could not query epoch/fee state:", err);
+      }
 
       // 2. User data
       if (address) {
@@ -440,45 +456,57 @@ export function NftTab(props: NftTabProps = {}) {
 
   // Actions
   const handleApprove = async () => {
-    if (!address) return;
+    if (!address) {
+      setError("Please connect your wallet first.");
+      return;
+    }
     try {
       setActionBusy("approve");
       setError(null);
+      setActionSuccess(null);
       const hash = await writeContractAsync({
         address: DEPLOYMENT.nara,
         abi: erc20Abi,
         functionName: "approve",
         args: [DEPLOYMENT.positionNft, parseEther("1000000000")],
       });
-      setActionSuccess(`Approval broadcast: ${hash.slice(0, 10)}…`);
+      setActionSuccess(`Approval submitted: ${hash.slice(0, 10)}…`);
       await fetchState();
-    } catch (err) {
-      setError((err as Error).message);
+    } catch (err: any) {
+      console.error("Approve error:", err);
+      setError(err?.shortMessage || err?.message || "Approval failed");
     } finally {
       setActionBusy(null);
     }
   };
 
   const handleMintAndLock = async () => {
-    if (!address) return;
+    if (!address) {
+      setError("Please connect your wallet first.");
+      return;
+    }
     try {
       setActionBusy("mint");
       setError(null);
-      const amt = parseEther(lockAmount);
+      setActionSuccess(null);
+      const amt = parseEther(lockAmount || "0");
       const durationEpochs = BigInt(selectedHorizon.epochs);
+      const feeWei = props.lockFeeWei || dynamicLockFeeWei || 1000000000000n;
 
       const hash = await writeContractAsync({
         address: DEPLOYMENT.positionNft,
         abi: positionNftAbi,
         functionName: "mintAndLockFor",
         args: [address, amt, durationEpochs, 0n],
+        value: feeWei,
       });
 
-      setActionSuccess(`Position created. Tx: ${hash.slice(0, 10)}…`);
+      setActionSuccess(`Position created! Tx: ${hash.slice(0, 10)}…`);
       setShowStakingModal(false);
       await fetchState();
-    } catch (err) {
-      setError((err as Error).message);
+    } catch (err: any) {
+      console.error("Mint error:", err);
+      setError(err?.shortMessage || err?.message || "Mint and lock failed");
     } finally {
       setActionBusy(null);
     }
@@ -497,8 +525,8 @@ export function NftTab(props: NftTabProps = {}) {
       });
       setActionSuccess(`Claim submitted: ${hash.slice(0, 10)}…`);
       await fetchState();
-    } catch (err) {
-      setError((err as Error).message);
+    } catch (err: any) {
+      setError(err?.shortMessage || err?.message || "Claim failed");
     } finally {
       setActionBusy(null);
     }
@@ -521,8 +549,8 @@ export function NftTab(props: NftTabProps = {}) {
       }
       setActionSuccess("Distributions claimed.");
       await fetchState();
-    } catch (err) {
-      setError((err as Error).message);
+    } catch (err: any) {
+      setError(err?.shortMessage || err?.message || "Claim all failed");
     } finally {
       setActionBusy(null);
     }
@@ -541,8 +569,8 @@ export function NftTab(props: NftTabProps = {}) {
       });
       setActionSuccess(`Duration extended: ${hash.slice(0, 10)}…`);
       await fetchState();
-    } catch (err) {
-      setError((err as Error).message);
+    } catch (err: any) {
+      setError(err?.shortMessage || err?.message || "Extend failed");
     } finally {
       setActionBusy(null);
     }
@@ -566,8 +594,8 @@ export function NftTab(props: NftTabProps = {}) {
       });
       setActionSuccess(`Position unlocked: ${hash.slice(0, 10)}…`);
       await fetchState();
-    } catch (err) {
-      setError((err as Error).message);
+    } catch (err: any) {
+      setError(err?.shortMessage || err?.message || "Unlock failed");
     } finally {
       setActionBusy(null);
     }
@@ -996,19 +1024,30 @@ export function NftTab(props: NftTabProps = {}) {
                     </div>
                     <div className="receipt-divider" />
                     <div className="receipt-row total">
-                      <span>Protocol Fee</span>
-                      <span>$1.00 USD</span>
+                      <span>
+                        Protocol Lock Fee
+                        <InfoCircle
+                          title="Engine Execution Fee"
+                          content="Fixed protocol execution fee required by NARAEngine.sol (0.000001 ETH)."
+                        />
+                      </span>
+                      <span>0.000001 ETH</span>
                     </div>
                   </div>
 
-                  {needsApproval ? (
+                  {!isConnected ? (
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", marginTop: "16px" }}>
+                      <span style={{ fontSize: "11px", color: "#8b949e", fontFamily: "var(--mono)" }}>Connect wallet to create lock</span>
+                      <ConnectButton />
+                    </div>
+                  ) : needsApproval ? (
                     <button
                       className="luxury-primary-action-btn"
                       type="button"
-                      disabled={actionBusy !== null}
+                      disabled={actionBusy !== null || parsedAmount === 0n}
                       onClick={handleApprove}
                     >
-                      {actionBusy === "approve" ? "Approving…" : "Approve NARA ➔"}
+                      {actionBusy === "approve" ? "Approving in Wallet…" : "Approve NARA ➔"}
                     </button>
                   ) : (
                     <button
@@ -1017,7 +1056,7 @@ export function NftTab(props: NftTabProps = {}) {
                       disabled={actionBusy !== null || parsedAmount === 0n}
                       onClick={handleMintAndLock}
                     >
-                      {actionBusy === "mint" ? "Confirming…" : "Confirm Lock ➔"}
+                      {actionBusy === "mint" ? "Confirming in Wallet…" : "Confirm Lock ➔"}
                     </button>
                   )}
                 </div>
