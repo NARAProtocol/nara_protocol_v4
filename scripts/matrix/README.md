@@ -324,10 +324,26 @@ fresher block, rebuild protection, simulate again — never loosen the guard.
 | **2 — BUY + HEDGE** | `scripts\matrix\start-tenmin-buys-with-hedge.ps1` | armed in execute mode, dry-run in `-ReadOnly` |
 
 Both launchers fail fast with the exact missing-confirmation instruction when
-production gates are not satisfied, and support `-Count <n>` for resume and
+production gates are not satisfied, and support `-Count <n>` for a bounded run and
 `-ReadOnly` for preflight/dry-run. The underlying scripts also work directly
 via `npx tsx ...` exactly as documented below (`--hedge` is the master switch
 on the hedge runner: omit it and it is a pure buy matrix).
+
+The buy-only launcher also supports `-DelaySeconds 3`. This enforces at least
+three seconds between actual submissions while retaining the strict distinct-
+later-block check; canonical receipt confirmation can make actual spacing
+longer. It has a separate typed gate and evidence identity, so the six-second
+confirmation cannot authorize it:
+
+```powershell
+$env:V4_LIVE_TEN_MIN_BUY_CONFIRMATION='BUY_NARA_100_X_11_USDC_3_SECOND_MINIMUM'
+.\scripts\matrix\start-tenmin-buys-only.ps1 -Count 100 -DelaySeconds 3
+```
+
+For the prepared run, double-click `RUN-NARA-100-BUY-MATRIX.cmd` in the FIELD
+Token folder and approve the single review dialog. It loads the existing local
+environment without displaying secrets, blocks duplicate launchers, runs the
+full preflight, and then starts the exact 100-buy mode.
 
 ### Instant mode (`--instant` / `-Instant`)
 
@@ -363,9 +379,9 @@ Hard rules baked into the scripts (do not bypass):
 
 - **Read-only unless both gates present.** No `--execute`, or wrong confirmation
   string ⇒ throws before anything stateful.
-- **Never print or infer keys.** `PRIVATE_KEY` comes from `.env` only; the
-  preflight prints `"loaded locally; never displayed"`. Signer must equal
-  `V4_DEPLOYER` or it aborts.
+- **Never print or infer keys.** Read-only preflight does not load a private
+  key. Execute mode loads it locally, never displays it, and requires its signer
+  to equal `V4_DEPLOYER`.
 - **Immutable pins.** Addresses, pool id, LP token id, fee/tickSpacing, runtime
   code hashes, depth, and curve are asserted exactly; any drift aborts.
 - **Budget guard.** Wallet must hold `count × 11 USDC` before approvals.
@@ -375,23 +391,29 @@ Hard rules baked into the scripts (do not bypass):
   after the completed 2026-08-24 runs.
 - **Distinct-later-block enforcement.** A buy mined in a block ≤ the previous
   trade's block fails the run.
+- **Full gas budget.** Preflight covers two approvals, every configured trade,
+  two cleanup transactions, buffered gas units, a base-fee multiplier, and an
+  explicit per-transaction L1 fee buffer.
+- **Minimum submission interval.** Non-default cadence is enforced between
+  actual submissions; slow confirmations may make it longer, never shorter.
 - **Allowance hygiene.** Approvals are sized to the exact run budget and revoked
   in `finally`; clean-zero allowances are asserted in preflight.
 
-### Resume procedure (partial-run recovery)
+### Partial-run recovery
 
 If a run aborts at trade N of C:
 
-1. Check `deployments/v4-live-buy-tax-tenmin-100x11-latest.json` — `status`,
-   completed `trades[]`, `error`, `cleanup` are always persisted.
+1. Resolve the terminal latest-pointer JSON, then inspect its immutable run
+   evidence file for `status`, completed `trades[]`, `error`, and `cleanup`.
 2. Confirm allowances were cleaned (preflight asserts zero anyway).
-3. Relaunch with `V4_TEN_MIN_BUY_COUNT=<remaining>` and the same confirmation
-   env. The schedule restarts cleanly; evidence accumulates across runs.
+3. Do not automatically retry. A reviewed follow-on run uses the remaining
+   count, a newly count/cadence-bound confirmation, and a new immutable run ID.
 
 ### Evidence locations
 
-- Per-run evidence JSON: `deployments/v4-live-buy-tax-tenmin-100x11-latest.json`
-  (overwritten per invocation — archive before re-running if you need history).
+- Every run writes a unique atomic evidence JSON. The schedule-specific
+  `...-latest.json` contains only a terminal pointer and never replaces prior
+  run evidence.
 - Console log lines are JSON per trade (`verifiedTax`, tx hash, block, fee,
   reconstruction, balances) plus the final `{ status, outputPath }`.
 

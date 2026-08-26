@@ -1,9 +1,10 @@
 /**
- * Executes the approved live Base ten-minute buy-tax matrix:
+ * Executes the approved live Base buy-tax matrix:
  * 100 separate NARA buys of exactly 11 USDC each (1,100 USDC gross total),
- * one transaction per DISTINCT later block, paced on an absolute schedule of
- * DELAY_SECONDS between target timestamps so the run spans roughly ten
- * minutes (last buy fires at ~(COUNT-1) x 6s = ~9m54s).
+ * one transaction per DISTINCT later block, with at least DELAY_SECONDS
+ * between actual submission attempts. The evidenced default is six seconds;
+ * an explicitly confirmed three-second minimum is also supported. Canonical
+ * confirmation and verification work may make actual spacing longer.
  *
  * Unlike the same-block matrix, per-block flow pressure resets between buys,
  * so each isolated 11-USDC buy is expected to land in the BASE tier
@@ -12,15 +13,15 @@
  * buys inside one of our blocks would raise that block's marginal fee; the
  * per-trade verifier reconstructs the exact due fee from block logs instead
  * of assuming isolation, and the vault delta must equal the sum of event fees.
- * If per-trade verification exceeds the schedule gap, buys simply run
- * back-to-back without sleeping, and the evidence records actual spacing.
+ * If per-trade verification exceeds the minimum gap, the next buy proceeds
+ * without an additional delay; elapsed time is never recovered by catch-up.
  *
  * Default mode is read-only. Production execution requires both --execute and
- * V4_LIVE_TEN_MIN_BUY_CONFIRMATION=BUY_NARA_100_X_11_USDC_TEN_MIN.
+ * the schedule-specific V4_LIVE_TEN_MIN_BUY_CONFIRMATION printed on failure.
  */
 import { ethers } from "ethers";
 import * as dotenv from "dotenv";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -28,21 +29,32 @@ import {
   requiredBaseRpcUrl,
   requiredEnv,
 } from "../lib/v4LiveConfig.js";
+import { resolveLiveBuyMatrixSchedule } from "./liveBuyMatrixSchedule.js";
+import {
+  calculateLiveBuyMatrixGasBudget,
+  LIVE_BUY_GAS_ASSUMPTIONS,
+} from "./liveBuyMatrixGasBudget.js";
+import {
+  atomicWriteJson,
+  createLiveBuyMatrixEvidencePaths,
+  latestPointerForTerminalRun,
+  minimumSubmissionWaitMs,
+  resolveLiveBuyMatrixTerminalOutcome,
+  secondsBetweenSubmissions,
+} from "./liveBuyMatrixRuntime.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const repoRoot = resolve(__dirname, "..", "..");
 dotenv.config({ path: resolve(repoRoot, ".env"), quiet: true });
 
-const EXECUTION_CONFIRMATION = "BUY_NARA_100_X_11_USDC_TEN_MIN";
 const BASE_CHAIN_ID = 8453n;
-// Count may be overridden for RESUME runs (e.g. V4_TEN_MIN_BUY_COUNT=97)
-// after an earlier partial run aborted safely mid-matrix.
-const parsedCount = Number(process.env.V4_TEN_MIN_BUY_COUNT ?? 100);
-if (!Number.isInteger(parsedCount) || parsedCount < 1 || parsedCount > 1_000) {
-  throw new Error("V4_TEN_MIN_BUY_COUNT must be an integer between 1 and 1000");
-}
-const STAGGERED_BUY_COUNT = parsedCount;
+const schedule = resolveLiveBuyMatrixSchedule({
+  count: process.env.V4_TEN_MIN_BUY_COUNT,
+  delaySeconds: process.env.V4_BUY_MATRIX_DELAY_SECONDS,
+});
+const EXECUTION_CONFIRMATION = schedule.executionConfirmation;
+const STAGGERED_BUY_COUNT = schedule.count;
 const STAGGERED_BUY_USDC = 11n * 10n ** 6n;
 const STAGGERED_BUY_TOTAL_USDC =
   BigInt(STAGGERED_BUY_COUNT) * STAGGERED_BUY_USDC;
@@ -51,7 +63,7 @@ const STAGGERED_BUY_TOTAL_USDC =
 export const STAGGERED_EXPECTED_PER_BUY_FEE_USDC = 330_000n;
 export const STAGGERED_EXPECTED_BASELINE_TOTAL_USDC =
   BigInt(STAGGERED_BUY_COUNT) * STAGGERED_EXPECTED_PER_BUY_FEE_USDC;
-const DELAY_SECONDS = 6;
+const DELAY_SECONDS = schedule.delaySeconds;
 const OUTPUT_TOLERANCE_BPS = 1_000n;
 const BPS = 10_000n;
 const V4_SWAP = 0x10;
@@ -143,7 +155,10 @@ type TradeEvidence = {
   transactionHash: string;
   blockNumber: number;
   blockHash: string;
-  secondsSincePrevious: number | null;
+  submittedAt: string;
+  receiptBlockTimestamp: number;
+  secondsSincePreviousSubmission: number | null;
+  receiptBlockDelta: number | null;
   hookFeeUsdc: string;
   terminalFeeBps: string;
   priorSameBlockFlowUsdc: string;
@@ -307,10 +322,17 @@ async function sendWithMargin(
   provider: ethers.Provider,
   label: string,
   estimate: () => Promise<bigint>,
-  send: (gasLimit: bigint) => Promise<ethers.ContractTransactionResponse>
+  send: (gasLimit: bigint) => Promise<ethers.ContractTransactionResponse>,
+  submission?: {
+    before?: () => Promise<void>;
+    recorded?: (submittedAtMs: number) => void;
+  }
 ): Promise<ethers.TransactionReceipt> {
   const gas = await estimate();
+  if (submission?.before) await submission.before();
+  const submittedAtMs = Date.now();
   const transaction = await send((gas * 120n + 99n) / 100n);
+  submission?.recorded?.(submittedAtMs);
   console.log(`${label}: ${transaction.hash}`);
   return canonicalReceipt(provider, transaction);
 }
@@ -333,9 +355,11 @@ async function main(): Promise<void> {
     staticNetwork: true,
     batchMaxCount: 1,
   });
-  const wallet = new ethers.Wallet(requiredEnv("PRIVATE_KEY"), provider);
   const expectedWallet = ethers.getAddress(requiredEnv("V4_DEPLOYER"));
-  if (wallet.address.toLowerCase() !== expectedWallet.toLowerCase()) {
+  const wallet = execute
+    ? new ethers.Wallet(requiredEnv("PRIVATE_KEY"), provider)
+    : null;
+  if (wallet && wallet.address.toLowerCase() !== expectedWallet.toLowerCase()) {
     throw new Error(
       `PRIVATE_KEY signer ${wallet.address} does not match V4_DEPLOYER ${expectedWallet}`
     );
@@ -364,13 +388,18 @@ async function main(): Promise<void> {
     );
   }
 
-  const usdc = new ethers.Contract(config.base, ERC20_ABI, wallet);
-  const nara = new ethers.Contract(config.token, ERC20_ABI, wallet);
-  const permit2 = new ethers.Contract(config.permit2, PERMIT2_ABI, wallet);
+  const contractRunner = wallet ?? provider;
+  const usdc = new ethers.Contract(config.base, ERC20_ABI, contractRunner);
+  const nara = new ethers.Contract(config.token, ERC20_ABI, contractRunner);
+  const permit2 = new ethers.Contract(
+    config.permit2,
+    PERMIT2_ABI,
+    contractRunner
+  );
   const router = new ethers.Contract(
     config.universalRouter,
     ROUTER_ABI,
-    wallet
+    contractRunner
   );
   const hook = new ethers.Contract(config.hook, HOOK_ABI, provider);
   const vault = new ethers.Contract(config.vault, VAULT_ABI, provider);
@@ -477,17 +506,17 @@ async function main(): Promise<void> {
     hook.buyCurve({ blockTag: preflightBlock.number }) as Promise<
       readonly bigint[]
     >,
-    usdc.balanceOf(wallet.address, {
+    usdc.balanceOf(expectedWallet, {
       blockTag: preflightBlock.number,
     }) as Promise<bigint>,
-    nara.balanceOf(wallet.address, {
+    nara.balanceOf(expectedWallet, {
       blockTag: preflightBlock.number,
     }) as Promise<bigint>,
-    provider.getBalance(wallet.address, preflightBlock.number),
-    usdc.allowance(wallet.address, config.permit2, {
+    provider.getBalance(expectedWallet, preflightBlock.number),
+    usdc.allowance(expectedWallet, config.permit2, {
       blockTag: preflightBlock.number,
     }) as Promise<bigint>,
-    permit2.allowance(wallet.address, config.base, config.universalRouter, {
+    permit2.allowance(expectedWallet, config.base, config.universalRouter, {
       blockTag: preflightBlock.number,
     }) as Promise<[bigint, bigint, bigint]>,
     vault.totalBaseFeeRecorded({
@@ -524,8 +553,31 @@ async function main(): Promise<void> {
         6
       )} USDC ten-minute budget`
     );
-  if (ethBalance < ethers.parseEther("0.001"))
-    throw new Error("Wallet has less than the 0.001 ETH gas floor");
+  const gasBudget = calculateLiveBuyMatrixGasBudget(
+    preflightBlock.baseFeePerGas,
+    STAGGERED_BUY_COUNT
+  );
+  if (ethBalance < gasBudget.requiredEthWei) {
+    throw new Error(
+      `Insufficient ETH for modeled full Matrix gas budget: available=${ethers.formatEther(
+        ethBalance
+      )} required=${ethers.formatEther(
+        gasBudget.requiredEthWei
+      )} ETH assumptions=${JSON.stringify({
+        approvals: gasBudget.approvalTransactionCount,
+        trades: gasBudget.tradeTransactionCount,
+        cleanup: gasBudget.cleanupTransactionCount,
+        observedBaseFeePerGasWei: gasBudget.observedBaseFeePerGasWei.toString(),
+        baseFeeFloorWei: gasBudget.baseFeeFloorWei.toString(),
+        gasPriceMultiplierBps:
+          LIVE_BUY_GAS_ASSUMPTIONS.gasPriceMultiplierBps.toString(),
+        bufferedGasUnits: gasBudget.bufferedGasUnits.toString(),
+        modeledGasPriceWei: gasBudget.modeledGasPriceWei.toString(),
+        l1EthBufferPerTransactionWei:
+          gasBudget.l1EthBufferPerTransactionWei.toString(),
+      })}`
+    );
+  }
   if (erc20AllowanceBefore !== 0n || permit2AllowanceBefore[0] !== 0n) {
     throw new Error(
       "Expected clean zero USDC allowances before the staggered matrix"
@@ -556,8 +608,10 @@ async function main(): Promise<void> {
   const preflight = {
     mode: execute ? "EXECUTE" : "READ_ONLY",
     chainId: network.chainId.toString(),
-    wallet: wallet.address,
-    privateKey: "loaded locally; never displayed",
+    wallet: expectedWallet,
+    signer: execute
+      ? "loaded locally and matched to V4_DEPLOYER; never displayed"
+      : "not loaded in read-only mode",
     transactionCount: STAGGERED_BUY_COUNT,
     amountPerBuyUsdc: ethers.formatUnits(STAGGERED_BUY_USDC, 6),
     totalUsdc: ethers.formatUnits(STAGGERED_BUY_TOTAL_USDC, 6),
@@ -578,6 +632,31 @@ async function main(): Promise<void> {
     usdcBalance: ethers.formatUnits(usdcBeforeAll, 6),
     naraBalance: ethers.formatUnits(naraBeforeAll, 18),
     ethBalance: ethers.formatEther(ethBalance),
+    requiredEthForModeledGas: ethers.formatEther(gasBudget.requiredEthWei),
+    gasBudgetAssumptions: {
+      approvalTransactions: gasBudget.approvalTransactionCount,
+      tradeTransactions: gasBudget.tradeTransactionCount,
+      cleanupTransactions: gasBudget.cleanupTransactionCount,
+      totalTransactions: gasBudget.totalTransactionCount,
+      observedBaseFeePerGasWei: gasBudget.observedBaseFeePerGasWei.toString(),
+      baseFeeFloorWei: gasBudget.baseFeeFloorWei.toString(),
+      gasPriceMultiplierBps:
+        LIVE_BUY_GAS_ASSUMPTIONS.gasPriceMultiplierBps.toString(),
+      modeledGasPriceWei: gasBudget.modeledGasPriceWei.toString(),
+      approvalGasUnitsPerTransaction:
+        LIVE_BUY_GAS_ASSUMPTIONS.approvalGasUnitsPerTransaction.toString(),
+      tradeGasUnitsPerTransaction:
+        LIVE_BUY_GAS_ASSUMPTIONS.tradeGasUnitsPerTransaction.toString(),
+      cleanupGasUnitsPerTransaction:
+        LIVE_BUY_GAS_ASSUMPTIONS.cleanupGasUnitsPerTransaction.toString(),
+      gasUnitsBufferBps: gasBudget.gasUnitsBufferBps.toString(),
+      unbufferedGasUnits: gasBudget.unbufferedGasUnits.toString(),
+      bufferedGasUnits: gasBudget.bufferedGasUnits.toString(),
+      executionGasWei: gasBudget.executionGasWei.toString(),
+      l1EthBufferPerTransactionWei:
+        gasBudget.l1EthBufferPerTransactionWei.toString(),
+      totalL1EthBufferWei: gasBudget.totalL1EthBufferWei.toString(),
+    },
     preflightBlock: preflightBlock.number,
     preflightBlockHash: preflightBlock.hash,
     poolId: config.poolId,
@@ -591,8 +670,10 @@ async function main(): Promise<void> {
   };
   console.log(JSON.stringify(preflight, null, 2));
   if (!execute) return;
+  if (!wallet) throw new Error("Execute mode signer was not initialized");
 
   const report: {
+    runId: string;
     status: string;
     startedAt: string;
     finishedAt?: string;
@@ -600,9 +681,15 @@ async function main(): Promise<void> {
     approvalTransactions: string[];
     trades: TradeEvidence[];
     error?: string;
-    cleanup?: Record<string, string>;
+    cleanup?: {
+      transactions: Record<string, string>;
+      errors: string[];
+      completed: boolean;
+    };
+    latestPointerError?: string;
     totals?: Record<string, unknown>;
   } = {
+    runId: "",
     status: "RUNNING",
     startedAt: new Date().toISOString(),
     preflight,
@@ -610,16 +697,21 @@ async function main(): Promise<void> {
     trades: [],
   };
   const outputDir = resolve(repoRoot, "deployments");
-  if (!existsSync(outputDir)) mkdirSync(outputDir, { recursive: true });
-  const outputPath = resolve(
+  const evidencePaths = createLiveBuyMatrixEvidencePaths(
     outputDir,
-    "v4-live-buy-tax-tenmin-100x11-latest.json"
+    schedule.evidenceLabel,
+    new Date(report.startedAt)
   );
-  const persist = () =>
-    writeFileSync(outputPath, `${JSON.stringify(report, null, 2)}\n`);
+  if (existsSync(evidencePaths.runPath)) {
+    throw new Error("Unique Matrix evidence path already exists");
+  }
+  report.runId = evidencePaths.runId;
+  const outputPath = evidencePaths.runPath;
+  const persist = () => atomicWriteJson(outputPath, report);
   persist();
 
   let sequenceError: unknown;
+  let sequenceFailed = false;
   try {
     const approval = await sendWithMargin(
       provider,
@@ -656,7 +748,7 @@ async function main(): Promise<void> {
     persist();
 
     let previousTradeBlock = 0;
-    let previousTradeTime: number | null = null;
+    let previousSubmittedAtMs: number | null = null;
     const hookInterface = new ethers.Interface(HOOK_ABI);
     const vaultInterface = new ethers.Interface(VAULT_ABI);
     const hookTopic = hookInterface.getEvent("PoolFeeTaken")?.topicHash;
@@ -665,19 +757,16 @@ async function main(): Promise<void> {
     if (!hookTopic || !vaultTopic || !transferTopic)
       throw new Error("Required event topic is missing");
 
-    // Absolute schedule: buy N targets start + (N-1) x DELAY_SECONDS. If a
-    // verification cycle overruns its slot, the next buy fires immediately
-    // (still enforced into a distinct later block) instead of drifting.
-    const intervalMs = DELAY_SECONDS * 1_000;
-    const runStartedAtMs = Date.now();
-
     for (let sequence = 1; sequence <= STAGGERED_BUY_COUNT; sequence += 1) {
-      if (sequence > 1) {
-        const targetMs = runStartedAtMs + (sequence - 1) * intervalMs;
-        const waitMs = targetMs - Date.now();
-        if (waitMs > 0) await delay(waitMs);
-      }
-      const startedAtMs = Date.now();
+      // Pace from the previous actual submission, never from an absolute
+      // schedule. Slow confirmation/verification therefore cannot create a
+      // catch-up burst.
+      const initialWaitMs = minimumSubmissionWaitMs(
+        previousSubmittedAtMs,
+        Date.now(),
+        DELAY_SECONDS
+      );
+      if (initialWaitMs > 0) await delay(initialWaitMs);
       let latestBlock = await provider.getBlock("latest");
       while (!latestBlock || latestBlock.number <= previousTradeBlock) {
         await delay(1_000);
@@ -800,6 +889,9 @@ async function main(): Promise<void> {
           blockTag: latestBlock.number,
         }) as Promise<bigint>,
       ]);
+      const priorSubmittedAtMs = previousSubmittedAtMs;
+      let submittedAtMs: number | null = null;
+      let secondsSincePreviousSubmission: number | null = null;
       const receipt = await sendWithMargin(
         provider,
         `Buy ${sequence}/${STAGGERED_BUY_COUNT} (${ethers.formatUnits(
@@ -808,22 +900,52 @@ async function main(): Promise<void> {
         )} USDC)`,
         () => router.execute.estimateGas(commands, [v4Input], deadline),
         (gasLimit) =>
-          router.execute(commands, [v4Input], deadline, { gasLimit })
+          router.execute(commands, [v4Input], deadline, { gasLimit }),
+        {
+          before: async () => {
+            const waitMs = minimumSubmissionWaitMs(
+              priorSubmittedAtMs,
+              Date.now(),
+              DELAY_SECONDS
+            );
+            if (waitMs > 0) await delay(waitMs);
+          },
+          recorded: (actualSubmittedAtMs) => {
+            submittedAtMs = actualSubmittedAtMs;
+            secondsSincePreviousSubmission = secondsBetweenSubmissions(
+              priorSubmittedAtMs,
+              actualSubmittedAtMs
+            );
+            previousSubmittedAtMs = actualSubmittedAtMs;
+          },
+        }
       );
+      if (submittedAtMs === null) {
+        throw new Error(
+          `Buy ${sequence} submission timestamp was not recorded`
+        );
+      }
+      if (
+        secondsSincePreviousSubmission !== null &&
+        secondsSincePreviousSubmission < DELAY_SECONDS
+      ) {
+        throw new Error(
+          `Buy ${sequence} was submitted before the minimum delay elapsed`
+        );
+      }
       if (receipt.blockNumber <= previousTradeBlock)
         throw new Error(
           `Buy ${sequence} was not mined in a distinct later block`
         );
-      previousTradeBlock = receipt.blockNumber;
-      const secondsSincePrevious =
-        previousTradeTime === null
+      const receiptBlockDelta =
+        previousTradeBlock === 0
           ? null
-          : Math.round((startedAtMs - previousTradeTime) / 1_000);
-      previousTradeTime = startedAtMs;
+          : receipt.blockNumber - previousTradeBlock;
 
       const receiptBlock = await provider.getBlock(receipt.blockNumber);
       if (!receiptBlock || receiptBlock.hash !== receipt.blockHash)
         throw new Error(`Buy ${sequence} receipt block is no longer canonical`);
+      previousTradeBlock = receipt.blockNumber;
 
       // Exact fee reconstruction from this block's full buy-flow log set.
       const allBlockHookLogs = await provider.getLogs({
@@ -949,7 +1071,10 @@ async function main(): Promise<void> {
         transactionHash: receipt.hash,
         blockNumber: receipt.blockNumber,
         blockHash: receipt.blockHash,
-        secondsSincePrevious,
+        submittedAt: new Date(submittedAtMs).toISOString(),
+        receiptBlockTimestamp: receiptBlock.timestamp,
+        secondsSincePreviousSubmission,
+        receiptBlockDelta,
         hookFeeUsdc: ethers.formatUnits(feeAmount, 6),
         terminalFeeBps: feeBps.toString(),
         priorSameBlockFlowUsdc: ethers.formatUnits(priorFlow, 6),
@@ -1008,55 +1133,136 @@ async function main(): Promise<void> {
       ),
     };
   } catch (error) {
+    sequenceFailed = true;
     sequenceError = error;
     report.status = "FAILED_STOPPED";
     report.error = error instanceof Error ? error.message : String(error);
   } finally {
-    const [permitRemaining, erc20Remaining] = await Promise.all([
-      permit2.allowance(
+    const cleanupTransactions: Record<string, string> = {};
+    const cleanupErrors: string[] = [];
+    let permitRemaining: bigint | null = null;
+    let erc20Remaining: bigint | null = null;
+    try {
+      const allowance = (await permit2.allowance(
         wallet.address,
         config.base,
         config.universalRouter
-      ) as Promise<[bigint, bigint, bigint]>,
-      usdc.allowance(wallet.address, config.permit2) as Promise<bigint>,
-    ]);
-    const cleanup: Record<string, string> = {};
-    if (permitRemaining[0] !== 0n) {
-      const receipt = await sendWithMargin(
-        provider,
-        "Cleanup Permit2 USDC allowance",
-        () =>
-          permit2.approve.estimateGas(
-            config.base,
-            config.universalRouter,
-            0n,
-            0n
-          ),
-        (gasLimit) =>
-          permit2.approve(config.base, config.universalRouter, 0n, 0n, {
-            gasLimit,
-          })
+      )) as [bigint, bigint, bigint];
+      permitRemaining = allowance[0];
+    } catch (error) {
+      cleanupErrors.push(
+        `Permit2 allowance read failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`
       );
-      cleanup.permit2 = receipt.hash;
     }
-    if (erc20Remaining !== 0n) {
-      const receipt = await sendWithMargin(
-        provider,
-        "Cleanup USDC allowance to Permit2",
-        () => usdc.approve.estimateGas(config.permit2, 0n),
-        (gasLimit) => usdc.approve(config.permit2, 0n, { gasLimit })
+    try {
+      erc20Remaining = (await usdc.allowance(
+        wallet.address,
+        config.permit2
+      )) as bigint;
+    } catch (error) {
+      cleanupErrors.push(
+        `ERC20 allowance read failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`
       );
-      cleanup.erc20 = receipt.hash;
     }
-    report.cleanup = cleanup;
+    if (permitRemaining !== null && permitRemaining !== 0n) {
+      try {
+        const receipt = await sendWithMargin(
+          provider,
+          "Cleanup Permit2 USDC allowance",
+          () =>
+            permit2.approve.estimateGas(
+              config.base,
+              config.universalRouter,
+              0n,
+              0n
+            ),
+          (gasLimit) =>
+            permit2.approve(config.base, config.universalRouter, 0n, 0n, {
+              gasLimit,
+            })
+        );
+        cleanupTransactions.permit2 = receipt.hash;
+      } catch (error) {
+        cleanupErrors.push(
+          `Permit2 cleanup failed: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+      }
+    }
+    if (erc20Remaining !== null && erc20Remaining !== 0n) {
+      try {
+        const receipt = await sendWithMargin(
+          provider,
+          "Cleanup USDC allowance to Permit2",
+          () => usdc.approve.estimateGas(config.permit2, 0n),
+          (gasLimit) => usdc.approve(config.permit2, 0n, { gasLimit })
+        );
+        cleanupTransactions.erc20 = receipt.hash;
+      } catch (error) {
+        cleanupErrors.push(
+          `ERC20 cleanup failed: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+      }
+    }
+    report.cleanup = {
+      transactions: cleanupTransactions,
+      errors: cleanupErrors,
+      completed: cleanupErrors.length === 0,
+    };
   }
 
   report.finishedAt = new Date().toISOString();
-  if (!sequenceError && report.trades.length === STAGGERED_BUY_COUNT)
-    report.status = "PASS";
+  const terminalOutcome = resolveLiveBuyMatrixTerminalOutcome({
+    primaryError: sequenceFailed ? report.error ?? String(sequenceError) : null,
+    cleanupErrors: report.cleanup?.errors ?? [],
+    completedTrades: report.trades.length,
+    expectedTrades: STAGGERED_BUY_COUNT,
+  });
+  report.status = terminalOutcome.status;
+  if (terminalOutcome.error !== null) report.error = terminalOutcome.error;
+  const terminalError = sequenceFailed
+    ? sequenceError
+    : terminalOutcome.error === null
+    ? null
+    : new Error(terminalOutcome.error);
   persist();
-  console.log(JSON.stringify({ status: report.status, outputPath }, null, 2));
-  if (sequenceError) throw sequenceError;
+  let latestPointerError: unknown;
+  try {
+    atomicWriteJson(
+      evidencePaths.latestPointerPath,
+      latestPointerForTerminalRun({
+        runId: report.runId,
+        runPath: outputPath,
+        status: report.status,
+        finishedAt: report.finishedAt,
+      })
+    );
+  } catch (error) {
+    latestPointerError = error;
+    report.latestPointerError =
+      error instanceof Error ? error.message : String(error);
+    persist();
+  }
+  console.log(
+    JSON.stringify(
+      {
+        status: report.status,
+        outputPath,
+        latestPointerPath: evidencePaths.latestPointerPath,
+      },
+      null,
+      2
+    )
+  );
+  if (sequenceFailed || terminalError) throw terminalError;
+  if (latestPointerError) throw latestPointerError;
 }
 
 main().catch((error) => {
