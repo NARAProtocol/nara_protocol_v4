@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 1,
+  "changeId": "NARA-20260826-v4-epoch-recovery",
+  "releaseType": "POST_ACTIVATION_OPERATIONS_EVIDENCE",
+  "chain": {
+    "name": "Base",
+    "chainId": 8453
+  },
+  "origin": {
+    "repository": "NARAProtocol/nara_protocol_v4",
+    "contractSourceCommit": "027af3f06bbe6dea2c187dfd8062e50c228f1c35",
+    "activationManifest": "deployments/v4-production-activation-2026-08-09.json",
+    "activationManifestSha256": "e525b8c6508c454b951fdb422eb6ad03b51a120827b22efc4ae64a3862ddd066",
+    "temporaryWorkflowCommit": "df05c83356b3dde7004f63cc1a917ec57291c3fd",
+    "temporaryWorkflowCommitMerged": false,
+    "workflowRunId": 32934625356,
+    "workflowRunUrl": "https://github.com/NARAProtocol/nara_protocol_v4/actions/runs/32934625356",
+    "pullRequest": 42,
+    "pullRequestState": "closed-without-merge"
+  },
+  "contracts": {
+    "nara": "0xB6333F5D4cEd8dffA80F3F13697D6aA3BB3f19c1",
+    "engine": "0x98ab6406D6B548F37dEF7110961bb45A399e5aFC",
+    "rewardReserve": "0x8369CEf28128A4B24Bc5ed52aA6196D92D563F2f"
+  },
+  "keeper": {
+    "address": "0xE3DDa33EdB0f8b6aa39e4ce853Ba7C4A29e520DD",
+    "purpose": "dedicated gas-only permissionless epoch maintainer",
+    "credentialSource": "protected GitHub Actions secret",
+    "credentialValueReadOrRecorded": false,
+    "balanceBeforeEth": "0.002258839350502051",
+    "balanceAfterEth": "0.002182950135414641"
+  },
+  "preRecoveryObservation": {
+    "source": "receipt-producing workflow preflight",
+    "observedAtUtc": "2026-08-26T05:35:51.726Z",
+    "currentEpoch": "1661",
+    "storedEpoch": "1499",
+    "backlogEpochs": "162",
+    "plannedBatches": [
+      "100",
+      "62"
+    ],
+    "localEmissionReserveNara": "0.0",
+    "rewardReserveAvailableNara": "649999.064660728418213654",
+    "trackedEmissionReserveNara": "0.0",
+    "untrackedDirectReserveNara": "0.0",
+    "totalLockedNara": "7076.1735",
+    "nextPositionId": "56",
+    "estimatedExecutionGasUpperCostEthBeforeL1Fee": "0.000145935119"
+  },
+  "operation": {
+    "permissionless": true,
+    "function": "advanceEpochs(uint256)",
+    "batchSize": "100",
+    "maxBatches": "10",
+    "maximumConfiguredRecoveryCapacityEpochs": "1000",
+    "valueWeiPerCall": "0",
+    "explicitHumanApproval": true,
+    "routinePolicyChanged": false,
+    "scheduledMaxBacklogEpochs": "8"
+  },
+  "executions": [
+    {
+      "part": 1,
+      "requestedMaxSteps": "100",
+      "transactionHash": "0x886606357052b7f1256613e30dbd962248fcf67ff5ae9e2862641c602725ada0",
+      "blockNumber": 50466603,
+      "blockHash": "0x86efa63bb3e09126174e047465d5f462bfe8ea1c53825e76f7193230770cd8ce",
+      "blockTimestamp": 1787722553,
+      "blockTimestampUtc": "2026-08-26T05:35:53.000Z",
+      "status": 1,
+      "gasUsed": "7796862",
+      "effectiveGasPriceWei": "6000000",
+      "l2ExecutionFeeEth": "0.000046781172",
+      "l1DataFeeEth": "0.000000000409543705",
+      "totalFeeEth": "0.000046781581543705",
+      "epochAdvancedEventCount": 100,
+      "firstAdvancedEpoch": "1500",
+      "lastAdvancedEpoch": "1599"
+    },
+    {
+      "part": 2,
+      "requestedMaxSteps": "62",
+      "transactionHash": "0xce4ecd87fdf0ab145a1c1e6db9008ba009727b0724056991ed6a9752d19b42df",
+      "blockNumber": 50466604,
+      "blockHash": "0xc155ef0f7a15a5d4b5125e3a39bb96031e2caa062f910a43762f42019e5c8406",
+      "blockTimestamp": 1787722555,
+      "blockTimestampUtc": "2026-08-26T05:35:55.000Z",
+      "status": 1,
+      "gasUsed": "4851204",
+      "effectiveGasPriceWei": "6000000",
+      "l2ExecutionFeeEth": "0.000029107224",
+      "l1DataFeeEth": "0.000000000409543705",
+      "totalFeeEth": "0.000029107633543705",
+      "epochAdvancedEventCount": 62,
+      "firstAdvancedEpoch": "1600",
+      "lastAdvancedEpoch": "1661"
+    }
+  ],
+  "postRecoveryReadback": {
+    "source": "receipt-block-pinned workflow readback and independent latest-state verification",
+    "blockNumber": 50466604,
+    "blockHash": "0xc155ef0f7a15a5d4b5125e3a39bb96031e2caa062f910a43762f42019e5c8406",
+    "blockTimestamp": 1787722555,
+    "blockTimestampUtc": "2026-08-26T05:35:55.000Z",
+    "currentEpoch": "1661",
+    "storedEpoch": "1661",
+    "backlogEpochs": "0",
+    "localEmissionReserveNara": "0.0",
+    "rewardReserveAvailableNara": "649998.642061840394812631",
+    "trackedEmissionReserveNara": "0.0",
+    "untrackedDirectReserveNara": "0.0",
+    "totalLockedNara": "7076.1735",
+    "nextPositionId": "56",
+    "verificationGatePassedAtBlock": true
+  },
+  "cost": {
+    "totalGasUsed": "12648066",
+    "effectiveGasPriceWei": "6000000",
+    "l2ExecutionFeeEth": "0.000075888396",
+    "l1DataFeeEth": "0.000000000819087410",
+    "totalFeeEth": "0.000075889215087410",
+    "keeperBalanceDeltaMatchesTotalFee": true
+  },
+  "operationalState": {
+    "backlogRecovered": true,
+    "maintainerWorkflowActive": true,
+    "maintainerEnableVariable": true,
+    "requiredHeartbeatCompleted": true,
+    "routineBoundUnchanged": true,
+    "firstPostRecoveryScheduledCycleObserved": false
+  },
+  "cleanup": {
+    "temporaryPullRequestMerged": false,
+    "temporaryPullRequestClosed": true,
+    "temporaryRemoteBranchDeleted": true,
+    "temporaryLocalWorktreeDeleted": true,
+    "defaultBranchChangedByRecovery": false
+  },
+  "onchainWritesByDocumentationChange": "none; this file records two earlier explicitly authorized permissionless keeper transactions"
+}

@@ -1,6 +1,6 @@
 # NARA v4 — Public State
 
-Last updated: 2026-08-14.
+Last updated: 2026-08-26.
 Audience: users, analysts, external protocols, integrators.  
 Maintained by: protocol operator. Update every time deployment state changes.
 
@@ -12,8 +12,9 @@ Maintained by: protocol operator. Update every time deployment state changes.
 Base. The NARA/USDC pool is registered, initialized, seeded, and evidenced by
 receipt-pinned buy/sell and same-block tax tests. Compounder validation and the
 separate permanent Vault binding freeze are receipt-pinned as complete.
-Allocations, periphery, recurring operations, the Engine lifecycle smoke, and
-downstream launch surfaces remain separately gated.**
+The separately credentialed epoch and liquidity maintainers are active under
+bounded policies. Allocations, remaining periphery, the Engine lifecycle smoke,
+and downstream launch surfaces remain separately gated.**
 
 This is factual technical disclosure, not investment, legal, tax, or financial
 advice and not a promise of safety, liquidity, price, returns, or availability.
@@ -30,7 +31,7 @@ advice and not a promise of safety, liquidity, price, returns, or availability.
 | NARA token | Deployed | Fixed supply minted; fresh NARA/USDC pool exists |
 | NARA/USDC pool | Seeded | Initialized with 60,000 NARA / 300 USDC; LP NFT 2898124 is Safe-owned; live buy/sell tax tests passed |
 | Liquidity compounder | Validated and binding frozen | Compounder-owned LP NFT 2898486 has liquidity 9455824137787; unmatched inventory is banked in the Compounder |
-| Engine operations | Backlog recovered; recurring maintenance disabled | Three Safe transactions advanced epochs 36 through 559; final receipt block `49970727` read current/stored epoch as `559 / 559`, and block `49970969` independently confirmed zero backlog |
+| Engine operations | Backlog recovered; recurring maintenance active | Dedicated keeper transactions advanced epochs `1500..1661`; final receipt block `50466604` read current/stored epoch as `1661 / 1661`, zero backlog, zero untracked reserve, and a funded external reward reserve. The routine limit remains eight epochs. |
 | NARA protocol depth | Configured and seeded | Hook depths and initial liquidity are 60,000 NARA / 300 USDC |
 | Public launch surface | Preview only | Baskets only; Lockboard deferred; Lotto and Arena retired |
 | Locking | Operations gated | Contract deployed and the activation backlog is recovered; a receipt-pinned production lock smoke test and verified public frontend are still required |
@@ -134,11 +135,12 @@ available from this release.
   undeployed router source exposes `syncEpochs()`; no production app call is
   available from this release.
 - **Maintenance:** user calls can advance up to eight epochs, but this is a
-  bounded buffer rather than indefinite keeperlessness. The guarded v4
-  maintainer workflow is currently disabled. The 2026-08-14 one-time Safe
-  recovery advanced epochs `36..559`, and Base block `49970969` independently
-  read current/stored epoch `559 / 559`. See `CURRENT_STATE.md` before any
-  operational change.
+  bounded buffer rather than indefinite keeperlessness. The guarded v4 epoch
+  maintainer is active on its bounded twice-hourly schedule. After RPC failures
+  let backlog exceed the routine limit, the explicitly approved 2026-08-26
+  recovery advanced epochs `1500..1661`; Base receipt block `50466604` read
+  current/stored epoch `1661 / 1661` with zero backlog. See `CURRENT_STATE.md`
+  before any operational change.
 - **Backlog visibility:** the undeployed lens source exposes `getEpochState()`;
   production monitoring must use separately verified deployed read surfaces.
 
