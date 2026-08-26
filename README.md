@@ -177,7 +177,12 @@ This is the v4 dependency shape. Full v4 layer inventory:
   surface backlog. The 2026-08-14 Safe recovery advanced epochs `36..559`; final
   receipt block `49970727` and later read block `49970969` both reported current
   and stored epoch `559 / 559`. The separately bounded epoch maintainer is now
-  active on its `7,37` schedule; operators must still monitor this invariant.
+  active on its `7,37` schedule. After an RPC outage let backlog exceed the
+  routine eight-epoch guard, the explicitly approved 2026-08-26 dedicated
+  keeper recovery advanced epochs `1500..1661`; final receipt block `50466604`
+  reported current/stored epoch `1661 / 1661`, zero backlog, and zero untracked
+  reserve. Operators must still monitor this invariant. The fast recovery
+  decision path is in `docs/NARA_V4_EPOCH_MAINTENANCE_RUNBOOK.md`.
 - **Weight = committed time.** `weight = amount × (1 + linearWad·r + quadraticWad·r²)`, where
   `r = duration / maxDuration`. Longer commitments receive a structurally higher weight (the curve
   accelerates with duration).

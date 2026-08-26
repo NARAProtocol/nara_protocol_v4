@@ -8,6 +8,9 @@ Recurring-maintenance hardening change-ID:
 Current activation evidence:
 `docs/releases/NARA-20260815-v4-epoch-maintainer-activation.md`
 
+Latest recovery and operator fast-path evidence:
+`docs/releases/NARA-20260826-v4-epoch-recovery.md`
+
 This runbook covers the fresh Base v4 engine only. The engine's epoch functions
 are permissionless. No admin, treasury, Safe, or protocol role is needed.
 
@@ -50,6 +53,128 @@ The command verifies Base chain ID, engine runtime code, the configured NARA
 binding, current and settled epochs, both reserve buckets, total locked NARA,
 and the next position ID. It prints the bounded transaction plan but sends
 nothing.
+
+## Fast Recovery Decision
+
+This section is the shortest safe route after a new explicit human approval.
+It does not pre-authorize a future transaction. Run from the authoritative
+`NARAProtocol/nara_protocol_v4` checkout and regenerate the live plan
+immediately before execution.
+
+```powershell
+npm run verify:v4:runtime-config
+npx tsx scripts/maintainV4Epochs.ts --batch-size 100 --max-batches 10
+```
+
+Use the reported state to select exactly one path:
+
+| Observed state | Action |
+|---|---|
+| backlog `0` | Stop. No transaction is required. |
+| backlog `1..8` | Dispatch the existing `main` workflow with `execute=true`; its routine guard and eight-epoch bound are designed for this state. |
+| backlog `9..1000`, dedicated keeper credential already available in the approved local runtime | Run the documented dedicated-wallet recovery command below after checking the wallet address, balance, reserve state, and gas estimate. |
+| backlog `9..1000`, keeper credential exists only as a GitHub Actions secret | Use the temporary, CI-validated GitHub-secret path below. The `main` workflow deliberately refuses this backlog. |
+| untracked direct reserve greater than `0`, external reserve `0`, backlog above configured recovery capacity, runtime mismatch, or keeper mismatch | Stop and perform a new deployment-specific review. Do not widen flags or bounds casually. |
+
+For a routine backlog of at most eight, the hosted path is:
+
+```powershell
+gh workflow run v4-epoch-maintainer.yml --ref main -f execute=true
+```
+
+Record the returned run URL, wait for completion, then perform the verification
+steps below. A successful idle cycle may submit no transaction.
+
+### GitHub-secret-only recovery path
+
+Use this only when the backlog is above the routine limit and the dedicated
+signer is intentionally available only through the protected repository
+secret. Never export, print, copy, rotate, or download that secret.
+
+1. Confirm the public keeper address, required secret names, workflow state,
+   live backlog, zero untracked reserve, sufficient sealed reserve, and keeper
+   ETH balance. Secret metadata may be listed; secret values must never be
+   read.
+2. Preserve any dirty checkout. Create a focused clean worktree from current
+   `origin/main`, for example:
+
+   ```powershell
+   $RecoveryPath = 'C:\checked\nara-protocol-hardhat-epoch-recovery-YYYYMMDD'
+   $Branch = 'ops/v4-epoch-recovery-YYYYMMDD'
+   git fetch origin main
+   git worktree add -b $Branch $RecoveryPath origin/main
+   ```
+
+   Replace `YYYYMMDD` with the recovery date and verify the resolved path before
+   any later cleanup.
+
+3. In the temporary branch only, change
+   `.github/workflows/v4-epoch-maintainer.yml` so scheduled execution retains
+   both existing routine steps and their `max-backlog 8` commands, while
+   manual `workflow_dispatch` with `execute=true` runs these two additional
+   steps:
+
+   ```yaml
+   - name: Verify bounded manual recovery plan
+     if: github.event_name == 'workflow_dispatch' && inputs.execute == true
+     run: npx tsx scripts/maintainV4Epochs.ts --batch-size 100 --max-batches 10
+   - name: Recover epochs with the dedicated keeper
+     if: github.event_name == 'workflow_dispatch' && inputs.execute == true
+     env:
+       V4_EPOCH_KEEPER_ADDRESS: ${{ vars.V4_EPOCH_KEEPER_ADDRESS }}
+       V4_EPOCH_KEEPER_PRIVATE_KEY: ${{ secrets.V4_EPOCH_KEEPER_PRIVATE_KEY }}
+       V4_EPOCH_ALERT_WEBHOOK_URL: ${{ secrets.V4_EPOCH_ALERT_WEBHOOK_URL }}
+       V4_EPOCH_HEARTBEAT_URL: ${{ secrets.V4_EPOCH_HEARTBEAT_URL }}
+       V4_EPOCH_REQUIRE_HEARTBEAT: "true"
+       V4_EPOCH_NOTIFY_RECOVERY: "true"
+     run: npx tsx scripts/maintainV4Epochs.ts --execute --batch-size 100 --max-batches 10
+   ```
+
+   Restrict the original routine check and routine execute steps to
+   `github.event_name == 'schedule'`. Do not change the schedule, deployment
+   binding, keeper, secret names, heartbeat requirement, package scripts, or
+   recurring bounds.
+4. Run `npm ci --ignore-scripts`, `npm run test:ops`, `npm run build`,
+   `npm run test:nonfork`, `npm audit --audit-level=high`, and
+   `git diff --check`. Review the full diff and scan it for secrets.
+5. Commit the one-file workflow change on the focused branch, push it, open a
+   pull request using the repository template, and wait for the required
+   canonical CI check. Do not bypass branch protection.
+6. Lock the local, pull-request, and remote branch to the same full commit SHA.
+   Dispatch from that exact branch and watch the returned run:
+
+   ```powershell
+   $Expected = (git rev-parse HEAD).Trim()
+   $Remote = ((git ls-remote origin "refs/heads/$Branch") -split '\s+')[0]
+   $PullRequest = gh pr view --json headRefOid | ConvertFrom-Json
+   if ($Remote -ne $Expected -or $PullRequest.headRefOid -ne $Expected) {
+     throw 'Recovery branch changed after review'
+   }
+   gh workflow run v4-epoch-maintainer.yml --ref $Branch -f execute=true
+   $RunId = gh run list --workflow v4-epoch-maintainer.yml --branch $Branch --event workflow_dispatch --limit 1 --json databaseId --jq '.[0].databaseId'
+   gh run watch $RunId --exit-status
+   ```
+
+7. Verify every transaction independently: Base chain `8453`, sender equals
+   the dedicated epoch keeper, target equals the manifest Engine, calldata
+   decodes only to the planned `advanceEpochs(uint256)` batch, receipt status
+   is `1`, and receipt-block state progressed.
+8. Run the unchanged routine guard locally. Completion requires `backlog: 0`,
+   no planned batches, zero untracked reserve, and a funded external reserve:
+
+   ```powershell
+   npx tsx scripts/maintainV4Epochs.ts --batch-size 8 --max-batches 2 --max-backlog 8
+   ```
+
+9. Attach sanitized hashes, blocks, block hashes, decoded calls, gas cost,
+   pre/post health, workflow run, and locked commit to the pull request. Close
+   the temporary pull request without merging, delete only the exact temporary
+   branch/worktree after verifying they are clean, and confirm `main` was not
+   changed.
+
+The CI wait and Base confirmations are intentional. The shortcut is selecting
+the correct route immediately, not bypassing runtime checks, protected secrets,
+receipt-pinned reads, or explicit approval.
 
 ## One-Time Recovery
 

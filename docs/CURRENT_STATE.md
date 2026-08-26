@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-08-22.
+Last updated: 2026-08-26.
 
 This repository is v4-only. `contracts/v4/` is the sole active Solidity source.
 The experimental V5 stack, tests, scripts, and release plans have been deleted
@@ -25,7 +25,9 @@ smoke is pending, and baskets remain preview-only. Canonical
 sanitized evidence is `deployments/v4-production-activation-2026-08-09.json`,
 `deployments/v4-engine-epoch-recovery-2026-08-09.json`,
 `deployments/v4-compounder-activation-2026-08-09.json`, and
-`deployments/v4-engine-epoch-recovery-2026-08-14.json`.
+`deployments/v4-engine-epoch-recovery-2026-08-14.json`. The latest recurring
+operations recovery evidence is
+`deployments/v4-engine-epoch-recovery-2026-08-26.json`.
 
 ## DEPLOYED AND FINALIZED — Position NFT Phase 2
 
@@ -139,7 +141,7 @@ binding, policy, or schedule without a new explicit user order and current
 deployment-specific review. See
 [NARA-20260809-disable-github-operations-bots.md](releases/NARA-20260809-disable-github-operations-bots.md).
 Current epoch evidence is
-[NARA-20260815-v4-epoch-maintainer-activation.md](releases/NARA-20260815-v4-epoch-maintainer-activation.md).
+[NARA-20260826-v4-epoch-recovery.md](releases/NARA-20260826-v4-epoch-recovery.md).
 
 On 2026-08-16, receipt-block reconciliation proved that six scheduled epoch
 runs shown as failed had actually submitted successful status-`1`
@@ -150,6 +152,22 @@ read to that block, and bounds retries to read-only RPC indexing checks. It does
 not replay a transaction or change the keeper's authority, schedule, bounds,
 credentials, heartbeat, or deployment binding. Evidence and test scope are in
 [NARA-20260816-v4-epoch-maintainer-receipt-readback-fix.md](releases/NARA-20260816-v4-epoch-maintainer-receipt-readback-fix.md).
+
+On 2026-08-26, the dedicated epoch keeper recovered a 162-epoch backlog after
+the previous RPC provider's free-plan `408` failures and the routine workflow's
+intentional eight-epoch guard prevented automatic catch-up. Workflow run
+`32934625356` submitted `advanceEpochs(100)` and `advanceEpochs(62)` in
+status-`1` transactions
+`0x886606357052b7f1256613e30dbd962248fcf67ff5ae9e2862641c602725ada0`
+and
+`0xce4ecd87fdf0ab145a1c1e6db9008ba009727b0724056991ed6a9752d19b42df`.
+At final receipt block `50466604`, current and stored epoch were both `1661`,
+backlog and untracked direct reserve were zero, and the external reward reserve
+was `649998.642061840394812631 NARA`. The paid RPC restored reachability; the
+separately approved recovery cleared the already-accumulated backlog. The
+temporary workflow branch was closed without merge, so `main` retains the
+unchanged routine policy. See the latest recovery record and
+`NARA_V4_EPOCH_MAINTENANCE_RUNBOOK.md` for the repeatable fast path.
 
 On 2026-08-15, a new explicit user order initiated a deployment-specific
 liquidity-maintainer review. Read-only checks found that the dormant script
@@ -466,11 +484,10 @@ Compounder validation/freeze are active or complete as specifically documented,
 but the whole stack is not production-ready. Remaining gates include:
 
 1. Keep the Engine backlog within its eight-epoch JIT buffer and monitor the
-   now-active recurring maintenance path. The 2026-08-14 Safe recovery
-   advanced epochs `36..559`; at final receipt block `49970727`, current and
-   stored epochs were both `559`. A later read at block `49970969` again found
-   `559 / 559`, zero backlog, and no reserve-accounting anomaly. The separately
-   bounded epoch maintainer was activated afterward; its observation period
+   active recurring maintenance path. The 2026-08-26 keeper recovery advanced
+   epochs `1500..1661`; at final receipt block `50466604`, current and stored
+   epochs were both `1661`, backlog and untracked direct reserve were zero, and
+   the external reserve remained funded. Continued scheduled observation
    remains an operational gate.
 2. Complete and receipt-pin the Engine lock, activation, claim, and unlock
    lifecycle smoke before describing public locking or reward use as available.
