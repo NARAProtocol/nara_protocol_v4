@@ -2,10 +2,12 @@
  * Pure reconstruction of canonical NARA/USDC flow from Uniswap v4 PoolManager
  * Swap logs. Source evidence for this ABI and sign convention:
  * - @uniswap/v4-core/src/interfaces/IPoolManager.sol (Swap event)
- * - @uniswap/v4-core/src/PoolManager.sol (emits BalanceDelta amount0/amount1)
+ * - @uniswap/v4-core/src/libraries/Pool.sol (constructs the caller delta)
+ * - @uniswap/v4-periphery/src/PositionManager.sol (negative debt is settled;
+ *   positive credit is taken)
  *
- * amount0 and amount1 are deltas of the pool: positive means the pool
- * received that currency and negative means the pool sent it.
+ * amount0 and amount1 are deltas of the swap caller: negative means currency
+ * input/owed by the caller and positive means output/received by the caller.
  */
 import { ethers } from "ethers";
 
@@ -50,8 +52,8 @@ export interface CanonicalSwapFlow {
   tokenIsCurrency0: boolean;
   swapLogCount: number;
   logIndices: number[];
-  amount0PoolDelta: bigint;
-  amount1PoolDelta: bigint;
+  amount0CallerDelta: bigint;
+  amount1CallerDelta: bigint;
   usdcIn: bigint;
   usdcOut: bigint;
   naraIn: bigint;
@@ -62,8 +64,8 @@ interface DecodedSwap {
   logIndex: number;
   amount0: bigint;
   amount1: bigint;
-  usdcPoolDelta: bigint;
-  naraPoolDelta: bigint;
+  usdcCallerDelta: bigint;
+  naraCallerDelta: bigint;
   side: StabilizerTriggerSide;
 }
 
@@ -147,17 +149,17 @@ function decodeSwap(
   if (amount0 === 0n || amount1 === 0n) reject("zero_flow");
   if (amount0 > 0n === amount1 > 0n) reject("ambiguous_flow_signs");
 
-  const usdcPoolDelta = tokenIsCurrency0 ? amount1 : amount0;
-  const naraPoolDelta = tokenIsCurrency0 ? amount0 : amount1;
+  const usdcCallerDelta = tokenIsCurrency0 ? amount1 : amount0;
+  const naraCallerDelta = tokenIsCurrency0 ? amount0 : amount1;
   const side: StabilizerTriggerSide =
-    usdcPoolDelta > 0n && naraPoolDelta < 0n ? "pump" : "floor";
+    usdcCallerDelta < 0n && naraCallerDelta > 0n ? "pump" : "floor";
 
   return {
     logIndex: logIndex!,
     amount0,
     amount1,
-    usdcPoolDelta,
-    naraPoolDelta,
+    usdcCallerDelta,
+    naraCallerDelta,
     side,
   };
 }
@@ -202,26 +204,26 @@ export function reconstructCanonicalSwapFlow(
     reject("unexpected_trigger_direction");
   }
 
-  const amount0PoolDelta = decoded.reduce(
+  const amount0CallerDelta = decoded.reduce(
     (total, swap) => total + swap.amount0,
     0n
   );
-  const amount1PoolDelta = decoded.reduce(
+  const amount1CallerDelta = decoded.reduce(
     (total, swap) => total + swap.amount1,
     0n
   );
-  const usdcPoolDelta = decoded.reduce(
-    (total, swap) => total + swap.usdcPoolDelta,
+  const usdcCallerDelta = decoded.reduce(
+    (total, swap) => total + swap.usdcCallerDelta,
     0n
   );
-  const naraPoolDelta = decoded.reduce(
-    (total, swap) => total + swap.naraPoolDelta,
+  const naraCallerDelta = decoded.reduce(
+    (total, swap) => total + swap.naraCallerDelta,
     0n
   );
-  if (usdcPoolDelta === 0n || naraPoolDelta === 0n) {
+  if (usdcCallerDelta === 0n || naraCallerDelta === 0n) {
     reject("zero_aggregate_flow");
   }
-  if (usdcPoolDelta > 0n === naraPoolDelta > 0n) {
+  if (usdcCallerDelta > 0n === naraCallerDelta > 0n) {
     reject("ambiguous_aggregate_flow");
   }
 
@@ -233,11 +235,11 @@ export function reconstructCanonicalSwapFlow(
     tokenIsCurrency0: options.tokenIsCurrency0,
     swapLogCount: decoded.length,
     logIndices: [...logIndices].sort((a, b) => a - b),
-    amount0PoolDelta,
-    amount1PoolDelta,
-    usdcIn: usdcPoolDelta > 0n ? usdcPoolDelta : 0n,
-    usdcOut: usdcPoolDelta < 0n ? -usdcPoolDelta : 0n,
-    naraIn: naraPoolDelta > 0n ? naraPoolDelta : 0n,
-    naraOut: naraPoolDelta < 0n ? -naraPoolDelta : 0n,
+    amount0CallerDelta,
+    amount1CallerDelta,
+    usdcIn: usdcCallerDelta < 0n ? -usdcCallerDelta : 0n,
+    usdcOut: usdcCallerDelta > 0n ? usdcCallerDelta : 0n,
+    naraIn: naraCallerDelta < 0n ? -naraCallerDelta : 0n,
+    naraOut: naraCallerDelta > 0n ? naraCallerDelta : 0n,
   };
 }

@@ -71,7 +71,7 @@ describe("v4 canonical stabilizer swap flow", () => {
     );
 
     const flow = reconstruct(
-      [swapLog(123_456_789n, -2_500_000_000_000_000_001n)],
+      [swapLog(-123_456_789n, 2_500_000_000_000_000_001n)],
       "pump"
     );
 
@@ -83,8 +83,8 @@ describe("v4 canonical stabilizer swap flow", () => {
       tokenIsCurrency0: false,
       swapLogCount: 1,
       logIndices: [7],
-      amount0PoolDelta: 123_456_789n,
-      amount1PoolDelta: -2_500_000_000_000_000_001n,
+      amount0CallerDelta: -123_456_789n,
+      amount1CallerDelta: 2_500_000_000_000_000_001n,
       usdcIn: 123_456_789n,
       usdcOut: 0n,
       naraIn: 0n,
@@ -94,24 +94,38 @@ describe("v4 canonical stabilizer swap flow", () => {
 
   it("maps token-as-currency0 floor flow in exact bigint units", () => {
     const flow = reconstruct(
-      [swapLog(9_876_543_210_123_456_789n, -456_789_123n)],
+      [swapLog(-9_876_543_210_123_456_789n, 456_789_123n)],
       "floor",
       true
     );
 
-    expect(flow.amount0PoolDelta).to.equal(9_876_543_210_123_456_789n);
-    expect(flow.amount1PoolDelta).to.equal(-456_789_123n);
+    expect(flow.amount0CallerDelta).to.equal(-9_876_543_210_123_456_789n);
+    expect(flow.amount1CallerDelta).to.equal(456_789_123n);
     expect(flow.usdcIn).to.equal(0n);
     expect(flow.usdcOut).to.equal(456_789_123n);
     expect(flow.naraIn).to.equal(9_876_543_210_123_456_789n);
     expect(flow.naraOut).to.equal(0n);
   });
 
+  it("classifies the archived actual-order NARA sell as floor", () => {
+    const flow = reconstruct(
+      [swapLog(91_377_444n, -554_976_216_000_000_000_000n)],
+      "floor",
+      false
+    );
+
+    expect(flow.side).to.equal("floor");
+    expect(flow.usdcIn).to.equal(0n);
+    expect(flow.usdcOut).to.equal(91_377_444n);
+    expect(flow.naraIn).to.equal(554_976_216_000_000_000_000n);
+    expect(flow.naraOut).to.equal(0n);
+  });
+
   it("aggregates multiple same-direction logs from the same transaction", () => {
     const flow = reconstruct(
       [
-        swapLog(40_000_001n, -800_000_000_000_000_001n, { logIndex: 12 }),
-        swapLog(59_999_999n, -1_199_999_999_999_999_999n, {
+        swapLog(-40_000_001n, 800_000_000_000_000_001n, { logIndex: 12 }),
+        swapLog(-59_999_999n, 1_199_999_999_999_999_999n, {
           logIndex: 9,
         }),
       ],
@@ -120,14 +134,14 @@ describe("v4 canonical stabilizer swap flow", () => {
 
     expect(flow.swapLogCount).to.equal(2);
     expect(flow.logIndices).to.deep.equal([9, 12]);
-    expect(flow.amount0PoolDelta).to.equal(100_000_000n);
-    expect(flow.amount1PoolDelta).to.equal(-2_000_000_000_000_000_000n);
+    expect(flow.amount0CallerDelta).to.equal(-100_000_000n);
+    expect(flow.amount1CallerDelta).to.equal(2_000_000_000_000_000_000n);
     expect(flow.usdcIn).to.equal(100_000_000n);
     expect(flow.naraOut).to.equal(2_000_000_000_000_000_000n);
   });
 
   it("infers the exact transaction and side for ethers-v6 log indices", () => {
-    const log = swapLog(25_000_000n, -500_000_000_000_000_000n);
+    const log = swapLog(-25_000_000n, 500_000_000_000_000_000n);
     const flow = reconstructCanonicalSwapFlow(
       [{ ...log, logIndex: undefined, index: 19 }],
       {
@@ -147,20 +161,20 @@ describe("v4 canonical stabilizer swap flow", () => {
   it("rejects logs from the wrong transaction, address, or pool", () => {
     expect(() =>
       reconstruct(
-        [swapLog(1n, -1n, { transactionHash: OTHER_TX_HASH })],
+        [swapLog(-1n, 1n, { transactionHash: OTHER_TX_HASH })],
         "pump"
       )
     ).to.throw("canonical_swap_flow_rejected:wrong_transaction_hash");
     expect(() =>
-      reconstruct([swapLog(1n, -1n, { address: OTHER_ADDRESS })], "pump")
+      reconstruct([swapLog(-1n, 1n, { address: OTHER_ADDRESS })], "pump")
     ).to.throw("canonical_swap_flow_rejected:wrong_pool_manager");
     expect(() =>
-      reconstruct([swapLog(1n, -1n, { poolId: OTHER_POOL_ID })], "pump")
+      reconstruct([swapLog(-1n, 1n, { poolId: OTHER_POOL_ID })], "pump")
     ).to.throw("canonical_swap_flow_rejected:wrong_pool_id");
   });
 
   it("rejects malformed, zero, and same-sign flows", () => {
-    const valid = swapLog(1n, -1n);
+    const valid = swapLog(-1n, 1n);
     expect(() =>
       reconstruct([{ ...valid, topics: valid.topics.slice(0, 2) }], "pump")
     ).to.throw("canonical_swap_flow_rejected:malformed_topics");
@@ -178,7 +192,7 @@ describe("v4 canonical stabilizer swap flow", () => {
         "pump"
       )
     ).to.throw("canonical_swap_flow_rejected:wrong_event_signature");
-    expect(() => reconstruct([swapLog(0n, -1n)], "pump")).to.throw(
+    expect(() => reconstruct([swapLog(0n, 1n)], "pump")).to.throw(
       "canonical_swap_flow_rejected:zero_flow"
     );
     expect(() => reconstruct([swapLog(1n, 1n)], "pump")).to.throw(
@@ -190,13 +204,13 @@ describe("v4 canonical stabilizer swap flow", () => {
     expect(() =>
       reconstruct(
         [
-          swapLog(10n, -20n, { logIndex: 1 }),
-          swapLog(-4n, 8n, { logIndex: 2 }),
+          swapLog(-10n, 20n, { logIndex: 1 }),
+          swapLog(4n, -8n, { logIndex: 2 }),
         ],
         "pump"
       )
     ).to.throw("canonical_swap_flow_rejected:mixed_swap_directions");
-    expect(() => reconstruct([swapLog(-10n, 20n)], "pump")).to.throw(
+    expect(() => reconstruct([swapLog(10n, -20n)], "pump")).to.throw(
       "canonical_swap_flow_rejected:unexpected_trigger_direction"
     );
   });
@@ -204,15 +218,15 @@ describe("v4 canonical stabilizer swap flow", () => {
   it("rejects duplicate indices, removed logs, and empty evidence", () => {
     expect(() =>
       reconstruct(
-        [swapLog(1n, -2n, { logIndex: 4 }), swapLog(3n, -4n, { logIndex: 4 })],
+        [swapLog(-1n, 2n, { logIndex: 4 }), swapLog(-3n, 4n, { logIndex: 4 })],
         "pump"
       )
     ).to.throw("canonical_swap_flow_rejected:duplicate_log_index");
     expect(() =>
-      reconstruct([swapLog(1n, -1n, { removed: true })], "pump")
+      reconstruct([swapLog(-1n, 1n, { removed: true })], "pump")
     ).to.throw("canonical_swap_flow_rejected:removed_log");
     expect(() =>
-      reconstruct([swapLog(1n, -1n, { index: 8, logIndex: 9 })], "pump")
+      reconstruct([swapLog(-1n, 1n, { index: 8, logIndex: 9 })], "pump")
     ).to.throw("canonical_swap_flow_rejected:conflicting_log_index");
     expect(() => reconstruct([], "pump")).to.throw(
       "canonical_swap_flow_rejected:no_swap_logs"

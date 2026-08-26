@@ -91,10 +91,29 @@ and floor marks omit exit costs and recovery probability. All simulation
 records therefore carry `positiveEvVerdict: BLOCKED` and
 `activationVerdict: BLOCKED`.
 
-Persistence analysis selected all 34 observations but found the configured RPC
-set non-archival for this purpose: only 4 of 195 unique historical block reads
-were available, 191 were unavailable, and all 34 event analyses were
-unavailable. No +1/+3/+5/+10/+20 persistence conclusion is claimed.
+The original persistence analysis selected all 34 observations but found the
+then-configured RPC set non-archival for that run: only 4 of 195 unique
+historical block reads were available, 191 were unavailable, and all 34 event
+analyses were unavailable. The currently configured HTTP endpoint later proved
+archive-capable for the exact block-pinned test below, but the complete
++1/+3/+5/+10/+20 persistence analysis has not yet been rerun. No persistence
+conclusion is claimed.
+
+On 2026-08-27, the opt-in archive-fork proof passed for the canonical floor
+trigger transaction
+`0x0167bc7f58aa15aec7bc84b593a376102f5d3ea1d3516a74976c67daf287b84e`
+at Base block `49,721,262`, hash
+`0x811065427ef5e543a6ab5428a537c47389853524e9afceb07bb8de90b6f4ebfe`:
+
+- canonical PoolManager flow reconstructed `12,257.063182609538962180` net
+  NARA into the pool and `79.795311` USDC out;
+- the production manifest, Base chain ID, and pinned runtime hashes passed;
+- after one empty local-fork block, a read-only 150 USDC defense quote returned
+  `17,523.135437734645459844` NARA with a `127,189` gas estimate;
+- no signer or production transaction was created.
+
+This single exact counterfactual validates the archive/fork plumbing. It is not
+an exit quote, a calibrated probability distribution, or positive-EV proof.
 
 Earlier schema v1 sessions, including an interrupted exploratory full-history
 run and the original whale-window reconstruction, remain local development
@@ -106,8 +125,8 @@ Verified from branch `feat/v4-stabilizer-shadow`, based directly on
 `origin/main` commit `7b28d3a23123b5ee58f93e9c8cb34150adeb9d05`:
 
 - focused stabilizer, EV, FIFO, source-flow, summary, aggregation, and
-  persistence tests: `89 passing`, with the opt-in historical archive-fork
-  proof intentionally pending because its required inputs were absent;
+  persistence tests: `89 passing`;
+- exact historical archive-fork proof: `1 passing` for the pinned floor trigger;
 - `npm run test:ops`: `43 passing`;
 - `npm run build`: pass;
 - `npm run test:nonfork`: `775 passing`;
@@ -130,9 +149,10 @@ record alone. Exact source-output reconstruction, next-block fork quoting,
 virtual FIFO accounting, and conservative EV math now have reusable code and
 focused tests, but the historical evidence is still incomplete. A future
 explicit order and deployment-specific review still need an archive-capable
-Base source; successful per-event next-block fork runs; executable exit quotes;
-gas converted to USDC; calibrated scenario probabilities; an end-to-end
-sequential backtest; persistence calibration; cooldown and cascade controls;
+Base source across the full event set; successful per-event next-block fork
+runs; executable exit quotes; gas converted to USDC; calibrated scenario
+probabilities; an end-to-end sequential backtest; persistence calibration;
+cooldown and cascade controls;
 per-action and daily loss caps; stale-state/RPC disagreement handling;
 allowance hygiene; dedicated credentials; an emergency disable path; and new
 fork and simulation evidence.
