@@ -91,6 +91,24 @@ describe("v4 live buy Matrix runtime helpers", () => {
     );
   });
 
+  it("bounds adverse estimate movement to one pre-send re-pin and never retries a send", () => {
+    const source = readFileSync(
+      "scripts/matrix/runV4LiveTenMinBuyMatrix.ts",
+      "utf8"
+    );
+    const loopStart = source.indexOf(
+      "for (let attempt = 1; attempt <= 2; attempt += 1)"
+    );
+    const loopEnd = source.indexOf("latestBlock = activeBlock", loopStart);
+    const boundedPreSend = source.slice(loopStart, loopEnd);
+
+    expect(boundedPreSend).to.contain("router.execute.staticCall");
+    expect(boundedPreSend).to.contain("router.execute.estimateGas");
+    expect(boundedPreSend).not.to.match(/router\.execute\(commands/);
+    expect(source.match(/const transaction = await send/g)).to.have.length(1);
+    expect(source).to.contain("async () => transactionGasEstimate");
+  });
+
   it("paces relative to the previous actual submission without catch-up", () => {
     expect(minimumSubmissionWaitMs(null, 50_000, 3)).to.equal(0);
     expect(minimumSubmissionWaitMs(50_000, 51_250, 3)).to.equal(1_750);

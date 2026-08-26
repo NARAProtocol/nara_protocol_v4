@@ -881,6 +881,7 @@ async function main(): Promise<void> {
       let deadline = 0n;
       let commands = "";
       let v4Input = "";
+      let transactionGasEstimate = 0n;
       for (let attempt = 1; attempt <= 2; attempt += 1) {
         const [quote, gasEstimate] =
           (await quoter.quoteExactInputSingle.staticCall(
@@ -937,11 +938,24 @@ async function main(): Promise<void> {
         commands = ethers.hexlify(new Uint8Array([V4_SWAP]));
         try {
           await router.execute.staticCall(commands, [v4Input], deadline);
+          // Estimate against the same freshly rebuilt calldata before reserving
+          // a nonce. A block may move after staticCall; treat an estimate-time
+          // revert exactly like the bounded pre-send simulation race.
+          transactionGasEstimate = await router.execute.estimateGas(
+            commands,
+            [v4Input],
+            deadline
+          );
+          if (transactionGasEstimate <= 0n) {
+            throw new Error(
+              "Router returned a non-positive transaction gas estimate"
+            );
+          }
           break;
-        } catch (simError) {
-          if (attempt === 2) throw simError;
+        } catch (preSendError) {
+          if (attempt === 2) throw preSendError;
           console.log(
-            `Buy ${sequence}: simulation reverted; re-pinning state and retrying once`
+            `Buy ${sequence}: pre-send simulation/estimate reverted; re-pinning state and retrying once`
           );
           await delay(1_000);
           let fresher = await provider.getBlock("latest");
@@ -975,7 +989,7 @@ async function main(): Promise<void> {
           amountIn,
           6
         )} USDC)`,
-        () => router.execute.estimateGas(commands, [v4Input], deadline),
+        async () => transactionGasEstimate,
         (gasLimit, nonce) =>
           router.execute(commands, [v4Input], deadline, { gasLimit, nonce }),
         nonceCursor,
