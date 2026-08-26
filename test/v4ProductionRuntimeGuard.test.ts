@@ -19,10 +19,13 @@ describe("v4 production runtime guard enforcement", () => {
     try {
       const manifest = readFileSync(PRODUCTION_V4_MANIFEST_PATH, "utf8");
       const changedPath = join(directory, "changed.json");
-      writeFileSync(changedPath, manifest.replace("\"poolFee\": 3000", "\"poolFee\": 500"));
+      writeFileSync(
+        changedPath,
+        manifest.replace('"poolFee": 3000', '"poolFee": 500')
+      );
 
       expect(() => canonicalProductionV4Deployment(changedPath)).to.throw(
-        "Production v4 manifest hash mismatch",
+        "Production v4 manifest hash mismatch"
       );
     } finally {
       rmSync(directory, { recursive: true, force: true });
@@ -60,8 +63,11 @@ describe("v4 production runtime guard enforcement", () => {
       "scripts/executeV4NaraDepth.ts",
       "scripts/maintainV4Liquidity.ts",
       "scripts/removeV4Liquidity.ts",
-      "scripts/runV4LiveSameBlockBuyTaxMatrix.ts",
-      "scripts/runV4LiveSameBlockSellReversal.ts",
+      "scripts/matrix/runV4LiveSameBlockBuyTaxMatrix.ts",
+      "scripts/matrix/runV4LiveSameBlockSellReversal.ts",
+      "scripts/matrix/runV4LiveStaggeredBuyMatrix.ts",
+      "scripts/matrix/runV4LiveTenMinBuyMatrix.ts",
+      "scripts/matrix/runV4LiveTenMinBuyMatrixWithBigBuyHedge.ts",
       "scripts/seedV4Liquidity.ts",
       "scripts/smokeTestV4Deployment.ts",
       "scripts/swapNaraForUsdc.ts",
@@ -76,13 +82,31 @@ describe("v4 production runtime guard enforcement", () => {
     }
   });
 
+  it("pins the read-only stabilizer directly to the production manifest", () => {
+    const contents = source("scripts/matrix/runV4TwoSidedStabilizer.ts");
+
+    expect(contents).to.contain("canonicalProductionV4Deployment()");
+    expect(contents).to.contain("productionV4ReadOnlyConfig(deployment)");
+    expect(contents).to.contain("verifyProductionV4ReadOnlyRuntime");
+    expect(contents).not.to.contain("currentV4Config()");
+    expect(contents).not.to.contain("requireProduction: false");
+    expect(contents).not.to.contain("dotenv");
+  });
+
   it("keeps scheduled epoch execution pinned, isolated, and bounded", () => {
     const workflow = source(".github/workflows/v4-epoch-maintainer.yml");
-    const packageJson = JSON.parse(source("package.json")) as { scripts: Record<string, string> };
+    const packageJson = JSON.parse(source("package.json")) as {
+      scripts: Record<string, string>;
+    };
     const hydrateIndex = workflow.indexOf("npm run v4:env:production:write");
     const runtimeIndex = workflow.indexOf("npm run verify:v4:runtime-config");
-    const checkIndex = workflow.indexOf("npm run maintain:v4:epochs:routine:check");
-    const executeIndex = workflow.indexOf("run: npm run maintain:v4:epochs:routine", checkIndex + 1);
+    const checkIndex = workflow.indexOf(
+      "npm run maintain:v4:epochs:routine:check"
+    );
+    const executeIndex = workflow.indexOf(
+      "run: npm run maintain:v4:epochs:routine",
+      checkIndex + 1
+    );
 
     expect(hydrateIndex).to.be.greaterThan(-1);
     expect(runtimeIndex).to.be.greaterThan(hydrateIndex);
@@ -92,10 +116,12 @@ describe("v4 production runtime guard enforcement", () => {
     expect(workflow).to.contain("secrets.V4_EPOCH_KEEPER_PRIVATE_KEY");
     expect(workflow).to.contain("vars.V4_EPOCH_KEEPER_ADDRESS");
     expect(workflow).to.contain('V4_EPOCH_REQUIRE_HEARTBEAT: "true"');
-    expect(packageJson.scripts["maintain:v4:epochs:routine:check"])
-      .to.equal("tsx scripts/maintainV4Epochs.ts --batch-size 8 --max-batches 2 --max-backlog 8");
-    expect(packageJson.scripts["maintain:v4:epochs:routine"])
-      .to.equal("tsx scripts/maintainV4Epochs.ts --execute --batch-size 8 --max-batches 2 --max-backlog 8");
+    expect(packageJson.scripts["maintain:v4:epochs:routine:check"]).to.equal(
+      "tsx scripts/maintainV4Epochs.ts --batch-size 8 --max-batches 2 --max-backlog 8"
+    );
+    expect(packageJson.scripts["maintain:v4:epochs:routine"]).to.equal(
+      "tsx scripts/maintainV4Epochs.ts --execute --batch-size 8 --max-batches 2 --max-backlog 8"
+    );
     expect(workflow).not.to.contain("vars.V4_ENGINE");
     expect(workflow).not.to.contain("V4_OPERATIONS_KEEPER_PRIVATE_KEY");
     expect(workflow).not.to.contain("V4_OPERATIONS_KEEPER_ENABLED");
@@ -107,19 +133,25 @@ describe("v4 production runtime guard enforcement", () => {
     const workflow = source(".github/workflows/v4-liquidity-maintainer.yml");
     const hydrateIndex = workflow.indexOf("npm run v4:env:production:write");
     const runtimeIndex = workflow.indexOf("npm run verify:v4:runtime-config");
-    const executeIndex = workflow.indexOf("npm run maintain:v4:liquidity -- --execute");
+    const executeIndex = workflow.indexOf(
+      "npm run maintain:v4:liquidity -- --execute"
+    );
 
     expect(hydrateIndex).to.be.greaterThan(-1);
     expect(runtimeIndex).to.be.greaterThan(hydrateIndex);
     expect(executeIndex).to.be.greaterThan(runtimeIndex);
     expect(workflow).to.contain("vars.V4_OPERATIONS_KEEPER_ENABLED == 'true'");
-    expect(workflow).to.contain("vars.V4_LIQUIDITY_MAINTAINER_ENABLED == 'true'");
+    expect(workflow).to.contain(
+      "vars.V4_LIQUIDITY_MAINTAINER_ENABLED == 'true'"
+    );
     expect(workflow).to.contain("vars.V4_COMPOUND_KEEPER_ADDRESS");
     expect(workflow).to.contain("secrets.V4_OPERATIONS_KEEPER_PRIVATE_KEY");
     expect(workflow).to.contain("vars.V4_COMPOUND_REFERENCE_SQRT_PRICE_X96");
     expect(workflow).to.contain("vars.V4_COMPOUND_MAX_NARA_USED_RAW");
     expect(workflow).to.contain("vars.V4_COMPOUND_MAX_USDC_USED_RAW");
-    expect(workflow).to.contain("github.event_name == 'schedule' || inputs.execute == true");
+    expect(workflow).to.contain(
+      "github.event_name == 'schedule' || inputs.execute == true"
+    );
     expect(workflow).to.contain('V4_COMPOUND_REQUIRE_HEARTBEAT: "true"');
     for (const key of [
       "V4_NARA_TOKEN",

@@ -13,15 +13,13 @@ import {
   SAME_BLOCK_BUY_TOTAL_USDC,
   SAME_BLOCK_EXPECTED,
   SAME_BLOCK_EXPECTED_FEE_USDC,
-} from "../../scripts/runV4LiveSameBlockBuyTaxMatrix.js";
+} from "../../scripts/matrix/runV4LiveSameBlockBuyTaxMatrix.js";
 
 const ERC20_ABI = [
   "function balanceOf(address) view returns (uint256)",
   "function approve(address,uint256) returns (bool)",
 ];
-const PERMIT2_ABI = [
-  "function approve(address,address,uint160,uint48)",
-];
+const PERMIT2_ABI = ["function approve(address,address,uint160,uint48)"];
 const ROUTER_ABI = ["function execute(bytes,bytes[],uint256) payable"];
 const QUOTER_ABI = [
   "function quoteExactInputSingle(((address currency0,address currency1,uint24 fee,int24 tickSpacing,address hooks) poolKey,bool zeroForOne,uint128 exactAmount,bytes hookData) params) returns (uint256 amountOut,uint256 gasEstimate)",
@@ -38,7 +36,7 @@ const hasRpc = !!(process.env.BASE_RPC_URL || process.env.BASE_MAINNET_RPC_URL);
 (hasRpc ? describe : describe.skip)(
   "deployed NARA v4 - 20 x 3 USDC same-block buy tax on Base fork",
   function () {
-    it("executes twenty swap actions atomically and records 4.95 USDC of Hook fees", async function () {
+    it("executes twenty swap actions atomically and records 3.15 USDC of Hook fees", async function () {
       this.timeout(180_000);
       const { ethers, networkName } = await hre.network.connect("baseFork");
       expect(networkName).to.equal("baseFork");
@@ -116,19 +114,18 @@ const hasRpc = !!(process.env.BASE_RPC_URL || process.env.BASE_MAINNET_RPC_URL);
       const [currency0, currency1] = tokenIsCurrency0
         ? [SAME_BLOCK_EXPECTED.token, SAME_BLOCK_EXPECTED.base]
         : [SAME_BLOCK_EXPECTED.base, SAME_BLOCK_EXPECTED.token];
-      const [aggregateQuote] =
-        (await quoter.quoteExactInputSingle.staticCall({
-          poolKey: {
-            currency0,
-            currency1,
-            fee: SAME_BLOCK_EXPECTED.fee,
-            tickSpacing: SAME_BLOCK_EXPECTED.tickSpacing,
-            hooks: SAME_BLOCK_EXPECTED.hook,
-          },
-          zeroForOne: !tokenIsCurrency0,
-          exactAmount: SAME_BLOCK_BUY_TOTAL_USDC,
-          hookData: "0x",
-        })) as [bigint, bigint];
+      const [aggregateQuote] = (await quoter.quoteExactInputSingle.staticCall({
+        poolKey: {
+          currency0,
+          currency1,
+          fee: SAME_BLOCK_EXPECTED.fee,
+          tickSpacing: SAME_BLOCK_EXPECTED.tickSpacing,
+          hooks: SAME_BLOCK_EXPECTED.hook,
+        },
+        zeroForOne: !tokenIsCurrency0,
+        exactAmount: SAME_BLOCK_BUY_TOTAL_USDC,
+        hookData: "0x",
+      })) as [bigint, bigint];
       const amountOutMinimum = (aggregateQuote * 9_000n) / 10_000n;
       const executionBlock = await ethers.provider.getBlock("latest");
       const deadline = BigInt(executionBlock!.timestamp + 600);

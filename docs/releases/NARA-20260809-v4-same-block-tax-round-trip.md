@@ -30,38 +30,38 @@ audit or a live multi-wallet/multi-transaction ordering test.
 
 ## Deployment under test
 
-| Item | Value |
-|---|---|
-| NARA | `0xB6333F5D4cEd8dffA80F3F13697D6aA3BB3f19c1` |
-| USDC | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
-| Hook | `0x59AEf9799DEA01A7FB7dA73BEA10dfB08858A088` |
-| Vault | `0xD7f7b44BF65EBa3E90fDe0642687ed22A323084D` |
-| PoolManager | `0x498581fF718922c3f8e6A244956aF099B2652b2b` |
-| Universal Router | `0x6ff5693b99212da76ad316178a184ab56d299b43` |
-| Pool ID | `0x83edced1f39e6adf7469cd718eeb409824d948959263408d4cfb6e745c8db464` |
-| Seed LP NFT at test time | `2898124` |
-| Active liquidity at test time | `4242640687119285` |
-| Configured USDC depth | `300 USDC` |
-| Configured NARA depth | `60,000 NARA` |
-| Standard Uniswap pool fee | `3000` (`0.30%`) |
+| Item                          | Value                                                                |
+| ----------------------------- | -------------------------------------------------------------------- |
+| NARA                          | `0xB6333F5D4cEd8dffA80F3F13697D6aA3BB3f19c1`                         |
+| USDC                          | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`                         |
+| Hook                          | `0x59AEf9799DEA01A7FB7dA73BEA10dfB08858A088`                         |
+| Vault                         | `0xD7f7b44BF65EBa3E90fDe0642687ed22A323084D`                         |
+| PoolManager                   | `0x498581fF718922c3f8e6A244956aF099B2652b2b`                         |
+| Universal Router              | `0x6ff5693b99212da76ad316178a184ab56d299b43`                         |
+| Pool ID                       | `0x83edced1f39e6adf7469cd718eeb409824d948959263408d4cfb6e745c8db464` |
+| Seed LP NFT at test time      | `2898124`                                                            |
+| Active liquidity at test time | `4242640687119285`                                                   |
+| Configured USDC depth         | `300 USDC`                                                           |
+| Configured NARA depth         | `60,000 NARA`                                                        |
+| Standard Uniswap pool fee     | `3000` (`0.30%`)                                                     |
 
 Deployed buy curve:
 
 | Cumulative input pressure | Marginal Hook rate |
-|---:|---:|
-| Up to 5% of depth | 5% |
-| Above 5%, up to 15% | 8% |
-| Above 15%, up to 30% | 12% |
-| Above 30% | 20% |
+| ------------------------: | -----------------: |
+|         Up to 5% of depth |                 5% |
+|       Above 5%, up to 15% |                 8% |
+|      Above 15%, up to 30% |                12% |
+|                 Above 30% |                20% |
 
 Deployed sell curve:
 
 | Cumulative input pressure | Marginal Hook rate |
-|---:|---:|
-| Up to 5% of depth | 5% |
-| Above 5%, up to 15% | 7% |
-| Above 15%, up to 30% | 10% |
-| Above 30% | 15% |
+| ------------------------: | -----------------: |
+|         Up to 5% of depth |                 5% |
+|       Above 5%, up to 15% |                 7% |
+|      Above 15%, up to 30% |                10% |
+|                 Above 30% |                15% |
 
 Both deployed curve records have a `maxFeeBps` cap of `2,000 BPS` (`20%`).
 The current final marginal rates are `20%` for buys and `15%` for sells.
@@ -71,24 +71,24 @@ The current final marginal rates are `20%` for buys and `15%` for sells.
 Base transaction:
 [`0x8b305a8c...a78d106`](https://basescan.org/tx/0x8b305a8c3e441dbf68fcf5a1e14fab021be0eeef3c98bd659cb0433b3a78d106)
 
-| Field | Result |
-|---|---:|
-| Receipt status | `1` |
-| Block | `49735413` |
-| Block hash | `0xbf006602d6e24c1a342155d762190e3d0e4c795378bf26a5b737cb7f6579f58f` |
-| Block time | `2026-08-09 07:22:53 UTC` |
-| Atomic router transactions | `1` |
-| Exact-input swap actions | `20` |
-| Input per action | `3 USDC` |
-| Gross input | `60 USDC` |
-| NARA received | `5,476.535036293903312662 NARA` |
-| Quoted output | `5,476.535036293903312674 NARA` |
-| Protected minimum output | `4,928.881532664512981406 NARA` |
-| Hook fee | `4.95 USDC` |
-| Effective Hook rate | `825 BPS` (`8.25%`) |
-| Final terminal marginal tier | `1,200 BPS` (`12%`) |
-| Gas used | `1,044,095` |
-| Gas cost | `0.00000626457 ETH` |
+| Field                        |                                                               Result |
+| ---------------------------- | -------------------------------------------------------------------: |
+| Receipt status               |                                                                  `1` |
+| Block                        |                                                           `49735413` |
+| Block hash                   | `0xbf006602d6e24c1a342155d762190e3d0e4c795378bf26a5b737cb7f6579f58f` |
+| Block time                   |                                            `2026-08-09 07:22:53 UTC` |
+| Atomic router transactions   |                                                                  `1` |
+| Exact-input swap actions     |                                                                 `20` |
+| Input per action             |                                                             `3 USDC` |
+| Gross input                  |                                                            `60 USDC` |
+| NARA received                |                                      `5,476.535036293903312662 NARA` |
+| Quoted output                |                                      `5,476.535036293903312674 NARA` |
+| Protected minimum output     |                                      `4,928.881532664512981406 NARA` |
+| Hook fee                     |                                                          `4.95 USDC` |
+| Effective Hook rate          |                                                  `825 BPS` (`8.25%`) |
+| Final terminal marginal tier |                                                  `1,200 BPS` (`12%`) |
+| Gas used                     |                                                          `1,044,095` |
+| Gas cost                     |                                                  `0.00000626457 ETH` |
 
 The exact cumulative buy calculation was:
 
@@ -120,24 +120,24 @@ is charged using the cumulative integral. Consumers must not present the event
 Base transaction:
 [`0xb4d2b3c7...fe6166`](https://basescan.org/tx/0xb4d2b3c7fb56137194d89cb976d0f889707b1cdd42aa480bc8d64c0fc7fe6166)
 
-| Field | Result |
-|---|---:|
-| Receipt status | `1` |
-| Block | `49735692` |
-| Block hash | `0xb944a6863b63edcf9e90de9d9103f44c9be99ffb100746f0c8c7d0471bef7f73` |
-| Block time | `2026-08-09 07:32:11 UTC` |
-| Atomic router transactions | `1` |
-| Exact-input sell actions | `20` |
-| Gross NARA input | `5,476.535036293903312662 NARA` |
-| USDC received | `51.878091 USDC` |
-| Quoted output | `51.878102 USDC` |
-| Protected minimum output | `46.690291 USDC` |
-| Hook fee | `323.357452540573231886 NARA` |
-| Effective Hook rate | approximately `590.4417 BPS` (`5.904417%`) |
-| Integer effective rate recorded by the script | `590 BPS` |
-| Final terminal marginal tier | `700 BPS` (`7%`) |
-| Gas used | `986,097` |
-| Gas cost | `0.000005916582 ETH` |
+| Field                                         |                                                               Result |
+| --------------------------------------------- | -------------------------------------------------------------------: |
+| Receipt status                                |                                                                  `1` |
+| Block                                         |                                                           `49735692` |
+| Block hash                                    | `0xb944a6863b63edcf9e90de9d9103f44c9be99ffb100746f0c8c7d0471bef7f73` |
+| Block time                                    |                                            `2026-08-09 07:32:11 UTC` |
+| Atomic router transactions                    |                                                                  `1` |
+| Exact-input sell actions                      |                                                                 `20` |
+| Gross NARA input                              |                                      `5,476.535036293903312662 NARA` |
+| USDC received                                 |                                                     `51.878091 USDC` |
+| Quoted output                                 |                                                     `51.878102 USDC` |
+| Protected minimum output                      |                                                     `46.690291 USDC` |
+| Hook fee                                      |                                        `323.357452540573231886 NARA` |
+| Effective Hook rate                           |                           approximately `590.4417 BPS` (`5.904417%`) |
+| Integer effective rate recorded by the script |                                                            `590 BPS` |
+| Final terminal marginal tier                  |                                                     `700 BPS` (`7%`) |
+| Gas used                                      |                                                            `986,097` |
+| Gas cost                                      |                                                 `0.000005916582 ETH` |
 
 The twenty action amounts partitioned the buy output exactly. Actions 1 through
 19 sold `273.826751814695165633 NARA` each; action 20 sold
@@ -196,10 +196,10 @@ input reaches the AMM.
 
 Earlier live matrices established the new-block reset behavior:
 
-| Live matrix | Block pattern | Gross input | Observed Hook fee |
-|---|---|---:|---:|
-| Twenty buys from `1` through `20 USDC` | twenty distinct blocks | `210 USDC` | `10.95 USDC` |
-| Ten sells of `1,000 NARA` | ten distinct blocks | `10,000 NARA` | `500 NARA` |
+| Live matrix                            | Block pattern          |   Gross input | Observed Hook fee |
+| -------------------------------------- | ---------------------- | ------------: | ----------------: |
+| Twenty buys from `1` through `20 USDC` | twenty distinct blocks |    `210 USDC` |      `10.95 USDC` |
+| Ten sells of `1,000 NARA`              | ten distinct blocks    | `10,000 NARA` |        `500 NARA` |
 
 Those transactions are not an amount-for-amount control for the same-block
 round trip. For comparison, the deployed formula predicts that twenty `3 USDC`
@@ -240,8 +240,8 @@ historical live receipt outputs unless the fork block is explicitly pinned.
 
 The execution and reconciliation helpers are:
 
-- `scripts/runV4LiveSameBlockBuyTaxMatrix.ts`;
-- `scripts/runV4LiveSameBlockSellReversal.ts`;
+- `scripts/matrix/runV4LiveSameBlockBuyTaxMatrix.ts`;
+- `scripts/matrix/runV4LiveSameBlockSellReversal.ts`;
 - local generated evidence
   `deployments/v4-live-buy-tax-same-block-20x3-latest.json`; and
 - local generated evidence

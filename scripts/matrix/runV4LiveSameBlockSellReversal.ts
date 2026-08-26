@@ -27,11 +27,11 @@ import {
   currentV4Config,
   requiredBaseRpcUrl,
   requiredEnv,
-} from "./lib/v4LiveConfig.js";
+} from "../lib/v4LiveConfig.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const repoRoot = resolve(__dirname, "..");
+const repoRoot = resolve(__dirname, "..", "..");
 dotenv.config({ path: resolve(repoRoot, ".env"), quiet: true });
 
 const EXECUTION_CONFIRMATION = "SELL_FAST_BUY_NARA_20_ACTIONS_SAME_BLOCK";
@@ -203,7 +203,9 @@ async function main(): Promise<void> {
     config.tickSpacing !== SAME_BLOCK_EXPECTED.tickSpacing ||
     config.lpTokenId !== SAME_BLOCK_EXPECTED.lpTokenId
   ) {
-    throw new Error("Pool parameters or LP token ID differ from activation evidence");
+    throw new Error(
+      "Pool parameters or LP token ID differ from activation evidence"
+    );
   }
 
   const nara = new ethers.Contract(config.token, ERC20_ABI, wallet);
@@ -232,7 +234,8 @@ async function main(): Promise<void> {
     throw new Error(`Expected Base chain 8453, got ${network.chainId}`);
   }
   const preflightBlock = await provider.getBlock("latest");
-  if (!preflightBlock?.hash) throw new Error("Could not pin the preflight block");
+  if (!preflightBlock?.hash)
+    throw new Error("Could not pin the preflight block");
 
   const codeEntries = [
     ["token", config.token],
@@ -257,7 +260,9 @@ async function main(): Promise<void> {
       ethers.keccak256(code).toLowerCase() !==
         SAME_BLOCK_EXPECTED_CODE_HASHES[label].toLowerCase()
     ) {
-      throw new Error(`${label} runtime code hash does not match activation evidence`);
+      throw new Error(
+        `${label} runtime code hash does not match activation evidence`
+      );
     }
   }
   const quoterPoolManager = (await quoter.poolManager({
@@ -285,12 +290,13 @@ async function main(): Promise<void> {
     )
     .map((log) => parsedLog(TRANSFER, log))
     .filter(
-      (parsed) =>
-        parsed.args.to.toLowerCase() === wallet.address.toLowerCase()
+      (parsed) => parsed.args.to.toLowerCase() === wallet.address.toLowerCase()
     )
     .reduce((sum, parsed) => sum + (parsed.args.value as bigint), 0n);
   if (sourceNaraReceived !== REVERSAL_NARA_TOTAL) {
-    throw new Error("Exact reversal amount does not match the source buy receipt");
+    throw new Error(
+      "Exact reversal amount does not match the source buy receipt"
+    );
   }
 
   const poolState = await readPoolStateAt(
@@ -310,12 +316,18 @@ async function main(): Promise<void> {
     permit2Allowance,
     feeRecorded,
   ] = await Promise.all([
-    hook.poolRegistered({ blockTag: preflightBlock.number }) as Promise<boolean>,
-    hook.registeredPoolId({ blockTag: preflightBlock.number }) as Promise<string>,
+    hook.poolRegistered({
+      blockTag: preflightBlock.number,
+    }) as Promise<boolean>,
+    hook.registeredPoolId({
+      blockTag: preflightBlock.number,
+    }) as Promise<string>,
     hook.protocolDepth(config.token, {
       blockTag: preflightBlock.number,
     }) as Promise<bigint>,
-    hook.sellCurve({ blockTag: preflightBlock.number }) as Promise<readonly bigint[]>,
+    hook.sellCurve({ blockTag: preflightBlock.number }) as Promise<
+      readonly bigint[]
+    >,
     nara.balanceOf(wallet.address, {
       blockTag: preflightBlock.number,
     }) as Promise<bigint>,
@@ -345,9 +357,20 @@ async function main(): Promise<void> {
   if (depth !== 60_000n * 10n ** 18n) {
     throw new Error(`Unexpected configured NARA depth: ${depth}`);
   }
-  const expectedCurve = [500n, 1_500n, 3_000n, 500n, 700n, 1_000n, 1_500n, 2_000n];
+  const expectedCurve = [
+    500n,
+    1_500n,
+    3_000n,
+    500n,
+    700n,
+    1_000n,
+    1_500n,
+    2_000n,
+  ];
   if (curve.some((value, index) => value !== expectedCurve[index])) {
-    throw new Error("Active sell curve differs from the approved activation curve");
+    throw new Error(
+      "Active sell curve differs from the approved activation curve"
+    );
   }
   const expectedFee = cumulativeFee(curve, REVERSAL_NARA_TOTAL, depth);
   if (naraBalance < REVERSAL_NARA_TOTAL) {
@@ -376,7 +399,8 @@ async function main(): Promise<void> {
     (await quoter.quoteExactInputSingle.staticCall(quoteParams, {
       blockTag: preflightBlock.number,
     })) as [bigint, bigint];
-  if (aggregateQuote === 0n) throw new Error("V4Quoter returned zero USDC output");
+  if (aggregateQuote === 0n)
+    throw new Error("V4Quoter returned zero USDC output");
   const preflightMinimum =
     (aggregateQuote * (BPS - OUTPUT_TOLERANCE_BPS)) / BPS;
 
@@ -391,10 +415,7 @@ async function main(): Promise<void> {
     sellActions: REVERSAL_SELL_COUNT,
     totalNara: ethers.formatUnits(REVERSAL_NARA_TOTAL, 18),
     baseActionNara: ethers.formatUnits(REVERSAL_NARA_PIECE, 18),
-    finalActionNara: ethers.formatUnits(
-      REVERSAL_NARA_AMOUNTS.at(-1)!,
-      18
-    ),
+    finalActionNara: ethers.formatUnits(REVERSAL_NARA_AMOUNTS.at(-1)!, 18),
     expectedHookFeeNara: ethers.formatUnits(expectedFee, 18),
     expectedEffectiveFeeBps: (
       (expectedFee * BPS) /
@@ -449,7 +470,8 @@ async function main(): Promise<void> {
     );
     (report.approvalTransactions as string[]).push(approval.hash);
     const approvalBlock = await provider.getBlock("latest");
-    if (!approvalBlock) throw new Error("Could not read Permit2 approval timestamp");
+    if (!approvalBlock)
+      throw new Error("Could not read Permit2 approval timestamp");
     const expiration = BigInt(approvalBlock.timestamp + 3_600);
     const permitApproval = await sendWithMargin(
       provider,
@@ -474,7 +496,8 @@ async function main(): Promise<void> {
     persist();
 
     const stateBlock = await provider.getBlock("latest");
-    if (!stateBlock?.hash) throw new Error("Could not pin the execution state block");
+    if (!stateBlock?.hash)
+      throw new Error("Could not pin the execution state block");
     const executionPoolState = await readPoolStateAt(
       poolManager,
       config.poolId,
@@ -483,10 +506,12 @@ async function main(): Promise<void> {
     if (executionPoolState.liquidity === 0n) {
       throw new Error("Pool liquidity became zero after approvals");
     }
-    const [executionQuote] =
-      (await quoter.quoteExactInputSingle.staticCall(quoteParams, {
+    const [executionQuote] = (await quoter.quoteExactInputSingle.staticCall(
+      quoteParams,
+      {
         blockTag: stateBlock.number,
-      })) as [bigint, bigint];
+      }
+    )) as [bigint, bigint];
     const amountOutMinimum =
       (executionQuote * (BPS - OUTPUT_TOLERANCE_BPS)) / BPS;
     const deadline = BigInt(stateBlock.timestamp + 600);
@@ -510,7 +535,9 @@ async function main(): Promise<void> {
     const feeCap = feeData.maxFeePerGas ?? feeData.gasPrice;
     const liveEthBalance = await provider.getBalance(wallet.address);
     if (!feeCap || liveEthBalance < gasLimit * feeCap) {
-      throw new Error("Wallet ETH balance is below the atomic transaction fee cap");
+      throw new Error(
+        "Wallet ETH balance is below the atomic transaction fee cap"
+      );
     }
     const [naraBefore, usdcBefore, vaultBefore] = await Promise.all([
       nara.balanceOf(wallet.address, {
@@ -559,20 +586,27 @@ async function main(): Promise<void> {
     ]);
     const usdcReceived = usdcAfter - usdcBefore;
     if (naraBefore - naraAfter !== REVERSAL_NARA_TOTAL) {
-      throw new Error("Atomic reversal did not spend the exact source-buy NARA");
+      throw new Error(
+        "Atomic reversal did not spend the exact source-buy NARA"
+      );
     }
     if (usdcReceived < amountOutMinimum) {
-      throw new Error("Atomic reversal USDC output is below the protected minimum");
+      throw new Error(
+        "Atomic reversal USDC output is below the protected minimum"
+      );
     }
     if (vaultAfter - vaultBefore !== expectedFee) {
-      throw new Error("Vault NARA fee delta does not match the integrated sell fee");
+      throw new Error(
+        "Vault NARA fee delta does not match the integrated sell fee"
+      );
     }
 
     const hookInterface = new ethers.Interface(HOOK_ABI);
     const vaultInterface = new ethers.Interface(VAULT_ABI);
     const hookTopic = hookInterface.getEvent("PoolFeeTaken")?.topicHash;
     const vaultTopic = vaultInterface.getEvent("PoolFeeRecorded")?.topicHash;
-    if (!hookTopic || !vaultTopic) throw new Error("Required event topic missing");
+    if (!hookTopic || !vaultTopic)
+      throw new Error("Required event topic missing");
     const hookEvents = receipt.logs
       .filter(
         (log) =>
@@ -587,7 +621,9 @@ async function main(): Promise<void> {
           parsed.args.isBuy === false
       );
     if (hookEvents.length !== REVERSAL_SELL_COUNT) {
-      throw new Error(`Expected 20 Hook sell events, found ${hookEvents.length}`);
+      throw new Error(
+        `Expected 20 Hook sell events, found ${hookEvents.length}`
+      );
     }
     const allBlockHookLogs = await provider.getLogs({
       address: config.hook,
@@ -606,7 +642,9 @@ async function main(): Promise<void> {
       allBlockSells.length !== REVERSAL_SELL_COUNT ||
       allBlockSells.some(({ log }) => log.transactionHash !== receipt.hash)
     ) {
-      throw new Error("Receipt block contains an unexpected external NARA sell");
+      throw new Error(
+        "Receipt block contains an unexpected external NARA sell"
+      );
     }
 
     let cumulativeAmount = 0n;
@@ -659,11 +697,14 @@ async function main(): Promise<void> {
           parsed.args.isBuy === false
       );
     if (vaultEvents.length !== REVERSAL_SELL_COUNT) {
-      throw new Error(`Expected 20 Vault sell-fee events, found ${vaultEvents.length}`);
+      throw new Error(
+        `Expected 20 Vault sell-fee events, found ${vaultEvents.length}`
+      );
     }
     for (let index = 0; index < vaultEvents.length; index += 1) {
       if (
-        vaultEvents[index].args.amount !== hookEvents[index].parsed.args.feeAmount ||
+        vaultEvents[index].args.amount !==
+          hookEvents[index].parsed.args.feeAmount ||
         vaultEvents[index].args.feeBps !== hookEvents[index].parsed.args.feeBps
       ) {
         throw new Error(`Vault event mismatch at sell action ${index + 1}`);
@@ -717,7 +758,9 @@ async function main(): Promise<void> {
       recordedFlowBlock !== BigInt(receipt.blockNumber) ||
       recordedFlowAmount !== REVERSAL_NARA_TOTAL
     ) {
-      throw new Error("Hook per-block NARA flow is not the exact reversal amount");
+      throw new Error(
+        "Hook per-block NARA flow is not the exact reversal amount"
+      );
     }
 
     report.result = {

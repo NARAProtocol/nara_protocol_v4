@@ -15,11 +15,11 @@ import {
   currentV4Config,
   requiredBaseRpcUrl,
   requiredEnv,
-} from "./lib/v4LiveConfig.js";
+} from "../lib/v4LiveConfig.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const repoRoot = resolve(__dirname, "..");
+const repoRoot = resolve(__dirname, "..", "..");
 dotenv.config({ path: resolve(repoRoot, ".env"), quiet: true });
 
 const EXECUTION_CONFIRMATION = "BUY_NARA_20_X_3_USDC_SAME_BLOCK";
@@ -28,7 +28,11 @@ export const SAME_BLOCK_BUY_COUNT = 20;
 export const SAME_BLOCK_BUY_USDC = 3n * 10n ** 6n;
 export const SAME_BLOCK_BUY_TOTAL_USDC =
   BigInt(SAME_BLOCK_BUY_COUNT) * SAME_BLOCK_BUY_USDC;
-export const SAME_BLOCK_EXPECTED_FEE_USDC = 4_950_000n;
+// Bound to the EXECUTED seller-weighted fee policy (Safe-proposed, 7-day
+// timelock, finalized on Base). Live buy curve verified on-chain:
+// thresholds 500/1500/3000 bps, tiers 300/500/800/1200 bps, max 1200.
+// Aggregate 20 x 3 USDC Hook fee at depth 300 USDC = exactly 3.15 USDC.
+export const SAME_BLOCK_EXPECTED_FEE_USDC = 3_150_000n;
 const OUTPUT_TOLERANCE_BPS = 1_000n;
 const BPS = 10_000n;
 const V4_SWAP = 0x10;
@@ -47,26 +51,27 @@ export const SAME_BLOCK_EXPECTED = {
   permit2: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
   universalRouter: "0x6ff5693b99212da76ad316178a184ab56d299b43",
   v4Quoter: "0x0d5e0F971ED27FBfF6c2837bf31316121532048D",
-  poolId:
-    "0x83edced1f39e6adf7469cd718eeb409824d948959263408d4cfb6e745c8db464",
+  poolId: "0x83edced1f39e6adf7469cd718eeb409824d948959263408d4cfb6e745c8db464",
   lpTokenId: 2_898_124n,
   fee: 3_000,
   tickSpacing: 60,
 } as const;
 
-export const SAME_BLOCK_EXPECTED_CODE_HASHES: Readonly<Record<string, string>> = {
-  token: "0x62ef7f0bc66a248bd2f3ceb829b785ab8a02029b38ed1645dbac19dfd404d5fd",
-  vault: "0x9f99df87819234a0a71b34bc961bb0aec70bb8f9bd1c906cc904c98b6d93fc27",
-  hook: "0x951a143030ac1137db00219600e3249fc9b6a37f92202a3d0807453d9e63d885",
-  poolManager:
-    "0x83b2af6e9f3158defc2811cbcb0db71ecf8b2ba2abea39c39e370ac5c6f43eb6",
-  base: "0xa6705a10bb756b5dea144591118be77d7af0c3eee3bf2dfe2583dcb0364fefab",
-  permit2: "0xa67739abc3ede9dbdc0491636c67d6a14ac07fab9030c3f509b1eb7b11dff8ed",
-  universalRouter:
-    "0x27713951fb0660a1422b710122022d90723d883dc7b72949be79cb2957d234e0",
-  v4Quoter:
-    "0x9a5c0cdd56325bef0e48cdab071a4b6a7f877e1271c2e08510998d724a038bb3",
-};
+export const SAME_BLOCK_EXPECTED_CODE_HASHES: Readonly<Record<string, string>> =
+  {
+    token: "0x62ef7f0bc66a248bd2f3ceb829b785ab8a02029b38ed1645dbac19dfd404d5fd",
+    vault: "0x9f99df87819234a0a71b34bc961bb0aec70bb8f9bd1c906cc904c98b6d93fc27",
+    hook: "0x951a143030ac1137db00219600e3249fc9b6a37f92202a3d0807453d9e63d885",
+    poolManager:
+      "0x83b2af6e9f3158defc2811cbcb0db71ecf8b2ba2abea39c39e370ac5c6f43eb6",
+    base: "0xa6705a10bb756b5dea144591118be77d7af0c3eee3bf2dfe2583dcb0364fefab",
+    permit2:
+      "0xa67739abc3ede9dbdc0491636c67d6a14ac07fab9030c3f509b1eb7b11dff8ed",
+    universalRouter:
+      "0x27713951fb0660a1422b710122022d90723d883dc7b72949be79cb2957d234e0",
+    v4Quoter:
+      "0x9a5c0cdd56325bef0e48cdab071a4b6a7f877e1271c2e08510998d724a038bb3",
+  };
 
 const ERC20_ABI = [
   "function balanceOf(address) view returns (uint256)",
@@ -166,10 +171,7 @@ export function buildSameBlockBuyCall(
     settleParams,
     takeParams,
   ];
-  const v4Input = abi.encode(
-    ["bytes", "bytes[]"],
-    [actions, actionParams]
-  );
+  const v4Input = abi.encode(["bytes", "bytes[]"], [actions, actionParams]);
   return {
     commands: ethers.hexlify(new Uint8Array([V4_SWAP])),
     inputs: [v4Input],
@@ -252,7 +254,9 @@ export async function readPoolStateAt(
   blockTag: number
 ): Promise<{ sqrtPriceX96: bigint; liquidity: bigint }> {
   const [rawSlot0, rawLiquidity] = await Promise.all([
-    poolManager.extsload(poolStateSlot(poolId), { blockTag }) as Promise<string>,
+    poolManager.extsload(poolStateSlot(poolId), {
+      blockTag,
+    }) as Promise<string>,
     poolManager.extsload(poolLiquiditySlot(poolId), {
       blockTag,
     }) as Promise<string>,
@@ -263,9 +267,15 @@ export async function readPoolStateAt(
   };
 }
 
-export function assertExact(label: string, actual: string, expected: string): void {
+export function assertExact(
+  label: string,
+  actual: string,
+  expected: string
+): void {
   if (actual.toLowerCase() !== expected.toLowerCase()) {
-    throw new Error(`${label} is not the hard-pinned fresh-v4 value: ${actual}`);
+    throw new Error(
+      `${label} is not the hard-pinned fresh-v4 value: ${actual}`
+    );
   }
 }
 
@@ -274,7 +284,8 @@ export function parsedLog(
   log: ethers.Log | ethers.EventLog
 ): ethers.LogDescription {
   const parsed = contractInterface.parseLog(log);
-  if (!parsed) throw new Error(`Could not decode expected log from ${log.address}`);
+  if (!parsed)
+    throw new Error(`Could not decode expected log from ${log.address}`);
   return parsed;
 }
 
@@ -291,7 +302,9 @@ export async function canonicalReceipt(
     receipt.blockHash === ethers.ZeroHash ||
     mined.blockHash !== receipt.blockHash
   ) {
-    throw new Error(`Canonical receipt validation failed for ${transaction.hash}`);
+    throw new Error(
+      `Canonical receipt validation failed for ${transaction.hash}`
+    );
   }
   const block = await provider.getBlock(receipt.blockNumber);
   if (!block || block.hash !== receipt.blockHash) {
@@ -362,7 +375,9 @@ async function main(): Promise<void> {
     config.tickSpacing !== SAME_BLOCK_EXPECTED.tickSpacing ||
     config.lpTokenId !== SAME_BLOCK_EXPECTED.lpTokenId
   ) {
-    throw new Error("Pool parameters or LP token ID differ from activation evidence");
+    throw new Error(
+      "Pool parameters or LP token ID differ from activation evidence"
+    );
   }
 
   const usdc = new ethers.Contract(config.base, ERC20_ABI, wallet);
@@ -391,7 +406,8 @@ async function main(): Promise<void> {
     throw new Error(`Expected Base chain 8453, got ${network.chainId}`);
   }
   const preflightBlock = await provider.getBlock("latest");
-  if (!preflightBlock?.hash) throw new Error("Could not pin the preflight block");
+  if (!preflightBlock?.hash)
+    throw new Error("Could not pin the preflight block");
 
   const codeEntries = [
     ["token", config.token],
@@ -416,7 +432,9 @@ async function main(): Promise<void> {
       ethers.keccak256(code).toLowerCase() !==
         SAME_BLOCK_EXPECTED_CODE_HASHES[label].toLowerCase()
     ) {
-      throw new Error(`${label} runtime code hash does not match activation evidence`);
+      throw new Error(
+        `${label} runtime code hash does not match activation evidence`
+      );
     }
   }
   const quoterPoolManager = (await quoter.poolManager({
@@ -445,12 +463,18 @@ async function main(): Promise<void> {
     permit2Allowance,
     feeRecorded,
   ] = await Promise.all([
-    hook.poolRegistered({ blockTag: preflightBlock.number }) as Promise<boolean>,
-    hook.registeredPoolId({ blockTag: preflightBlock.number }) as Promise<string>,
+    hook.poolRegistered({
+      blockTag: preflightBlock.number,
+    }) as Promise<boolean>,
+    hook.registeredPoolId({
+      blockTag: preflightBlock.number,
+    }) as Promise<string>,
     hook.protocolDepth(config.base, {
       blockTag: preflightBlock.number,
     }) as Promise<bigint>,
-    hook.buyCurve({ blockTag: preflightBlock.number }) as Promise<readonly bigint[]>,
+    hook.buyCurve({ blockTag: preflightBlock.number }) as Promise<
+      readonly bigint[]
+    >,
     usdc.balanceOf(wallet.address, {
       blockTag: preflightBlock.number,
     }) as Promise<bigint>,
@@ -480,9 +504,20 @@ async function main(): Promise<void> {
   if (depth !== 300n * 10n ** 6n) {
     throw new Error(`Unexpected configured USDC depth: ${depth}`);
   }
-  const expectedCurve = [500n, 1_500n, 3_000n, 500n, 800n, 1_200n, 2_000n, 2_000n];
+  const expectedCurve = [
+    500n,
+    1_500n,
+    3_000n,
+    300n,
+    500n,
+    800n,
+    1_200n,
+    1_200n,
+  ];
   if (curve.some((value, index) => value !== expectedCurve[index])) {
-    throw new Error("Active buy curve differs from the approved activation curve");
+    throw new Error(
+      "Active buy curve differs from the executed seller-weighted policy curve"
+    );
   }
   const reconstructedFee = cumulativeFee(
     curve,
@@ -490,7 +525,9 @@ async function main(): Promise<void> {
     depth
   );
   if (reconstructedFee !== SAME_BLOCK_EXPECTED_FEE_USDC) {
-    throw new Error(`Expected 4.95 USDC aggregate Hook fee, got ${reconstructedFee}`);
+    throw new Error(
+      `Expected 3.15 USDC aggregate Hook fee, got ${reconstructedFee}`
+    );
   }
   if (usdcBalance < SAME_BLOCK_BUY_TOTAL_USDC) {
     throw new Error("Wallet has less than the approved 60 USDC test budget");
@@ -499,7 +536,9 @@ async function main(): Promise<void> {
     throw new Error("Wallet has less than the 0.001 ETH gas floor");
   }
   if (erc20Allowance !== 0n || permit2Allowance[0] !== 0n) {
-    throw new Error("Expected clean zero USDC allowances before the fast matrix");
+    throw new Error(
+      "Expected clean zero USDC allowances before the fast matrix"
+    );
   }
 
   const quoteParams = {
@@ -518,7 +557,8 @@ async function main(): Promise<void> {
     (await quoter.quoteExactInputSingle.staticCall(quoteParams, {
       blockTag: preflightBlock.number,
     })) as [bigint, bigint];
-  if (aggregateQuote === 0n) throw new Error("V4Quoter returned zero NARA output");
+  if (aggregateQuote === 0n)
+    throw new Error("V4Quoter returned zero NARA output");
   const preflightMinimum =
     (aggregateQuote * (BPS - OUTPUT_TOLERANCE_BPS)) / BPS;
 
@@ -531,10 +571,7 @@ async function main(): Promise<void> {
     swapActions: SAME_BLOCK_BUY_COUNT,
     amountPerActionUsdc: ethers.formatUnits(SAME_BLOCK_BUY_USDC, 6),
     totalUsdc: ethers.formatUnits(SAME_BLOCK_BUY_TOTAL_USDC, 6),
-    expectedHookFeeUsdc: ethers.formatUnits(
-      SAME_BLOCK_EXPECTED_FEE_USDC,
-      6
-    ),
+    expectedHookFeeUsdc: ethers.formatUnits(SAME_BLOCK_EXPECTED_FEE_USDC, 6),
     expectedEffectiveFeeBps: (
       (SAME_BLOCK_EXPECTED_FEE_USDC * BPS) /
       SAME_BLOCK_BUY_TOTAL_USDC
@@ -588,7 +625,8 @@ async function main(): Promise<void> {
     );
     (report.approvalTransactions as string[]).push(approval.hash);
     const approvalBlock = await provider.getBlock("latest");
-    if (!approvalBlock) throw new Error("Could not read Permit2 approval timestamp");
+    if (!approvalBlock)
+      throw new Error("Could not read Permit2 approval timestamp");
     const expiration = BigInt(approvalBlock.timestamp + 3_600);
     const permitApproval = await sendWithMargin(
       provider,
@@ -613,7 +651,8 @@ async function main(): Promise<void> {
     persist();
 
     const stateBlock = await provider.getBlock("latest");
-    if (!stateBlock?.hash) throw new Error("Could not pin the execution state block");
+    if (!stateBlock?.hash)
+      throw new Error("Could not pin the execution state block");
     const executionPoolState = await readPoolStateAt(
       poolManager,
       config.poolId,
@@ -622,10 +661,12 @@ async function main(): Promise<void> {
     if (executionPoolState.liquidity === 0n) {
       throw new Error("Pool liquidity became zero after approvals");
     }
-    const [executionQuote] =
-      (await quoter.quoteExactInputSingle.staticCall(quoteParams, {
+    const [executionQuote] = (await quoter.quoteExactInputSingle.staticCall(
+      quoteParams,
+      {
         blockTag: stateBlock.number,
-      })) as [bigint, bigint];
+      }
+    )) as [bigint, bigint];
     const amountOutMinimum =
       (executionQuote * (BPS - OUTPUT_TOLERANCE_BPS)) / BPS;
     const deadline = BigInt(stateBlock.timestamp + 600);
@@ -649,7 +690,9 @@ async function main(): Promise<void> {
     const feeCap = feeData.maxFeePerGas ?? feeData.gasPrice;
     const liveEthBalance = await provider.getBalance(wallet.address);
     if (!feeCap || liveEthBalance < gasLimit * feeCap) {
-      throw new Error("Wallet ETH balance is below the atomic transaction fee cap");
+      throw new Error(
+        "Wallet ETH balance is below the atomic transaction fee cap"
+      );
     }
     const [usdcBefore, naraBefore, vaultBefore] = await Promise.all([
       usdc.balanceOf(wallet.address, {
@@ -704,10 +747,12 @@ async function main(): Promise<void> {
       throw new Error("Atomic matrix did not spend exactly 60 USDC");
     }
     if (naraReceived < amountOutMinimum) {
-      throw new Error("Atomic matrix NARA output is below the protected minimum");
+      throw new Error(
+        "Atomic matrix NARA output is below the protected minimum"
+      );
     }
     if (vaultAfter - vaultBefore !== SAME_BLOCK_EXPECTED_FEE_USDC) {
-      throw new Error("Vault fee delta is not exactly 4.95 USDC");
+      throw new Error("Vault fee delta is not exactly 3.15 USDC");
     }
 
     const hookInterface = new ethers.Interface(HOOK_ABI);
@@ -732,7 +777,9 @@ async function main(): Promise<void> {
           parsed.args.isBuy === true
       );
     if (hookEvents.length !== SAME_BLOCK_BUY_COUNT) {
-      throw new Error(`Expected 20 Hook buy events, found ${hookEvents.length}`);
+      throw new Error(
+        `Expected 20 Hook buy events, found ${hookEvents.length}`
+      );
     }
     const allBlockHookLogs = await provider.getLogs({
       address: config.hook,
@@ -787,7 +834,7 @@ async function main(): Promise<void> {
       };
     });
     if (totalEventFee !== SAME_BLOCK_EXPECTED_FEE_USDC) {
-      throw new Error("Hook events do not total exactly 4.95 USDC");
+      throw new Error("Hook events do not total exactly 3.15 USDC");
     }
 
     const vaultEvents = receipt.logs
@@ -803,7 +850,9 @@ async function main(): Promise<void> {
           parsed.args.isBuy === true
       );
     if (vaultEvents.length !== SAME_BLOCK_BUY_COUNT) {
-      throw new Error(`Expected 20 Vault fee events, found ${vaultEvents.length}`);
+      throw new Error(
+        `Expected 20 Vault fee events, found ${vaultEvents.length}`
+      );
     }
     for (let index = 0; index < vaultEvents.length; index += 1) {
       const hookEvent = hookEvents[index].parsed;
@@ -836,7 +885,9 @@ async function main(): Promise<void> {
         0n
       ) !== SAME_BLOCK_EXPECTED_FEE_USDC
     ) {
-      throw new Error("PoolManager-to-Vault transfers do not reconcile to 4.95 USDC");
+      throw new Error(
+        "PoolManager-to-Vault transfers do not reconcile to 3.15 USDC"
+      );
     }
     const naraTransfers = receipt.logs
       .filter(
@@ -851,7 +902,9 @@ async function main(): Promise<void> {
       )
       .reduce((sum, parsed) => sum + (parsed.args.value as bigint), 0n);
     if (naraTransfers !== naraReceived) {
-      throw new Error("NARA receipt transfers do not match the wallet balance delta");
+      throw new Error(
+        "NARA receipt transfers do not match the wallet balance delta"
+      );
     }
     const [recordedFlowBlock, recordedFlowAmount] = await Promise.all([
       hook.flowBlock(config.base, {

@@ -10,12 +10,12 @@ import {
   SAME_BLOCK_EXPECTED,
   cumulativeFee,
   type FeeCurve,
-} from "../../scripts/runV4LiveSameBlockBuyTaxMatrix.js";
+} from "../../scripts/matrix/runV4LiveSameBlockBuyTaxMatrix.js";
 import {
   buildSameBlockSellCall,
   REVERSAL_NARA_TOTAL,
   REVERSAL_SELL_COUNT,
-} from "../../scripts/runV4LiveSameBlockSellReversal.js";
+} from "../../scripts/matrix/runV4LiveSameBlockSellReversal.js";
 
 const ERC20_ABI = [
   "function balanceOf(address) view returns (uint256)",
@@ -119,19 +119,18 @@ const hasRpc = !!(process.env.BASE_RPC_URL || process.env.BASE_MAINNET_RPC_URL);
       const [currency0, currency1] = tokenIsCurrency0
         ? [SAME_BLOCK_EXPECTED.token, SAME_BLOCK_EXPECTED.base]
         : [SAME_BLOCK_EXPECTED.base, SAME_BLOCK_EXPECTED.token];
-      const [aggregateQuote] =
-        (await quoter.quoteExactInputSingle.staticCall({
-          poolKey: {
-            currency0,
-            currency1,
-            fee: SAME_BLOCK_EXPECTED.fee,
-            tickSpacing: SAME_BLOCK_EXPECTED.tickSpacing,
-            hooks: SAME_BLOCK_EXPECTED.hook,
-          },
-          zeroForOne: tokenIsCurrency0,
-          exactAmount: REVERSAL_NARA_TOTAL,
-          hookData: "0x",
-        })) as [bigint, bigint];
+      const [aggregateQuote] = (await quoter.quoteExactInputSingle.staticCall({
+        poolKey: {
+          currency0,
+          currency1,
+          fee: SAME_BLOCK_EXPECTED.fee,
+          tickSpacing: SAME_BLOCK_EXPECTED.tickSpacing,
+          hooks: SAME_BLOCK_EXPECTED.hook,
+        },
+        zeroForOne: tokenIsCurrency0,
+        exactAmount: REVERSAL_NARA_TOTAL,
+        hookData: "0x",
+      })) as [bigint, bigint];
       const amountOutMinimum = (aggregateQuote * 9_000n) / 10_000n;
       const executionBlock = await ethers.provider.getBlock("latest");
       const deadline = BigInt(executionBlock!.timestamp + 600);
