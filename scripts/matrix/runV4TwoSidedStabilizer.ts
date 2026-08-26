@@ -105,6 +105,14 @@ const HEDGE_RATIO_BPS = BigInt(
   safeIntegerEnv("V4_HEDGE_SELL_RATIO_BPS", 9_000, 1, 10_000)
 );
 const BPS = 10_000n;
+const POSITIVE_EV_EVIDENCE_GAPS = [
+  "exact_source_swap_flow",
+  "next_block_defense_quote",
+  "executable_exit_scenarios",
+  "entry_and_exit_gas_in_usdc",
+  "calibrated_scenario_probabilities",
+  "path_dependent_fifo_portfolio",
+] as const;
 const BUCKET_NARA = (() => {
   const text =
     process.env.V4_HEDGE_BUCKET_NARA?.trim() || "25000000000000000000000";
@@ -751,7 +759,11 @@ async function simulatePumpDefense(
     edgeUsdc: edgeUsdc.toFixed(4),
     edgeBps,
     verdict: diagnosticVerdict,
+    verdictScope: "DIAGNOSTIC_MARK_ONLY",
     diagnosticVerdict,
+    positiveEvVerdict: "BLOCKED",
+    positiveEvEvidenceComplete: false,
+    positiveEvEvidenceGaps: POSITIVE_EV_EVIDENCE_GAPS,
     activationVerdict: "BLOCKED",
     activationEligible: false,
     minEdgeBps: Number(MIN_EDGE_BPS),
@@ -880,7 +892,11 @@ async function simulateFloorDefense(
     ).toFixed(4),
     edgeBps: Number(edge.edgeBps),
     verdict: edge.verdict,
+    verdictScope: "DIAGNOSTIC_MARK_ONLY",
     diagnosticVerdict: edge.verdict,
+    positiveEvVerdict: "BLOCKED",
+    positiveEvEvidenceComplete: false,
+    positiveEvEvidenceGaps: POSITIVE_EV_EVIDENCE_GAPS,
     activationVerdict: "BLOCKED",
     activationEligible: false,
     minEdgeBps: Number(MIN_EDGE_BPS),

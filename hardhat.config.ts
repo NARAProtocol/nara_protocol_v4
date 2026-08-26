@@ -8,7 +8,26 @@ import "dotenv/config";
 
 const PRIVATE_KEY = process.env.PRIVATE_KEY ?? "";
 const BASE_SEPOLIA_RPC_URL = process.env.BASE_SEPOLIA_RPC_URL ?? "";
-const BASE_RPC_URL = process.env.BASE_MAINNET_RPC_URL || process.env.BASE_RPC_URL || "https://mainnet.base.org";
+const BASE_RPC_URL =
+  process.env.BASE_MAINNET_RPC_URL ||
+  process.env.BASE_RPC_URL ||
+  "https://mainnet.base.org";
+const BASE_STABILIZER_ARCHIVE_RPC_URL =
+  process.env.V4_STABILIZER_ARCHIVE_RPC_URL?.trim() ?? "";
+const BASE_STABILIZER_FORK_BLOCK = (() => {
+  if (!BASE_STABILIZER_ARCHIVE_RPC_URL) return null;
+  const raw = process.env.V4_STABILIZER_FORK_BLOCK?.trim() ?? "";
+  if (!/^\d+$/.test(raw)) {
+    throw new Error(
+      "V4_STABILIZER_FORK_BLOCK must be set to the exact trigger block when V4_STABILIZER_ARCHIVE_RPC_URL is configured"
+    );
+  }
+  const value = Number(raw);
+  if (!Number.isSafeInteger(value) || value < 1) {
+    throw new Error("V4_STABILIZER_FORK_BLOCK must be a positive safe integer");
+  }
+  return value;
+})();
 
 const networks = {
   default: {
@@ -90,6 +109,24 @@ if (BASE_RPC_URL) {
     forking: {
       url: BASE_RPC_URL,
       blockNumber: 49_715_120,
+    },
+  };
+}
+
+if (BASE_STABILIZER_ARCHIVE_RPC_URL && BASE_STABILIZER_FORK_BLOCK !== null) {
+  // Opt-in, exact historical snapshot for the read-only stabilizer EV proof.
+  // It is intentionally separate from the latest-state Base fork so a generic
+  // RPC cannot silently turn historical evidence into a current-head quote.
+  optionalNetworks.baseStabilizerArchiveFork = {
+    type: "edr-simulated",
+    chainType: "op",
+    chainId: 8453,
+    allowUnlimitedContractSize: true,
+    blockGasLimit: 60_000_000,
+    hardfork: "isthmus",
+    forking: {
+      url: BASE_STABILIZER_ARCHIVE_RPC_URL,
+      blockNumber: BASE_STABILIZER_FORK_BLOCK,
     },
   };
 }

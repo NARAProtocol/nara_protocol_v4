@@ -112,8 +112,10 @@ the external-flow trigger set. Without one, origin is labeled unclassified.
   buy capped by `V4_DEFENSE_USDC_CAP` while preserving
   `V4_RESERVE_FLOOR_USDC` when a watched wallet is configured.
 - Diagnostic verdict: `GO` means only that an independent historical mark
-  reaches `V4_MIN_EDGE_BPS` (default 300 bps). Every record also carries
-  `activationVerdict: BLOCKED` and `activationEligible: false`.
+  reaches `V4_MIN_EDGE_BPS` (default 300 bps). It is explicitly scoped as
+  `DIAGNOSTIC_MARK_ONLY`; every record separately carries
+  `positiveEvVerdict: BLOCKED`, `activationVerdict: BLOCKED`, and
+  `activationEligible: false`.
 - Historical quotes use end-of-trigger-block state. They are not the observed
   trader's actual output and do not model the Hook's next-block pressure reset.
   An executable counterfactual requires a fork pinned after the trigger with an
@@ -156,9 +158,39 @@ npx tsx scripts/matrix/analyzeStabilizerPersistence.ts `
   <session-id>
 ```
 
-Phase 2 remains blocked until shadow evidence supports calibrated persistence,
-FIFO inventory basis, cooldown/cascade guards, loss limits, an explicit
-execution confirmation design, and a separate deployment-specific review.
+### Positive-EV validation
+
+The economic gate is separate from the historical mark:
+
+- `stabilizerSwapFlow.ts` reconstructs the actual USDC/NARA input and output
+  from canonical PoolManager `Swap` logs for the exact transaction and pool.
+- `stabilizerVirtualPortfolio.ts` consumes a sequential virtual USDC/NARA path
+  with explicit seeded inventory basis and FIFO lot accounting. It blocks
+  balance reuse and refuses inventory whose basis is unknown.
+- `stabilizerExpectedValue.ts` requires executable exit proceeds and residual
+  value for probability-weighted scenarios totaling exactly 10,000 bps. Entry
+  cost, entry gas, exit gas, and other costs are explicit atomic-USDC inputs.
+  Its only verdicts are `POSITIVE_EV`, `NON_POSITIVE_EV`, and `BLOCKED`.
+  Recovery marks are informational and never enter the calculation.
+- `test/fork/NARAV4StabilizerNextBlock.fork.test.ts` is an opt-in read-only
+  historical fork proof. It requires `V4_STABILIZER_ARCHIVE_RPC_URL`,
+  `V4_STABILIZER_FORK_BLOCK`, `V4_STABILIZER_TRIGGER_BLOCK_HASH`,
+  `V4_STABILIZER_TRIGGER_TX_HASH`, and
+  `V4_STABILIZER_EXPECTED_TRIGGER_SIDE`. It pins the exact trigger block and
+  hash, verifies the production runtime, reconstructs actual source output,
+  mines one empty local-fork block, and quotes the defense from that next-block
+  state. Without every input and an archive-capable provider it skips;
+  current-head substitution is forbidden.
+
+These primitives make a positive-EV claim testable, but they do not create the
+missing evidence. A `POSITIVE_EV` result still requires calibrated outcome
+probabilities and block-pinned executable exit quotes, including gas and all
+path-dependent inventory changes.
+
+Phase 2 remains blocked until a sequential shadow replay demonstrates
+calibrated persistence and FIFO inventory economics, with cooldown/cascade
+guards, loss limits, an explicit execution confirmation design, and a separate
+deployment-specific review.
 
 ---
 

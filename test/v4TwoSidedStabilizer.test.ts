@@ -169,4 +169,25 @@ describe("v4 two-sided stabilizer scan planning", () => {
       source.indexOf('kind: "scanCheckpoint"')
     );
   });
+
+  it("labels diagnostic marks as blocked positive-EV evidence", () => {
+    const source = readFileSync(
+      "scripts/matrix/runV4TwoSidedStabilizer.ts",
+      "utf8"
+    );
+
+    expect(source).to.contain('verdictScope: "DIAGNOSTIC_MARK_ONLY"');
+    expect(source).to.contain('positiveEvVerdict: "BLOCKED"');
+    expect(source).to.contain("positiveEvEvidenceComplete: false");
+    for (const gap of [
+      "exact_source_swap_flow",
+      "next_block_defense_quote",
+      "executable_exit_scenarios",
+      "entry_and_exit_gas_in_usdc",
+      "calibrated_scenario_probabilities",
+      "path_dependent_fifo_portfolio",
+    ]) {
+      expect(source).to.contain(`"${gap}"`);
+    }
+  });
 });

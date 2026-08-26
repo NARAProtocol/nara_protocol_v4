@@ -2,6 +2,8 @@
 
 Date: 2026-08-26
 
+Updated: 2026-08-27
+
 Owner: `NARAProtocol/nara_protocol_v4`
 
 Evidence state: `implemented`, `tested` locally
@@ -54,6 +56,15 @@ contract, ABI, address, role, manifest, keeper schedule, or deployed runtime.
   economics summary.
 - `analyzeStabilizerPersistence.ts`: read-only block-pinned price-persistence
   analysis at `+1`, `+3`, `+5`, `+10`, and `+20` blocks.
+- `stabilizerSwapFlow.ts`: exact canonical PoolManager swap-flow
+  reconstruction for the source transaction.
+- `stabilizerVirtualPortfolio.ts`: sequential USDC/NARA state with explicit
+  seeded basis and FIFO realization.
+- `stabilizerExpectedValue.ts`: conservative probability-weighted, all-cost
+  expected-value calculation with explicit `POSITIVE_EV`, `NON_POSITIVE_EV`,
+  and `BLOCKED` outcomes.
+- `NARAV4StabilizerNextBlock.fork.test.ts`: opt-in archive-fork proof that
+  mines one empty block after the exact trigger snapshot before defense quote.
 
 Raw `deployments/stabilizer-shadow.jsonl` remains ignored by Git. It is local
 operational evidence, not an integration manifest. This release record contains
@@ -77,7 +88,8 @@ Canonical v2 full-range replay session
 That total is **not realizable policy P&L**. The replay does not consume virtual
 inventory across candidates, pump quotes use end-of-trigger-block Hook state,
 and floor marks omit exit costs and recovery probability. All simulation
-records therefore carry `activationVerdict: BLOCKED`.
+records therefore carry `positiveEvVerdict: BLOCKED` and
+`activationVerdict: BLOCKED`.
 
 Persistence analysis selected all 34 observations but found the configured RPC
 set non-archival for this purpose: only 4 of 195 unique historical block reads
@@ -93,10 +105,12 @@ evidence and are excluded from release totals.
 Verified from branch `feat/v4-stabilizer-shadow`, based directly on
 `origin/main` commit `7b28d3a23123b5ee58f93e9c8cb34150adeb9d05`:
 
-- focused stabilizer, summary, aggregation, and persistence tests: `55 passing`;
+- focused stabilizer, EV, FIFO, source-flow, summary, aggregation, and
+  persistence tests: `89 passing`, with the opt-in historical archive-fork
+  proof intentionally pending because its required inputs were absent;
 - `npm run test:ops`: `43 passing`;
 - `npm run build`: pass;
-- `npm run test:nonfork`: `741 passing`;
+- `npm run test:nonfork`: `775 passing`;
 - focused same-block buy/sell latest-state Base-fork tests: `2 passing`;
 - scoped strict TypeScript check for the Matrix implementation/tests: pass;
 - repository-wide `tsc --noEmit` still exits `2` on pre-existing unrelated
@@ -112,10 +126,13 @@ protected-branch workflow.
 ## Remaining boundary
 
 Phase 2 remains blocked. No executor may be designed or enabled from this
-record alone. A future explicit order and deployment-specific review would need
-an archive-capable Base source; actual source-output reconstruction; an
-after-trigger fork with one empty block before defense quoting; virtual USDC,
-NARA, and FIFO basis across accepted actions; full floor buy/exit economics;
-persistence calibration; cooldown and cascade controls; per-action and daily
-loss caps; stale-state/RPC disagreement handling; allowance hygiene; dedicated
-credentials; an emergency disable path; and new fork and simulation evidence.
+record alone. Exact source-output reconstruction, next-block fork quoting,
+virtual FIFO accounting, and conservative EV math now have reusable code and
+focused tests, but the historical evidence is still incomplete. A future
+explicit order and deployment-specific review still need an archive-capable
+Base source; successful per-event next-block fork runs; executable exit quotes;
+gas converted to USDC; calibrated scenario probabilities; an end-to-end
+sequential backtest; persistence calibration; cooldown and cascade controls;
+per-action and daily loss caps; stale-state/RPC disagreement handling;
+allowance hygiene; dedicated credentials; an emergency disable path; and new
+fork and simulation evidence.
