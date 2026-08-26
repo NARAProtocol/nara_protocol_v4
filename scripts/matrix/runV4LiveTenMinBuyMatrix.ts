@@ -36,9 +36,11 @@ import {
 } from "./liveBuyMatrixGasBudget.js";
 import {
   atomicWriteJson,
+  ConfirmedNonceCursor,
   createLiveBuyMatrixEvidencePaths,
   latestPointerForTerminalRun,
   minimumSubmissionWaitMs,
+  requireIdleNonceState,
   resolveLiveBuyMatrixTerminalOutcome,
   secondsBetweenSubmissions,
 } from "./liveBuyMatrixRuntime.js";
@@ -293,12 +295,21 @@ function parsedLog(
 
 async function canonicalReceipt(
   provider: ethers.Provider,
-  transaction: ethers.ContractTransactionResponse
+  transaction: ethers.ContractTransactionResponse,
+  onConfirmedMined: () => void
 ): Promise<ethers.TransactionReceipt> {
   const mined = await transaction.wait(2);
+  if (!mined || mined.status !== 1 || mined.blockHash === ethers.ZeroHash) {
+    throw new Error(
+      `Confirmed receipt validation failed for ${transaction.hash}`
+    );
+  }
+  // The nonce is conclusively consumed once a successful confirmed receipt is
+  // returned. Release it before later canonical-provider verification so safe
+  // cleanup remains possible if that independent verification fails.
+  onConfirmedMined();
   const receipt = await provider.getTransactionReceipt(transaction.hash);
   if (
-    !mined ||
     !receipt ||
     receipt.status !== 1 ||
     receipt.blockHash === ethers.ZeroHash
@@ -322,19 +333,45 @@ async function sendWithMargin(
   provider: ethers.Provider,
   label: string,
   estimate: () => Promise<bigint>,
-  send: (gasLimit: bigint) => Promise<ethers.ContractTransactionResponse>,
+  send: (
+    gasLimit: bigint,
+    nonce: number
+  ) => Promise<ethers.ContractTransactionResponse>,
+  nonceCursor: ConfirmedNonceCursor,
   submission?: {
     before?: () => Promise<void>;
     recorded?: (submittedAtMs: number) => void;
+    sent?: (evidence: {
+      actionId: string;
+      reservedNonce: number;
+      transactionHash: string;
+      submittedAt: string;
+    }) => void;
+    actionId?: string;
   }
 ): Promise<ethers.TransactionReceipt> {
   const gas = await estimate();
   if (submission?.before) await submission.before();
+  const nonce = nonceCursor.reserve();
   const submittedAtMs = Date.now();
-  const transaction = await send((gas * 120n + 99n) / 100n);
+  const transaction = await send((gas * 120n + 99n) / 100n, nonce);
   submission?.recorded?.(submittedAtMs);
+  submission?.sent?.({
+    actionId: submission.actionId ?? label,
+    reservedNonce: nonce,
+    transactionHash: transaction.hash,
+    submittedAt: new Date(submittedAtMs).toISOString(),
+  });
+  if (transaction.nonce !== nonce) {
+    throw new Error(
+      `${label} returned nonce ${transaction.nonce}, expected reserved nonce ${nonce}`
+    );
+  }
   console.log(`${label}: ${transaction.hash}`);
-  return canonicalReceipt(provider, transaction);
+  const receipt = await canonicalReceipt(provider, transaction, () =>
+    nonceCursor.confirm(transaction.nonce)
+  );
+  return receipt;
 }
 
 async function main(): Promise<void> {
@@ -671,6 +708,12 @@ async function main(): Promise<void> {
   console.log(JSON.stringify(preflight, null, 2));
   if (!execute) return;
   if (!wallet) throw new Error("Execute mode signer was not initialized");
+  const [latestNonce, pendingNonce] = await Promise.all([
+    provider.getTransactionCount(wallet.address, "latest"),
+    provider.getTransactionCount(wallet.address, "pending"),
+  ]);
+  const startNonce = requireIdleNonceState(latestNonce, pendingNonce);
+  const nonceCursor = new ConfirmedNonceCursor(startNonce);
 
   const report: {
     runId: string;
@@ -679,12 +722,24 @@ async function main(): Promise<void> {
     finishedAt?: string;
     preflight: typeof preflight;
     approvalTransactions: string[];
+    noncePreflight: {
+      latest: number;
+      pending: number;
+      start: number;
+    };
+    submittedActions: Array<{
+      actionId: string;
+      reservedNonce: number;
+      transactionHash: string;
+      submittedAt: string;
+    }>;
     trades: TradeEvidence[];
     error?: string;
     cleanup?: {
       transactions: Record<string, string>;
       errors: string[];
       completed: boolean;
+      disposition: "COMPLETED" | "FAILED" | "DEFERRED_NONCE_UNCERTAIN";
     };
     latestPointerError?: string;
     totals?: Record<string, unknown>;
@@ -694,6 +749,12 @@ async function main(): Promise<void> {
     startedAt: new Date().toISOString(),
     preflight,
     approvalTransactions: [],
+    noncePreflight: {
+      latest: latestNonce,
+      pending: pendingNonce,
+      start: startNonce,
+    },
+    submittedActions: [],
     trades: [],
   };
   const outputDir = resolve(repoRoot, "deployments");
@@ -708,6 +769,15 @@ async function main(): Promise<void> {
   report.runId = evidencePaths.runId;
   const outputPath = evidencePaths.runPath;
   const persist = () => atomicWriteJson(outputPath, report);
+  const persistSubmittedAction = (action: {
+    actionId: string;
+    reservedNonce: number;
+    transactionHash: string;
+    submittedAt: string;
+  }) => {
+    report.submittedActions.push(action);
+    persist();
+  };
   persist();
 
   let sequenceError: unknown;
@@ -717,8 +787,13 @@ async function main(): Promise<void> {
       provider,
       "USDC exact approval to Permit2",
       () => usdc.approve.estimateGas(config.permit2, STAGGERED_BUY_TOTAL_USDC),
-      (gasLimit) =>
-        usdc.approve(config.permit2, STAGGERED_BUY_TOTAL_USDC, { gasLimit })
+      (gasLimit, nonce) =>
+        usdc.approve(config.permit2, STAGGERED_BUY_TOTAL_USDC, {
+          gasLimit,
+          nonce,
+        }),
+      nonceCursor,
+      { actionId: "approval-erc20", sent: persistSubmittedAction }
     );
     report.approvalTransactions.push(approval.hash);
     const latest = await provider.getBlock("latest");
@@ -735,14 +810,16 @@ async function main(): Promise<void> {
           STAGGERED_BUY_TOTAL_USDC,
           expiration
         ),
-      (gasLimit) =>
+      (gasLimit, nonce) =>
         permit2.approve(
           config.base,
           config.universalRouter,
           STAGGERED_BUY_TOTAL_USDC,
           expiration,
-          { gasLimit }
-        )
+          { gasLimit, nonce }
+        ),
+      nonceCursor,
+      { actionId: "approval-permit2", sent: persistSubmittedAction }
     );
     report.approvalTransactions.push(permitApproval.hash);
     persist();
@@ -899,8 +976,9 @@ async function main(): Promise<void> {
           6
         )} USDC)`,
         () => router.execute.estimateGas(commands, [v4Input], deadline),
-        (gasLimit) =>
-          router.execute(commands, [v4Input], deadline, { gasLimit }),
+        (gasLimit, nonce) =>
+          router.execute(commands, [v4Input], deadline, { gasLimit, nonce }),
+        nonceCursor,
         {
           before: async () => {
             const waitMs = minimumSubmissionWaitMs(
@@ -918,6 +996,8 @@ async function main(): Promise<void> {
             );
             previousSubmittedAtMs = actualSubmittedAtMs;
           },
+          actionId: `buy-${sequence}`,
+          sent: persistSubmittedAction,
         }
       );
       if (submittedAtMs === null) {
@@ -1168,7 +1248,18 @@ async function main(): Promise<void> {
         }`
       );
     }
-    if (permitRemaining !== null && permitRemaining !== 0n) {
+    if (nonceCursor.locked) {
+      cleanupErrors.push(
+        `DEFERRED_NONCE_UNCERTAIN: reserved nonce ${String(
+          nonceCursor.reservedNonce
+        )}; no cleanup transactions submitted`
+      );
+    }
+    if (
+      !nonceCursor.locked &&
+      permitRemaining !== null &&
+      permitRemaining !== 0n
+    ) {
       try {
         const receipt = await sendWithMargin(
           provider,
@@ -1180,10 +1271,13 @@ async function main(): Promise<void> {
               0n,
               0n
             ),
-          (gasLimit) =>
+          (gasLimit, nonce) =>
             permit2.approve(config.base, config.universalRouter, 0n, 0n, {
               gasLimit,
-            })
+              nonce,
+            }),
+          nonceCursor,
+          { actionId: "cleanup-permit2", sent: persistSubmittedAction }
         );
         cleanupTransactions.permit2 = receipt.hash;
       } catch (error) {
@@ -1194,13 +1288,20 @@ async function main(): Promise<void> {
         );
       }
     }
-    if (erc20Remaining !== null && erc20Remaining !== 0n) {
+    if (
+      !nonceCursor.locked &&
+      erc20Remaining !== null &&
+      erc20Remaining !== 0n
+    ) {
       try {
         const receipt = await sendWithMargin(
           provider,
           "Cleanup USDC allowance to Permit2",
           () => usdc.approve.estimateGas(config.permit2, 0n),
-          (gasLimit) => usdc.approve(config.permit2, 0n, { gasLimit })
+          (gasLimit, nonce) =>
+            usdc.approve(config.permit2, 0n, { gasLimit, nonce }),
+          nonceCursor,
+          { actionId: "cleanup-erc20", sent: persistSubmittedAction }
         );
         cleanupTransactions.erc20 = receipt.hash;
       } catch (error) {
@@ -1215,6 +1316,11 @@ async function main(): Promise<void> {
       transactions: cleanupTransactions,
       errors: cleanupErrors,
       completed: cleanupErrors.length === 0,
+      disposition: nonceCursor.locked
+        ? "DEFERRED_NONCE_UNCERTAIN"
+        : cleanupErrors.length === 0
+        ? "COMPLETED"
+        : "FAILED",
     };
   }
 

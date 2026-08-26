@@ -10,14 +10,87 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   atomicWriteJson,
+  ConfirmedNonceCursor,
   createLiveBuyMatrixEvidencePaths,
   latestPointerForTerminalRun,
   minimumSubmissionWaitMs,
+  requireIdleNonceState,
   resolveLiveBuyMatrixTerminalOutcome,
   secondsBetweenSubmissions,
 } from "../scripts/matrix/liveBuyMatrixRuntime.js";
 
 describe("v4 live buy Matrix runtime helpers", () => {
+  it("allocates consecutive nonces only after confirmed transactions", () => {
+    const cursor = new ConfirmedNonceCursor(41);
+
+    expect(cursor.reserve()).to.equal(41);
+    expect(() => cursor.reserve()).to.throw("uncertain outcome");
+    expect(() => cursor.confirm(40)).to.throw("does not match reserved nonce");
+    cursor.confirm(41);
+    expect(cursor.reserve()).to.equal(42);
+    cursor.confirm(42);
+    expect(cursor.initialNonce).to.equal(41);
+  });
+
+  it("rejects unsafe initial nonces", () => {
+    expect(() => new ConfirmedNonceCursor(-1)).to.throw("initial nonce");
+    expect(() => new ConfirmedNonceCursor(1.5)).to.throw("initial nonce");
+  });
+
+  it("starts only from an idle latest/pending nonce", () => {
+    expect(requireIdleNonceState(17, 17)).to.equal(17);
+    expect(() => requireIdleNonceState(17, 18)).to.throw("not nonce-idle");
+    expect(() => requireIdleNonceState(18, 17)).to.throw("not nonce-idle");
+  });
+
+  it("permits exactly one send after reservation until exact confirmation", () => {
+    const cursor = new ConfirmedNonceCursor(9);
+    expect(cursor.reserve()).to.equal(9);
+    expect(cursor.locked).to.equal(true);
+    expect(cursor.reservedNonce).to.equal(9);
+    expect(() => cursor.reserve()).to.throw("uncertain outcome");
+    cursor.confirm(9);
+    expect(cursor.locked).to.equal(false);
+    expect(cursor.reserve()).to.equal(10);
+  });
+
+  it("allows cleanup after a confirmed transaction even if later verification fails", () => {
+    const cursor = new ConfirmedNonceCursor(30);
+    cursor.reserve();
+    cursor.confirm(30);
+
+    // A canonical-provider verification failure occurs after this confirmation;
+    // the next safe cleanup transaction must use the following nonce.
+    expect(cursor.reserve()).to.equal(31);
+  });
+
+  it("persists a returned transaction before waiting for its receipt", () => {
+    const source = readFileSync(
+      "scripts/matrix/runV4LiveTenMinBuyMatrix.ts",
+      "utf8"
+    );
+    const sendIndex = source.indexOf("const transaction = await send");
+    const persistIndex = source.indexOf("submission?.sent?.(", sendIndex);
+    const receiptIndex = source.indexOf("canonicalReceipt(", persistIndex);
+
+    expect(sendIndex).to.be.greaterThan(-1);
+    expect(persistIndex).to.be.greaterThan(sendIndex);
+    expect(receiptIndex).to.be.greaterThan(persistIndex);
+    expect(source.indexOf("transaction.nonce !== nonce", persistIndex))
+      .to.be.greaterThan(persistIndex)
+      .and.lessThan(receiptIndex);
+    expect(source).to.contain("DEFERRED_NONCE_UNCERTAIN");
+    expect(
+      source.indexOf("const gas = await estimate()", sendIndex - 500)
+    ).to.be.lessThan(source.indexOf("nonceCursor.reserve()", sendIndex - 500));
+    expect(source).to.match(
+      /if \(\s*!nonceCursor\.locked &&\s*permitRemaining !== null/
+    );
+    expect(source).to.match(
+      /if \(\s*!nonceCursor\.locked &&\s*erc20Remaining !== null/
+    );
+  });
+
   it("paces relative to the previous actual submission without catch-up", () => {
     expect(minimumSubmissionWaitMs(null, 50_000, 3)).to.equal(0);
     expect(minimumSubmissionWaitMs(50_000, 51_250, 3)).to.equal(1_750);

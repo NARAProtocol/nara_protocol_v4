@@ -25,6 +25,76 @@ export interface LiveBuyMatrixTerminalOutcome {
   readonly error: string | null;
 }
 
+export class ConfirmedNonceCursor {
+  readonly #initialNonce: number;
+  #nextNonce: number;
+  #inFlight: number | null = null;
+
+  constructor(initialNonce: number) {
+    if (!Number.isSafeInteger(initialNonce) || initialNonce < 0) {
+      throw new Error("initial nonce must be a non-negative safe integer");
+    }
+    this.#initialNonce = initialNonce;
+    this.#nextNonce = initialNonce;
+  }
+
+  get initialNonce(): number {
+    return this.#initialNonce;
+  }
+
+  get locked(): boolean {
+    return this.#inFlight !== null;
+  }
+
+  get reservedNonce(): number | null {
+    return this.#inFlight;
+  }
+
+  reserve(): number {
+    if (this.#inFlight !== null) {
+      throw new Error(
+        `nonce ${
+          this.#inFlight
+        } has an uncertain outcome; refusing another transaction`
+      );
+    }
+    this.#inFlight = this.#nextNonce;
+    return this.#inFlight;
+  }
+
+  confirm(transactionNonce: number): void {
+    if (this.#inFlight === null || transactionNonce !== this.#inFlight) {
+      throw new Error(
+        `confirmed transaction nonce ${transactionNonce} does not match reserved nonce ${String(
+          this.#inFlight
+        )}`
+      );
+    }
+    this.#nextNonce = transactionNonce + 1;
+    this.#inFlight = null;
+  }
+}
+
+export function requireIdleNonceState(
+  latestNonce: number,
+  pendingNonce: number
+): number {
+  for (const [label, nonce] of [
+    ["latest", latestNonce],
+    ["pending", pendingNonce],
+  ] as const) {
+    if (!Number.isSafeInteger(nonce) || nonce < 0) {
+      throw new Error(`${label} nonce must be a non-negative safe integer`);
+    }
+  }
+  if (latestNonce !== pendingNonce) {
+    throw new Error(
+      `wallet is not nonce-idle: latest=${latestNonce}, pending=${pendingNonce}`
+    );
+  }
+  return pendingNonce;
+}
+
 export function minimumSubmissionWaitMs(
   previousSubmittedAtMs: number | null,
   nowMs: number,
