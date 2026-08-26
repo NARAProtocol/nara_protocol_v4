@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       execute:
-        description: "Run the bounded epoch maintenance cycle"
+        description: "Run the bounded manual epoch recovery"
         required: true
         default: false
         type: boolean
@@ -41,10 +41,10 @@ jobs:
         if: github.event_name == 'workflow_dispatch' && inputs.execute != true
         run: npm run maintain:v4:epochs
       - name: Verify routine backlog is inside the automatic bound
-        if: github.event_name == 'schedule' || inputs.execute == true
+        if: github.event_name == 'schedule'
         run: npm run maintain:v4:epochs:routine:check
       - name: Maintain epochs inside the routine bound
-        if: github.event_name == 'schedule' || inputs.execute == true
+        if: github.event_name == 'schedule'
         env:
           V4_EPOCH_KEEPER_ADDRESS: ${{ vars.V4_EPOCH_KEEPER_ADDRESS }}
           V4_EPOCH_KEEPER_PRIVATE_KEY: ${{ secrets.V4_EPOCH_KEEPER_PRIVATE_KEY }}
@@ -53,3 +53,16 @@ jobs:
           V4_EPOCH_REQUIRE_HEARTBEAT: "true"
           V4_EPOCH_NOTIFY_RECOVERY: "true"
         run: npm run maintain:v4:epochs:routine
+      - name: Verify bounded manual recovery plan
+        if: github.event_name == 'workflow_dispatch' && inputs.execute == true
+        run: npx tsx scripts/maintainV4Epochs.ts --batch-size 100 --max-batches 10
+      - name: Recover epochs with the dedicated keeper
+        if: github.event_name == 'workflow_dispatch' && inputs.execute == true
+        env:
+          V4_EPOCH_KEEPER_ADDRESS: ${{ vars.V4_EPOCH_KEEPER_ADDRESS }}
+          V4_EPOCH_KEEPER_PRIVATE_KEY: ${{ secrets.V4_EPOCH_KEEPER_PRIVATE_KEY }}
+          V4_EPOCH_ALERT_WEBHOOK_URL: ${{ secrets.V4_EPOCH_ALERT_WEBHOOK_URL }}
+          V4_EPOCH_HEARTBEAT_URL: ${{ secrets.V4_EPOCH_HEARTBEAT_URL }}
+          V4_EPOCH_REQUIRE_HEARTBEAT: "true"
+          V4_EPOCH_NOTIFY_RECOVERY: "true"
+        run: npx tsx scripts/maintainV4Epochs.ts --execute --batch-size 100 --max-batches 10
