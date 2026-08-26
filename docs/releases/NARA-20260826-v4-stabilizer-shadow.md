@@ -63,8 +63,16 @@ contract, ABI, address, role, manifest, keeper schedule, or deployed runtime.
 - `stabilizerExpectedValue.ts`: conservative probability-weighted, all-cost
   expected-value calculation with explicit `POSITIVE_EV`, `NON_POSITIVE_EV`,
   and `BLOCKED` outcomes.
+- `stabilizerHistoricalQuotes.ts`: canonical receipt reconstruction and exact
+  block/hash-pinned V4 quotes with no current-head fallback.
+- `stabilizerHistoricalFloorEv.ts`: sequential, fixed-horizon floor portfolios
+  with reserve, gas, overlap, and FIFO inventory enforcement.
+- `stabilizerGasModel.ts`: pure conservative quote-gas/base-fee conversion to
+  atomic USDC, including the fixed Base L1 data buffer.
 - `NARAV4StabilizerNextBlock.fork.test.ts`: opt-in archive-fork proof that
   mines one empty block after the exact trigger snapshot before defense quote.
+- `NARAV4StabilizerHistoricalFloorEv.fork.test.ts`: opt-in floor-only archive
+  fork screen over all canonical floor candidates and five exit horizons.
 
 Raw `deployments/stabilizer-shadow.jsonl` remains ignored by Git. It is local
 operational evidence, not an integration manifest. This release record contains
@@ -91,13 +99,13 @@ and floor marks omit exit costs and recovery probability. All simulation
 records therefore carry `positiveEvVerdict: BLOCKED` and
 `activationVerdict: BLOCKED`.
 
-The original persistence analysis selected all 34 observations but found the
-then-configured RPC set non-archival for that run: only 4 of 195 unique
-historical block reads were available, 191 were unavailable, and all 34 event
-analyses were unavailable. The currently configured HTTP endpoint later proved
-archive-capable for the exact block-pinned test below, but the complete
-+1/+3/+5/+10/+20 persistence analysis has not yet been rerun. No persistence
-conclusion is claimed.
+The original persistence analysis selected all 34 observations but found only
+4 of 195 unique direct historical reads available. A 2026-08-27 rerun against
+the current HTTP endpoint found 2 available and 193 unavailable because direct
+historical `eth_call` was rejected. The same endpoint did serve the historical
+state proofs required by the isolated local forks below. The general 34-event
+persistence analysis remains unavailable; no persistence conclusion is
+claimed.
 
 On 2026-08-27, the opt-in archive-fork proof passed for the canonical floor
 trigger transaction
@@ -115,6 +123,34 @@ at Base block `49,721,262`, hash
 This single exact counterfactual validates the archive/fork plumbing. It is not
 an exit quote, a calibrated probability distribution, or positive-EV proof.
 
+The same day, a separate floor-only historical screen completed over all 15
+canonical floor candidates in that session. It created an isolated Base fork
+for every entry and exit observation, with canonical block/hash checks, and
+sent no transaction. Five separate portfolios tested exits at `+1`, `+3`,
+`+5`, `+10`, and `+20` blocks relative to the entry block:
+
+- each portfolio started with `350 USDC`, preserved `200 USDC`, and used a
+  fixed `148 USDC` entry under the `150 USDC` cap;
+- modeled gas used `max(350,000, 2 x quoter estimate)` units,
+  `max(2 x block base fee, 0.01 gwei)`, `5,000 USDC/ETH`, plus a fixed
+  `0.05 USDC` Base L1 data buffer per action;
+- all 15 candidates received complete entry and five-horizon quote coverage;
+- each horizon admitted 1 episode and reserve-blocked the remaining 14;
+- the admitted `148 USDC` entry quoted
+  `17,370.349934589888866750 NARA`; every canonical horizon returned
+  `64.876685 USDC` gross, with `0.0675 USDC` modeled gas on each leg;
+- the sole episode was therefore identical across the five horizons: modeled
+  realized P&L `-83.258315 USDC`, ending cash `266.741685 USDC`, median and
+  mean `-83.258315 USDC`, and win rate `0/1`.
+
+This is an adverse exploratory observation, not an expected-value estimate.
+One admitted episode cannot establish a distribution, and the canonical exit
+states omit the hypothetical entry's effect on the pool. The report is scoped
+`HISTORICAL_COUNTERFACTUAL_SCREEN` and therefore remains
+`evidenceComplete: false`, `verdict: BLOCKED`, and
+`executionAuthorized: false`. The five offsets are alternative fixed-horizon
+policies, not five independent samples or probability weights.
+
 Earlier schema v1 sessions, including an interrupted exploratory full-history
 run and the original whale-window reconstruction, remain local development
 evidence and are excluded from release totals.
@@ -127,6 +163,10 @@ Verified from branch `feat/v4-stabilizer-shadow`, based directly on
 - focused stabilizer, EV, FIFO, source-flow, summary, aggregation, and
   persistence tests: `89 passing`;
 - exact historical archive-fork proof: `1 passing` for the pinned floor trigger;
+- historical identity/quote/gas/evaluator unit tests: `27 passing`;
+- hardened floor-only historical archive-fork screen: `1 passing` in 197
+  seconds on the final rerun, with all 15 candidates and 75 exit observations
+  collected;
 - `npm run test:ops`: `43 passing`;
 - `npm run build`: pass;
 - `npm run test:nonfork`: `775 passing`;
@@ -147,11 +187,11 @@ protected-branch workflow.
 Phase 2 remains blocked. No executor may be designed or enabled from this
 record alone. Exact source-output reconstruction, next-block fork quoting,
 virtual FIFO accounting, and conservative EV math now have reusable code and
-focused tests, but the historical evidence is still incomplete. A future
-explicit order and deployment-specific review still need an archive-capable
-Base source across the full event set; successful per-event next-block fork
-runs; executable exit quotes; gas converted to USDC; calibrated scenario
-probabilities; an end-to-end sequential backtest; persistence calibration;
+focused tests. The floor screen has complete canonical quote coverage for its
+15 selected candidates, but it is not a stateful counterfactual and admits only
+one portfolio episode per horizon. A future explicit order and deployment-
+specific review still need stateful intervention replay; calibrated scenario
+probabilities; a materially larger sequential sample; persistence calibration;
 cooldown and cascade controls;
 per-action and daily loss caps; stale-state/RPC disagreement handling;
 allowance hygiene; dedicated credentials; an emergency disable path; and new

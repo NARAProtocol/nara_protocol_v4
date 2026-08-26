@@ -181,11 +181,40 @@ The economic gate is separate from the historical mark:
   mines one empty local-fork block, and quotes the defense from that next-block
   state. Without every input and an archive-capable provider it skips;
   current-head substitution is forbidden.
+- `stabilizerHistoricalQuotes.ts` binds source-flow reconstruction and exact-
+  input quotes to canonical block numbers and hashes. It rejects missing
+  receipts, direction mismatches, reorgs, and unavailable historical state;
+  it never retries against current head.
+- `stabilizerHistoricalFloorEv.ts` applies fixed-horizon floor candidates to
+  five separate sequential FIFO portfolios. Each starts with 350 USDC,
+  preserves a 200 USDC reserve, caps entries at 150 USDC, reserves entry and
+  exit gas, blocks overlapping capital, and never reuses inventory.
+- `stabilizerGasModel.ts` provides the pure, unit-tested conservative gas-to-
+  USDC conversion used by the historical screen.
+- `test/fork/NARAV4StabilizerHistoricalFloorEv.fork.test.ts` is the opt-in
+  floor-only historical screen. It quotes a fixed 148 USDC entry at the
+  canonical block after each trigger and quotes the exact resulting NARA
+  inventory at `+1`, `+3`, `+5`, `+10`, and `+20` blocks. Gas uses the larger
+  of 350,000 units or twice the quoter estimate, the larger of twice the block
+  base fee or 0.01 gwei, a 5,000 USDC/ETH conversion, and a 0.05 USDC Base L1
+  data buffer per action.
 
 These primitives make a positive-EV claim testable, but they do not create the
 missing evidence. A `POSITIVE_EV` result still requires calibrated outcome
 probabilities and block-pinned executable exit quotes, including gas and all
 path-dependent inventory changes.
+
+The floor-only screen is deliberately
+`HISTORICAL_COUNTERFACTUAL_SCREEN`, not an EV proof. Canonical later blocks do
+not contain the hypothetical defense entry or its pool-state impact. Therefore
+the screen always reports `evidenceComplete: false`, `verdict: BLOCKED`, and
+`executionAuthorized: false`, regardless of apparent historical P&L. Each
+offset is a separate policy horizon, not a probability or an independent
+sample. Its output retains the canonical identity, exact entry/exit quote and
+gas, block/hash binding, admission decision and reason, portfolio snapshots,
+and realized P&L for every candidate at every offset. Fewer than 30 admitted
+episodes is explicitly labeled `BELOW_MINIMUM_SAMPLE_COUNT`; reaching that
+count is only a factual threshold and does not claim statistical sufficiency.
 
 Phase 2 remains blocked until a sequential shadow replay demonstrates
 calibrated persistence and FIFO inventory economics, with cooldown/cascade
