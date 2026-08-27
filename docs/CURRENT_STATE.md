@@ -97,8 +97,10 @@ data/dashboard lenses, circulating-supply periphery, and composability remain Ph
   explicit user order naming that contract.
 - Canonical Hook: `contracts/v4/NARALiquidityGrowthHook.sol`.
 - Hook update delay: seven days.
-- Contract default and governance maximum buy and sell curve rates are
-  `2,000 BPS` (20%). The activated production configuration is buy
+- Both constructor-default curves set their curve-level `maxFeeBps` to
+  `2,000 BPS` (20%). The separate source-level governance hard ceiling is
+  `MAX_POOL_FEE_BPS = 5,000 BPS` (50%); registered-pool curve changes remain
+  subject to the seven-day delay. The activated production configuration is buy
   `300/500/800/1,200 BPS` (maximum 12%) and sell
   `500/800/1,200/2,000 BPS` (maximum 20%), activated at Base block `50189462`.
   See
@@ -405,9 +407,10 @@ receipt block, reconcile receipt logs, and block blind retries.
   - terminal marginal BPS;
   - effective integrated BPS; and
   - exact integrated fee amount.
-- Contract default buy/sell maximum curve values are both capped at 20%. The
-  active production curve is buy `3%/5%/8%/12%` and sell
-  `5%/8%/12%/20%`; source defaults are not the current buy configuration.
+- Constructor-default buy/sell curve-level maximums are both 20%; the distinct
+  source hard ceiling for delayed governance updates is 50%. The active
+  production curve is buy `3%/5%/8%/12%` and sell `5%/8%/12%/20%`; source
+  defaults and the absolute hard ceiling are not the current buy configuration.
 - Live-depth probing rejects invalid token/pool inputs and remains telemetry;
   configured protocol depth is the deterministic fee basis.
 - Exact-output swaps remain rejected so fee deltas cannot invert swap semantics.

@@ -68,7 +68,8 @@ As of 2026-08-27:
   sells and separate buy-side flow. This is reconciled operations evidence,
   not whole-protocol availability or compound authorization.
 - The activated production fee curve is buy `3%/5%/8%/12%` and sell
-  `5%/8%/12%/20%`. The 20% contract defaults and governance caps must not be
+  `5%/8%/12%/20%`. The constructor defaults use 20% curve-level caps, while
+  the delayed-governance source hard ceiling is 50%; neither should be
   described as the current buy configuration.
 - Engine activation-backlog recovery is receipt-pinned. Recurring maintenance
   and the Engine lock/activation/claim/unlock lifecycle smoke remain gated.
