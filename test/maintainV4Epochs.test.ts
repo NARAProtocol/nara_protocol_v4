@@ -6,6 +6,7 @@ import {
   planEpochBatches,
   readHealthAtConfirmedBlock,
   untrackedDirectReserve,
+  validateAutomaticPlan,
 } from "../scripts/maintainV4Epochs.js";
 
 function mockHealthContracts(
@@ -45,6 +46,22 @@ describe("v4 epoch maintainer", function () {
 
   it("honors the maximum batch count", function () {
     expect(planEpochBatches(462n, 100, 3)).to.deep.equal([100n, 100n, 100n]);
+  });
+
+  it("clears the reviewed automatic recovery envelope without partial execution", function () {
+    const policy = { batchSize: 100, maxBatches: 2, maxBacklog: 150 };
+    expect(validateAutomaticPlan(115n, policy)).to.deep.equal([100n, 15n]);
+    expect(validateAutomaticPlan(150n, policy)).to.deep.equal([100n, 50n]);
+    expect(() => validateAutomaticPlan(151n, policy))
+      .to.throw("Observed backlog 151 exceeds the automatic limit 150");
+  });
+
+  it("refuses plans that cannot clear the complete observed backlog", function () {
+    expect(() => validateAutomaticPlan(201n, {
+      batchSize: 100,
+      maxBatches: 2,
+      maxBacklog: 300,
+    })).to.throw("Configured batch limit cannot clear the observed backlog");
   });
 
   it("distinguishes the external sealed reserve from direct untracked engine funds", function () {

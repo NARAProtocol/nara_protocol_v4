@@ -146,13 +146,13 @@ transaction bots.
 No secret was read, changed, or deleted, and the 2026-08-09 shutdown sent no
 on-chain transaction. The epoch workflow source was later separated from
 liquidity, bound to the hash-pinned production manifest, and separately
-activated with its own gas-only keeper, `7,37` schedule, bounded routine, and
+activated with its own gas-only keeper, bounded routine, and
 required heartbeat. Do not change either maintainer's authority, deployment
 binding, policy, or schedule without a new explicit user order and current
 deployment-specific review. See
 [NARA-20260809-disable-github-operations-bots.md](releases/NARA-20260809-disable-github-operations-bots.md).
 Current epoch evidence is
-[NARA-20260826-v4-epoch-recovery.md](releases/NARA-20260826-v4-epoch-recovery.md).
+[NARA-20260828-v4-epoch-maintainer-resilience.md](releases/NARA-20260828-v4-epoch-maintainer-resilience.md).
 
 On 2026-08-16, receipt-block reconciliation proved that six scheduled epoch
 runs shown as failed had actually submitted successful status-`1`
@@ -179,6 +179,17 @@ separately approved recovery cleared the already-accumulated backlog. The
 temporary workflow branch was closed without merge, so `main` retains the
 unchanged routine policy. See the latest recovery record and
 `NARA_V4_EPOCH_MAINTENANCE_RUNBOOK.md` for the repeatable fast path.
+
+On 2026-08-28, live workflow evidence proved that GitHub did not emit expected
+scheduled events for gaps of `2h20m`, `3h13m`, `5h04m`, and `11h03m`. The
+keeper, enable variable, concurrency policy, and RPC reads were healthy, but
+the first delayed run observed backlog `10` and the eight-epoch routine ceiling
+then prevented all later catch-up. The reviewed resilience policy changes the
+epoch-only cadence to `3,18,33,48`, permits complete automatic recovery through
+backlog `150` using at most `100 + remainder`, and still fails closed above
+that bound. No contract, ABI, address, role, credential, or liquidity policy is
+changed. Independent Railway polling and alerting is the separate consumer-side
+guard for early detection.
 
 On 2026-08-15, a new explicit user order initiated a deployment-specific
 liquidity-maintainer review. Read-only checks found that the dormant script

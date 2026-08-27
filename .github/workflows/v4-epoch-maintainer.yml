@@ -2,7 +2,7 @@ name: NARA v4 epoch maintainer
 
 on:
   schedule:
-    - cron: "7,37 * * * *"
+    - cron: "3,18,33,48 * * * *"
   workflow_dispatch:
     inputs:
       execute:
@@ -42,6 +42,8 @@ jobs:
         run: npm run maintain:v4:epochs
       - name: Verify routine backlog is inside the automatic bound
         if: github.event_name == 'schedule' || inputs.execute == true
+        env:
+          V4_EPOCH_ALERT_WEBHOOK_URL: ${{ secrets.V4_EPOCH_ALERT_WEBHOOK_URL }}
         run: npm run maintain:v4:epochs:routine:check
       - name: Maintain epochs inside the routine bound
         if: github.event_name == 'schedule' || inputs.execute == true
