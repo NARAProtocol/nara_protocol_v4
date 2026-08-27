@@ -274,7 +274,6 @@ function ledgerCandidates(jsonl: string): FloorLedgerCandidate[] {
           {
             schemaVersion: 1,
             scope: "HISTORICAL_COUNTERFACTUAL_SCREEN",
-            sessionId: SESSION_ID,
             candidatesQuoted: collected.length,
             candidateIdentitySchema:
               "chainId|poolId|configFingerprint|triggerBlockHash|sortedObservationIds",
