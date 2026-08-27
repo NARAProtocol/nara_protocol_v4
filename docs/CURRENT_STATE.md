@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-08-26.
+Last updated: 2026-08-27.
 
 This repository is v4-only. `contracts/v4/` is the sole active Solidity source.
 The experimental V5 stack, tests, scripts, and release plans have been deleted
@@ -27,15 +27,28 @@ sanitized evidence is `deployments/v4-production-activation-2026-08-09.json`,
 `deployments/v4-compounder-activation-2026-08-09.json`, and
 `deployments/v4-engine-epoch-recovery-2026-08-14.json`. The latest recurring
 operations recovery evidence is
-`deployments/v4-engine-epoch-recovery-2026-08-26.json`.
+`deployments/v4-engine-epoch-recovery-2026-08-26.json`. The latest reconciled
+liquidity state is recorded in
+[`NARA-20260827-v4-full-inventory-compound.md`](releases/NARA-20260827-v4-full-inventory-compound.md),
+and the later block-pinned fee accrual is recorded in
+[`NARA-20260827-v4-post-compound-sell-fees.md`](releases/NARA-20260827-v4-post-compound-sell-fees.md).
+The terminal three-second Matrix record is
+[`NARA-20260827-v4-live-buy-matrix-3s.md`](releases/NARA-20260827-v4-live-buy-matrix-3s.md).
 
 ## DEPLOYED AND FINALIZED — Position NFT Phase 2
 
-The Position NFT Phase-2 release is deployed on Base Mainnet, fully source-verified on
-BaseScan, and finalized under production Safe governance.
+The seven-contract Position NFT Phase-2 baseline is deployed on Base Mainnet,
+source-verified on BaseScan, and finalized under production Safe governance.
 Canonical sanitized evidence: `deployments/v4-position-nft-phase2-finalized-2026-08-21.json`
-(SHA-256: `68d9df51f9bc222437252e3628c6c7c593ef96088a518b99b17a50965504c06b`) and
+(normalized-LF SHA-256:
+`68d9df51f9bc222437252e3628c6c7c593ef96088a518b99b17a50965504c06b`) and
 `deployments/v4-position-nft-phase2-source-verification-2026-08-21.json`.
+
+The finalized evidence state is `configured_source_verified`, but
+`integrationReady` remains `false`. At finalization, the complete reconciled
+history contained no `PositionMinted` event and `nextTokenId` was `1`. The
+separately approved value-bearing mint/transfer/claim/unlock smoke, 48-hour
+monitored hold, and immutable downstream handoff are not evidenced as complete.
 
 ### Initial Verification Deployment (Phase 2 Baseline — Historical Evidence)
 Phase 2 initially deployed and verified the static baseline stack on Base Mainnet:
@@ -45,40 +58,29 @@ Phase 2 initially deployed and verified the static baseline stack on Base Mainne
 4. `NARAArtGenesisPlateV1`: `0x20520115546c28F99aE581d62935e62D9E8B9022`
 5. `NARAPositionRendererV5`: `0x607b08365C23a983C542898a79E670e6D4B80673`
 6. `NARAPositionAccountV4`: `0x3a8c9cA4f95E94751774810B33caF01bb992A55F`
-7. `NARAPositionNFTV4` (Initial Baseline): `0xCcBD8c59664958636369F8fe24B927aEBc3DF7cC` (Superseded by `0x01D3...`)
+7. `NARAPositionNFTV4`: `0xCcBD8c59664958636369F8fe24B927aEBc3DF7cC`
 
 Safe finalization transaction `0xfb83cb4cb4b8a2c30216f46be69b519628ad74259795806e30d158a7736c6e8f`
 (mined in block `50296367`) executed the atomic batch:
+
 - `setDefaultRoyalty(production.treasury, 1000)` — permanently frozen at 10.00% (`1000 BPS`)
 - `setClaimFees(0, 0)` & `setClaimFeeRecipient(address(0))` — permanently frozen at 0 BPS
 - `freezeRoyalties()` (`royaltiesFrozen = true`)
 - `freezeClaimFees()` (`claimFeesFrozen = true`)
 
-### ACTIVE CANONICAL PRODUCTION STACK — V8 Master On-Chain Progression Engine (`0x01D3...`)
-To support the **3-Vector Staking Progression (Time, Stake, Fleet Grid)**, **Multi-Year Ascensions (Supernova & Immortal Quantum Sovereign)**, and **Anti-Slop Zero-Collision SVG Architecture**, the active production contract is:
-* **Active Position NFT (`NARAPOS`):** `0x01D3AC0acda01FE5D6788fA0B4062de94C8DE52b`
-* **Active Master Renderer (V8):** `0x8567f3A8AE361E87d9441E4AA8B7B55ACBe93159`
-* **Master Art Core Plate V4:** `0x21024A9be0380d710161Bf7329E22A8cfFFAf19b`
-* **Master Art Metadata V4:** `0x0787167D575Ae7e0EDe15d77f8924Ac86597D72a`
-* **Account Implementation (EIP-1167):** `0x3a8c9cA4f95E94751774810B33caF01bb992A55F`
+### Unverified later Position NFT activity
 
-### Live Minting Verification & Master V8 Upgrades (2026-08-23)
-- **Live Mainnet Tokens:** Tokens #1 through #20 minted and verified on Base Mainnet.
-- **Empirical System Audit:** `scripts/audit-live-nfts.js` verified 100.00% exact mathematical match against `NARAEngineModelLib.computeWeight()`, verified ERC-6551 clone bytecodes (45 bytes), Engine-TBA ownership equivalence, bidirectional token-position indexing, and 100% Engine contract solvency.
-- **Master V8 Architectural Features:**
-  - **10-Cell LED Battery Capacitor HUD:** Lights up cell-by-cell as the card ages from Day 1 to Day 365.
-  - **Multi-Year Ascension Eras:** Unlocks `Ascension I: Supernova` on Year 2 and `Ascension II: Immortal Quantum Sovereign` on Year 3+.
-  - **64-Slot Fleet Grid Synergy:** Reads the holder's wallet staking count and scales from Solo Vanguard to 64/64 Sovereign Grid Master.
-  - **WCAG AAA Maximum Contrast:** 18.2:1 contrast white typography (`#F0F6FC`), Super-Cyan lasers (`#00F5FF`), and 24K Molten Gold (`#FFD700`) on solid Onyx (`#06080F`).
-  - **Zero-Collision 500x700 Bounding Box:** Isolated center reactor stage ($Y: 120-460$) guaranteeing zero text overlaps.
+Later V8 addresses, mint-count claims, marketplace activity, and audit results
+previously described here are not bound to a canonical deployment manifest or
+dated release evidence in this repository. They are provisional and are not
+production-address, integration, or availability authority. A future release
+must supply immutable origin, receipts, runtime/source proof, complete mint
+history, smoke, observation, and downstream handoff evidence before any such
+claim becomes authoritative.
 
-- **Console Web App Live:** Deployed to Cloudflare Pages (`https://nara-v4-console-preview.pages.dev`).
-
-### OpenSea Secondary Trading & Uniswap v4 Hook Swap Routing (2026-08-22)
-- **OpenSea NFT Secondary Trade Forensics:** Position NFT #3 (`Position #13`) sold via Seaport 1.6 in tx `0xb288ca5ac9d2ef5dfca788f1a73f09a7b0b834fdf928364a2c79fbdb77bfa703` for 0.001 ETH. Protocol received exact 10.00% royalty (0.0001 ETH). Buyer `0xC019...490d` took custody of Token-Bound Account `0x47Ea...bE43` with 9.90 NARA locked in `NARAEngine.sol` 100% intact.
-- **OpenSea Swap Native Uniswap v4 Hook Routing:** OpenSea Swap natively routes to NARA's Uniswap v4 Hook pool (`[USDC, NARA, 3000, 60, NARALiquidityGrowthHook]`). Supports single-hop (`USDC -> NARA`) and multi-hop (`ETH -> WETH -> USDC -> NARA`) atomic swaps.
-- **Hook Fee Banking:** Verified live swap fee captures (3.00% to 5.00%). Banked fees in `NARALiquidityGrowthVault.sol` (`0xD7f7b44BF65EBa3E90fDe0642687ed22A323084D`) reached 190.80 NARA and 24.92 USDC for protocol POL compounding.
-- **Direct OpenSea Swap Endpoint:** `https://opensea.io/swap?fromChain=base&fromAddress=0x833589fcd6edb6e08f4c7c32d4f71b54bda02913&toChain=base&toAddress=0xb6333f5d4ced8dffa80f3f13697d6aa3bb3f19c1`.
+The Cloudflare console at
+`https://nara-v4-console-preview.pages.dev` is a preview deployment only. Its
+existence does not establish Position NFT integration or public availability.
 
 
 Bonds, allocations/Ops Vault, `NARAGenesisRewardDistributorV4` and Genesis binding, router,
@@ -93,7 +95,12 @@ data/dashboard lenses, circulating-supply periphery, and composability remain Ph
   explicit user order naming that contract.
 - Canonical Hook: `contracts/v4/NARALiquidityGrowthHook.sol`.
 - Hook update delay: seven days.
-- Default maximum buy and sell curve rates: 2,000 BPS (20%).
+- Contract default and governance maximum buy and sell curve rates are
+  `2,000 BPS` (20%). The activated production configuration is buy
+  `300/500/800/1,200 BPS` (maximum 12%) and sell
+  `500/800/1,200/2,000 BPS` (maximum 20%), activated at Base block `50189462`.
+  See
+  [NARA-20260819-v4-pol-compound-and-fee-update.md](releases/NARA-20260819-v4-pol-compound-and-fee-update.md).
 - Pressure accounting: cumulative per input currency within one block.
 - Tax boundary: every supported exact-input swap through the one registered
   canonical NARA/USDC Hook pool is charged. Exact-output is rejected. ERC-20
@@ -191,6 +198,29 @@ transaction; keeper nonce remained `1`. The workflow is active with both gates
 true. See
 [NARA-20260815-v4-liquidity-maintainer-activation.md](releases/NARA-20260815-v4-liquidity-maintainer-activation.md).
 
+On 2026-08-27, a separately controlled full-inventory operation compounded
+`8,891.386678206871411484 NARA + 1,717.033154 USDC` in status-`1` transaction
+`0x855691363aaf930f418cf065a491653513a69f4bece0ec210d53bd92a4864583`
+at Base block `50499085`. Receipt-pinned reconciliation recorded Compounder LP
+liquidity `4386316228001171`, banked remainder
+`28.423769295100595183 NARA + 2.326460 USDC`, lifetime realized totals
+`11,764.639965826519127719 NARA + 1,797.139917 USDC`, and zero Vault token
+balances. The temporary broad caps were removed: routine policy is again
+`500 NARA`, `6 USDC`, a `100 BPS` sqrt-price guard, a `200 BPS` imbalance
+guard, and a `5 USDC` minimum trigger. Both workflow gates remained true and
+the keeper role, schedule, and runtime binding were unchanged. This is
+controlled compound activation/reconciliation evidence, not a whole-protocol
+availability claim. See
+[NARA-20260827-v4-full-inventory-compound.md](releases/NARA-20260827-v4-full-inventory-compound.md).
+
+After that zero-Vault post-state, 22 confirmed sells through the canonical Hook
+accrued `2,627.5 NARA` of new sell fees. At cutoff block `50534484`, the Vault
+held `2,627.5 NARA + 0.660000 USDC`; the Compounder still held
+`28.423769295100595183 NARA + 2.326460 USDC`. Combined USDC inventory was
+`2.986460`, below the routine `5 USDC` minimum. This balance snapshot is
+read-only evidence and does not authorize a compound. See
+[NARA-20260827-v4-post-compound-sell-fees.md](releases/NARA-20260827-v4-post-compound-sell-fees.md).
+
 On 2026-08-14, the production Safe executed three permissionless, zero-value
 `advanceEpochs(200)` calls at Safe nonces `35..37`. Receipt events covered
 epochs `36..235`, `236..435`, and `436..559`; the final call stopped after the
@@ -276,8 +306,18 @@ The full receipt-pinned calculation, round-trip accounting, and evidence limits
 are documented in
 [NARA-20260809-v4-same-block-tax-round-trip.md](releases/NARA-20260809-v4-same-block-tax-round-trip.md).
 
-The production Safe then executed one bounded Compounder validation in Base
-transaction
+On 2026-08-27, a separately gated three-second Matrix attempted 100 buys of
+`11 USDC`. Three terminal attempts confirmed 47 buys before two fail-closed
+stops and an explicit operator stop. The confirmed partial result was
+`517 USDC` in, `2,700.576852184485250104 NARA` out, and `15.510000 USDC` of
+Hook fees. All 47 receipts and canonical fee events reconciled; all six cleanup
+receipts succeeded and both allowance layers ended at zero. The remaining 53
+buys were not executed, no resume is authorized, and this is not a completed
+100-buy or profitability result. See
+[NARA-20260827-v4-live-buy-matrix-3s.md](releases/NARA-20260827-v4-live-buy-matrix-3s.md).
+
+The production Safe then executed the historical initial bounded Compounder
+validation in Base transaction
 `0xf1ea7e7dfdf8e1021ceebf26a943cba604e0a8c894eec5f527bc01656b5890be`
 at block `49736646`. The transaction minted Compounder-owned LP NFT `2898486`
 with liquidity `9455824137787`, adding
@@ -298,7 +338,9 @@ at block `49736809`. At that freeze block:
 Vault lifetime-compounded counters describe the full inventory handed to the
 exact-spend Compounder (`1818.586695052744227683 NARA + 25.412880 USDC`). They
 are not the actual LP inputs. The difference remains banked in the Compounder,
-not active liquidity. Full evidence is in
+not active liquidity. This initial snapshot is superseded for current liquidity
+balances by the 2026-08-15 maintainer activation and the 2026-08-27
+full-inventory compound. Full validation evidence is in
 [NARA-20260809-v4-compounder-activation.md](releases/NARA-20260809-v4-compounder-activation.md).
 
 The original core deployment evidence remains a historical pre-activation
@@ -361,7 +403,9 @@ receipt block, reconcile receipt logs, and block blind retries.
   - terminal marginal BPS;
   - effective integrated BPS; and
   - exact integrated fee amount.
-- Default buy/sell maximum curve values are both capped at 20%.
+- Contract default buy/sell maximum curve values are both capped at 20%. The
+  active production curve is buy `3%/5%/8%/12%` and sell
+  `5%/8%/12%/20%`; source defaults are not the current buy configuration.
 - Live-depth probing rejects invalid token/pool inputs and remains telemetry;
   configured protocol depth is the deterministic fee basis.
 - Exact-output swaps remain rejected so fee deltas cannot invert swap semantics.

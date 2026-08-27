@@ -1,6 +1,7 @@
 # NARA-20260821-v4-position-nft-phase2 — Production Operator Runbook
 
-Status: **PRE-DEPLOYMENT — NO BASE ADDRESS OR PRODUCTION WRITE RECORDED**
+Status: **HISTORICAL OPERATOR RUNBOOK — DEPLOYMENT AND SAFE FINALIZATION COMPLETE;
+INTEGRATION GATES PENDING**
 
 Network: Base mainnet (`chainId 8453`)
 
@@ -11,9 +12,33 @@ deployment authorization, is not a Safe signing request, and does not replace th
 attestation or explicit human approvals. Never place private keys, RPC values, API-key values, or
 signatures in this document or any release artifact.
 
+## Executed outcome
+
+Gates 0 through 9 below are retained as the historical one-time operator path
+and must not be replayed. Canonical outcome evidence is
+`deployments/v4-position-nft-phase2-finalized-2026-08-21.json` and
+`deployments/v4-position-nft-phase2-source-verification-2026-08-21.json`.
+
+- Canonical `NARAPositionNFTV4`:
+  `0xCcBD8c59664958636369F8fe24B927aEBc3DF7cC`.
+- Seven-contract deployment transaction sequence completed successfully; the
+  NFT deployment transaction is
+  `0x20d8e0a3fa62c1628c9fcb66055de631cfbf5519b988e2d98d5f713b63aa1f45`
+  at Base block `50293938`.
+- All seven contracts are source-verified.
+- Production Safe finalization transaction
+  `0xfb83cb4cb4b8a2c30216f46be69b519628ad74259795806e30d158a7736c6e8f`
+  succeeded at Base block `50296367`.
+- Final evidence state is `configured_source_verified`, with frozen 10% Treasury
+  royalties, frozen zero claim fees, and Genesis distributor unset.
+- `integrationReady` remains `false`. The separately approved value-bearing
+  smoke was `not_performed`; Gate 10's smoke and 48-hour hold and Gate 11's
+  immutable downstream handoff remain pending. Safe finalization is not
+  consumer activation or public availability.
+
 ## Release boundary
 
-Deploy exactly seven contracts, in this order:
+The release deployed exactly seven contracts, in this order:
 
 1. `NARAArtMetadataV1`
 2. `NARAArtSecurityPrintV1`
@@ -587,7 +612,9 @@ authoritative protocol origin, all consumers remain quarantined:
 - baskets and frontends must not expose NFT actions or planned addresses;
 - analytics must not infer an NFT address or start block;
 - generated ABIs/bindings must not move from a dirty/uncommitted tree; and
-- public documentation must not say deployed, configured, indexed, available, or live.
+- public documentation may describe the manifest-pinned deployment and
+  finalization, but must state `integrationReady: false` and must not say
+  integrated, indexed, available, or live.
 
 Create one cross-repository handoff for the same change ID containing:
 
