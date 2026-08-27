@@ -1,20 +1,19 @@
 # NARA Roadmap
 
-Last updated: 2026-08-21.
+Last updated: 2026-08-27.
 
-> **Current-state override:** the fresh v4 core and Compounder are deployed and
-> source-verified on Base mainnet. Hook/Vault ownership is accepted, and the
-> NARA/USDC pool is initialized and seeded with a Safe-owned LP NFT. Engine
-> epoch recovery and Compounder validation/freeze are receipt-pinned as
-> complete. The immediate contract-release step is the exact seven-contract
-> Position NFT Phase 2; its hardened workflow exists locally but is unmerged
-> and has no Base deployment manifest. Allocations, bonds, Genesis distribution,
-> router/lens periphery, the Engine lifecycle smoke, and downstream handoffs
-> remain separate later gates. Baskets remain preview-only, Lockboard is
-> deferred, and Lotto and Arena are retired. Current authority includes
-> `deployments/v4-compounder-activation-2026-08-09.json` together with
-> `docs/releases/NARA-20260809-v4-compounder-activation.md`. This file is
-> product direction, not a deployment runbook.
+> **Current-state override:** the fresh v4 core, Compounder, and exact
+> seven-contract Position NFT Phase-2 baseline are deployed and source-verified
+> on Base mainnet. The Position NFT at
+> `0xCcBD8c59664958636369F8fe24B927aEBc3DF7cC` is configured and Safe-finalized,
+> but its final manifest remains `integrationReady: false`; value-bearing
+> smoke, the 48-hour monitored hold, and immutable downstream handoff remain
+> pending. Allocations, bonds, Genesis distribution, router/lens periphery, and
+> the Engine lifecycle smoke remain separate later gates. Baskets and the
+> Cloudflare console remain preview-only, Lockboard is deferred, and Lotto and
+> Arena are retired. Current authority includes the finalized Position NFT
+> manifests and `docs/releases/NARA-20260827-v4-full-inventory-compound.md`.
+> This file is product direction, not a deployment runbook.
 
 This roadmap is anchored to [CURRENT_STATE.md](CURRENT_STATE.md). Code and deployment scripts are the source of truth. If roadmap language conflicts with code, update the roadmap.
 
@@ -31,9 +30,11 @@ Current v4 thesis:
 - Base native USDC liquidity on Uniswap v4.
 - Dynamic liquidity-growth hook through `NARALiquidityGrowthHook`.
 - Fee routing through `NARALiquidityGrowthVault`.
-- Phase-2 tradable lock positions through `NARAPositionNFTV4` and
-  `NARAPositionAccountV4`, with immutable on-chain art and stable marketplace metadata via the
-  modular `NARAPositionRendererV5`; not deployed yet.
+- The deployed and Safe-finalized Phase-2 baseline provides optional tradable
+  lock positions through `NARAPositionNFTV4` and `NARAPositionAccountV4`, with
+  immutable on-chain art and stable marketplace metadata via the modular
+  `NARAPositionRendererV5`. It is not consumer-available while smoke, hold, and
+  handoff evidence remain incomplete.
 - Phase-3 public bond path through `NARABondDepositoryV4NFT`, not raw direct-lock bonds.
 - Phase-3 Genesis reward accounting through `NARAGenesisRewardDistributorV4`.
 - Phase-3 lazy UX + read layer: `NARARouter` (permit+sync+lock, permissionless
@@ -47,7 +48,7 @@ The frontend is a launch and education surface. The protocol thesis is the durab
 
 ## Current Starting Point
 
-As of 2026-08-21:
+As of 2026-08-27:
 
 - v3 is **retired**. All v3 mainnet contracts are archived at `archive/legacy-v3/`. See `archive/legacy-v3/README.md` for retired addresses.
 - The 2026-04-23 v4 incident stack is retired for launch purposes.
@@ -58,13 +59,24 @@ As of 2026-08-21:
   `60,000 NARA + 300 USDC`; LP NFT `2898124` is Safe-owned.
 - Receipt-pinned buy/sell and same-block tax tests passed and Vault accounting
   reconciled.
-- Compounder validation/freeze succeeded. Compounder-owned LP NFT `2898486`
-  has liquidity `9455824137787`; unmatched inventory is banked in the
-  Compounder, not active LP.
+- Compounder validation/freeze succeeded. After the receipt-pinned 2026-08-27
+  controlled full-inventory compound, Compounder-owned LP NFT `2898486` had
+  liquidity `4386316228001171`; banked remainder was
+  `28.423769295100595183 NARA + 2.326460 USDC`, and Vault token balances were
+  zero at the compound receipt. A later cutoff at block `50534484` recorded
+  `2,627.5 NARA + 0.660000 USDC` of fresh Vault inventory after 22 confirmed
+  sells and separate buy-side flow. This is reconciled operations evidence,
+  not whole-protocol availability or compound authorization.
+- The activated production fee curve is buy `3%/5%/8%/12%` and sell
+  `5%/8%/12%/20%`. The 20% contract defaults and governance caps must not be
+  described as the current buy configuration.
 - Engine activation-backlog recovery is receipt-pinned. Recurring maintenance
   and the Engine lock/activation/claim/unlock lifecycle smoke remain gated.
-- The immediate deployment scope is the exact seven-contract Position NFT Phase 2. The workflow is
-  local/unmerged; there is no verified Base NFT address or final manifest, and every consumer remains
+- The exact seven-contract Position NFT Phase-2 baseline is deployed,
+  source-verified, and Safe-finalized at
+  `0xCcBD8c59664958636369F8fe24B927aEBc3DF7cC`. Its evidence state is
+  `configured_source_verified`, but `integrationReady` is `false`; smoke, the
+  48-hour hold, and downstream handoff remain pending and consumers stay
   disabled.
 - Baskets remain preview-only and are not the origin for NFT deployment facts.
 - Do not repeat the core deployment.
@@ -73,8 +85,11 @@ As of 2026-08-21:
 - Current public bond path is `NARABondDepositoryV4NFT`.
 - Current composability code is implemented locally but not deployed.
 
-Latest verification — see [CURRENT_STATE.md](CURRENT_STATE.md#verification-evidence) for the
-commands and dated stamp. As of 2026-08-09:
+Baseline repository verification — see
+[CURRENT_STATE.md](CURRENT_STATE.md#verification-evidence) for the commands and
+dated stamp. The broad-suite counts below are from 2026-08-09; the later
+Position NFT manifests and 2026-08-27 compound record are deployment-specific
+evidence:
 
 - Full Hardhat suite: 556 passing, with 7 opt-in Base-fork cases pending.
 - Fresh deployment/receipt/Safe-batch evidence: 12 focused tests passing.
@@ -191,14 +206,17 @@ Success criteria:
 
 ## Phase 2: Position NFT And Modular On-Chain Art
 
-Status: active release preparation. The contracts and fail-closed deployment workflow exist in the
-local release worktree, but they are unmerged and not deployed. No planned address is a production
-address, and consumers remain disabled.
+Status: deployed, configured, source-verified, and Safe-finalized baseline. The
+canonical Position NFT is
+`0xCcBD8c59664958636369F8fe24B927aEBc3DF7cC`. The final manifest remains
+`integrationReady: false`; value-bearing smoke, the 48-hour monitored hold, and
+immutable downstream handoff remain pending, so consumers remain disabled.
 
-Goal: deploy and finalize exactly the optional Position NFT wrapper and its immutable art/account
-dependencies without coupling the release to allocations, bonds, Genesis distribution, or periphery.
+Goal: preserve the finalized seven-contract origin and complete the separately
+approved smoke, observation, and handoff gates without coupling the release to
+allocations, bonds, Genesis distribution, or periphery.
 
-Exact deployment order:
+Completed deployment order:
 
 1. `NARAArtMetadataV1`
 2. `NARAArtSecurityPrintV1`
@@ -221,25 +239,27 @@ Phase-2 policy:
   configuration remains available only for a separately reviewed Phase-3 release.
 - Minting is permissionless from the confirmed NFT deployment block, so every verifier reconciles
   the complete `PositionMinted` history and `nextTokenId`.
+- The finalized readback reconciled zero `PositionMinted` events and
+  `nextTokenId == 1`; that boundary is historical finalization evidence, not a
+  claim that a later smoke or mint occurred.
 
-Canonical flow:
+Completed release path and remaining gate:
 
-1. Complete source tests, current byte sizes, static analysis, local art QA, and the atomic fresh-fork
-   rehearsal on the exact source commit.
-2. Merge the audited source commit through protected `origin/main`; generate the nonce/address plan
-   and artifact evidence from that clean commit; then merge the evidence-only second commit.
-3. Bind exact source/evidence commits, CI, audit, art, roadmap, plan, royalty/fee policy, and explicit
-   human approval in the ignored external attestation.
-4. Use the dedicated idle one-attempt signer and `npm run deploy:v4:position-nft` once. Stop on nonce,
-   code, receipt-journal, runtime, or prior-attempt ambiguity; never retry blindly.
-5. Run strict pending verification, all-seven source verification, and the just-in-time Safe packet
-   builder. Any Safe nonce drift from the deployment snapshot is a stop-and-review condition.
-6. Human Safe signers execute only the exact five-call royalty/claim-fee reset-and-freeze batch.
-   Finalize and rerun the final verifier.
-7. Complete separately approved value-bearing smoke, the 48-hour monitored hold, immutable protocol
-   origin evidence, and the explicit downstream handoff before enabling any consumer.
+1. Source tests, size/static analysis, local art QA, fork rehearsal, protected
+   source/evidence commits, and human release approvals completed.
+2. The dedicated one-attempt deployment produced the seven exact Base receipts
+   and the pending manifest.
+3. All seven contracts were source-verified and the state-bound Safe packet was
+   prepared.
+4. Human Safe signers executed the exact five-call royalty/claim-fee
+   reset-and-freeze batch; final verification produced
+   `deployments/v4-position-nft-phase2-finalized-2026-08-21.json`.
+5. Separately approved value-bearing smoke, the 48-hour monitored hold, and the
+   explicit immutable downstream handoff remain pending before any consumer can
+   be enabled.
 
-Canonical command names, separated by the human/evidence gates above:
+Historical one-time command names, retained for audit context; do not rerun the
+deployment or finalization sequence:
 
 ```text
 npm run preview:v4:position-nft-art
@@ -255,8 +275,9 @@ npm run finalize:v4:position-nft-evidence
 npm run verify:v4:position-nft
 ```
 
-This is not a single uninterrupted command sequence. Source/evidence commits, external attestation,
-explicit deployment approval, Safe review, and separate smoke approval remain mandatory boundaries.
+This was not a single uninterrupted command sequence. Source/evidence commits,
+external attestation, explicit deployment approval, and Safe review were
+mandatory boundaries; separate smoke approval remains a mandatory boundary.
 
 The authoritative checklist and operator sequence are
 [`NARA_V4_NFT_PRODUCTION_PLAN.md`](NARA_V4_NFT_PRODUCTION_PLAN.md) and
@@ -268,13 +289,14 @@ Phase-2 dry-run or deployment path. Do not bypass that refusal or restore the fo
 
 Success criteria:
 
-- exact seven-contract receipts, runtime/source proofs, constructors, bindings, and start blocks are
-  recorded in the finalized manifest;
-- the royalty receiver/rate and both zero claim fees are read back as permanently frozen;
-- owner, Safe state/nonce continuity, Genesis-zero history, and complete permissionless mint history
-  reconcile;
-- smoke and the 48-hour observation hold pass; and
-- consumers remain quarantined until an immutable manifest/ABI/start-block handoff exists.
+- Complete: exact seven-contract receipts, runtime/source proofs, constructors,
+  bindings, and start blocks are recorded in the finalized manifest.
+- Complete: royalty receiver/rate, both zero claim fees, owner, Safe
+  state/nonce continuity, Genesis-zero history, and the finalization mint
+  history reconcile.
+- Pending: smoke and the 48-hour observation hold pass.
+- Pending: immutable manifest/ABI/start-block handoff is issued; consumers
+  remain quarantined until then.
 
 ---
 
@@ -322,9 +344,11 @@ Success criteria:
 
 ## Phase 4: Liquidity Growth Operations
 
-Status: pool fees are live, the first bounded compound and permanent binding freeze are complete,
-and the separately credentialed bounded liquidity maintainer is active under its verified policy,
-schedule, runtime guard, and heartbeat.
+Status: pool fees are live, the permanent binding freeze is complete, and the
+separately credentialed bounded liquidity maintainer is active under its
+verified policy, schedule, runtime guard, and heartbeat. The 2026-08-27
+full-inventory operation is activated-and-reconciled evidence; it did not
+change code, roles, keeper schedule, or whole-stack availability.
 
 Goal: operate `NARALiquidityGrowthVault` deliberately.
 
@@ -344,6 +368,20 @@ Launch expectation:
   it without a new explicit order and deployment-specific review.
 - Distinguish active LP inputs from unmatched inventory banked in the
   Compounder.
+- Preserve the active buy `3%/5%/8%/12%` and sell `5%/8%/12%/20%` curves unless
+  a separately reviewed seven-day-timelocked update completes. Current fee
+  activation evidence is
+  [`NARA-20260819-v4-pol-compound-and-fee-update.md`](releases/NARA-20260819-v4-pol-compound-and-fee-update.md).
+- Treat the 2026-08-27 compound receipt as the latest reconciled LP checkpoint:
+  LP liquidity `4386316228001171`, banked
+  `28.423769295100595183 NARA + 2.326460 USDC`, zero Vault balances immediately
+  after the call, and
+  lifetime realized totals `11,764.639965826519127719 NARA + 1,797.139917 USDC`.
+  The later fee checkpoint at block `50534484` records Vault balances
+  `2,627.5 NARA + 0.660000 USDC`; combined Vault and Compounder USDC inventory
+  is `2.986460`, below the routine `5 USDC` minimum, and rolls forward.
+- Keep the restored routine caps at `500 NARA`, `6 USDC`, `100 BPS` sqrt-price
+  guard, `200 BPS` imbalance guard, and `5 USDC` minimum trigger.
 
 Success criteria:
 
@@ -490,23 +528,19 @@ If users do not understand rewards:
 
 ## Near-Term Build Order
 
-1. Finish the exact Phase-2 Position NFT source, tests, current size/static-analysis evidence, local
-   art QA, atomic fork rehearsal, and operator documentation.
-2. Merge the audited source commit through protected CI, generate the deployment plan/artifact
-   evidence from that exact clean origin, and merge the evidence-only second commit.
-3. Complete the ignored external attestation and explicit human approval, then execute the dedicated
-   one-attempt seven-contract deployment without any blind retry.
-4. Complete strict pending verification, all-seven source verification, nonce/state-bound JIT Safe
-   preparation, exact five-call human Safe finalization, and final evidence/readback.
-5. Complete separately approved Position NFT smoke and the 48-hour monitored hold; commit the final
-   manifest/observation evidence and issue the immutable downstream handoff.
-6. Keep Swarm, baskets, analytics, frontends, and public documentation NFT surfaces disabled until
-   that handoff; keep Baskets preview-only until their own verified manifests exist.
-7. Continue monitoring both active maintainers while keeping credentials, schedules, bounds, and
-   deployment bindings separate unless a new explicit order authorizes a reviewed change.
-8. Only then design and review new Phase-3 allocation/bond/Genesis and router/lens release paths;
-   do not revive the quarantined broad allocation deployer.
-9. Open bonds only after the Phase-3 valuation, terms, capacity, treasury routing, Genesis metadata,
-   role, smoke, and observation gates pass.
-10. Deploy composability only after its dependencies have verified manifests and handoffs, then
-    validate SY before Pendle outreach.
+1. Obtain separate explicit approval and complete the receipt-pinned Position
+   NFT mint/transfer/claim/unlock smoke against the finalized baseline.
+2. Complete the 48-hour monitored hold, commit the observation evidence, and
+   issue the immutable downstream manifest/ABI/start-block handoff.
+3. Keep Swarm, baskets, analytics, frontends, and public NFT surfaces disabled
+   until that handoff; keep baskets and the Cloudflare console preview-only.
+4. Continue monitoring both active maintainers and the post-compound bank while
+   keeping credentials, schedules, routine caps, and deployment bindings
+   separate unless a new explicit order authorizes a reviewed change.
+5. Only then design and review new Phase-3 allocation/bond/Genesis and
+   router/lens release paths; do not revive the quarantined broad allocation
+   deployer.
+6. Open bonds only after the Phase-3 valuation, terms, capacity, treasury
+   routing, Genesis metadata, role, smoke, and observation gates pass.
+7. Deploy composability only after its dependencies have verified manifests and
+   handoffs, then validate SY before Pendle outreach.
