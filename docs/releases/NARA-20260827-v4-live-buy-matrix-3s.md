@@ -4,6 +4,9 @@ Date: 2026-08-27
 
 Owner: `NARAProtocol/nara_protocol_v4`
 
+Distribution: public sanitized evidence; Matrix implementation remains private
+local operator tooling and is not part of this repository.
+
 Evidence state: `TERMINAL_PARTIAL_EXECUTION_RECONCILED`
 
 Decision: `47_OF_100_CONFIRMED_INCOMPLETE`
@@ -16,6 +19,9 @@ resume the remaining 53 buys
 The live Matrix attempted 100 separate exact-input buys of `11 USDC` with a
 minimum three-second submission interval. Three terminal attempts produced 47
 confirmed buys. The remaining 53 buys were not executed.
+
+This record explains the Matrix behavior and reconciled outcome without
+publishing its source, launchers, local configuration, or signing surface.
 
 Every receipt was independently fetched from Base and checked for status,
 receipt block/hash, and exactly one canonical `PoolFeeTaken` buy event for the

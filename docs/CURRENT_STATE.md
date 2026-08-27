@@ -34,6 +34,8 @@ and the later block-pinned fee accrual is recorded in
 [`NARA-20260827-v4-post-compound-sell-fees.md`](releases/NARA-20260827-v4-post-compound-sell-fees.md).
 The terminal three-second Matrix record is
 [`NARA-20260827-v4-live-buy-matrix-3s.md`](releases/NARA-20260827-v4-live-buy-matrix-3s.md).
+Only sanitized Matrix evidence is public; the implementation remains private
+local operator tooling and is not a protocol repository component.
 
 ## DEPLOYED AND FINALIZED — Position NFT Phase 2
 
