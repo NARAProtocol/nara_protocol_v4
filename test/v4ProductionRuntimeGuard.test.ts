@@ -92,10 +92,11 @@ describe("v4 production runtime guard enforcement", () => {
     expect(workflow).to.contain("secrets.V4_EPOCH_KEEPER_PRIVATE_KEY");
     expect(workflow).to.contain("vars.V4_EPOCH_KEEPER_ADDRESS");
     expect(workflow).to.contain('V4_EPOCH_REQUIRE_HEARTBEAT: "true"');
+    expect(workflow).to.contain('cron: "3,18,33,48 * * * *"');
     expect(packageJson.scripts["maintain:v4:epochs:routine:check"])
-      .to.equal("tsx scripts/maintainV4Epochs.ts --batch-size 8 --max-batches 2 --max-backlog 8");
+      .to.equal("tsx scripts/maintainV4Epochs.ts --batch-size 100 --max-batches 2 --max-backlog 150");
     expect(packageJson.scripts["maintain:v4:epochs:routine"])
-      .to.equal("tsx scripts/maintainV4Epochs.ts --execute --batch-size 8 --max-batches 2 --max-backlog 8");
+      .to.equal("tsx scripts/maintainV4Epochs.ts --execute --batch-size 100 --max-batches 2 --max-backlog 150");
     expect(workflow).not.to.contain("vars.V4_ENGINE");
     expect(workflow).not.to.contain("V4_OPERATIONS_KEEPER_PRIVATE_KEY");
     expect(workflow).not.to.contain("V4_OPERATIONS_KEEPER_ENABLED");

@@ -135,6 +135,23 @@ export function planEpochBatches(backlog: bigint, batchSize: number, maxBatches:
   return batches;
 }
 
+export function validateAutomaticPlan(
+  backlog: bigint,
+  options: Pick<MaintainerOptions, "batchSize" | "maxBatches" | "maxBacklog">,
+): bigint[] {
+  if (options.maxBacklog !== undefined && backlog > BigInt(options.maxBacklog)) {
+    throw new Error(
+      `Observed backlog ${backlog} exceeds the automatic limit ${options.maxBacklog}; manual recovery review required`,
+    );
+  }
+  const plannedBatches = planEpochBatches(backlog, options.batchSize, options.maxBatches);
+  const plannedCapacity = plannedBatches.reduce((sum, value) => sum + value, 0n);
+  if (plannedCapacity < backlog) {
+    throw new Error("Configured batch limit cannot clear the observed backlog");
+  }
+  return plannedBatches;
+}
+
 export function epochHealthStatus(backlog: bigint): "current" | "jit-recoverable" | "writes-blocked" {
   if (backlog === 0n) return "current";
   if (backlog <= 8n) return "jit-recoverable";
@@ -312,27 +329,15 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
     }
     const nara = new ethers.Contract(expectedNara, ERC20_ABI, provider);
     let health = await readHealth(readEngine, nara, engineAddress);
-    const plannedBatches = planEpochBatches(health.backlog, options.batchSize, options.maxBatches);
-    const plannedCapacity = plannedBatches.reduce((sum, value) => sum + value, 0n);
 
     console.log(`NARA v4 epoch maintainer (${options.execute ? "execute" : "read-only"})`);
     console.log(JSON.stringify(formatHealth(health), null, 2));
-    if (options.maxBacklog !== undefined && health.backlog > BigInt(options.maxBacklog)) {
-      throw new Error(
-        `Observed backlog ${health.backlog} exceeds the automatic limit ${options.maxBacklog}; manual recovery review required`,
-      );
-    }
+    const plannedBatches = validateAutomaticPlan(health.backlog, options);
     if (!options.execute) {
       console.log(`Planned advanceEpochs batches: ${plannedBatches.map(String).join(", ") || "none"}`);
-      if (plannedCapacity < health.backlog) {
-        throw new Error("Configured batch limit cannot clear the observed backlog");
-      }
       return;
     }
 
-    if (plannedCapacity < health.backlog) {
-      throw new Error("Configured batch limit cannot clear the observed backlog; refusing a partial automatic recovery");
-    }
     if (health.untrackedDirectReserve > 0n && !options.syncUntrackedReserve) {
       throw new Error(
         "Untracked direct engine reserve requires explicit --sync-untracked-reserve approval; refusing automatic accounting",

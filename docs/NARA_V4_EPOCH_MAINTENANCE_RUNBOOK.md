@@ -11,6 +11,9 @@ Current activation evidence:
 Latest recovery and operator fast-path evidence:
 `docs/releases/NARA-20260826-v4-epoch-recovery.md`
 
+Recurring scheduler-resilience review:
+`docs/releases/NARA-20260828-v4-epoch-maintainer-resilience.md`
+
 This runbook covers the fresh Base v4 engine only. The engine's epoch functions
 are permissionless. No admin, treasury, Safe, or protocol role is needed.
 
@@ -71,12 +74,12 @@ Use the reported state to select exactly one path:
 | Observed state | Action |
 |---|---|
 | backlog `0` | Stop. No transaction is required. |
-| backlog `1..8` | Dispatch the existing `main` workflow with `execute=true`; its routine guard and eight-epoch bound are designed for this state. |
-| backlog `9..1000`, dedicated keeper credential already available in the approved local runtime | Run the documented dedicated-wallet recovery command below after checking the wallet address, balance, reserve state, and gas estimate. |
-| backlog `9..1000`, keeper credential exists only as a GitHub Actions secret | Use the temporary, CI-validated GitHub-secret path below. The `main` workflow deliberately refuses this backlog. |
+| backlog `1..150` | Dispatch the existing `main` workflow with `execute=true`; its reviewed routine can clear the full backlog as `100 + remainder`. |
+| backlog `151..1000`, dedicated keeper credential already available in the approved local runtime | Run the documented dedicated-wallet recovery command below after checking the wallet address, balance, reserve state, and gas estimate. |
+| backlog `151..1000`, keeper credential exists only as a GitHub Actions secret | Use the temporary, CI-validated GitHub-secret path below. The `main` workflow deliberately refuses this backlog. |
 | untracked direct reserve greater than `0`, external reserve `0`, backlog above configured recovery capacity, runtime mismatch, or keeper mismatch | Stop and perform a new deployment-specific review. Do not widen flags or bounds casually. |
 
-For a routine backlog of at most eight, the hosted path is:
+For a routine backlog of at most 150, the hosted path is:
 
 ```powershell
 gh workflow run v4-epoch-maintainer.yml --ref main -f execute=true
@@ -110,7 +113,7 @@ secret. Never export, print, copy, rotate, or download that secret.
 
 3. In the temporary branch only, change
    `.github/workflows/v4-epoch-maintainer.yml` so scheduled execution retains
-   both existing routine steps and their `max-backlog 8` commands, while
+   both existing routine steps and their `max-backlog 150` commands, while
    manual `workflow_dispatch` with `execute=true` runs these two additional
    steps:
 
@@ -163,7 +166,7 @@ secret. Never export, print, copy, rotate, or download that secret.
    no planned batches, zero untracked reserve, and a funded external reserve:
 
    ```powershell
-   npx tsx scripts/maintainV4Epochs.ts --batch-size 8 --max-batches 2 --max-backlog 8
+   npx tsx scripts/maintainV4Epochs.ts --batch-size 100 --max-batches 2 --max-backlog 150
    ```
 
 9. Attach sanitized hashes, blocks, block hashes, decoded calls, gas cost,
@@ -237,7 +240,7 @@ transaction.
 > Read the two dated maintainer activation records before changing either path.
 
 `.github/workflows/v4-epoch-maintainer.yml` is an epoch-only cycle at minutes
-`7,37` of every UTC hour. Its active configuration requires:
+`3,18,33,48` of every UTC hour. Its active configuration requires:
 
 - repository variable `V4_EPOCH_MAINTAINER_ENABLED=true`;
 - repository variable `V4_EPOCH_KEEPER_ADDRESS` with a dedicated gas-only EOA;
@@ -251,7 +254,15 @@ activation manifest and then verifies the manifest hash and live runtime
 bytecode. GitHub deployment-address variables are deliberately not used. A
 stale or modified manifest, a credential/address mismatch, a zero-gas wallet,
 an absent heartbeat, an unexpected direct Engine balance, or a backlog above
-eight fails before routine execution.
+150 fails before routine execution.
+
+The scheduled policy uses at most two calls, `advanceEpochs(100)` followed by
+the exact remainder, and refuses partial automatic recovery. The 150-epoch
+ceiling covers 37.5 hours of missed 15-minute epochs while keeping each call
+inside the production-proven 100-step envelope. The independent hosted monitor
+must poll every five minutes and alert before the Engine's eight-epoch JIT
+write boundary; the wider recovery envelope is not a substitute for that
+external scheduler/dead-man check.
 
 Do not reuse the epoch EOA for liquidity, admin, treasury, deployment,
 Safe-owner, or trading activity. Do not change the enabled state, keeper,
@@ -260,7 +271,7 @@ deployment-specific review. Manual diagnostics should use `workflow_dispatch`
 in read-only mode first.
 
 The heartbeat is sent only after an execute-mode cycle ends with zero backlog.
-Configure the dead-man service to alert if the 30-minute workflow misses its
+Configure the dead-man service to alert if the 15-minute workflow misses its
 expected window; this detects scheduler outages that an in-process error
 webhook cannot see.
 
@@ -283,7 +294,10 @@ has immutable transaction evidence.
 
 - Backlog `1..8`: engine JIT can recover, but the maintainer should still catch
   up on its next run.
-- Backlog `>8`: user writes can revert `EpochStale`; treat as a launch blocker.
+- Backlog `9..150`: user writes can revert `EpochStale`; the reviewed routine
+  can clear the full backlog in no more than two calls.
+- Backlog `>150`: recurring automation fails closed and requires a new
+  deployment-specific recovery review.
 - External reserve `0`: verify reserve binding, balance, allocation, and
   `totalReleased` before attempting any funding action.
 - Untracked direct reserve `>0`: the maintainer calls
