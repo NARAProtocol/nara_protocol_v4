@@ -4,9 +4,9 @@ Change ID: `NARA-20260828-v4-epoch-maintainer-resilience`
 
 Network: Base (`8453`)
 
-Evidence state: recurring policy merged and independently monitored; first
-scheduled recovery remains pending. This record does not claim that the current
-backlog has been cleared.
+Evidence state: recurring policy merged, independently monitored, and used for
+an operator-approved recovery. Receipt-pinned readback and the independent
+sentinel both confirmed backlog zero.
 
 ## Incident
 
@@ -80,5 +80,38 @@ write path. Monitor activation evidence is in
 Both epoch and liquidity workflows stopped receiving expected schedule events
 in the same period even though manual and CI workflows continued to run. The
 epoch workflow was re-registered disabled-to-enabled and verified `active`.
-The next successful scheduled recovery, transaction receipts, and zero-backlog
-readback remain required before recording recovery completion.
+The expected `22:18` and `22:33` scheduled events were not delivered after the
+workflow was re-registered. The operator therefore approved a guarded manual
+dispatch; its recovery evidence is recorded below rather than represented as a
+scheduled execution.
+
+## Recovery completion
+
+Workflow dispatch `33123323400` ran with `execute=true` from protected `main`
+commit `e195ec4f08da7e5ea083b2d4701a6fc9dc6bfcb4`. Its production runtime guard
+matched the pinned Base deployment. The read-only precheck observed
+current/stored epochs `1825 / 1706`, backlog `119`, zero untracked direct Engine
+reserve, and planned the complete bounded recovery as `100 + 19`.
+
+The dedicated epoch keeper
+`0xE3DDa33EdB0f8b6aa39e4ce853Ba7C4A29e520DD` submitted two zero-value calls to
+the production Engine `0x98ab6406D6B548F37dEF7110961bb45A399e5aFC`:
+
+- `advanceEpochs(100)`: transaction
+  `0x2cdf5a58ef7af0a849b784f28c4d45330bd42519bafb0a2b9fa8400b519ee4a7`,
+  status `1`, block `50540524`, gas used `7,796,862`;
+- `advanceEpochs(19)`: transaction
+  `0xf8525318646e6471fca9c2a640189a13ec81887cdeba35bbf27c99a531fc491f`,
+  status `1`, block `50540525`, gas used `1,576,824`.
+
+Independent receipt decoding verified chain ID `8453`, sender, target, method,
+arguments, zero value, block hash, and successful status for both calls. Their
+combined receipt fees were `0.00005624319231305 ETH`, including the reported L1
+data fees.
+
+Receipt-block readback at block `50540525` reported current/stored epochs
+`1825 / 1825`, backlog `0`, external reward reserve
+`649998.123350609976089468 NARA`, and zero untracked direct reserve. The
+required heartbeat completed as part of the successful job. The independent
+Railway sentinel then observed GREEN, backlog `0`, at block `50540546` and
+routed `notification=recovered`.
