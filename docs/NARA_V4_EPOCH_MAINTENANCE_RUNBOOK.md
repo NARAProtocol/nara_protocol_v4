@@ -294,6 +294,7 @@ The Railway service must contain only these watchdog settings:
 V4_EPOCH_RAILWAY_DISPATCH_ENABLED=true
 GITHUB_ACTIONS_DISPATCH_TOKEN=<fine-grained credential>
 V4_EPOCH_DISPATCH_STALE_MINUTES=12
+NIXPACKS_NODE_VERSION=22
 ```
 
 The dispatch credential is limited to Actions write and metadata read for
@@ -303,6 +304,14 @@ into chat, logs, source, or a shell command. Railway must not contain
 liquidity credential. The watchdog cannot sign or send a transaction. GitHub
 hydrates and validates the pinned production configuration, holds the existing
 gas-only keeper secret, and performs the bounded routine.
+
+The Railway build only verifies the installed `tsx` runtime. It deliberately
+does not compile the unrelated contract tree. Pin Nixpacks to Node 22 so clean
+builds use the same supported even-numbered runtime on every deployment.
+The complete non-secret service policy is pinned in
+`operations/V4_EPOCH_WATCHDOG_RAILWAY_POLICY.json`. Apply it through Railway
+service settings or `railway environment edit`; new Railway services cannot
+adopt the deprecated `railway.json` config-as-code path.
 
 GitHub workflow concurrency remains `nara-v4-operations-keeper` with
 `cancel-in-progress: false`. This serializes a delayed native schedule and a
