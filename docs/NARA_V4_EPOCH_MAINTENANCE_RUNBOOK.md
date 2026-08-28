@@ -14,6 +14,9 @@ Latest recovery and operator fast-path evidence:
 Recurring scheduler-resilience review:
 `docs/releases/NARA-20260828-v4-epoch-maintainer-resilience.md`
 
+Redundant scheduler watchdog:
+`docs/releases/NARA-20260828-v4-epoch-railway-watchdog.md`
+
 This runbook covers the fresh Base v4 engine only. The engine's epoch functions
 are permissionless. No admin, treasury, Safe, or protocol role is needed.
 
@@ -274,6 +277,40 @@ The heartbeat is sent only after an execute-mode cycle ends with zero backlog.
 Configure the dead-man service to alert if the 15-minute workflow misses its
 expected window; this detects scheduler outages that an in-process error
 webhook cannot see.
+
+### Redundant Railway dispatch watchdog
+
+`scripts/dispatchV4EpochMaintainer.ts` is a scheduler-only fallback. Railway
+runs it at minutes `12,27,42,57` UTC, nine minutes after each expected GitHub
+schedule. It checks the exact repository ID, workflow ID and path, default
+branch, active workflow state, active runs, and the latest scheduled or manual
+run. A run no older than 12 minutes is healthy. If the latest relevant run is
+older, the watchdog dispatches the protected `main` workflow once with
+`execute=true`.
+
+The Railway service must contain only these watchdog settings:
+
+```text
+V4_EPOCH_RAILWAY_DISPATCH_ENABLED=true
+GITHUB_ACTIONS_DISPATCH_TOKEN=<fine-grained credential>
+V4_EPOCH_DISPATCH_STALE_MINUTES=12
+```
+
+The dispatch credential is limited to Actions write and metadata read for
+`NARAProtocol/nara_protocol_v4`. Enter it directly in Railway; never paste it
+into chat, logs, source, or a shell command. Railway must not contain
+`V4_EPOCH_KEEPER_PRIVATE_KEY`, an RPC secret, or any admin, Safe, treasury, or
+liquidity credential. The watchdog cannot sign or send a transaction. GitHub
+hydrates and validates the pinned production configuration, holds the existing
+gas-only keeper secret, and performs the bounded routine.
+
+GitHub workflow concurrency remains `nara-v4-operations-keeper` with
+`cancel-in-progress: false`. This serializes a delayed native schedule and a
+fallback dispatch; a second idle cycle submits no transaction after the first
+has cleared the backlog. The watchdog also refuses to dispatch while any target
+workflow run is active. Set the Railway enable variable to `false` before
+rotating its credential or changing its schedule, and perform a new protected
+release review before re-enabling it.
 
 ## Verification Gate
 
