@@ -1,0 +1,23 @@
+{
+  "changeId": "NARA-20260828-v4-epoch-railway-watchdog",
+  "serviceName": "nara-v4-epoch-watchdog",
+  "source": {
+    "repository": "NARAProtocol/nara_protocol_v4",
+    "branch": "main"
+  },
+  "build": {
+    "builder": "NIXPACKS",
+    "buildCommand": "npx --no-install tsx --version",
+    "nodeMajor": "22"
+  },
+  "deploy": {
+    "startCommand": "npm run watchdog:v4:epochs:dispatch",
+    "cronSchedule": "12,27,42,57 * * * *",
+    "restartPolicyType": "NEVER"
+  },
+  "variables": {
+    "enable": "V4_EPOCH_RAILWAY_DISPATCH_ENABLED",
+    "staleMinutes": "V4_EPOCH_DISPATCH_STALE_MINUTES",
+    "dispatchCredential": "GITHUB_ACTIONS_DISPATCH_TOKEN"
+  }
+}

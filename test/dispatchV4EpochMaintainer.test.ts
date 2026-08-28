@@ -76,8 +76,21 @@ function enabledEnv(extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
 
 describe("v4 epoch Railway dispatch watchdog", function () {
   it("pins Railway to the offset UTC cron and one-shot dispatcher", function () {
-    const railway = JSON.parse(readFileSync("railway.json", "utf8"));
-    expect(railway.deploy).to.deep.equal({
+    const policy = JSON.parse(readFileSync(
+      "docs/operations/V4_EPOCH_WATCHDOG_RAILWAY_POLICY.json",
+      "utf8",
+    ));
+    expect(policy.serviceName).to.equal("nara-v4-epoch-watchdog");
+    expect(policy.source).to.deep.equal({
+      repository: TARGET_REPOSITORY,
+      branch: TARGET_DEFAULT_BRANCH,
+    });
+    expect(policy.build).to.deep.equal({
+      builder: "NIXPACKS",
+      buildCommand: "npx --no-install tsx --version",
+      nodeMajor: "22",
+    });
+    expect(policy.deploy).to.deep.equal({
       startCommand: "npm run watchdog:v4:epochs:dispatch",
       cronSchedule: "12,27,42,57 * * * *",
       restartPolicyType: "NEVER",

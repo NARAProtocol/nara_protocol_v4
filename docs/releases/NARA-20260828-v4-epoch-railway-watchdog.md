@@ -38,9 +38,11 @@ runs.
 Source merge does not activate the fallback. Activation additionally requires:
 
 - a dedicated Railway cron service sourced from protected `main`;
-- the repository's committed `railway.json` schedule;
+- hosted settings matching
+  `docs/operations/V4_EPOCH_WATCHDOG_RAILWAY_POLICY.json`;
 - `V4_EPOCH_RAILWAY_DISPATCH_ENABLED=true`;
 - `V4_EPOCH_DISPATCH_STALE_MINUTES=12`;
+- `NIXPACKS_NODE_VERSION=22` and the committed runtime-only build command;
 - a fine-grained `GITHUB_ACTIONS_DISPATCH_TOKEN` entered directly in Railway
   with repository metadata read and Actions write only; and
 - one observed healthy skip plus one controlled stale-path dispatch with a
