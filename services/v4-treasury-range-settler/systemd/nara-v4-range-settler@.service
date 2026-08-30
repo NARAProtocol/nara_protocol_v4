@@ -1,0 +1,34 @@
+[Unit]
+Description=NARA v4 treasury range settler instance %i
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=nara-settler
+Group=nara-settler
+WorkingDirectory=/opt/nara/nara-protocol-hardhat
+EnvironmentFile=/etc/nara/v4-range-settler-%i.env
+StateDirectory=nara-v4-range-settler
+StateDirectoryMode=0700
+ExecStart=/opt/nara/nara-protocol-hardhat/node_modules/.bin/tsx services/v4-treasury-range-settler/src/index.ts
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=30
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=false
+CapabilityBoundingSet=
+AmbientCapabilities=
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

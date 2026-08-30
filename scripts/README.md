@@ -22,6 +22,18 @@ and simulate the exact target before using any state-changing command.
 Read-only verification still requires a trusted RPC when it queries Base. Never
 print or commit that endpoint.
 
+## Treasury range candidate builders
+
+These three scripts read Base and write local, unsigned Safe Transaction Builder evidence only. They contain no signer and cannot broadcast:
+
+| Command | Local effect and required authority |
+|---|---|
+| `npx tsx scripts/deployV4TreasuryRangeManagerProposal.ts` | Deploy-coverage entry point that forces Hardhat clean/build before reading the artifact, then builds a unique unsigned CREATE2 Safe proposal from protected-origin evidence and the exact generated strategy manifest. It has no signer or broadcast path. `buildV4TreasuryRangeManagerDeployment.ts` is the compatibility entry point for the same builder. |
+| `npx tsx scripts/buildV4TreasuryRangeOrders.ts` | Uses the simulator's shared exact integer planner to recompute every enabled order's ticks, one-sidedness, liquidity, input/dust, output, tolerance, and minimum, then builds exact approvals, strategy/deadline-bound creates, approval resets, and final cleanliness assertion. Requires exact v2 receipt/Safe/CREATE2 deployed-manager evidence. |
+| `npx tsx scripts/buildV4TreasuryRangeCancellation.ts --order=<id>:<minNara>:<minUsdc>:<strategyHash> --reason=<reviewed-reason>` | Builds explicit Safe-only cancellations after direct allowance checks. Donated manager token balances are reported but do not block, and no broad final cleanliness assertion is appended. Requires exact v2 deployed-manager evidence and labels its cancellation-only `emergency_exit_bypass`; it intentionally bypasses matrix and just-in-time USDC exactness so an exit can still be proposed after drift, but cannot make an incompatible token transfer succeed. |
+
+All three require the exact committed HEAD to have protected origin ancestry and live equality with the configured credential-free upstream branch, every tracked file clean, and no untracked file except the exact resolved generated strategy manifest. They also fail on stale/crash-leftover packets, manager/runtime binding drift, nonce change, or failed whole-Safe `simulateAndRevert`. Deployment and order creation additionally require the exact successful 30-row matrix, current strategy-v2 USDC dependency evidence, and complete active/pending Hook checks. Cancellation preserves the explicitly documented emergency-exit exception above. Output names include Base block and Safe nonce. Packets expire after their short encoded deadline and always require separate human review and approval.
+
 ## Position NFT Phase-2 Commands by Effect
 
 | Effect class | Exact command | Effect and boundary |
@@ -86,7 +98,7 @@ The following categories can deploy contracts, transfer tokens, change roles,
 initialize or seed liquidity, remove liquidity, execute swaps, or modify
 production configuration:
 
-- files beginning with `deploy`;
+- files beginning with `deploy`, except the explicitly unsigned/no-broadcast `deployV4TreasuryRangeManagerProposal.ts` proposal builder documented above;
 - `executeV4NaraDepth.ts`;
 - `fundEmissionReserveV4.ts`;
 - `seedV4Liquidity.ts`;

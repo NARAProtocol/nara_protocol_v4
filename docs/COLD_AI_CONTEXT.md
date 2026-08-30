@@ -32,7 +32,7 @@ This is a context-loss-safe summary for agents entering the NARA workspace.
 - Receipt-pinned live buy/sell matrices and the same-block round trip passed.
   The separately authorized liquidity maintainer is active on the `17,47`
   schedule after a receipt-reconciled compound and hosted idle/heartbeat test.
-  The epoch workflow is separately active on its `7,37` schedule with a
+  The epoch workflow is separately active on its `3,18,33,48` schedule with a
   different keeper and heartbeat, and the Engine lifecycle smoke is pending.
   This evidence is not an overall production-readiness claim.
 - The Engine activation backlog was recovered through the Safe in transaction

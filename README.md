@@ -140,6 +140,11 @@ flowchart TD
       RT[NARARouter · lenses<br/>V4 source inventory]
     end
 
+    subgraph TR[Tactical Treasury Ranges - candidate only]
+      RM[NARATreasuryRangeManagerV1<br/>Safe-bound one-sided ranges]
+      RS[Permissionless range settler<br/>gas-only service]
+    end
+
     T --> E
     R --> E
     P --- H --> V --> LP
@@ -148,11 +153,17 @@ flowchart TD
     NFT --> ST --> SY
     NFT --> FR
     RT --> E
+    S[Production Safe] -->|create / cancel only| RM
+    RS -->|settle terminal ranges| RM -->|all proceeds| S
     E -->|NARA · ETH| U[Committers]
 ```
 
 This is the v4 dependency shape. Full v4 layer inventory:
 [`docs/NARA_V4_PROJECT_SCOPE.md`](docs/NARA_V4_PROJECT_SCOPE.md).
+
+The Treasury Range Manager path in the diagram is an implemented, tested, and
+internal-audit-remediated candidate only. It is not funded, deployed,
+activated, independently externally audited, or part of permanent POL.
 
 ---
 
@@ -177,7 +188,7 @@ This is the v4 dependency shape. Full v4 layer inventory:
   surface backlog. The 2026-08-14 Safe recovery advanced epochs `36..559`; final
   receipt block `49970727` and later read block `49970969` both reported current
   and stored epoch `559 / 559`. The separately bounded epoch maintainer is now
-  active on its `7,37` schedule. After an RPC outage let backlog exceed the
+  active on its `3,18,33,48` resilience schedule. After an RPC outage let backlog exceed the
   routine eight-epoch guard, the explicitly approved 2026-08-26 dedicated
   keeper recovery advanced epochs `1500..1661`; final receipt block `50466604`
   reported current/stored epoch `1661 / 1661`, zero backlog, and zero untracked
@@ -247,6 +258,10 @@ automatically part of a fresh v4 release:
 
 `contracts/v4/` is the only active source path. Full v4 index with deploy steps:
 [`docs/V4_CONTRACT_INDEX.md`](docs/V4_CONTRACT_INDEX.md).
+
+`NARATreasuryRangeManagerV1` is an undeployed Safe-bound tactical range
+candidate. Its exact planner, adversarial simulator, unsigned Safe builders,
+and gas-only settler are documented separately and do not alter permanent POL.
 
 | Layer | Contracts |
 |-------|-----------|
@@ -339,6 +354,8 @@ See the activation manifest and release note linked above.
 | [NARA_V4_PROJECT_SCOPE.md](docs/NARA_V4_PROJECT_SCOPE.md) | V4 architecture and recovery-source inventory |
 | [V4_CONTRACT_INDEX.md](docs/V4_CONTRACT_INDEX.md) | V4 source/deployment history |
 | [UNISWAP_V4_HOOK.md](docs/UNISWAP_V4_HOOK.md) | Fixed v4 hook architecture (`0x2088`, pressure curves) |
+| [NARA_TREASURY_RANGE_MANAGER_V1.md](docs/architecture/NARA_TREASURY_RANGE_MANAGER_V1.md) | Undeployed tactical range-manager architecture and boundaries |
+| [NARA-20260828-v4-treasury-range-manager.md](docs/releases/NARA-20260828-v4-treasury-range-manager.md) | Implemented/tested candidate evidence, blockers, and handoff |
 | [EMISSION_MECHANICS.md](docs/EMISSION_MECHANICS.md) | Adaptive emission model |
 | [NARA_V4_NFT_POSITIONS.md](docs/NARA_V4_NFT_POSITIONS.md) | Position NFT + account + Genesis spec |
 | [ROUTER_LENS.md](docs/ROUTER_LENS.md) | Router · lens · disabled `BribeRouterV4` reference |

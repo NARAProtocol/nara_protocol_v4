@@ -35,6 +35,10 @@ jobs:
         run: npm test
         env:
           NODE_OPTIONS: --require=${{ github.workspace }}/polyfill.cjs
+      - name: Treasury range settler tests
+        run: npm run test:treasury-range-settler:v4
+      - name: Treasury range settler strict TypeScript
+        run: npm run typecheck:treasury-range-settler:v4
       - name: Bytecode size limits (24576 / 49152)
         run: npm run size
         env:
@@ -63,12 +67,13 @@ jobs:
             --output "$RUNNER_TEMP/solc-0.8.34"
           echo "d40adc6f9fdbb22a97d32a02fa05688bf2ee7886affc48c9851b0afd4a726b39  $RUNNER_TEMP/solc-0.8.34" | sha256sum --check
           chmod 0755 "$RUNNER_TEMP/solc-0.8.34"
-      - name: Slither (32 v4 production targets)
+      - name: Slither (v4 production targets)
         run: |
           mapfile -t targets < <(find contracts/v4 -type f -name '*.sol' \
             ! -path '*/interfaces/*' ! -path '*/libraries/*' ! -path '*/mocks/*' \
             ! -name 'NARAEngineTypes.sol' | sort)
-          test "${#targets[@]}" -ge 32
+          test "${#targets[@]}" -ge 33
+          printf '%s\n' "${targets[@]}" | grep -Fxq 'contracts/v4/NARATreasuryRangeManagerV1.sol'
           failed=0
 
           for target in "${targets[@]}"; do

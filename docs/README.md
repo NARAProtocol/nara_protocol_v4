@@ -32,6 +32,15 @@ stack and its release plans are deleted and must not be used as instructions.
    — historical v4 findings and remediations.
 12. [V4_CONTRACT_INDEX.md](V4_CONTRACT_INDEX.md) — v4 contract inventory.
 
+The Treasury Range Manager is an **implemented, tested, and
+internal-audit-remediated candidate only**. It has no deployed address or
+production authority. Start with
+[NARA-20260828-v4-treasury-range-manager.md](releases/NARA-20260828-v4-treasury-range-manager.md)
+and
+[NARA_TREASURY_RANGE_MANAGER_REMEDIATION_2026-08-30.md](security/NARA_TREASURY_RANGE_MANAGER_REMEDIATION_2026-08-30.md),
+and do not update downstream consumers until protected upstream and verified
+deployment evidence exist. No independent external audit is claimed.
+
 The fresh pool is activated, live tax evidence passed, and Compounder
 validation/reconciliation/freeze and the bounded liquidity-maintainer cycle are
 receipt-pinned as complete. This is not an overall production-readiness claim:
@@ -51,6 +60,7 @@ Engine lifecycle smoke is pending, and baskets remain preview-only.
 | [V4_BUILD_PLAN_COMPOSABILITY.md](V4_BUILD_PLAN_COMPOSABILITY.md) | Optional v4 composability components |
 | [NARA_V4_DASHBOARD_SPEC.md](NARA_V4_DASHBOARD_SPEC.md) | Frontend data specification |
 | [NARA_V4_LOCK_USER_GUIDE.md](NARA_V4_LOCK_USER_GUIDE.md) | Locking, claiming, and exit guide |
+| [NARA_TREASURY_RANGE_MANAGER_V1.md](architecture/NARA_TREASURY_RANGE_MANAGER_V1.md) | Undeployed Safe-bound tactical range-manager architecture |
 
 ## Security and operations
 
@@ -65,6 +75,9 @@ Engine lifecycle smoke is pending, and baskets remain preview-only.
 | [V4_LAUNCH_CHECKLIST.md](V4_LAUNCH_CHECKLIST.md) | Active v4 release gates |
 | [NARA_V4_BOND_OPENING_CRITERIA.md](NARA_V4_BOND_OPENING_CRITERIA.md) | Bond-opening operator checks |
 | [LOCAL_TESTING.md](LOCAL_TESTING.md) | Local toolchain setup |
+| [NARA_TREASURY_RANGE_MANAGER_THREAT_MODEL.md](security/NARA_TREASURY_RANGE_MANAGER_THREAT_MODEL.md) | Manager, builder, simulator, and settler threat model |
+| [NARA_TREASURY_RANGE_MANAGER_STATIC_ANALYSIS.md](security/NARA_TREASURY_RANGE_MANAGER_STATIC_ANALYSIS.md) | Static-analysis evidence and unavailable-tool boundary |
+| [NARA_V4_TREASURY_RANGE_SETTLER_RUNBOOK.md](runbooks/NARA_V4_TREASURY_RANGE_SETTLER_RUNBOOK.md) | Two-instance gas-only settlement operations |
 
 The repository [README](../README.md) is the front door;
 [SECURITY.md](../SECURITY.md) is the disclosure policy.

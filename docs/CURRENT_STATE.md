@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-08-27.
+Last updated: 2026-08-30.
 
 This repository is v4-only. `contracts/v4/` is the sole active Solidity source.
 The experimental V5 stack, tests, scripts, and release plans have been deleted
@@ -36,6 +36,59 @@ The terminal three-second Matrix record is
 [`NARA-20260827-v4-live-buy-matrix-3s.md`](releases/NARA-20260827-v4-live-buy-matrix-3s.md).
 Only sanitized Matrix evidence is public; the implementation remains private
 local operator tooling and is not a protocol repository component.
+
+## IMPLEMENTED AND TESTED CANDIDATE - Treasury Range Manager V1
+
+Change ID `NARA-20260828-v4-treasury-range-manager` adds an undeployed
+Safe-bound periphery manager for tactical one-sided NARA/USDC ranges, an exact
+state reader/planner/optimizer, unsigned Safe builders, an adversarial Base-fork
+simulator, and a separate permissionless gas-only settlement service. It does
+not modify permanent POL, the active Hook, Vault, Compounder, production roles,
+or either existing maintainer.
+
+The pre-remediation implementation commit was
+`b34b78330f2f40b514d2bf6a0e5cff96c92ff928`. The 2026-08-30 internal-audit
+remediation is pre-release candidate work without an immutable protected
+release commit, so it is not deployment authority. No manager address,
+deployment receipt, activation, or production transaction exists.
+
+The final candidate checkpoint pinned Base fork block `50537172`, block hash
+`0x6e896c222c2b8313fc232d174136d58212835c39a06378f2dbf2b73c0101b7d9`.
+The deterministic optimizer selected `CONSERVATIVE-100000-NARA` with 12 orders
+and status `SELECTED_EXECUTION_BLOCKED`. The Safe was effectively unfunded for
+the required 100,000 NARA and 5,000 USDC candidate budget; the separate
+Treasury must never be substituted for Safe custody.
+
+The manager can crystallize a fully traversed range only through a later
+settlement transaction that sends both currencies to the Safe. It cannot
+intercept a same-transaction buy/reverse, does not guarantee profit, and never
+automatically replans or reinvests proceeds. Any refreshed plan requires a new
+state pin and a new human-reviewed Safe proposal.
+
+The comprehensive internal audit retained five items (`ARI-001`, `ARI-002`,
+`SIG-001`, `EXT-001`, and `UPG-001`); all five are remediated in the current
+pre-release candidate and covered by focused regressions. Strategy schema v2 now
+requires exact Circle USDC proxy/implementation/admin/role/pause/blacklist and
+code-hash-bound reader evidence. Deployment, order creation, settlement, and
+exact rebroadcast fail closed on drift before signing. Safe cancellation alone
+uses a visibly labelled emergency bypass so exit can still be attempted. This
+internal remediation is not an independent external audit or security
+clearance.
+
+Final pre-release remediation evidence is recorded in
+[`NARA_TREASURY_RANGE_MANAGER_REMEDIATION_2026-08-30.md`](security/NARA_TREASURY_RANGE_MANAGER_REMEDIATION_2026-08-30.md):
+93/93 focused tests, 759/759 repository non-fork tests, 4/4 pinned-fork cases,
+strict TypeScript, build, bytecode, Slither, and production dependency gates
+passed. Aderyn, Echidna, and Gitleaks remain explicitly unavailable and are not
+claimed as passes.
+
+Before any production use: protected review/CI and merge to an immutable
+release commit, explicitly approved Safe funding, fresh schema-v2 live-state
+regeneration, receipt-pinned
+deployment verification, two independent settler instances, a separately
+approved canary, and at least 48 hours of monitored canary behavior are still
+required. See
+[`NARA-20260828-v4-treasury-range-manager.md`](releases/NARA-20260828-v4-treasury-range-manager.md).
 
 ## DEPLOYED AND FINALIZED — Position NFT Phase 2
 
