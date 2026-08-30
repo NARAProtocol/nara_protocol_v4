@@ -1,16 +1,17 @@
 # NARA v4 — Whole-Project Scope (Cold-AI Start Here)
 
-> **Core evidence dated 2026-08-09; Phase-2 scope updated 2026-08-21:**
+> **Current-state annotation: 2026-08-30:**
 > [CURRENT_STATE.md](CURRENT_STATE.md)
 > is the broader workspace state index. The experimental protocol V5 proposal and its source,
 > tests, scripts, and plans are deleted and must not be restored. The fresh v4
 > core is deployed and source-verified from one immutable reviewed origin
 > commit with a new verified manifest and receipt reconciliation. Pool
 > activation, Engine epoch recovery, and Compounder validation/freeze are
-> confirmed. The next contract release is the exact seven-contract Position NFT
-> Phase 2; its replacement workflow exists locally, while release evidence,
-> protected merge, deployment, Safe finalization, smoke, and the 48-hour hold
-> remain pending. Allocations, bonds, Genesis distributor/minter binding,
+> confirmed. The exact seven-contract Position NFT Phase-2 baseline is deployed,
+> source-verified, and Safe-finalized, but its canonical manifest remains
+> `integrationReady: false`; the separately approved value-bearing smoke,
+> 48-hour monitored hold, and immutable downstream handoff remain pending.
+> Allocations, bonds, Genesis distributor/minter binding,
 > Router/Lens, and composability are Phase 3. Current core authority is
 > `deployments/v4-production-activation-2026-08-09.json` together with
 > `deployments/v4-compounder-activation-2026-08-09.json` and
@@ -18,12 +19,18 @@
 > Stage A and the 2026-07-30 pool are historical incident/recovery evidence
 > only; none of their addresses may be reused in consumer configuration.
 
-Last updated: 2026-08-21. Produced by a full scope-coherence audit and updated
+Last updated: 2026-08-30. Produced by a full scope-coherence audit and updated
 for the fixed-v4 relaunch.
 
 **Audience:** any AI (Claude, GPT, Gemini, Cursor, Codex, …) or human starting cold on this workspace.
 Read this first. It is the single end-to-end map: what exists, what state it's in, what's genuinely
 outstanding, and how the pieces fit. It links out to the deeper docs rather than duplicating them.
+
+> The canonical contracts and NARA/USDC pool are in technical live testing with
+> real assets on Base mainnet. This is not public product availability, audit or
+> safety assurance, legal approval, or a recommendation. This repository
+> contains no evidence of completed jurisdiction-specific
+> qualified legal review.
 
 > **Code is the source of truth.** Where this doc disagrees with Solidity or scripts, fix the doc.
 > Test counts and addresses drift — this doc references commands + dated stamps for those, never
@@ -33,8 +40,10 @@ outstanding, and how the pieces fit. It links out to the deeper docs rather than
 
 ## 0. The one-paragraph version
 
-NARA v4 is a fixed-supply (1,000,000) time-preference protocol on Base. You lock NARA → get a
-weight → earn NARA + ETH rewards per epoch. **A lock *is* an NFT** (`NARAPositionNFTV4`).
+NARA v4 is a fixed-supply (1,000,000) time-weighted protocol on Base. Source
+behavior can lock NARA, assign weight, and account variable NARA emissions and
+contributed ETH; amounts can be zero. Direct Engine positions are not NFTs.
+`NARAPositionNFTV4` is an optional position-creation path.
 Pool fees accrue in the Vault; a validated bounded action has compounded the
 first balanced subset into protocol-owned liquidity. The **five pillars** are: **Token, Engine,
 Liquidity (the taxed Uniswap v4 pool), the NFT lock layer, and Baskets** (the brand front door).
@@ -42,10 +51,10 @@ The source candidate is v4-only. The fresh core deployment, immutable origin
 commit, verified deployment manifest, and receipt reconciliation now exist.
 Hook/Vault Safe ownership, atomic pool activation, Safe-owned LP NFT `2898124`,
 receipt-pinned buy/sell and same-block tax evidence, Engine backlog recovery,
-and validated/frozen Compounder-owned LP NFT `2898486` now exist. The next
-contract release is the exact seven-contract Position NFT Phase 2. Its local
-workflow is not deployment evidence: protected commits, external attestation,
-one-attempt deployment, Safe finalization, smoke, and a 48-hour hold remain.
+and validated/frozen Compounder-owned LP NFT `2898486` now exist. The exact
+seven-contract Position NFT Phase-2 baseline is deployed, source-verified, and
+Safe-finalized. Its canonical `integrationReady` value remains `false`; the
+separately approved smoke, 48-hour hold, and downstream handoff remain.
 Allocations and the rest of the periphery are Phase 3; the publishable Baskets
 app remains in preview, Lockboard is deferred, and Lotto and Arena are retired.
 
@@ -73,7 +82,8 @@ build order:   token → engine → LIQUIDITY → NFT locks → Phase-3 router/p
 user sees:     baskets (front door) sitting on top of everything beneath it
 ```
 
-Liquidity (the taxed pool) is the easy-to-forget pillar: no depth → nothing tradable, locking can't
+Liquidity (the taxed pool) is the easy-to-forget pillar: without adequate depth,
+swaps can have severe price impact and there may be no practical market; locking cannot
 happen, baskets can't route. It is the foundation everything sits on.
 
 | Layer | Deploy step / script | Contracts |
@@ -140,48 +150,43 @@ new verified manifest produced from the immutable v4 origin commit. See
 
 ---
 
-## 4. What's genuinely outstanding (ops vs. external — NOT code)
+## 4. Outstanding release and evidence gates
 
-Everything above is **built and tested**. The remaining work to actually launch is mostly **not
-writing contracts**:
+The listed source exists with the cited test evidence. This is not deployment,
+integration, public-availability, legal, economic, or release readiness.
 
 | Item | Type | Why it's not a code task |
 |---|---|---|
 | Publish the activation evidence downstream | **release** | Use only the activation manifest and release record cited at the top; consumer changes require explicit handoff |
-| Complete Position NFT Phase 2 | **release/ops** | Exact seven-contract workflow is local; immutable source/evidence commits, attestation, one-attempt deploy, Safe finalization, smoke, and 48-hour hold remain |
+| Complete Position NFT integration readiness | **release/ops** | Seven-contract baseline is deployed, source-verified, and Safe-finalized; value-bearing smoke, 48-hour hold, and immutable downstream handoff remain, so `integrationReady` stays `false` |
 | Deploy allocations, bonds, Genesis, Router/Lens, or composability | **Phase 3 ops/capital** | Separate future scopes; never route them through Position NFT Phase 2 or bypass the retired allocation refusal guard |
 | Validate and freeze compounder | **completed ops evidence** | Receipt-pinned in `deployments/v4-compounder-activation-2026-08-09.json`; do not replay the one-time activation sequence |
-| Lock UI rebuilt for v4 | **deferred frontend** | Lockboard is not part of the baskets-only launch |
-| Baskets buy/sell UI | **frontend** | The public front door app |
-| **stNARA AMM pool** for instant exit | **ops/liquidity** | A pool you seed, not a contract. Without it, exit is via the redemption queue (which IS built) |
-| **Pendle PT/YT market** | **external** | Pendle deploys it on top of the already-built SY adapter (`NARAStakingPoolSYV4`) |
+| Lock UI rebuilt for v4 | **deferred frontend** | Lockboard is deferred and no public lock product is available |
+| Baskets buy/sell UI | **frontend** | Preview-only app; no public transactions or product availability |
+| **stNARA AMM pool** | **ops/liquidity** | Undeployed external liquidity dependency; no instant or complete exit is guaranteed |
+| **Pendle PT/YT market** | **external** | No deployment or availability commitment; requires independent Pendle coordination and all release gates |
 | Market-price/TWAP oracle for stNARA | **ops, later** | Only needed for *lending* integrations, and depends on the AMM pool existing first |
 | Bonds opening | **ops, deliberate** | Needs a market price to discount from; stays closed at launch |
 | **Aderyn + Echidna** | historical 2026-06-08; current rerun pending | Echidna previously passed 13/13 over 10,004 calls; Aderyn previously reported 4 High / 18 Low heuristic items. Those runs predate the liquidity correction and are historical evidence only. Use a Linux runner or CI and `scripts/run-gates-linux.sh` for the release-source rerun. |
 
-> **The NAV oracle the composability layer needs IS built**: `NARAStakingPoolV4.exchangeRateWad()`
-> (NARA per stNARA share) and `NARAStakingPoolSYV4.exchangeRate()` / `assetInfo()`. The composability
-> layer is **not** "blocked on a missing design piece" — it's gated on deploy + TVL + external market,
-> all of which correctly sit after the core launch.
+The source includes `NARAStakingPoolV4.exchangeRateWad()` and
+`NARAStakingPoolSYV4.exchangeRate()` / `assetInfo()`. Those functions are not a
+market-price oracle or availability evidence. Composability requires separate
+security, economic, legal, integration, monitoring, liquidity, custody, and
+user-exit gates in addition to deployment and any external market.
 
 ---
 
-## 5. The flywheel (why the order compounds)
+## 5. Dependency and fee-flow ordering
 
-```
-basket trades + pool tax
-   → NARA/USDC fees accrue in the LiquidityGrowthVault
-   → a bounded balanced subset compounds into LP; unmatched inventory remains banked
-   → separate ETH/NARA reward sources can fund lockers
-   → demand to buy NARA and lock
-   → pool deepens, tax compounds LP
-   → baskets route cheaper → more volume → more fees → (loop)
-```
-
-It only spins once **depth** (liquidity) and **locked weight** (lockers) exist. That is the whole
-reason baskets ship last in build order even though they're the front door. The engine **banks** ETH
-when locked weight is zero (not lost, but no visible reward), so fee-producing surfaces go live after
-lockers exist.
+Current evidenced flow is limited to supported swaps charging input-currency
+fees into the Vault and bounded compounding of balanced inventory into LP;
+unmatched inventory remains banked. Separate ETH/NARA reward sources have their
+own gates. Any claim that this creates demand, deeper liquidity, lower costs,
+more volume, more fees, or a self-reinforcing loop is an unverified economic
+hypothesis and must not be presented as an expected outcome. Baskets ship only
+after their independent deployment, security, economic, legal, monitoring, and
+exit gates.
 
 ---
 

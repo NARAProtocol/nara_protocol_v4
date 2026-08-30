@@ -2,6 +2,12 @@
 
 This is a context-loss-safe summary for agents entering the NARA workspace.
 
+> The canonical v4 contracts and NARA/USDC pool are in technical live testing
+> with real assets on Base mainnet. This is not public product availability,
+> legal approval, a safety claim, or a recommendation. This repository contains
+> no evidence of completed jurisdiction-specific
+> qualified legal review; baskets remain preview-only.
+
 ## Non-negotiable state
 
 - NARA is v4-only. `contracts/v4/` is the sole active Solidity source.
@@ -23,7 +29,9 @@ This is a context-loss-safe summary for agents entering the NARA workspace.
   `0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF` passed its bounded validation
   in transaction
   `0xf1ea7e7dfdf8e1021ceebf26a943cba604e0a8c894eec5f527bc01656b5890be`.
-  It owns LP NFT `2898486` with liquidity `61410660413174`; the Vault binding
+  It owns LP NFT `2898486`; the latest receipt-pinned full-inventory compound
+  increased that position to liquidity `4386316228001171` at Base block
+  `50499085`. The Vault binding
   was permanently frozen in transaction
   `0xccd73cf07602f18412bea291812f0d171fa5cabd41fcff6b6894029978084ef3`.
 - The fresh NARA/USDC pool is registered, initialized, and seeded. Its PoolId is
@@ -32,8 +40,9 @@ This is a context-loss-safe summary for agents entering the NARA workspace.
 - Receipt-pinned live buy/sell matrices and the same-block round trip passed.
   The separately authorized liquidity maintainer is active on the `17,47`
   schedule after a receipt-reconciled compound and hosted idle/heartbeat test.
-  The epoch workflow is separately active on its `3,18,33,48` schedule with a
-  different keeper and heartbeat, and the Engine lifecycle smoke is pending.
+  The epoch workflow is separately active on its `3,18,33,48` schedule, with a
+  Railway fallback at `12,27,42,57`, a different keeper, and heartbeat. The
+  Engine lifecycle smoke is pending.
   This evidence is not an overall production-readiness claim.
 - The Engine activation backlog was recovered through the Safe in transaction
   `0xcd6e52b319f21b5a6772a36cc076a5c6f8390dcd7326ab1adf822a16f6638493`.
@@ -54,6 +63,10 @@ This is a context-loss-safe summary for agents entering the NARA workspace.
   authority or policy without a new explicit user order and current
   deployment-specific review. Read both 2026-08-15 maintainer activation
   records first.
+- The seven-contract Position NFT Phase-2 baseline is deployed,
+  source-verified, and Safe-finalized. Its canonical manifest remains
+  `integrationReady: false`; do not enable consumers before the separately
+  approved value-bearing smoke, monitored hold, and immutable handoff exist.
 
 `NARAPositionRendererV5` is the historical name of the modular renderer revision
 inside the v4 contract family. It is not a protocol V5 stack.
@@ -62,16 +75,15 @@ inside the v4 contract family. It is not a protocol V5 stack.
 
 1. `AGENTS.md`
 2. `docs/CURRENT_STATE.md`
-3. `deployments/v4-compounder-activation-2026-08-09.json`
-4. `docs/releases/NARA-20260809-v4-compounder-activation.md`
-5. `docs/releases/NARA-20260815-v4-liquidity-maintainer-activation.md`
-6. `docs/releases/NARA-20260815-v4-epoch-maintainer-activation.md`
-7. `deployments/v4-production-activation-2026-08-09.json`
-8. `docs/releases/NARA-20260809-v4-same-block-tax-round-trip.md`
-9. `docs/V4_NEXT_SESSION_HANDOFF.md`
-10. `docs/UNISWAP_V4_HOOK.md`
-11. `docs/V4_LAUNCH_CHECKLIST.md`
-12. `docs/NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md`
+3. `docs/releases/NARA-20260827-v4-full-inventory-compound.md`
+4. `docs/releases/NARA-20260828-v4-epoch-maintainer-resilience.md`
+5. `deployments/v4-position-nft-phase2-finalized-2026-08-21.json`
+6. `docs/releases/NARA-20260821-v4-position-nft-phase2.md`
+7. `deployments/v4-compounder-activation-2026-08-09.json`
+8. `deployments/v4-production-activation-2026-08-09.json`
+9. `docs/UNISWAP_V4_HOOK.md`
+10. `docs/V4_LAUNCH_CHECKLIST.md`
+11. `docs/NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md`
 
 ## Protocol shape
 
