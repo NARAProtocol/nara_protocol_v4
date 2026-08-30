@@ -30,8 +30,9 @@ Active sources live **only** in `contracts/v4/`. Everything else is archived/ret
 ## Treasury Range Manager candidate (implemented/tested/remediated; not deployed)
 
 This periphery is separate from permanent POL and has no production address.
-Its deployment and order builders remain blocked until protected review/CI,
-approved Safe funding, a fresh schema-v2 state pin, and explicit human approval.
+Its deployment and order builders remain blocked until approved Safe funding,
+a fresh schema-v2 state pin, and explicit human approval. Protected source
+commit `35091010de09802f39ccda7e726ff8c4b240e165` passed the repository gates.
 The completed internal audit/remediation is not an independent external audit
 or security clearance.
 

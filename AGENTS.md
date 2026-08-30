@@ -75,10 +75,11 @@ block when applicable, test results, and unresolved risks.
   `docs/releases/NARA-20260828-v4-treasury-range-manager.md`,
   `docs/architecture/NARA_TREASURY_RANGE_MANAGER_V1.md`, and
   `docs/runbooks/NARA_V4_TREASURY_RANGE_SETTLER_RUNBOOK.md`. The manager is an
-  implemented/tested and internal-audit-remediated candidate only: it is not
-  funded, deployed, activated, independently externally audited, or part of
-  permanent POL. Never describe optimizer output as a profit guarantee or
-  reuse an existing keeper for the settler.
+  implemented/tested and internal-audit-remediated candidate merged at source
+  commit `35091010de09802f39ccda7e726ff8c4b240e165`: it is not funded, deployed,
+  activated, independently externally audited, or part of permanent POL. Never
+  describe optimizer output as a profit guarantee or reuse an existing keeper
+  for the settler.
 - **Historical withdrawal completed:** human Safe signers retired the 2026-07-30
   NARA/USDC pool on 2026-08-08 in Base transaction
   `0xd3b4c1790b586c399e48307afa3c282a279ac395212f0242a98835781a430523`.
