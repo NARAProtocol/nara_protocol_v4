@@ -8,10 +8,10 @@ Origin remote: `https://github.com/NARAProtocol/nara_protocol_v4`
 
 Historical pre-remediation implementation commit: `b34b78330f2f40b514d2bf6a0e5cff96c92ff928`
 
-The 2026-08-30 remediation is pre-release candidate work without an immutable
-protected release commit. It is not deployment authority. All strategy,
-audit-gate, and deployment evidence must be regenerated from the final
-protected release commit before human signing.
+The 2026-08-30 remediation was merged through protected PR #52 at immutable
+engineering origin `35091010de09802f39ccda7e726ff8c4b240e165`. The merged
+source is not deployment authority. All strategy, audit-gate, and deployment
+evidence must be regenerated from that exact origin before human signing.
 
 This change adds the immutable Safe-bound manager contract, exact state reader/planner/optimizer, adversarial Base-fork matrix, three unsigned Safe packet builders, and a separate event-driven permissionless settler. It does not modify permanent POL, the active Hook, existing production maintainer workflows or services, schedules, keys, roles, or production manifests. The protected CI workflow is extended only to run the settler tests and strict TypeScript check and to require the manager in Slither target discovery.
 
@@ -114,17 +114,17 @@ promises, or authority to trade.
 ```text
 Change-ID: NARA-20260828-v4-treasury-range-manager
 Origin remote: https://github.com/NARAProtocol/nara_protocol_v4
-Origin commit: pending immutable remediation release commit
-Evidence state: locally implemented, tested, internal-audit remediated; not deployment authority
-Changed contracts/interfaces: NARATreasuryRangeManagerV1; generated ABI only after protected release rebuild
-Generated artifact or ABI source: local Hardhat artifact from the tested implementation commit; not downstream authority
+Origin commit: 35091010de09802f39ccda7e726ff8c4b240e165
+Evidence state: merged, tested, internal-audit remediated engineering candidate; not deployment authority
+Changed contracts/interfaces: NARATreasuryRangeManagerV1; generated ABI only from an exact-origin clean rebuild
+Generated artifact or ABI source: rebuild from the immutable origin; no deployment artifact is downstream authority
 Deployment manifest: none
 Chain and verification block: Base 8453 fork pinned to block 50537172; no deployed manager address
-Depends-on: protected CI/merge, approved Safe funding, fresh state pin/schema-v2 evidence, explicit human Safe approval
+Depends-on: approved Safe funding, fresh state pin/schema-v2 evidence, explicit human Safe approval
 Unblocks: later manager deployment proposal, order proposal, settler canary, monitor integration, and public documentation
-Downstream repositories reviewed: none updated; blocked until immutable upstream and deployment evidence exist
+Downstream repositories reviewed: none updated; blocked until verified deployment evidence exists
 Commands and results: 93 focused, 759 non-fork, 4 pinned-fork cases, strict TypeScript, build, bytecode size, Slither, and production dependency audit passed
-Skipped/unavailable gates: Aderyn, Echidna, Gitleaks, protected CI, independent external audit, deployment, two-host rehearsal, 48-hour canary
+Skipped/unavailable gates: Aderyn, Echidna, Gitleaks, independent external audit, deployment, two-host rehearsal, 48-hour canary
 Unresolved risks: same-transaction buy/reverse cannot be intercepted; Circle can change USDC after snapshot and incompatible behavior may block exit; deep post-confirmation reorg monitoring remains external
 Onchain or production writes: none
 Secret scan: focused changed-content scan passed; Gitleaks remains unavailable; no secrets or RPC values are recorded in this handoff
@@ -132,7 +132,9 @@ Secret scan: focused changed-content scan passed; Gitleaks remains unavailable; 
 
 ## Acceptance gates still outstanding
 
-- Protected pull-request review/CI and an immutable remediation release commit. The completed internal audit is not represented as an independent external audit.
+- No independent external audit has been completed. The internal audit and
+  remediation record must not be represented as an external audit or security
+  clearance; any canary requires an explicit human risk decision.
 - Fresh live re-pin and regenerated strategy immediately before any human signing review.
 - Explicitly approved Treasury-to-Safe funding; the current Safe is effectively unfunded and the builder refuses to substitute Treasury custody.
 - Receipt-pinned deployment verification and explicit human approval.

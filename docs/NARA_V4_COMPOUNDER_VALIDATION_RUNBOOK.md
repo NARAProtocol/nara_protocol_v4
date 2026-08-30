@@ -15,8 +15,11 @@ authorize another transaction or a recurring workflow.
 Current authority is
 `deployments/v4-production-activation-2026-08-09.json` together with
 `deployments/v4-compounder-activation-2026-08-09.json` and
-`docs/releases/NARA-20260809-v4-compounder-activation.md`. Recurring
-maintenance remains blocked pending separate authorization and review.
+`docs/releases/NARA-20260809-v4-compounder-activation.md`. At that 2026-08-09
+checkpoint, recurring maintenance remained blocked. That statement is
+historical: both maintainers are now active under separate bounded policies,
+credentials, and schedules. Use `CURRENT_STATE.md` and
+`docs/releases/NARA-20260827-v4-full-inventory-compound.md` for current state.
 
 ## Build The Validation Transaction
 

@@ -7,7 +7,9 @@ operational safety, integration clarity, or documentation.
 
 1. Read [`AGENTS.md`](AGENTS.md) and [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md).
 2. For cross-repository work, follow
-   [`../docs/NARA_CROSS_REPOSITORY_RELEASE_PROTOCOL.md`](../docs/NARA_CROSS_REPOSITORY_RELEASE_PROTOCOL.md).
+   [`docs/REPOSITORY_MAINTENANCE.md`](docs/REPOSITORY_MAINTENANCE.md) and the
+   workspace-level `docs/NARA_CROSS_REPOSITORY_RELEASE_PROTOCOL.md` when this
+   checkout is inside the FIELD workspace.
 3. Read [`SECURITY.md`](SECURITY.md) and report suspected vulnerabilities
    privately.
 4. Never use retired v3, incident-stack, or deleted experimental v5 artifacts

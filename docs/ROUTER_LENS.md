@@ -1,11 +1,16 @@
 # NARA v4 Router + Lens
 
-Last updated: 2026-07-26.
+Last updated: 2026-08-30.
 
 ## What this is
 
-Deferred router/read-layer contracts for a future v4 position frontend. They are
-not part of the current baskets-only launch and are not deployed.
+Deferred router/read-layer contracts for a future v4 position frontend. They
+are not deployed. The Position NFT Phase-2 baseline is separately deployed and
+finalized but remains `integrationReady: false`; this does not activate the
+router, lenses, or any public position interface.
+
+This is source-level technical documentation, not public product availability,
+legal approval, or a recommendation to transact.
 
 - **`NARARouter`** — permit + permissionless sync + lock in one transaction.
   It can reduce short-gap friction when deployed, but it does not replace the
@@ -84,9 +89,10 @@ safety buffer, not an indefinite operations guarantee.
 
 ## Deploy
 
-Deployment is currently blocked because `NARAPositionNFTV4` is deferred and no
-production position-NFT address exists. Do not invent an address or run
-`npm run deploy:v4:router:lens` for the baskets-only launch.
+Deployment remains blocked because Position NFT consumer integration is
+`integrationReady: false` and no router/lens release has been approved. Do not
+invent an address or run `npm run deploy:v4:router:lens` without a new reviewed
+release and explicit human approval.
 
 Writes addresses to `deployments/router-lens-<chainId>.json`. Set `VITE_NARA_ROUTER_ADDRESS` / `VITE_NARA_LENS_ADDRESS` in any consuming app's env, or hardcode in `nara.ts`.
 
@@ -102,8 +108,8 @@ function notify(address token, uint256 amount) external;
 **Current policy:** do not grant `REWARD_NOTIFIER_ROLE`. The deployed engine
 intentionally has no holder because ERC-20 reward notification is disabled for
 the active release. `BribeRouterV4` is source-only and `notify()` is expected to
-remain unavailable unless a future explicitly authorized security review,
-deployment, role assignment, and state record change this policy.
+remain unavailable for this deployed Engine. Do not grant the role or treat a
+future router/lens release as authorization to change that policy.
 
 ## What is still NOT built (and why it's OK for mainnet)
 
@@ -118,9 +124,9 @@ The FOX report conclusion: "Solidity architecture is largely ready. Operational 
 ## Status (2026-05-28)
 
 - Code complete, 70/70 new tests passing (28 router + 28 lens + 14 bribe router).
-- **Not deployed to mainnet.** The fresh engine exists, but the position NFT and
-  this router/lens layer are deferred from the baskets-only launch.
+- **Router/lens not deployed to mainnet.** The Position NFT Phase-2 baseline is
+  deployed and finalized but remains `integrationReady: false`.
 - Do not run the historical deploy/grant sequence against the live engine.
-  Any future router/lens release requires fresh verified manifests and an
-  explicit decision on the intentionally disabled notifier role.
+  Any future router/lens release requires fresh verified manifests. The
+  deployed Engine's notifier prohibition remains unchanged.
 - Frontend wiring deferred per user decision. Each app imports ABIs/addresses from `nara.ts`.

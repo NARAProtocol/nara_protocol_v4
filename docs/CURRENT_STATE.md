@@ -1,6 +1,16 @@
 # Current State
 
 Last updated: 2026-08-30.
+> **Technical live testing on Base mainnet — not public product availability.**
+> The canonical v4 contracts and NARA/USDC pool use real assets. This document
+> records observed technical state only; it does not mean every NARA product or
+> interface is available, production-ready, audited, safe, legally approved, or
+> available in any jurisdiction. Transactions are irreversible; liquidity can
+> be limited or unavailable; token values can fall to zero. This repository
+> contains no evidence of completed jurisdiction-specific qualified legal
+> review. This material is technical and
+> educational, not an invitation, inducement, or recommendation to transact in
+> NARA.
 
 This repository is v4-only. `contracts/v4/` is the sole active Solidity source.
 The experimental V5 stack, tests, scripts, and release plans have been deleted
@@ -36,6 +46,8 @@ The terminal three-second Matrix record is
 [`NARA-20260827-v4-live-buy-matrix-3s.md`](releases/NARA-20260827-v4-live-buy-matrix-3s.md).
 Only sanitized Matrix evidence is public; the implementation remains private
 local operator tooling and is not a protocol repository component.
+The documentation state and downstream handoff boundary are recorded in
+[`NARA-20260830-documentation-convergence.md`](releases/NARA-20260830-documentation-convergence.md).
 
 ## IMPLEMENTED AND TESTED CANDIDATE - Treasury Range Manager V1
 
@@ -48,9 +60,10 @@ or either existing maintainer.
 
 The pre-remediation implementation commit was
 `b34b78330f2f40b514d2bf6a0e5cff96c92ff928`. The 2026-08-30 internal-audit
-remediation is pre-release candidate work without an immutable protected
-release commit, so it is not deployment authority. No manager address,
-deployment receipt, activation, or production transaction exists.
+remediation was merged through protected PR #52 at immutable engineering origin
+`35091010de09802f39ccda7e726ff8c4b240e165`. That merged source is still not
+deployment authority. No manager address, deployment receipt, activation, or
+production transaction exists.
 
 The final candidate checkpoint pinned Base fork block `50537172`, block hash
 `0x6e896c222c2b8313fc232d174136d58212835c39a06378f2dbf2b73c0101b7d9`.
@@ -82,18 +95,19 @@ strict TypeScript, build, bytecode, Slither, and production dependency gates
 passed. Aderyn, Echidna, and Gitleaks remain explicitly unavailable and are not
 claimed as passes.
 
-Before any production use: protected review/CI and merge to an immutable
-release commit, explicitly approved Safe funding, fresh schema-v2 live-state
-regeneration, receipt-pinned
-deployment verification, two independent settler instances, a separately
-approved canary, and at least 48 hours of monitored canary behavior are still
-required. See
+Before any production use: explicitly approved Safe funding, fresh schema-v2
+live-state regeneration from the immutable origin, receipt-pinned deployment
+verification, two independent settler instances, a separately approved canary,
+and at least 48 hours of monitored canary behavior are still required. No
+independent external audit has been completed or claimed. See
 [`NARA-20260828-v4-treasury-range-manager.md`](releases/NARA-20260828-v4-treasury-range-manager.md).
 
 ## DEPLOYED AND FINALIZED — Position NFT Phase 2
 
 The seven-contract Position NFT Phase-2 baseline is deployed on Base Mainnet,
-source-verified on BaseScan, and finalized under production Safe governance.
+tested under the recorded release gates, source-verified on BaseScan, and
+finalized under production Safe governance. Those gates do not constitute an
+overall independent protocol audit.
 Canonical sanitized evidence: `deployments/v4-position-nft-phase2-finalized-2026-08-21.json`
 (normalized-LF SHA-256:
 `68d9df51f9bc222437252e3628c6c7c593ef96088a518b99b17a50965504c06b`) and
@@ -508,13 +522,14 @@ Current local evidence after remediation:
 
 | Gate | Result |
 |---|---|
-| Complete Hardhat suite | 556 passing, 7 pending, 0 failing on 2026-08-09; pending cases require opt-in Base-fork environments |
+| Deterministic non-fork Hardhat suite | 759 passing, 0 failing on 2026-08-30; opt-in Base-fork cases were not exercised by this documentation-only pass |
 | Fresh deployment/receipt/Safe-batch evidence | 12 focused tests passing on 2026-08-09 |
 | Live Hook/Vault tax matrix | 20 buys + 10 sells; all receipt/event/transfer/fee proofs passed |
 | Current manifest/env synchronization | 19 focused live-config and env-sync tests passing; fresh Compounder and LP NFT exported |
 | Focused Hook/Vault/Compounder/atomic launch | 43 passing |
 | Hardhat invariant regression | 4 passing |
 | Compiled-size gate | Passed; Engine runtime is 24,554 bytes, only 22 bytes below EIP-170 |
+| npm dependency audit | 0 high / 0 critical on 2026-08-30; 8 low transitive `ethers` v5/`elliptic` findings have no available upstream fix |
 | Slither v4 | Completed every configured production target; raw alerts require critic disposition |
 | Aderyn | Not executed on 2026-08-05: configured WSL binary/environment is missing |
 | Echidna smoke | Not executed on 2026-08-05: registered WSL virtual disks are missing |

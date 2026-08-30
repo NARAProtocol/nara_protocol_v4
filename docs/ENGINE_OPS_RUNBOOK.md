@@ -89,13 +89,15 @@ Native ETH:
 
 Non-NARA ERC-20:
 
-- enter through `notifyTokenRewards(token, amount)`;
-- require `REWARD_NOTIFIER_ROLE`;
-- reject zero amount, zero address, and NARA itself;
-- account for the actual received balance delta.
+- the function exists in immutable source, but it is prohibited for the
+  deployed Engine because post-notification extensions can under-allocate later
+  distributions;
+- no current component may hold `REWARD_NOTIFIER_ROLE`;
+- do not grant the role, approve a notifier, or call
+  `notifyTokenRewards(token, amount)`.
 
-The role holder, token behavior, allowance, active weight, and epoch freshness
-must be reviewed before notification.
+Any future ERC-20 reward design requires a new reviewed implementation rather
+than activating this deployed path.
 
 ## Configuration
 

@@ -1,14 +1,20 @@
 # NARA v4 Safe Custody Handoff
 
-Prepared and verified: 2026-07-30. Current-state annotation: 2026-08-09.
+Prepared and verified: 2026-07-30. Current-state annotation: 2026-08-30.
+
+> **Historical custody record.** Use [CURRENT_STATE.md](CURRENT_STATE.md) and its
+> latest referenced manifests/releases for current liquidity, automation,
+> Position NFT, product-availability, and legal state. Technical live testing
+> does not mean public product availability or legal approval.
 
 Status: the production Safe has accepted ownership of the fresh Hook and Vault
 and owns the deployed, source-verified, and wired Compounder at
 `0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF`. The fresh NARA/USDC pool is
 initialized and seeded; LP NFT `2898124` is Safe-owned. The Compounder passed
-bounded validation, owns LP NFT `2898486` with liquidity `9455824137787`, and
-the Vault binding is permanently frozen to it. Recurring maintenance remains
-disabled.
+bounded validation and owns LP NFT `2898486`; the Vault binding is permanently
+frozen to it. That liquidity value was a historical checkpoint. Both recurring
+maintainers are now active under separate bounded policies, credentials, and
+schedules; current liquidity requires the latest release/readback.
 
 Current activation authority is
 `deployments/v4-production-activation-2026-08-09.json` together with

@@ -1,7 +1,8 @@
 # NARA Protocol — Master Knowledge Base & Deep Architecture Reference
 
 > **Authoritative Knowledge Base for FIELD Token / NARA Protocol Workspace**  
-> **Status:** Fixed v4 Production Stack Only (`contracts/v4/`).  
+> **Status:** Fixed v4 stack only (`contracts/v4/`); canonical contracts and
+> NARA/USDC pool are in technical live testing on Base mainnet.
 > **Target Network:** Base Mainnet (`chainId: 8453`).  
 > **Scope:** Smart Contracts, Economic Formulas, Uniswap v4 Hook/Vault/Compounder, NFT Generative Art Engine, Category Baskets, Swarm Indexer, UI/UX Design Systems, Keepers, Multisig Custody & Governance.
 
@@ -13,7 +14,7 @@
 2. [Token Supply & Macroeconomics](#2-token-supply--macroeconomics)
 3. [NARA Engine & Adaptive Mathematical Models](#3-nara-engine--adaptive-mathematical-models)
 4. [Uniswap v4 Dynamic Fee Hook & Fee Vault](#4-uniswap-v4-dynamic-fee-hook--fee-vault)
-5. [Liquidity Compounder & POL Flywheel](#5-liquidity-compounder--pol-flywheel)
+5. [Liquidity Compounder and Fee-to-LP Flow](#5-liquidity-compounder-and-fee-to-lp-flow)
    - [5.1 Treasury Range Manager Candidate](#51-treasury-range-manager-candidate)
 6. [Position NFTs & Generative On-Chain Art Engine](#6-position-nfts--generative-on-chain-art-engine)
 7. [Bond Markets & Genesis Reward Distribution](#7-bond-markets--genesis-reward-distribution)
@@ -30,10 +31,18 @@
 
 ## 1. Executive Summary & Monorepo Topology
 
-NARA is a **fixed-supply, time-preference yield and protocol-owned liquidity (POL) engine** native to Base. 
+NARA is a fixed-supply protocol with time-weighted positions, variable reward
+accounting, and protocol-owned-liquidity components on Base.
 The system operates exclusively on the **fixed v4 production stack**. All experimental v5 versions and legacy v3 contracts are retired and frozen.
 
-> 🧭 **Strategic Vision & Roadmap:** For the full phased deployment sequence ($100k Safe Haven floor, on-chain NFTs, public token discovery, and bond tranches), see [`docs/NARA_V4_MASTER_ROADMAP.md`](NARA_V4_MASTER_ROADMAP.md).
+> **Live-testing and legal boundary:** The canonical contracts and pool use real
+> assets. This knowledge base records technical state and design inventory; it
+> does not establish public product availability, production readiness, audit
+> completion, safety, legal approval, jurisdictional availability, price,
+> liquidity, returns, or an exit. This repository contains no evidence of
+> completed jurisdiction-specific qualified legal review. Nothing here is an
+> invitation, inducement, or recommendation
+> to transact. For current gates, see [CURRENT_STATE.md](CURRENT_STATE.md).
 
 ### Workspace Architecture
 The workspace contains self-contained sub-projects without a shared root `package.json`:
@@ -82,8 +91,12 @@ c:\Users\linas\Desktop\FIELD Token/
 
 ### Supply Distribution Architecture
 1. **Reward Reserve (`NARARewardReserve`):** `650,000 NARA` (65%) sealed in custody. Releases strictly to `NARAEngine` for epoch-by-epoch emissions.
-2. **Bond Vault (`NARABondVaultV4`):** `250,000 NARA` (25%) dedicated to discounted vesting bond sales.
-3. **Initial Liquidity & Floating Reserve:** `100,000 NARA` (10%) for DEX bootstrapping (60k seeded into Uniswap v4 pool) and initial treasury float.
+2. **Treasury inventory:** historical plans allocate up to `250,000 NARA` to a
+   bond vault, but the bond system is not deployed or open and no sale or
+   return is promised.
+3. **Initial Liquidity & Floating Reserve:** `100,000 NARA` (10%) was the
+   deployment allocation model; `60,000 NARA` was used in the initial v4 pool
+   seed. Current balances require a fresh read.
 
 ### Circulating Supply Formula
 Circulating supply is computed as:
@@ -93,21 +106,29 @@ $$\text{CirculatingSupply} = \text{TotalSupply} - \text{EngineBalance} - \text{R
 
 ## 3. NARA Engine & Adaptive Mathematical Models
 
-The `NARAEngine` (`contracts/v4/NARAEngine.sol`) is the heart of the time-preference yield mechanism and the primary accounting sink for revenue explicitly assigned to lockers. It manages epochs, locking duration multipliers, emission calculations, stress feedback, and multi-asset reward accounting.
+The `NARAEngine` (`contracts/v4/NARAEngine.sol`) manages epochs, locking
+duration multipliers, emissions, stress feedback, and reward accounting. It is
+not a universal revenue sink: routing is module-specific and depends on
+deployed, verified configuration.
 
-### 3.0 Locker Value-Capture Rails
-Eligible protocol revenue routes into the configured Engine reward rails where a module's reviewed design explicitly requires it. Treasury principal, tactical range proceeds, tactical LP fees, and cancellation outputs are not Engine revenue: the Treasury Range Manager returns all of them directly to the immutable production Safe. Future modules require their own reviewed routing decision rather than inheriting a universal cash-flow rule.
+### 3.0 Deployed Reward-Routing Boundary
 
-1. **Decentralized Bonds (`NARABondDepositoryV4NFT.sol`):** `50%` of all ETH paid by bond purchasers is immediately pushed into `engine.notifyEthRewards()`.
-2. **Category Baskets (`NARAIndexFeeCollectorV2.sol`):** `100%` of basket trading and minting fees are converted via Chainlink oracles into native ETH and pushed into `engine.notifyEthRewards()`, while NARA fees are sent to `engine.depositRewards()`.
-3. **Uniswap v4 AMM Fees (`NARALiquidityGrowthVault.sol`):** RouteMode options stream trading fees into POL depth compounding or directly to Genesis Bond lockers (`RouteMode.GenesisSplit`).
-4. **Third-Party Bribes (`BribeRouterV4.sol`):** External protocols seeking NARA governance or liquidity alignment route bribe tokens and ETH directly to `NARAEngine`.
-5. **Future Ecosystem Applications (Games, Launchpads, Vaults):** A future product may route eligible protocol revenue into Engine rewards only when its reviewed specification and deployed bindings require that behavior.
-
-```text
-[Reviewed eligible fee rails] --> NARAEngine reward accounting --> eligible locker rewards
-[Treasury tactical ranges]    --> immutable production Safe
-```
+- The Engine supports NARA emissions and contributed native ETH through
+  `notifyEthRewards()`.
+- Its generic ERC-20 notifier exists in immutable code but is prohibited for
+  the deployed Engine. There is no authorized `REWARD_NOTIFIER_ROLE` holder;
+  do not grant the role or call `notifyTokenRewards`.
+- The current liquidity Vault uses `RouteMode.Liquidity`. Its `Engine` and
+  `Split` enum values permanently revert `EngineTokenRoutingDisabled`.
+- `Genesis` and `GenesisSplit` require a separately deployed and verified
+  distributor and are not currently available.
+- Bonds, baskets, and future applications have their own deployment and legal
+  gates. Source-level routing options are not evidence of current cash flow,
+  product availability, revenue, or returns.
+- The Treasury Range Manager is an implemented/tested candidate only and is not
+  deployed, funded, or activated. Its source design returns treasury principal,
+  tactical proceeds, LP fees, and cancellation outputs to the immutable
+  production Safe rather than treating them as Engine revenue.
 
 ### 3.1 Epoch Lifecycle & JIT Advance
 - **Epoch Duration:** `EPOCH_LENGTH = 900` seconds (15 minutes). 96 epochs per day.
@@ -168,18 +189,13 @@ Executed on every epoch transition (`NARAEngineModelLib.computeNextEpochSnapshot
 - **Native ETH Distribution:** Injected via `notifyEthRewards()`. 100% of queued ETH distributes in the next epoch.
 - **Safety Invariant:** `REWARD_NOTIFIER_ROLE` is permanently renounced from Custody Safe and Vault to prevent arbitrary ERC-20 denominator dilution.
 
-### 3.5 Lock APR Drivers & Yield Scaling Mechanics
-The annual percentage rate (APR) earned by locked positions is determined dynamically by the engine's 15-minute emission allocation:
+### 3.5 Variable Reward-Rate Inputs
 
-1. **Bootstrap Dilution Phase (Anti-Hyperinflation Guard):**
-   - At launch, `bootstrapInitialWeight` ($10\text{M}$) acts as virtual dilution weight.
-   - Real locker emission share is scaled by $\frac{\text{ActiveWeight}}{\text{ActiveWeight} + \text{BootstrapWeight}}$.
-   - Early APR is intentionally conservative while circulating supply is low and liquidity is bootstrapping.
-2. **The 4 Levers to Increase Lock APR:**
-   - **Lever 1: Natural Bootstrap Decay (Time Progression):** `bootstrapWeight` decays every epoch by $0.09\%$ (`bootstrapDecayWad = 99.91%`). As it approaches zero, lockers transition from receiving $\approx 0.5\%$ to $100\%$ of the designated locker emission ($0.2646\text{ NARA/epoch}$), providing an organic $\approx 200\times\text{ to }260\times$ multiplier to initial APR.
-   - **Lever 2: Compound Base Emission Growth (`growthFactorWad = 1.000104`):** Base emission expands every epoch from $0.20\text{ NARA}$ up to the hard cap of $5.00\text{ NARA/epoch}$ ($175,200\text{ NARA/year}$), expanding the global reward pool by up to $16\times$.
-   - **Lever 3: Real-Yield Secondary Fee Distributions:** Any protocol revenue, swap fee sweeps, or treasury revenue routed via `notifyEthRewards()` or `notifyTokenRewards()` distributes $100\%$ directly to active lockers with **zero bootstrap dilution**.
-   - **Lever 4: Governance Parameter Configuration (`PARAM_ROLE`):** The Safe multisig can accelerate `bootstrapDecayWad` or increase `minBaseEmission` / `dripSplitWad` subject to `CONFIG_CHANGE_DELAY` timelocks.
+Position reward amounts are state-dependent and can be zero. Bootstrap weight,
+active weight, admitted supply, reserve availability, contribution timing, and
+timelocked parameters all affect realized accounting. Formula outputs and
+historical snapshots are not APR quotes, forecasts, promises, or guarantees.
+The deployed Engine's ERC-20 notifier remains prohibited.
 
 ---
 
@@ -207,25 +223,42 @@ Uniswap v4 encodes hook permissions into the lowest bits of the deployed hook ad
 ### 4.3 Liquidity Growth Vault (`NARALiquidityGrowthVault.sol`)
 - Receives pool fees in input currency (USDC on buys, NARA on sells) directly via `poolManager.take(..., address(vault), feeAmount)`.
 - **Dynamic Route Modes (`enum RouteMode`):**
-  - **`Liquidity` (0, Active Default):** `100%` of collected USDC & NARA fees compound into permanent Protocol-Owned Liquidity (POL).
-  - **`Genesis` (3):** `100%` of incoming pool USDC fees are routed to `NARAGenesisRewardDistributorV4`, paying direct cash dividends to Genesis Bond NFT holders.
-  - **`GenesisSplit` (4):** Hybrid mode. Splits USDC fees between Genesis Bond NFT holders (`splitGenesisShareBps`, e.g. 50%) and POL Compounding (remaining 50% USDC + 100% NARA).
+  - **`Liquidity` (0, Active Default):** balanced collected USDC and NARA can
+    be added to the Compounder's position; one-sided or unmatched inventory is
+    banked and is not active LP.
+  - **`Genesis` (3):** unavailable until a separately verified Genesis
+    distributor is deployed and bound.
+  - **`GenesisSplit` (4):** unavailable under the same gate; its source-level
+    split is not current distribution evidence.
   - **`Engine` (1) / `Split` (2):** Disabled/Prohibited to preserve core invariants.
-- **The Phased USDC Activation Switch:** The Vault can remain in `RouteMode.Liquidity` during initial bootstrapping, and the Safe multisig can switch to `GenesisSplit` at any later time to stream live AMM trading fees directly to Genesis Bond NFT holders without requiring contract redeployments.
+- A future Genesis route requires separate deployment evidence, configuration,
+  security review, legal review, and explicit human approval. Source capability
+  alone is not authorization.
 - **Frozen Compounder Binding:** The binding from Vault to Compounder is permanently frozen (`compounderFrozen = true`).
 
 ---
 
-## 5. Liquidity Compounder & POL Flywheel
+## 5. Liquidity Compounder and Fee-to-LP Flow
 
-`NARALiquidityCompounderV4.sol` adds permanent protocol-owned liquidity to the Uniswap v4 pool.
+`NARALiquidityCompounderV4.sol` adds protocol-owned liquidity to the Uniswap v4
+pool subject to documented owner recovery/migration controls and a seven-day
+timelock.
 
 ### Key Architectural Invariants
-1. **Full-Range Liquidity:** Uses `MIN_TICK` to `MAX_TICK` (aligned to tick spacing 60). Never falls out of range, requires zero active rebalancing, minimizes price manipulation surface.
+1. **Full-Range Liquidity:** Uses `MIN_TICK` to `MAX_TICK` (aligned to tick
+   spacing 60) and is intended to avoid routine range rebalancing. This does not
+   eliminate price, manipulation, contract, liquidity, or operational risk.
 2. **No-Swap Compound:** Never executes market swaps. Only the balanced ratio of NARA:USDC at the live `sqrtPriceX96` is deposited.
-3. **Remainder Banking:** Unbalanced surplus (e.g. excess USDC from buy pressure) is banked safely inside the Compounder and rolled into future compound cycles. One-sided fees do not become instant LP.
-4. **Position NFT Custody:** The Uniswap v4 LP NFT (`tokenId: 2898486`) is held directly by the Compounder contract (`473,995,658,948,700` liquidity units, ~10.05% of active pool liquidity).
-5. **Exact-Spend Invariant:** Pulls exact allowances from Vault, guaranteeing zero stuck funds in intermediate stages.
+3. **Remainder Banking:** Unbalanced surplus (for example, excess USDC from buy
+   pressure) remains held by the Compounder subject to contract, admin, and
+   recovery risk. One-sided fees do not become instant LP.
+4. **Position NFT Custody:** Uniswap v4 LP NFT `2898486` is held by the
+   Compounder. Its liquidity was `4386316228001171` at the latest
+   receipt-pinned compound (Base block `50499085`). A percentage share requires
+   a fresh total-liquidity read and must not be inferred from this snapshot.
+5. **Exact-Spend Invariant:** Pulls exact allowances from the Vault and clears
+   the intended intermediate spend path; this does not eliminate all contract,
+   integration, or recovery risk.
 6. **7-Day Recovery Timelock:** Owner POL-removal operations (`WindDown`, `MigratePosition`, `RecoverPoolTokens`) require `RECOVERY_DELAY = 7 days`.
 
 ### 5.1 Treasury Range Manager Candidate
@@ -274,7 +307,10 @@ Authority and operating documents:
 
 ## 6. Position NFTs & Generative On-Chain Art Engine
 
-In NARA v4, every locked position is an ERC-721 token (`NARAPositionNFTV4`, name: `"NARA Position"`, symbol: `NARAPOS`).
+Direct Engine positions are not ERC-721 tokens. The separately deployed
+`NARAPositionNFTV4` (`"NARA Position"`, symbol `NARAPOS`) is an optional path
+that creates a clone-owned Engine position. The seven-contract Phase-2 baseline
+is source-verified and Safe-finalized but remains `integrationReady: false`.
 
 ### 6.1 Clone Account Architecture (EIP-1167)
 ```
@@ -286,7 +322,9 @@ NARAPositionAccountV4 (EIP-1167 Clone) ← Unique contract per tokenId
        ▼
 NARAEngine Position (global positionId)
 ```
-- **Bearer Asset:** Transferring the NFT transfers ownership of the underlying clone account and its future claimable rewards.
+- **Contract-control transfer:** Contract control follows the current ERC-721
+  owner; no legal property characterization is made. Transferability does not
+  establish a buyer, market, liquidity, value, or exit.
 - **Thin Proxy Security:** Clone accounts only accept calls from the NFT factory (`onlyFactory`).
 - **Claim Fees:** Configurable wrapper-level fees (up to 10% hard cap) on NARA and bribe tokens. ETH claims bypass wrapper fees. Direct EOA locks bypass NFT wrapper fees entirely.
 
@@ -298,20 +336,24 @@ Renders 100% on-chain vector art and JSON metadata without external IPFS/HTTP de
   - `New` $\to$ `Activated` $\to$ `Rewarded` $\to$ `One ETH Mark` $\to$ `Apex`.
   - Driven strictly by **realized historical delivered rewards** (`lifetimeEthClaimed`, claim count, extension count).
   - Emits ERC-4906 `MetadataUpdate` on claims and lock extensions.
-- **Compliance Rule:** The renderer strictly encodes realized historical facts and provenance. It never displays projected returns, estimated APY, or speculative rarity.
+- **Renderer content invariant:** The renderer encodes realized historical facts
+  and provenance. It does not display projected returns, estimated APY, or
+  speculative rarity; this technical rule is not a legal-compliance claim.
 
-### 6.3 Multi-Asset Reward Vault & Multiplier Dynamics (Up to 10.00x)
-Each NARA Position NFT functions as a self-contained multi-token cash flow vault:
-1. **Multi-Asset Parallel Streams:** The NFT's clone account (`NARAPositionAccountV4`) independently tracks, accumulates, and claims:
-   - **NARA Rewards:** From 15-minute epoch emission drips (`claimRewards`).
-   - **Native ETH Dividends:** From bond fundraising and category basket conversions (`claimEthRewards` / `claimGenesisEth`).
-   - **USDC & Arbitrary ERC-20s:** From parallel distributions and bribe routing (`claimParallelTokenRewards` / `claimGenesisToken`).
-2. **Weight Multipliers (Up to 10.00x):**
-   - Active default configuration grants up to **`4.00x`** for 365-day commitments.
-   - The engine architecture contains a mathematical parameter ceiling of **`10.00x`** (`MAX_MULTIPLIER_WAD = 10e18` in `NARAEngineModelLib.sol`), adjustable via 7-day governance timelock.
-   - Genesis Bond NFTs feature custom `rewardMultiplierBps` stamped directly into on-chain metadata for parallel reward distributions.
+### 6.3 Position Accounting and Multiplier Bounds
 
-> ⚖️ **Legal UX & Regulatory Notice:** NARA Position NFTs represent self-directed, non-custodial time-commitment positions within a decentralized protocol. Duration multipliers are structural weighting parameters within the smart contract accounting system and do not constitute promises of investment yield, interest, or financial return. Reward distributions are variable, dependent on protocol activity, and may be zero. NARA tokens, NFTs, and lock positions carry no voting equity or rights against any entity.
+The NFT controls a clone account that owns the underlying Engine position. The
+deployed supported reward rails are variable NARA emissions and contributed
+native ETH; amounts can be zero. Generic Engine ERC-20 notification is
+prohibited. Genesis token/ETH claim functions describe future source behavior
+and are unavailable without a separately deployed and bound Genesis
+distributor.
+
+Duration affects accounting weight. The deployed parameter set and source-level
+ceilings are technical inputs, not return multipliers, APR/APY forecasts, or
+promises. The NFT, clone account, and Engine have distinct custody and control
+relationships that must be shown factually; this document makes no legal
+characterization of them.
 
 ---
 
@@ -319,58 +361,40 @@ Each NARA Position NFT functions as a self-contained multi-token cash flow vault
 
 ## 7. Bond Markets & Genesis Reward Distribution
 
-### 7.1 Bond Depository (`NARABondDepositoryV4NFT.sol`)
-- **Mechanism:** ETH In $\to$ Discounted NARA Locked in Engine $\to$ Genesis Position NFT delivered to buyer.
+### 7.1 Bond Depository Source (`NARABondDepositoryV4NFT.sol`)
+- **Source mechanism:** ETH input, bounded signed quote, NARA locked in the
+  Engine, and a Genesis Position NFT delivered to the recipient. This is not
+  deployed or offered.
 - **Fixed-Price Model:** Admin-set fixed price with 24-hour change delay (`MIN_PRICE_DELAY = 1 day`) and 48-hour expiration (`MAX_TERMS_AGE = 2 days`).
-- **Safety Caps:** Max discount hard-capped at 30% (`MAX_DISCOUNT_BPS = 3,000`).
+- **Parameter cap:** Source caps the quote discount at 30%
+  (`MAX_DISCOUNT_BPS = 3,000`); a cap does not make terms safe or suitable.
 - **ETH Routing Split (`rewardSplitWad`):** Fully configurable from `0%` to `100%` (`MAX_REWARD_SPLIT_WAD = 1e18`). Default is `0.50` (50% to `NARAEngine.notifyEthRewards()`, 50% to Treasury). Can be configured to 100% Treasury / 0% Lockers or 100% Lockers / 0% Treasury depending on capital requirements.
-- **Inventory Sourcing:** Pulls NARA on-demand from `NARABondVaultV4` (250,000 NARA reserve).
+- **Inventory sourcing:** Source can pull NARA from `NARABondVaultV4`; no
+  deployed, funded reserve is claimed here.
 
-### 7.2 Genesis Reward Distributor (`NARAGenesisRewardDistributorV4.sol`)
-- Parallel reward pool exclusively for Genesis NFT holders.
-- **Reward Multiplier:** Up to $5.0\times$ (`MAX_GENESIS_REWARD_MULTIPLIER_BPS = 50,000`).
+### 7.2 Genesis Reward Distributor Source (`NARAGenesisRewardDistributorV4.sol`)
+- Undeployed parallel accounting source for Genesis NFT holders.
+- **Reward-weight parameter:** source bound up to $5.0\times$
+  (`MAX_GENESIS_REWARD_MULTIPLIER_BPS = 50,000`); this is not a return claim.
 - **Genesis Reward Weight:** $\text{Weight} = \text{Amount} \times \text{Multiplier}$.
-- **Eternal Genesis Positions:** Cannot unlock principal via normal methods. Exit is strictly through `burnEternalGenesis(tokenId)` after maturity, which forfeits Genesis reward weight and returns principal.
+- **Eternal Genesis Positions:** Source does not allow the normal unlock path.
+  After maturity, `burnEternalGenesis(tokenId)` attempts to remove Genesis
+  reward weight and release the recorded NARA amount when contract conditions
+  pass; execution, token value, and recovery are not guaranteed.
 
-### 7.3 Capital Formation, Cash Flow Rounds & Valuation Strategy
-Bonds operate as decentralized on-chain capital formation rounds (equivalent to Series A/B funding), exchanging discounted future tokens for real ETH cash flow without market dumping:
+### 7.3 Bond and Genesis Availability Boundary
 
-```
-[Bond Buyer Deposits ETH] ──► [50% ETH] ──► NARAEngine.notifyEthRewards() (Direct Cash Dividends to Lockers)
-                         └──► [50% ETH] ──► Protocol Treasury (Permanent POL & Liquidity Backing)
-```
+Bond, Genesis distributor, and Genesis Vault routes are source-level future
+components. They are not deployed, funded, opened, marketed, or available.
+Price scenarios, valuation targets, projected proceeds, returns, distributions,
+and market-impact claims are intentionally excluded because they are not
+verified current facts.
 
-1. **Strategic Pilot Batch #1 (`20,000 NARA` at $\ge \$1.00\text{ USD}$ Target):**
-   * **Valuation Gate:** Bonds open only when $NARA spot is $\ge \$1.00$ to conserve the 250k reserve against early micro-cap dilution.
-   * **Batch Capacity:** `20,000 NARA` (only 2.0% of total supply / 8% of bond reserve).
-   * **Gross Value Raised:** `~$16,000 – $17,000 USD` in real ETH (at 15–20% discount).
-   * **Immediate Impact:** `~$8,000+ USD in ETH` paid directly to active lockers as instant dividends; `~$8,000+ USD in ETH` added to Treasury. `0 NARA` dumped on AMM (100% time-locked 1 year at `4.00x`).
-2. **Macro Scale Economics (`250,000 NARA` Reserve at Scale):**
-   * At **`$100.00 / NARA`**: Gross reserve value = **`$25,000,000 USD`**.
-   * At 20% discount ($80/token): Raises **`$20,000,000 USD in ETH`**.
-   * **`$10,000,000 in ETH`** paid directly to protocol lockers + **`$10,000,000 in ETH`** to Treasury backing.
-   * All 250,000 tokens locked 1 year inside the Engine, preventing market dumps while capturing massive protocol solvency.
-
-### 7.4 The Phased AMM USDC Fee-Sharing Switch (Bond NFT Superpower)
-Genesis Bond NFTs possess the capability to capture direct cash flow from **all Uniswap v4 trading volume**:
-
-```mermaid
-sequenceDiagram
-    participant Trader as Swapper on Uniswap v4
-    participant Hook as NARALiquidityGrowthHook
-    participant Vault as NARALiquidityGrowthVault
-    participant Dist as NARAGenesisRewardDistributorV4
-    participant NFT as Genesis Bond NFT Holder
-
-    Trader->>Hook: Swaps USDC for NARA (Pays Buy Tax in USDC)
-    Hook->>Vault: Delivers USDC Swap Fees
-    Note over Vault: Phase 1: RouteMode.Liquidity (Compounds 100% into POL)<br/>Phase 2: Safe sets RouteMode.GenesisSplit (e.g. 50% USDC to Genesis)
-    Vault->>Dist: Routes 50% USDC via notifyTokenRewards()
-    Dist->>NFT: Instant Pro-Rata Claimable USDC Cash Dividends
-```
-
-* **Decoupled Activation:** Bonds can be sold while the Vault operates in `RouteMode.Liquidity`. Genesis metadata and `Genesis Reward Weight` are stamped permanently on the NFTs at mint time.
-* **Activating at Scale:** When trading volume reaches maturity, the Safe Multisig executes `vault.setRouteMode(RouteMode.GenesisSplit)`, activating continuous USDC distributions to all Genesis Bond holders without changing contract bytecode or disrupting active locks.
+Any future activation requires a protected protocol release, verified manifests
+and bindings, security and economic review, explicit human approval, and written
+jurisdiction-specific legal review of terms, audience, disclosures, marketing,
+and transaction journey. No current document authorizes a bond sale or a switch
+to `Genesis` or `GenesisSplit`.
 
 ---
 
@@ -378,19 +402,29 @@ sequenceDiagram
 
 Located in `contracts/v4/composability/`:
 
+> **Source only.** These components are not deployed, integrated, offered, or
+> publicly available. The following bullets describe conditional source
+> behavior, not a product commitment.
+
 ### 8.1 Liquid Staking (`NARAStakingPoolV4.sol` / `stNARA`)
 - ERC-4626 style liquid staking pool.
-- Aggregates user NARA deposits and automatically creates maximum-duration (35,040 epochs $\approx 3\times$ weight) engine positions.
-- **Queued Redemptions:** `queueRedeem(shares)` provides orderly exits as underlying positions mature or liquidity becomes available.
-- **Reward Auto-Harvesting:** Collects NARA, ETH, and USDC rewards and distributes to `stNARA` holders via internal reward indexes.
+- If deployed and approved, source can aggregate NARA deposits and create
+  maximum-duration Engine positions.
+- **Queued Redemptions:** source queues redemption claims until recorded liquid
+  NARA is available; execution and token value are not guaranteed.
+- **Reward accounting:** source contains internal indexes for supported claimed
+  amounts; no amount or distribution is promised.
 
 ### 8.2 Pendle Standardized Yield (`NARAStakingPoolSYV4.sol` / `SY-stNARA`)
 - Implements the Pendle Standardized Yield (SY) interface for `stNARA`.
-- Enables tokenizing NARA yield into Principal Tokens (PT) and Yield Tokens (YT) on Pendle.
+- Implements an SY-compatible source interface; no Pendle PT/YT market,
+  liquidity, integration, or yield is deployed or guaranteed.
 
 ### 8.3 Fractional Positions (`NARAFractionalPositionFactoryV4.sol` & `NARAFractionalPositionV4.sol`)
 - Allows locking a single `NARAPositionNFTV4` into a smart vault and issuing 1,000,000 fractional ERC-20 tokens.
-- Fractions trade freely on DEXes, claim pro-rata NARA/ETH rewards, and redeem underlying principal upon position maturity.
+- Source produces transferable ERC-20 units and pro-rata accounting. No DEX
+  market, buyer, liquidity, token value, reward, principal recovery, or exit is
+  guaranteed.
 
 ---
 
@@ -398,9 +432,13 @@ Located in `contracts/v4/composability/`:
 
 Located in `nara-category-baskets-v1/` (Foundry build system).
 
+> **Source and preview only.** Basket managers are not deployed and public
+> purchases are unavailable. Current launch design accepts USDC entry only.
+
 ### 9.1 Immutable Basket Position Manager (`NARAImmutableBasketPositionManagerV1.sol`)
 - ERC-721 tokenized basket positions.
-- Users deposit USDC/WETH and buy defined portfolio baskets in a single atomic transaction.
+- If deployed and activated, source accepts USDC and constructs a defined
+  portfolio in one transaction; WETH entry is not in the current launch design.
 - **Required Asset Anchor:** **$NARA is mandatory in every basket** with a protocol-enforced minimum weight.
 - **Four Canonical Categories:**
   1. **CORE:** Foundation assets ($NARA, WETH, cbBTC).
@@ -408,8 +446,12 @@ Located in `nara-category-baskets-v1/` (Foundry build system).
   3. **FINANCE:** Decentralized finance tokens.
   4. **CULTURE:** Community and cultural ecosystem tokens.
 - **Streaming Holding Fees:** Linear time-based holding fees collected on position interaction (`holdingFeeBps \le 200` BPS/yr).
-- **Referral Rewards:** Configurable referral fee share (`referralShareBps \le 5,000` BPS = 50% of protocol fees).
-- **Non-Custodial Underlying Exits:** Users can exit via `sell` (swap back to payment token) or `withdrawUnderlying` (receive raw portfolio tokens directly).
+- **Source-level referral fee-share parameter:** `referralShareBps \le 5,000`
+  BPS; no referral program is deployed or offered.
+- **Contract-mediated exits:** source exposes `sell` (swap back to payment
+  token) and `withdrawUnderlying` (receive portfolio tokens directly). Custody,
+  liquidity, adapter, slippage, and deployment state must be disclosed; no
+  immediate or complete exit is guaranteed.
 
 ### 9.2 DEX Swap Adapters (`src/adapters/`)
 Modular swap adapters implementing `INARABasketSwapAdapterV1`:
@@ -476,19 +518,26 @@ Located in `nara-swarm-monitor/`. Powered by Ponder framework for real-time Base
 
 ### 12.2 GitHub Operational Keepers
 - **`v4-epoch-maintainer.yml` (ACTIVE):**
-  - Schedule: `3,18,33,48 * * * *` (Four times hourly).
+  - Schedule: `3,18,33,48 * * * *`; Railway fallback at `12,27,42,57`.
   - Dedicated Gas-Only Key: `0xE3DDa33EdB0f8b6aa39e4ce853Ba7C4A29e520DD`.
-  - Operations: Calls `advanceEpoch()` / `advanceEpochs()`, verifies runtime bytecode hashes, pings external heartbeat monitor.
+  - Operations: Calls `advanceEpochs(uint256)` and uses `poke()` where the
+    bounded routine requires it, verifies runtime bytecode hashes, and pings the
+    external heartbeat monitor.
 - **`v4-liquidity-maintainer.yml` (ACTIVE):**
-  - Schedule: `17,47 * * * *` (Twice hourly).
+  - Schedule: `17,47 * * * *`.
   - Dedicated Gas-Only Key: `0x0f8ADa55B394E58e9BC667c23a1EEcED12216272`.
-  - Operations: Runs the bounded, deployment-bound `compoundAll()` policy only when its independent gates and trigger conditions pass; otherwise emits the required idle heartbeat.
+  - Operations: Runs the bounded, deployment-bound `compoundAll()` policy only
+    when its enable gate, token-use caps, pinned price guard, runtime checks,
+    and trigger conditions pass; otherwise emits the required idle heartbeat.
+  - Do not reuse or broaden either keeper.
 
 ---
 
 ## 13. Cross-Repository Release Protocol & State Gates
 
-Defined in `docs/NARA_CROSS_REPOSITORY_RELEASE_PROTOCOL.md`.
+Defined at workspace level in
+`../docs/NARA_CROSS_REPOSITORY_RELEASE_PROTOCOL.md`; this repository's tracked
+entry points are `AGENTS.md` and `docs/REPOSITORY_MAINTENANCE.md`.
 
 ### Single Source of Truth Authority Matrix
 | Repository | Authority Domain |
@@ -500,7 +549,10 @@ Defined in `docs/NARA_CROSS_REPOSITORY_RELEASE_PROTOCOL.md`.
 
 ### Strict State Gate Sequence
 $$\text{implemented} \longrightarrow \text{tested} \longrightarrow \text{merged} \longrightarrow \text{deployed} \longrightarrow \text{configured} \longrightarrow \text{indexed} \longrightarrow \text{activated} \longrightarrow \text{available}$$
-- Never use the generic word `"live"` in release records.
+- Qualify `live` precisely. `Technical live testing` means the named deployed
+  contracts or pool are being observed with real assets; it does not mean
+  every product or interface is available, production-ready, audited, safe,
+  legally approved, or available in any jurisdiction.
 - Never update downstream consumers from uncommitted branches, local edits, or planned addresses.
 
 ---
@@ -535,6 +587,13 @@ Located in `.codex/audit/`. Workspace serves as a dedicated security audit hub.
 | **`Create2HookDeployer`** | `0xDE9E3Cac08b7a31Db18c7432d4C45DF4584Fd646` | Verified | Safe-owned CREATE2 factory |
 | **`NARALiquidityGrowthHook`** | `0x59AEf9799DEA01A7FB7dA73BEA10dfB08858A088` | Verified | Uniswap v4 Hook (bits `0x2088`) |
 | **`NARALiquidityCompounderV4`** | `0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF` | Verified | Owns POL LP NFT `2898486` |
+| **`NARAArtMetadataV1`** | `0xAE0Da2B2066FF0c1409A2aC4053699E75dd00633` | Verified | Position NFT Phase-2 baseline |
+| **`NARAArtSecurityPrintV1`** | `0x0640dd2B545348eC91826ab7c58DD88EcE81f353` | Verified | Position NFT Phase-2 baseline |
+| **`NARAArtCorePlateV1`** | `0x476b69f490C17a5500c4Eb9b6cB49302cef4bE4A` | Verified | Position NFT Phase-2 baseline |
+| **`NARAArtGenesisPlateV1`** | `0x20520115546c28F99aE581d62935e62D9E8B9022` | Verified | Position NFT Phase-2 baseline; no Genesis distributor binding |
+| **`NARAPositionRendererV5`** | `0x607b08365C23a983C542898a79E670e6D4B80673` | Verified | Position NFT Phase-2 baseline |
+| **`NARAPositionAccountV4`** | `0x3a8c9cA4f95E94751774810B33caF01bb992A55F` | Verified | Position NFT Phase-2 implementation |
+| **`NARAPositionNFTV4`** | `0xCcBD8c59664958636369F8fe24B927aEBc3DF7cC` | Verified and Safe-finalized | Manifest remains `integrationReady: false`; consumers disabled |
 | **Uniswap v4 Pool ID** | `0x83edced1f39e6adf7469cd718eeb409824d948959263408d4cfb6e745c8db464` | Initialized | NARA/USDC 0.30% fee, tick 60 |
 | **Seed LP NFT** | `2898124` | Active | Owned by Production Safe |
 | **Compounder LP NFT** | `2898486` | Active | Owned by Compounder |

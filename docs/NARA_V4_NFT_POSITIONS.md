@@ -1,6 +1,6 @@
 # NARA v4 NFT Positions — Canonical Spec
 
-Last updated: 2026-08-21.
+Last updated: 2026-08-30.
 **This is the v4 canonical NFT spec.** The old `NFT_WRAPPER_BUILD_PLAN.md` lives only in
 `archive/legacy-v3/docs/` and describes the **retired v3** `NaraLockNFT` + `NaraLockAccount`.
 Do not apply v3 wrapper patterns to v4 — the architecture is different.
@@ -21,10 +21,17 @@ Phase-2 source contracts (exact deployment scope):
 `NARAGenesisRewardDistributorV4` are implemented future surfaces but are explicitly deferred to
 Phase 3. They are not part of the Phase-2 deployment, manifest, Safe batch, or consumer handoff.
 
-> **Production state — 2026-08-21:** The hardened Phase-2 workflow exists locally but is unmerged
-> and not deployed. No Base Position NFT address, runtime, receipt, source verification, or finalized
-> manifest is available. Planned, local, environment-only, and zero-code addresses are not
-> deployments and must remain disabled in consumers.
+> **Current state:** The seven-contract Phase-2 baseline passed its recorded
+> release review/test gates, was deployed on Base, source-verified, and finalized
+> under the production Safe. This is not an overall independent protocol audit.
+> Canonical evidence
+> is `deployments/v4-position-nft-phase2-finalized-2026-08-21.json` and
+> `deployments/v4-position-nft-phase2-source-verification-2026-08-21.json`.
+> The finalized manifest remains `integrationReady: false`: the separately
+> approved value-bearing smoke, 48-hour monitored hold, and immutable
+> downstream handoff are not evidenced as complete. Consumers must remain
+> disabled. This is technical live-testing state, not public product
+> availability, legal approval, or a recommendation to transact.
 
 ---
 
@@ -209,8 +216,10 @@ data lens for current financial state. Until then, consumers must not invent a l
 - Minting is permissionless from the confirmed NFT deployment block. Pending/final verifiers must
   reconcile all `PositionMinted` events and `nextTokenId`; no operator may assume an empty mint window
   or reserve a manual token ID.
-- Addresses, start blocks, generated ABIs/bindings, and consumer configuration remain blank/disabled
-  until the finalized source-verified manifest, approved smoke, 48-hour observation hold, immutable
-  protocol origin, and explicit cross-repository handoff exist. Swarm, baskets, analytics, frontends,
-  and public documentation must fail closed during that quarantine.
+- Addresses and start blocks are recorded in the finalized, source-verified
+  manifest. Generated bindings and consumer configuration remain disabled
+  until the approved smoke, 48-hour observation hold, immutable protocol
+  origin, and explicit cross-repository handoff exist. Swarm, baskets,
+  analytics, frontends, and public documentation must fail closed during that
+  quarantine.
 - The engine is **not permit-aware**, but the NFT is: `mintAndLockWithPermit` does the NARA permit.

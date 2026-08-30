@@ -57,8 +57,9 @@ Complete every item before running anything on Base mainnet.
 □ Deployer wallet has at least 0.001 ETH on Base and passes the deployment
   script's higher live-fee requirement when Base fees demand it.
 □ npm run build passes locally.
-□ npm run test passes locally (556 passing with 7 opt-in Base-fork cases pending
-  as of 2026-08-09; run `npm test` for the live count).
+□ The deterministic non-fork suite and every release-relevant opt-in Base-fork
+  case pass on the exact candidate; record current counts instead of copying a
+  historical total.
 □ npm run size passes (all contract bytecodes under EVM limit).
 □ npm run slither:v4 passes.
 □ Aderyn is rerun when its Linux binary is available; do not claim a current Aderyn pass otherwise.

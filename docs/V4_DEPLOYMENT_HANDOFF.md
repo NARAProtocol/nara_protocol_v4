@@ -1,6 +1,12 @@
 # NARA v4 Deployment Handoff
 
-Last updated: 2026-08-09.
+Activation checkpoint: 2026-08-09. Current-state annotation: 2026-08-30.
+
+> **Historical checkpoint.** This file preserves the 2026-08-09 deployment
+> handoff. Current liquidity, automation, Position NFT, availability, and legal
+> state come from [CURRENT_STATE.md](CURRENT_STATE.md) and its latest referenced
+> manifests/releases. The canonical contracts and pool are in technical live
+> testing; that is not public product availability or legal approval.
 
 This filename is retained for existing links. The current deployment authority
 is the fresh Base v4 core from immutable protected commit
@@ -53,12 +59,13 @@ at block `49721188`. Initial LP NFT `2898124` holds liquidity
 
 Do not repeat the core deployment, pool launch, Engine recovery, Compounder
 validation, or permanent binding freeze. The Compounder owns LP NFT `2898486`
-with liquidity `9455824137787`; total active liquidity was
-`4252096511257072` at the freeze block. Engine backlog recovery succeeded, but
-the Engine lifecycle smoke and recurring maintenance remain gated. Both
-recurring v4 workflows remain disabled, baskets are preview-only, and
-downstream availability still requires the explicit handoff sequence. This is
-not an overall production-readiness claim.
+with liquidity `9455824137787` at this historical freeze checkpoint. Engine
+backlog recovery succeeded. Current override: both recurring maintainers are
+active under separate bounded policies, and the latest receipt-pinned
+Compounder position liquidity is recorded in `CURRENT_STATE.md`. The Engine
+lifecycle smoke remains pending, Position NFT integration remains gated, and
+baskets are preview-only. This is not an overall production-readiness,
+public-availability, or legal-compliance claim.
 
 The earlier protected core manifest remains accompanied by its supplemental
 canonical receipt reconciliation because 24 original journal entries stored a

@@ -7,11 +7,11 @@ has been deleted. Fresh deployment work is v4-only.**
 
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.34-363636?logo=solidity)](https://soliditylang.org)
 [![Hardhat](https://img.shields.io/badge/Built%20with-Hardhat-fff100)](https://hardhat.org)
-[![Tests](https://img.shields.io/badge/V4-556%20passing-2ea44f)](#-build--test)
+[![Tests](https://img.shields.io/badge/non--fork-759%20passing-2ea44f)](#-build--test)
 [![Echidna](https://img.shields.io/badge/invariants-13%2F13%20passing-2ea44f)](#-security)
 [![Uniswap v4](https://img.shields.io/badge/Uniswap-v4-ff007a)](docs/UNISWAP_V4_HOOK.md)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
-[![Status](https://img.shields.io/badge/status-fresh%20v4%20activated%20%C2%B7%20final%20gates%20pending-orange)](#-status)
+[![Status](https://img.shields.io/badge/status-technical%20live%20testing-orange)](#-status)
 
 <br/>
 
@@ -26,6 +26,16 @@ has been deleted. Fresh deployment work is v4-only.**
 > [v4 Hook specification](docs/UNISWAP_V4_HOOK.md), and the
 > [v4 launch checklist](docs/V4_LAUNCH_CHECKLIST.md) before liquidity work.
 
+> **Technical live testing on Base mainnet — not public product availability.**
+> The canonical v4 contracts and NARA/USDC pool use real assets. This repository
+> reports observed technical state; it does not mean every NARA product or
+> interface is available, production-ready, audited, safe, legally approved, or
+> available in any jurisdiction. Transactions are irreversible, liquidity can
+> be limited or unavailable, and token values can fall to zero. This repository
+> contains no evidence of completed jurisdiction-specific qualified legal
+> review. Nothing here is an invitation,
+> inducement, or recommendation to transact in NARA.
+
 ---
 
 ## What is NARA?
@@ -37,16 +47,20 @@ The v4 source is built around commitment: a participant can lock a fixed-supply
 token for a chosen duration, and duration affects position weight. The Engine
 source accounts NARA emissions and contributed ETH across active weight in
 15-minute epochs. Rewards are variable, never promised, and can be zero. Public
-locking is not yet available; the production lock/activation/claim/unlock smoke
-and frontend gates remain pending. The deployed Engine's generic ERC-20
+locking is unavailable; the production lock/activation/claim/unlock smoke and
+verified frontend gates remain incomplete. The
+deployed Engine's generic ERC-20
 notification surface is intentionally disabled; see
 [Current State](docs/CURRENT_STATE.md).
 
-The allocation-layer source represents a commitment as an owner-transferable
-NFT. That layer is not deployed in this release. Fractionalization, wrapping,
-marketplace, and lending integrations are optional undeployed source or future
-integration work; their existence does not guarantee a buyer, market, lender,
-liquidity, or exit.
+The deployed, tested, release-reviewed, and source-verified Position NFT
+Phase-2 baseline can represent a commitment as an owner-transferable NFT. Its
+release gates do not constitute an overall independent protocol audit. Its finalized manifest remains
+`integrationReady: false`: the separately approved value-bearing smoke,
+48-hour monitored hold, and immutable downstream handoff are pending.
+Fractionalization, wrapping, marketplace, and lending integrations are optional
+undeployed source or future integration work; their existence does not
+guarantee a buyer, market, lender, liquidity, or exit.
 
 The fresh v4 market uses a custom Uniswap v4 pool. The Hook and Vault are
 Safe-owned, the Compounder is deployed and wired, and the pool was atomically
@@ -86,24 +100,30 @@ NARA/USDC pool -> v4 Hook -> v4 Vault -> balanced inventory -> Compounder/POL
 
 ## 🚦 Status
 
-**The fresh v4 core and NARA/USDC pool are activated on Base, with final
-operational gates still pending.** The production Safe accepted Hook and Vault
+**The fresh v4 core and NARA/USDC pool are active in technical live testing on
+Base, with product-availability gates still pending.** The production Safe accepted Hook and Vault
 ownership, the Compounder was deployed and wired, and the pool was seeded with
 LP NFT `2898124` and liquidity `4242640687119285`. Both live tax matrices
 passed, including receipt-pinned same-block pressure and reversal evidence.
-Compounder validation/reconciliation/freeze is complete: LP NFT `2898486` is
-Compounder-owned with liquidity `9455824137787`, and total active liquidity was
-`4252096511257072` at the freeze block. Both recurring v4 workflows remain
-disabled. The Engine's later accumulated backlog was recovered by three
-permissionless Safe transactions on 2026-08-14; final receipt block `49970727`
-read current/stored epoch `559 / 559`, and block `49970969` independently
-confirmed zero backlog. Baskets remain preview-only. This is not an overall
-production-readiness claim.
+Compounder validation/reconciliation/freeze is complete. The latest controlled
+compound increased Compounder-owned LP NFT `2898486` to liquidity
+`4386316228001171` at Base block `50499085`; `28.423769295100595183 NARA /
+2.326460 USDC` remained banked. The epoch and liquidity maintainers are active
+under separate bounded policies and credentials. The epoch schedule is
+`3,18,33,48` with a Railway fallback at `12,27,42,57`; liquidity maintenance is
+scheduled at `17,47`. The Position NFT Phase-2 baseline is deployed and
+finalized but remains `integrationReady: false`. Baskets remain preview-only.
+This is not an overall production-readiness, legal-compliance, or public-
+availability claim.
 Canonical deployment and operations evidence:
 [`deployments/v4-production-activation-2026-08-09.json`](deployments/v4-production-activation-2026-08-09.json),
 [`deployments/v4-engine-epoch-recovery-2026-08-09.json`](deployments/v4-engine-epoch-recovery-2026-08-09.json),
 [`deployments/v4-compounder-activation-2026-08-09.json`](deployments/v4-compounder-activation-2026-08-09.json),
 and [`deployments/v4-engine-epoch-recovery-2026-08-14.json`](deployments/v4-engine-epoch-recovery-2026-08-14.json).
+Latest operational evidence is recorded in
+[`docs/releases/NARA-20260827-v4-full-inventory-compound.md`](docs/releases/NARA-20260827-v4-full-inventory-compound.md)
+and
+[`docs/releases/NARA-20260828-v4-epoch-maintainer-resilience.md`](docs/releases/NARA-20260828-v4-epoch-maintainer-resilience.md).
 
 ---
 
@@ -127,7 +147,7 @@ flowchart TD
       LP[Initial full-range LP NFT 2898124]
     end
     subgraph POS[Positions]
-      NFT[NARAPositionNFTV4<br/>a commitment IS an NFT]
+      NFT[NARAPositionNFTV4<br/>optional NFT-created commitment]
       ACC[NARAPositionAccountV4<br/>clone per position]
       G[Genesis + Bonds]
     end
@@ -173,8 +193,8 @@ activated, independently externally audited, or part of permanent POL.
 |--------|-----------|
 | **Token** | `NARAToken` — 1,000,000 fixed supply, minted once. ERC-2612 permit, ERC-1363 (`transferAndCall` to commit in one tx), capped ERC-3156 flash mint, multicall. |
 | **Engine** | `NARAEngine` — the settlement core: JIT epoch advance and weight-based NARA/ETH accounting. Its generic ERC-20 rail exists in immutable code but is disabled for this deployment. |
-| **Liquidity** | The fresh **Uniswap v4** Hook/Vault/Compounder family and seeded pool. Initial full-range liquidity is active under Safe-owned LP NFT `2898124`; validated Compounder-owned LP NFT `2898486` adds liquidity `9455824137787`. Banked Compounder inventory is not active LP. V4 ERC-20 Engine notification is prohibited. |
-| **Positions** | `NARAPositionNFTV4` — a commitment *is* a tradable NFT, with Genesis tiers and a bond intake path. |
+| **Liquidity** | The fresh **Uniswap v4** Hook/Vault/Compounder family and seeded pool. Initial full-range liquidity is active under Safe-owned LP NFT `2898124`; at the latest receipt-pinned compound, Compounder-owned LP NFT `2898486` had liquidity `4386316228001171`. Banked Compounder inventory is not active LP. V4 ERC-20 Engine notification is prohibited. |
+| **Positions** | `NARAPositionNFTV4` — the Phase-2 baseline is deployed, finalized, and source-verified, but remains `integrationReady: false`; Genesis and bond modules are not part of that deployment. |
 | **Composability** | Tested optional v4 source for `stNARA`, a Pendle SY adapter, and fractional position wrappers; not automatically deployed. |
 
 ---
@@ -188,7 +208,8 @@ activated, independently externally audited, or part of permanent POL.
   surface backlog. The 2026-08-14 Safe recovery advanced epochs `36..559`; final
   receipt block `49970727` and later read block `49970969` both reported current
   and stored epoch `559 / 559`. The separately bounded epoch maintainer is now
-  active on its `3,18,33,48` resilience schedule. After an RPC outage let backlog exceed the
+  active on its `3,18,33,48` schedule, with a separately provisioned Railway
+  fallback at `12,27,42,57`. After an RPC outage let backlog exceed the
   routine eight-epoch guard, the explicitly approved 2026-08-26 dedicated
   keeper recovery advanced epochs `1500..1661`; final receipt block `50466604`
   reported current/stored epoch `1661 / 1661`, zero backlog, and zero untracked
@@ -227,8 +248,12 @@ Source detail: [`docs/UNISWAP_V4_HOOK.md`](docs/UNISWAP_V4_HOOK.md).
 
 ## 🎟 V4 Positions, Genesis & Bonds
 
-- **A commitment is an NFT.** `NARAPositionNFTV4` mints an ERC-721 backed 1:1 by a minimal-clone account
+- **Optional NFT-created commitment.** `NARAPositionNFTV4` mints an ERC-721 backed 1:1 by a minimal-clone account
   (`NARAPositionAccountV4`) that owns the underlying engine position. Transfer the NFT = transfer the commitment.
+- **Deployment state.** The seven-contract Phase-2 baseline is deployed,
+  source-verified, and Safe-finalized, but `integrationReady` is `false` until
+  the separately approved value-bearing smoke, monitored hold, and downstream
+  handoff are complete. It is not presented as a generally available product.
 - **Genesis positions** carry a reward multiplier (capped 5×) and an optional `isEternal` flag;
   Eternal positions exit only via `burnEternalGenesis()` (auto-harvest → release → return principal → burn).
 - **Bonds** (`NARABondDepositoryV4NFT`) are historical V4 source for delivering
@@ -249,8 +274,9 @@ automatically part of a fresh v4 release:
   exchange-rate accounting includes a dead-share mitigation on first deposit.
 - **Pendle SY adapter** (`NARAStakingPoolSYV4`) — implements Pendle's SY (Standardized-Yield) interface
   over stNARA, with two reward streams (USDC + native ETH) and the NAV oracle Pendle needs.
-- **Fractional positions** (`NARAFractionalPositionV4`) — split one committed position into up to 1e12
-  units, tradable/collateralizable without breaking the engine commitment.
+- **Fractional positions** (`NARAFractionalPositionV4`) — undeployed source can
+  represent one committed position as up to 1e12 transferable units. No market,
+  buyer, collateral support, liquidity, value, or exit is implied.
 
 ---
 
@@ -266,7 +292,7 @@ and gas-only settler are documented separately and do not alter permanent POL.
 | Layer | Contracts |
 |-------|-----------|
 | **Core** | `NARAToken` · `NARAEngine` · `NARARewardReserve` · `NARALauncher` · `NARALiquidityGrowthHook` · `NARALiquidityGrowthVault` · `utils/Create2HookDeployer` |
-| **Positions** | `NARAPositionNFTV4` · `NARAPositionAccountV4` · `NARAPositionRendererV4` · `NARAGenesisRewardDistributorV4` · `NARABondVaultV4` · `NARABondDepositoryV4NFT` · `NARAOpsVaultV4` |
+| **Positions** | `NARAPositionNFTV4` · `NARAPositionAccountV4` · `NARAPositionRendererV5` · `NARAGenesisRewardDistributorV4` · `NARABondVaultV4` · `NARABondDepositoryV4NFT` · `NARAOpsVaultV4` |
 | **Router / Lens** | `router/NARARouter` · `router/NARADashboardLens` · `router/NARAPositionDataLensV1` · dormant `router/BribeRouterV4` reference |
 | **Composability** | `composability/NARAStakingPoolV4` · `NARAStakingPoolSYV4` · `NARAFractionalPositionV4` · `NARAFractionalPositionFactoryV4` |
 
@@ -302,18 +328,19 @@ not a Forge setup.)
 
 | Gate | Latest evidence |
 |------|-----------------|
-| V4 Hardhat suite | **556 passing, 7 pending, 0 failing** on 2026-08-09; pending cases require opt-in Base-fork environments |
+| Deterministic non-fork Hardhat suite | **759 passing, 0 failing** on 2026-08-30; opt-in Base-fork cases were not exercised by this documentation-only pass |
 | Fresh deployment/receipt/Safe-batch evidence | **12/12** focused tests passing on 2026-08-09 |
 | Fresh v4 activation | Safe ownership accepted; Compounder deployed/wired; pool seeded in block `49721188` with LP NFT `2898124` and liquidity `4242640687119285` |
 | Live Hook-tax matrices | Receipt-pinned buy and sell matrices passed on 2026-08-09 |
 | Same-block Hook-tax round trip | 20-action buy and exact 20-action sell reversal reconciled at receipt blocks on 2026-08-09 |
 | Compounder activation | Bounded compound transaction `0xf1ea7e7d...56b5890be` minted LP NFT `2898486`; separate freeze transaction `0xccd73cf0...78084ef3` permanently locked the Vault binding |
-| Liquidity maintainer | Dedicated keeper authorized; bounded transaction `0x0d5c4deb...e579de` increased LP liquidity to `61410660413174`; hosted idle/heartbeat path passed; `17,47` schedule active |
+| Liquidity maintainer | Dedicated keeper active at `17,47`; latest controlled transaction `0x85569136...64583` increased LP NFT `2898486` to liquidity `4386316228001171`; normal bounded policy was restored and the residual remains banked |
+| Position NFT Phase 2 | Seven contracts tested, release-reviewed, deployed, source-verified, and Safe-finalized; manifest state `configured_source_verified`, `integrationReady: false`; not an overall independent protocol audit |
 | Focused Hook/Vault/Compounder/atomic batch | **43/43** passing on 2026-08-05 |
 | V4 invariants | **4/4** Hardhat invariant regressions passing on 2026-08-05 |
 | Static review | Slither completed every configured production v4 target; internal critic disposition is recorded in the dated audit run |
 | Compiled size | Size gate passes; `NARAEngine` remains only 22 bytes below EIP-170 and must not grow |
-| npm dependency audit | **0 high / 0 critical** on 2026-08-08 after overriding Mocha's `js-yaml` to fixed `4.3.1`; 8 low findings remain in Hardhat Verify's legacy Ethers v5 chain with no upstream fix |
+| npm dependency audit | **0 high / 0 critical** on 2026-08-30; 8 low findings remain in Hardhat Verify's legacy Ethers v5 chain with no upstream fix |
 | Echidna | **13/13** invariants on 2026-06-08, before the 2026-07-28 liquidity patch |
 | Aderyn | Latest completed run is 2026-06-08; the 2026-07-29 rerun could not start because the binary is unavailable |
 

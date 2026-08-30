@@ -2,11 +2,13 @@
 
 Change-ID: `NARA-20260731-liquidity-maintainer`
 
-Current operational boundary (updated 2026-08-15): the fresh pool is initialized
+Current operational boundary (updated 2026-08-30): the fresh pool is initialized
 and seeded, the Engine activation backlog is recovered, and Compounder
 validation/freeze completed under receipt-pinned Safe transactions. LP NFT
-`2898486` is Compounder-owned with liquidity `61410660413174`; unmatched
-inventory remains banked in the Compounder. Dedicated gas-only keeper
+`2898486` is Compounder-owned. At the latest receipt-pinned compound, its
+liquidity was `4386316228001171` at Base block `50499085`; unmatched
+`28.423769295100595183 NARA / 2.326460 USDC` remained banked in the
+Compounder. Dedicated gas-only keeper
 `0x0f8ADa55B394E58e9BC667c23a1EEcED12216272` is authorized on the current
 production Vault. The liquidity workflow is active on its guarded twice-hourly
 schedule at minutes `17,47`, and both `V4_OPERATIONS_KEEPER_ENABLED` and
@@ -16,7 +18,10 @@ change the keeper, execution policy, or enable gates without a new explicit
 order and deployment-specific review. Current authority is
 `deployments/v4-production-activation-2026-08-09.json` together with
 `deployments/v4-compounder-activation-2026-08-09.json` and
-`docs/releases/NARA-20260815-v4-liquidity-maintainer-activation.md`.
+`docs/releases/NARA-20260815-v4-liquidity-maintainer-activation.md`. The latest
+liquidity snapshot authority is
+`docs/releases/NARA-20260827-v4-full-inventory-compound.md`; any current balance
+or liquidity claim still requires a fresh read.
 
 The hook collects NARA/USDC pool fees into the growth vault during live swaps.
 Those fees do not become liquidity inside the swap transaction. A second,

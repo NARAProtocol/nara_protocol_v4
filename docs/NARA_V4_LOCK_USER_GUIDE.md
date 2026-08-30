@@ -1,20 +1,23 @@
 # Locking on NARA v4 — User Guide
 
-Last updated: 2026-08-09.
-Audience: future users and integrators reviewing the undeployed source design.
+Last updated: 2026-08-30.
+Audience: future users and integrators reviewing gated source behavior.
 
-> **PREVIEW / SOURCE-DESIGN GUIDE — NOT AN AVAILABLE PRODUCT FLOW.** The fresh
-> allocation layer, Position NFT, router, lens, and Lockboard are not deployed;
-> the Engine lifecycle smoke is pending. Do not follow the transaction steps or
-> send funds based on this document. Any future public flow requires verified
-> deployment evidence, current fee/risk disclosure, monitored exits, and
-> jurisdiction-specific qualified-counsel review.
+> **PREVIEW / SOURCE-DESIGN GUIDE — NOT AN AVAILABLE PRODUCT FLOW.** The
+> Position NFT Phase-2 baseline is deployed, source-verified, and Safe-finalized,
+> but remains `integrationReady: false`; router, lenses, Genesis/bonds, and
+> Lockboard are not deployed, and the Engine lifecycle smoke is pending. Do not
+> follow the transaction steps or send funds based on this document. The
+> canonical deployment uses real assets in technical live testing; that is not
+> public product availability or legal approval. Any future public flow requires
+> verified integration evidence, current fee/risk disclosure, monitored exits,
+> and written jurisdiction-specific qualified-counsel review.
 
 ---
 
 ## What the locking source is designed to do
 
-If the allocation layer is later deployed and activated, source behavior locks
+If a Position NFT consumer flow is later approved and activated, source behavior locks
 NARA for a fixed duration and accounts variable NARA emission and contributed
 ETH across active weight. Rewards are not promised and can be zero. The source
 represents the position as an owner-transferable NFT; transferability does not
@@ -136,10 +139,12 @@ extension as a recommended choice.
 ## Unlock source behavior
 
 When `settledEpoch >= unlockEpoch`, source calls `unlock()` or `unlockTo()` can:
-- Returns your NARA principal.
-- Forwards any remaining unclaimed rewards.
-- Burns the NFT.
-- Costs the flat unlock ETH fee (if set).
+- attempt to release the recorded NARA amount when contract conditions pass;
+- forward claimable recorded amounts;
+- burn the NFT; and
+- require the flat unlock ETH fee, if configured.
+
+Execution, token value, and recovery are not guaranteed.
 
 ---
 
@@ -182,7 +187,7 @@ All ETH fees go to treasury (not burned). NARA fees reduce your locked amount.
 |---|---|
 | `NARARouter` | Source tested; not deployed |
 | `NARAEngine` | Deployed; public lifecycle smoke pending |
-| `NARAPositionNFTV4` | Source tested; fresh allocation deployment pending |
+| `NARAPositionNFTV4` | Tested, deployed, source-verified, and Safe-finalized; `integrationReady: false`, so consumers remain disabled |
 | `NARADashboardLens` | Source tested; not deployed |
 
 ABI authority: generated artifacts under `artifacts/contracts/v4/` from the

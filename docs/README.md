@@ -4,6 +4,13 @@
 [CURRENT_STATE.md](CURRENT_STATE.md) are authoritative. The experimental V5
 stack and its release plans are deleted and must not be used as instructions.
 
+> The canonical contracts and NARA/USDC pool are in technical live testing with
+> real assets on Base mainnet. This is not public product availability, an audit
+> or safety claim, legal approval, or a recommendation. This repository contains
+> no evidence of completed jurisdiction-specific
+> qualified legal review; baskets remain preview-only and Position NFT
+> consumers remain disabled while `integrationReady` is `false`.
+
 ## Start here
 
 1. [CURRENT_STATE.md](CURRENT_STATE.md) — canonical state, incident findings,
@@ -23,9 +30,8 @@ stack and its release plans are deleted and must not be used as instructions.
    historical activation checkpoint.
 7. [NARA-20260809-v4-production-activation.md](releases/NARA-20260809-v4-production-activation.md)
    — dated activation handoff and tax-matrix evidence.
-8. [V4_NEXT_SESSION_HANDOFF.md](V4_NEXT_SESSION_HANDOFF.md) — exact current
-   checkpoint: activated pool and Compounder, separately active epoch and
-   liquidity maintenance, pending Engine lifecycle smoke, and preview-only baskets.
+8. [V4_NEXT_SESSION_HANDOFF.md](V4_NEXT_SESSION_HANDOFF.md) — historical
+   2026-08-09 activation checkpoint; use `CURRENT_STATE.md` for current state.
 9. [UNISWAP_V4_HOOK.md](UNISWAP_V4_HOOK.md) — v4 Hook fee and pressure semantics.
 10. [V4_LAUNCH_CHECKLIST.md](V4_LAUNCH_CHECKLIST.md) — fresh-v4 deployment gates.
 11. [NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md](NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md)
@@ -46,6 +52,10 @@ validation/reconciliation/freeze and the bounded liquidity-maintainer cycle are
 receipt-pinned as complete. This is not an overall production-readiness claim:
 the epoch and liquidity maintainers are active under separate bounded roles, the
 Engine lifecycle smoke is pending, and baskets remain preview-only.
+The latest POL and epoch-maintainer evidence is
+[NARA-20260827-v4-full-inventory-compound.md](releases/NARA-20260827-v4-full-inventory-compound.md)
+and
+[NARA-20260828-v4-epoch-maintainer-resilience.md](releases/NARA-20260828-v4-epoch-maintainer-resilience.md).
 
 ## Technical references
 

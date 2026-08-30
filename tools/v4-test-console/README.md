@@ -58,7 +58,9 @@ separate from the preview-only basket app and does not depend on the monitor.
   confirmation even when reusable trading access is still active.
 - Close transaction reviews when control passes to the wallet so the tracker is
   immediately visible for the Wallet, Base, and Updated stages.
-- Keep Position NFTs gated until their contracts are separately deployed.
+- Keep Position NFT consumer features gated. The seven-contract baseline is
+  tested, deployed, source-verified, and Safe-finalized, but its canonical
+  manifest remains `integrationReady: false`.
 
 The console never reads private keys. Every write is simulated, then explicitly
 confirmed and signed by the connected wallet. Sponsorship pays network gas
