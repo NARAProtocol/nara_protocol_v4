@@ -164,6 +164,7 @@ Settler configuration is environment-only. Logs are allowlisted structured field
 The internal review completed senior analysis, independent adversarial review,
 strongest-model architecture review, focused regressions, full non-fork tests,
 fork tests, and available static analysis. This is not an independent external
-audit or a security guarantee. Production acceptance still requires protected
-review/CI, an immutable release commit, fresh signing-time evidence, a
+audit or a security guarantee. Protected source commit
+`35091010de09802f39ccda7e726ff8c4b240e165` passed review/CI and is the rebuild
+origin. Production acceptance still requires fresh signing-time evidence, a
 monitored canary, and explicit human Safe approval of nonce-bound artifacts.

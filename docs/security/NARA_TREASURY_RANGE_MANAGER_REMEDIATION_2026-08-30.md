@@ -4,9 +4,10 @@ Date: 2026-08-30
 
 Change ID: `NARA-20260828-v4-treasury-range-manager`
 
-Status: all five retained internal-audit findings are remediated in the
-pre-release candidate and independently reviewed. This is not an independent
-external audit, production approval, deployment authority, or profit guarantee.
+Status: all five retained internal-audit findings are remediated in protected
+source commit `35091010de09802f39ccda7e726ff8c4b240e165` and independently
+reviewed. This is not an independent external audit, production approval,
+deployment authority, or profit guarantee.
 
 ## Finding closure
 
@@ -34,16 +35,17 @@ external audit, production approval, deployment authority, or profit guarantee.
 | Repository non-fork suite | **759/759 passing** on the current upstream base |
 | Pinned Base fork | **4/4 passing** at the historical audit pin; includes the full 21-candidate adversarial matrix |
 | Strict TypeScript | Manual strict target set and settler project no-emit type-check passed |
-| Protected CI coverage | Required CI job runs the 32 settler operations tests, strict settler TypeScript, and explicitly includes the manager in Slither discovery; hosted result remains pending before merge |
+| Protected CI coverage | PR #52 and post-merge `main` passed build/test/size, the 32 settler operations tests, strict settler TypeScript, Slither, Aderyn, Echidna, and CodeQL |
 | Build | Hardhat build passed |
 | Bytecode | Manager runtime 23,620 bytes; initcode 28,095 bytes; both within EVM limits |
 | Slither | 0.11.5 with solc 0.8.34 completed; same 17 previously triaged raw signals, no new detector class |
 | Dependency audit | Production dependencies: zero vulnerabilities; development graph: eight low-severity `elliptic` advisories, no fix available |
 | Changed-content secret check | Passed; Gitleaks was unavailable, so no Gitleaks pass is claimed |
 
-Aderyn did not run because its binary is unavailable. Echidna did not run
-because the configured WSL distribution could not start. These are explicit
-coverage limitations, not passes.
+Aderyn did not run locally because its binary was unavailable. Echidna did not
+run locally because the configured WSL distribution could not start. They later
+passed in protected PR and post-merge CI; those hosted results are not
+relabelled as local runs. Gitleaks remained unavailable locally.
 
 ## What this does not prove
 
@@ -61,7 +63,6 @@ coverage limitations, not passes.
 
 No manager is deployed or funded, no transaction was signed or broadcast, and
 no settler was activated. Before any production use, the candidate still needs
-protected CI/review, an immutable release commit, fresh schema-v2 state and
-strategy regeneration, explicit Safe funding approval, receipt-pinned
-deployment verification, human approval of fresh nonce-bound packets, a
-two-host rehearsal, and a monitored canary.
+fresh schema-v2 state and strategy regeneration, explicit Safe funding
+approval, receipt-pinned deployment verification, human approval of fresh
+nonce-bound packets, a two-host rehearsal, and a monitored canary.

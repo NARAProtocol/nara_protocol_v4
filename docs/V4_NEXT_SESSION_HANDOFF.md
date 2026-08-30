@@ -39,12 +39,13 @@ Core verification readback block: `49719008`.
 `NARA-20260828-v4-treasury-range-manager` was implemented and tested at
 historical pre-remediation candidate commit
 `b34b78330f2f40b514d2bf6a0e5cff96c92ff928`. The 2026-08-30 remediation
-closes the five retained internal-audit findings but does not yet have an
-immutable protected release commit. It adds a Safe-bound tactical
-range manager, exact planner/optimizer, adversarial fork simulator, unsigned
-Safe builders, and a separate permissionless gas-only settler. It changes no
-current deployment, permanent POL position, Hook/Vault/Compounder binding,
-keeper role, schedule, or production manifest.
+closes the five retained internal-audit findings and was merged through
+protected PR #52 as GitHub-verified source commit
+`35091010de09802f39ccda7e726ff8c4b240e165`. It adds a Safe-bound tactical range
+manager, exact planner/optimizer, adversarial fork simulator, unsigned Safe
+builders, and a separate permissionless gas-only settler. It changes no current
+deployment, permanent POL position, Hook/Vault/Compounder binding, keeper role,
+schedule, or production manifest.
 
 The Base-fork checkpoint at block `50537172` selected
 `CONSERVATIVE-100000-NARA`, 12 candidate orders, with
@@ -127,11 +128,10 @@ The current epoch-automation authority is
 6. Reconcile public documentation last. Do not turn the activation evidence
    into an overall production-ready, audited, safe, or complete claim.
 7. For the Treasury Range Manager candidate, preserve the completed internal
-   audit/remediation evidence, then complete protected review/CI, an immutable
-   release commit, separately approved Safe funding, fresh schema-v2 state
-   regeneration, receipt-pinned deployment, two-host settler rehearsal, and a
-   monitored canary before any activation claim. No independent external audit
-   is claimed.
+   audit/remediation and protected-source evidence, then complete separately
+   approved Safe funding, fresh schema-v2 state regeneration, receipt-pinned
+   deployment, two-host settler rehearsal, and a monitored canary before any
+   activation claim. No independent external audit is claimed.
 
 ## Verification commands
 

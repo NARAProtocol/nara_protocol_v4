@@ -150,4 +150,8 @@ The repository may contain implementation, fork simulations, optimizer output, a
 7. two independently operated settlers and monitoring;
 8. at least 48 hours of canary evidence before considering expansion.
 
+Protected PR #52 completed item 1 and the automated review portions of item 2
+for source commit `35091010de09802f39ccda7e726ff8c4b240e165`. Human production
+acceptance and items 3 through 8 remain outstanding.
+
 No source artifact or candidate manifest authorizes signing or broadcast.

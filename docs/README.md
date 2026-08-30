@@ -38,8 +38,8 @@ production authority. Start with
 [NARA-20260828-v4-treasury-range-manager.md](releases/NARA-20260828-v4-treasury-range-manager.md)
 and
 [NARA_TREASURY_RANGE_MANAGER_REMEDIATION_2026-08-30.md](security/NARA_TREASURY_RANGE_MANAGER_REMEDIATION_2026-08-30.md),
-and do not update downstream consumers until protected upstream and verified
-deployment evidence exist. No independent external audit is claimed.
+and do not update deployment-dependent downstream consumers until verified
+deployment evidence exists. No independent external audit is claimed.
 
 The fresh pool is activated, live tax evidence passed, and Compounder
 validation/reconciliation/freeze and the bounded liquidity-maintainer cycle are

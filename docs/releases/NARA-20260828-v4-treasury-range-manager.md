@@ -1,6 +1,6 @@
 # NARA v4 Treasury Range Manager Candidate
 
-Evidence state: **IMPLEMENTED + INTERNAL AUDIT REMEDIATED CANDIDATE / NOT DEPLOYED / NOT ACTIVATED / NO EXTERNAL AUDIT CLAIM**
+Evidence state: **PROTECTED SOURCE MERGED + INTERNAL AUDIT REMEDIATED CANDIDATE / NOT DEPLOYED / NOT ACTIVATED / NO EXTERNAL AUDIT CLAIM**
 
 Change ID: `NARA-20260828-v4-treasury-range-manager`
 
@@ -8,10 +8,11 @@ Origin remote: `https://github.com/NARAProtocol/nara_protocol_v4`
 
 Historical pre-remediation implementation commit: `b34b78330f2f40b514d2bf6a0e5cff96c92ff928`
 
-The 2026-08-30 remediation is pre-release candidate work without an immutable
-protected release commit. It is not deployment authority. All strategy,
-audit-gate, and deployment evidence must be regenerated from the final
-protected release commit before human signing.
+Protected PR #52 merged the 2026-08-30 remediation as GitHub-verified source
+commit `35091010de09802f39ccda7e726ff8c4b240e165`. The protected PR and
+post-merge `main` checks passed. This immutable source evidence is not
+deployment authority. All strategy and deployment evidence must be regenerated
+from that exact commit before human signing.
 
 This change adds the immutable Safe-bound manager contract, exact state reader/planner/optimizer, adversarial Base-fork matrix, three unsigned Safe packet builders, and a separate event-driven permissionless settler. It does not modify permanent POL, the active Hook, existing production maintainer workflows or services, schedules, keys, roles, or production manifests. The protected CI workflow is extended only to run the settler tests and strict TypeScript check and to require the manager in Slither target discovery.
 
@@ -92,7 +93,9 @@ computed whole-manifest hash.
 | Strict TypeScript | Manual strict no-emit target set and service project type-check passed |
 | Independent reviews | Independent adversarial PASS and strongest-model architecture PASS; no remaining remediation blocker |
 | Slither | `0.11.5`/solc `0.8.34` rerun completed; same 17 triaged raw signals, no new detector class |
-| Additional analyzers | Aderyn binary unavailable; configured Echidna WSL distro could not start; neither pass is claimed |
+| Protected release | PR #52 merged as GitHub-verified commit `35091010de09802f39ccda7e726ff8c4b240e165` |
+| Hosted gates | PR runs `33332837160` / `33332837113` and post-merge runs `33333021179` / `33333021180` passed build/test/size, Slither, Aderyn, Echidna, and CodeQL |
+| Local additional analyzers | Aderyn binary unavailable; configured Echidna WSL distro could not start locally; the hosted passes above close those protected gates but are not relabelled as local runs |
 | Dependency audit | Production dependencies: zero vulnerabilities; development graph: eight low-severity `elliptic` advisories with no fix available |
 | Secret review | Focused changed-content scan passed; Gitleaks unavailable and no Gitleaks pass is claimed |
 | Production writes | None |
@@ -114,17 +117,17 @@ promises, or authority to trade.
 ```text
 Change-ID: NARA-20260828-v4-treasury-range-manager
 Origin remote: https://github.com/NARAProtocol/nara_protocol_v4
-Origin commit: pending immutable remediation release commit
-Evidence state: locally implemented, tested, internal-audit remediated; not deployment authority
-Changed contracts/interfaces: NARATreasuryRangeManagerV1; generated ABI only after protected release rebuild
-Generated artifact or ABI source: local Hardhat artifact from the tested implementation commit; not downstream authority
+Origin commit: 35091010de09802f39ccda7e726ff8c4b240e165
+Evidence state: protected source merged, tested, internal-audit remediated; not deployment authority
+Changed contracts/interfaces: NARATreasuryRangeManagerV1; no existing production interface or core contract changed
+Generated artifact or ABI source: rebuild Hardhat artifacts from exact protected origin commit 35091010de09802f39ccda7e726ff8c4b240e165
 Deployment manifest: none
 Chain and verification block: Base 8453 fork pinned to block 50537172; no deployed manager address
-Depends-on: protected CI/merge, approved Safe funding, fresh state pin/schema-v2 evidence, explicit human Safe approval
-Unblocks: later manager deployment proposal, order proposal, settler canary, monitor integration, and public documentation
-Downstream repositories reviewed: none updated; blocked until immutable upstream and deployment evidence exist
-Commands and results: 93 focused, 759 non-fork, 4 pinned-fork cases, strict TypeScript, build, bytecode size, Slither, and production dependency audit passed
-Skipped/unavailable gates: Aderyn, Echidna, Gitleaks, protected CI, independent external audit, deployment, two-host rehearsal, 48-hour canary
+Depends-on: approved Safe funding, fresh state pin/schema-v2 evidence, explicit human Safe approval
+Unblocks: controlled deployment-proposal preparation from the exact source; deployment-dependent orders, settler canary, monitor integration, and public documentation remain blocked
+Downstream repositories reviewed: none updated; deployment-dependent consumers remain blocked until verified deployment evidence exists
+Commands and results: 93 focused, 759 non-fork, 4 pinned-fork cases, strict TypeScript, build, bytecode size, dependency audit, protected Slither/Aderyn/Echidna, and CodeQL passed
+Skipped/unavailable gates: local Gitleaks, independent external audit, deployment, two-host rehearsal, 48-hour canary
 Unresolved risks: same-transaction buy/reverse cannot be intercepted; Circle can change USDC after snapshot and incompatible behavior may block exit; deep post-confirmation reorg monitoring remains external
 Onchain or production writes: none
 Secret scan: focused changed-content scan passed; Gitleaks remains unavailable; no secrets or RPC values are recorded in this handoff
@@ -132,7 +135,7 @@ Secret scan: focused changed-content scan passed; Gitleaks remains unavailable; 
 
 ## Acceptance gates still outstanding
 
-- Protected pull-request review/CI and an immutable remediation release commit. The completed internal audit is not represented as an independent external audit.
+- Explicit human production acceptance. The completed internal audit and protected gates are not represented as an independent external audit or security guarantee.
 - Fresh live re-pin and regenerated strategy immediately before any human signing review.
 - Explicitly approved Treasury-to-Safe funding; the current Safe is effectively unfunded and the builder refuses to substitute Treasury custody.
 - Receipt-pinned deployment verification and explicit human approval.

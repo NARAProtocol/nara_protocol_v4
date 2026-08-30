@@ -34,11 +34,16 @@ build evidence under `slither-reports/` and is not deployment authority.
 ## Aderyn
 
 `npm run aderyn:v4:only` did not execute because no Aderyn binary was
-available. No Aderyn pass is claimed.
+available. No local Aderyn pass is claimed; protected PR and post-merge CI
+later passed the pinned Aderyn gate.
 
 ## Echidna
 
-`npm run echidna:v4:smoke` did not execute because the configured WSL distribution could not be started. No Echidna pass is claimed. Deterministic lifecycle/property tests exercise the manager invariants in Hardhat, but they are not represented as an Echidna substitute.
+`npm run echidna:v4:smoke` did not execute because the configured WSL
+distribution could not be started. No local Echidna pass is claimed; protected
+PR and post-merge CI later passed the pinned Echidna gate. Deterministic
+lifecycle/property tests exercise the manager invariants in Hardhat, but they
+are not represented as a local Echidna substitute.
 
 ## Independent review and executable gates
 
@@ -62,6 +67,7 @@ One Low operations risk remains: after the configured confirmations, reconciled 
 Automated findings were reviewed against the immutable dependency and
 authorization model. Exact pinned-fork and independent review evidence exists
 for this candidate, but production acceptance still requires a fresh
-signing-time re-pin, protected review/CI, an immutable release commit, a
-monitored canary, and explicit human approval. No independent external audit is
+signing-time re-pin, a monitored canary, and explicit human approval. Protected
+PR and post-merge CI passed for source commit
+`35091010de09802f39ccda7e726ff8c4b240e165`. No independent external audit is
 claimed.

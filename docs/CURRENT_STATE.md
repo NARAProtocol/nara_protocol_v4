@@ -37,7 +37,7 @@ The terminal three-second Matrix record is
 Only sanitized Matrix evidence is public; the implementation remains private
 local operator tooling and is not a protocol repository component.
 
-## IMPLEMENTED AND TESTED CANDIDATE - Treasury Range Manager V1
+## PROTECTED SOURCE CANDIDATE - Treasury Range Manager V1 (not deployed)
 
 Change ID `NARA-20260828-v4-treasury-range-manager` adds an undeployed
 Safe-bound periphery manager for tactical one-sided NARA/USDC ranges, an exact
@@ -47,10 +47,11 @@ not modify permanent POL, the active Hook, Vault, Compounder, production roles,
 or either existing maintainer.
 
 The pre-remediation implementation commit was
-`b34b78330f2f40b514d2bf6a0e5cff96c92ff928`. The 2026-08-30 internal-audit
-remediation is pre-release candidate work without an immutable protected
-release commit, so it is not deployment authority. No manager address,
-deployment receipt, activation, or production transaction exists.
+`b34b78330f2f40b514d2bf6a0e5cff96c92ff928`. Protected PR #52 merged the
+2026-08-30 internal-audit remediation as GitHub-verified source commit
+`35091010de09802f39ccda7e726ff8c4b240e165`. That immutable source evidence is
+not deployment authority. No manager address, deployment receipt, activation,
+or production transaction exists.
 
 The final candidate checkpoint pinned Base fork block `50537172`, block hash
 `0x6e896c222c2b8313fc232d174136d58212835c39a06378f2dbf2b73c0101b7d9`.
@@ -66,8 +67,8 @@ automatically replans or reinvests proceeds. Any refreshed plan requires a new
 state pin and a new human-reviewed Safe proposal.
 
 The comprehensive internal audit retained five items (`ARI-001`, `ARI-002`,
-`SIG-001`, `EXT-001`, and `UPG-001`); all five are remediated in the current
-pre-release candidate and covered by focused regressions. Strategy schema v2 now
+`SIG-001`, `EXT-001`, and `UPG-001`); all five are remediated in the protected
+source candidate and covered by focused regressions. Strategy schema v2 now
 requires exact Circle USDC proxy/implementation/admin/role/pause/blacklist and
 code-hash-bound reader evidence. Deployment, order creation, settlement, and
 exact rebroadcast fail closed on drift before signing. Safe cancellation alone
@@ -75,19 +76,18 @@ uses a visibly labelled emergency bypass so exit can still be attempted. This
 internal remediation is not an independent external audit or security
 clearance.
 
-Final pre-release remediation evidence is recorded in
+Final remediation and protected-release evidence is recorded in
 [`NARA_TREASURY_RANGE_MANAGER_REMEDIATION_2026-08-30.md`](security/NARA_TREASURY_RANGE_MANAGER_REMEDIATION_2026-08-30.md):
 93/93 focused tests, 759/759 repository non-fork tests, 4/4 pinned-fork cases,
 strict TypeScript, build, bytecode, Slither, and production dependency gates
-passed. Aderyn, Echidna, and Gitleaks remain explicitly unavailable and are not
-claimed as passes.
+passed locally. Protected PR and post-merge `main` runs also passed
+build/test/size, Slither, Aderyn, Echidna, and CodeQL. Gitleaks remained
+unavailable locally and is not claimed as a pass.
 
-Before any production use: protected review/CI and merge to an immutable
-release commit, explicitly approved Safe funding, fresh schema-v2 live-state
-regeneration, receipt-pinned
-deployment verification, two independent settler instances, a separately
-approved canary, and at least 48 hours of monitored canary behavior are still
-required. See
+Before any production use: explicitly approved Safe funding, fresh schema-v2
+live-state regeneration, receipt-pinned deployment verification, two
+independent settler instances, a separately approved canary, and at least 48
+hours of monitored canary behavior are still required. See
 [`NARA-20260828-v4-treasury-range-manager.md`](releases/NARA-20260828-v4-treasury-range-manager.md).
 
 ## DEPLOYED AND FINALIZED — Position NFT Phase 2

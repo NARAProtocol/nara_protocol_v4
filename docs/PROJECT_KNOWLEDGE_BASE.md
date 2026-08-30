@@ -235,6 +235,9 @@ Safe-bound periphery candidate for tactical one-sided NARA/USDC ranges. It is
 strictly separate from permanent POL: it owns only manager-registered tactical
 PositionManager NFTs, never changes the Hook/Vault/Compounder, and sends every
 settlement or cancellation output directly to the immutable production Safe.
+Protected PR #52 merged the reviewed/remediated source as GitHub-verified
+commit `35091010de09802f39ccda7e726ff8c4b240e165`; no deployment, funding,
+activation, or production transaction followed from that source merge.
 
 The companion planner reads a pinned PoolManager spot, pool liquidity, active
 positions, Hook configuration and pending updates, runtime bindings, and
