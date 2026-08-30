@@ -3,8 +3,15 @@
 > Source: [`contracts/v4/NARALiquidityGrowthHook.sol`](../contracts/v4/NARALiquidityGrowthHook.sol)
 > · [`contracts/v4/NARALiquidityGrowthVault.sol`](../contracts/v4/NARALiquidityGrowthVault.sol)
 > · [`contracts/v4/utils/Create2HookDeployer.sol`](../contracts/v4/utils/Create2HookDeployer.sol)
-> Verified against code and the real Uniswap v4 PoolManager test on
-> **2026-08-08**.
+> Code/test baseline verified 2026-08-08; deployment and operations state
+> reconciled through 2026-08-30.
+
+> **Technical live testing on Base mainnet — not public product availability.**
+> The canonical contracts and pool use real assets. This is technical evidence,
+> not an audit, safety or legal-approval claim, an offer, or a recommendation.
+> Transactions are irreversible; liquidity can be limited or unavailable; token
+> values can fall to zero. This repository contains no evidence of completed
+> jurisdiction-specific qualified legal review.
 
 NARA's canonical liquidity home is a **single custom Uniswap v4 pool**
 (NARA/USDC). The fresh canonical Hook is registered and the pool is initialized
@@ -23,7 +30,7 @@ this Hook and are not universally taxed.
 > under-allocate after an active-position extension. Do **not** describe the
 > hook as "a tax that funds lockers."
 >
-> **FRESH FULL-v4 POOL AND COMPOUNDER ACTIVATED; OPERATIONS GATED.** Stage A and
+> **FRESH FULL-v4 POOL AND COMPOUNDER IN TECHNICAL LIVE TESTING.** Stage A and
 > the 2026-07-30 pool are historical incident/recovery evidence only. The
 > corrected Hook and Vault are Safe-owned and the fresh pool is seeded. The POL
 > adapter remains intentionally pluggable through
@@ -31,9 +38,12 @@ this Hook and are not universally taxed.
 > protection, remainder banking, POL custody, and a seven-day recovery
 > timelock. The verified Compounder at
 > `0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF` passed bounded validation and
-> owns LP NFT `2898486` with liquidity `9455824137787`. The Vault binding is
-> permanently frozen to that address. Unmatched inventory remains banked in the
-> Compounder and must not be described as active LP.
+> owns LP NFT `2898486`. At the latest receipt-pinned compound (Base block
+> `50499085`), the position had liquidity `4386316228001171`; the banked
+> remainder was `28.423769295100595183 NARA / 2.326460 USDC`. The Vault binding
+> is permanently frozen to that address. Unmatched inventory remains banked in
+> the Compounder and must not be described as active LP. The separately
+> credentialed liquidity maintainer is active at `17,47` under bounded policy.
 
 This document explains the Hook design, observed behavior, verification
 evidence, and remaining limitations.
@@ -234,6 +244,11 @@ consumer; it needs no hook permission bits of its own.
   balances were zero; unmatched `1718.586695052747189931 NARA` and
   `24.518753 USDC` were banked in the Compounder. Later balances require a new
   readback.
+- ✅ A later controlled full-inventory compound at Base block `50499085`
+  increased LP NFT `2898486` to liquidity `4386316228001171`; Vault balances
+  were zero and `28.423769295100595183 NARA / 2.326460 USDC` remained banked.
+  See
+  [`NARA-20260827-v4-full-inventory-compound.md`](releases/NARA-20260827-v4-full-inventory-compound.md).
 
 The canonical record for findings #1–#5 is
 [`NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md`](NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md).
@@ -245,5 +260,6 @@ independent audit or remove the operational gates in
 initial flow, twenty-buy/ten-sell matrix, and same-block round trip reconciled.
 The fresh convert-to-liquidity layer (`NARALiquidityCompounderV4`) is deployed,
 source-verified, validation-compounded, and permanently bound to the Vault.
-Recurring maintenance and whole-product availability remain gated. See
+Recurring liquidity maintenance is active under a separately credentialed,
+bounded `17,47` policy. Whole-product availability remains gated. See
 [`NARA_V4_PROJECT_SCOPE.md`](NARA_V4_PROJECT_SCOPE.md).

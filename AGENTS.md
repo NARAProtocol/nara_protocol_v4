@@ -31,6 +31,17 @@ block when applicable, test results, and unresolved risks.
 
 ## 🚨 v4 STACK ONLY — FIXED PRODUCTION RELEASE
 
+> **Technical live testing on Base mainnet — not public product availability.**
+> The canonical v4 contracts and NARA/USDC pool use real assets. This is an
+> observed technical state, not a claim that every NARA product or interface is
+> available, production-ready, audited, safe, approved, or offered in any
+> jurisdiction. Transactions are irreversible; liquidity can be limited or
+> unavailable; token values can fall to zero. This repository contains no
+> evidence of completed jurisdiction-specific
+> qualified legal review. Public material must remain factual and
+> educational, not an invitation, inducement, or recommendation to acquire,
+> hold, sell, lock, stake, or provide liquidity for NARA.
+
 - **Active release stack:** `contracts/v4/` is the **only** maintained and authoritative contract source. Historical Base deployments are incident/recovery evidence, not the fresh release manifest. All experimental protocol V5 files and folders have been completely eliminated.
 - **NARALiquidityGrowthHook:** Hardened with 7-day governance timelocks (`FEE_UPDATE_DELAY = 7 days`), 20% max default operational fee caps, aligned floor rounding, and direct vault fee recording.
 - **Sniper Liquidity Bootstrapping:** The pressure accumulator is explicitly
@@ -54,19 +65,22 @@ block when applicable, test results, and unresolved risks.
   `deployments/v4-production-activation-2026-08-09.json` and
   `deployments/v4-compounder-activation-2026-08-09.json` before using any
   address or liquidity state.
-- **Activation boundary:** the pool/tax path is active, the sampled and
-  same-block live tax paths reconciled, and the bounded Compounder validation
-  minted Compounder-owned LP NFT `2898486` with liquidity `9455824137787`.
-  The Vault binding is permanently frozen to the deployed Compounder. Engine
-  backlog recovery succeeded, and the separately hardened epoch and liquidity
-  maintainers are active under different gas-only keys, schedules, enable
-  variables, and bounded policies. Raw lock/activation/unlock and post-fee lock
-  paths are exercised;
-  post-fee unlock and positive ETH-allocation claim evidence remain pending.
-  Baskets remain preview-only. Do not claim whole-stack production readiness.
+- **Activation boundary:** the pool/tax path is active and in technical live
+  testing. The sampled and same-block live tax paths reconciled, and the Vault
+  binding is permanently frozen to Compounder `0xfeF...13DF`. The latest
+  receipt-pinned full-inventory compound increased Compounder LP NFT `2898486`
+  to liquidity `4386316228001171` at Base block `50499085`; the banked remainder
+  was `28.423769295100595183 NARA / 2.326460 USDC`. Both the epoch and liquidity
+  maintainers are active under separate bounded policies, credentials, and
+  schedules. Raw lock/activation/unlock and post-fee lock paths are exercised;
+  the current Position NFT deployment remains `integrationReady: false` until
+  its separately approved value-bearing smoke, monitored hold, and downstream
+  handoff are complete. Baskets remain preview-only. Do not claim whole-stack
+  production readiness or public product availability.
 - **Read-first liquidity state:** read `docs/CURRENT_STATE.md`,
   `docs/releases/NARA-20260809-v4-production-activation.md`,
-  `docs/releases/NARA-20260809-v4-compounder-activation.md`,
+  `docs/releases/NARA-20260827-v4-full-inventory-compound.md`,
+  `docs/releases/NARA-20260828-v4-epoch-maintainer-resilience.md`,
   `docs/NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md`,
   `docs/UNISWAP_V4_HOOK.md`, and `docs/V4_LAUNCH_CHECKLIST.md` before pool,
   fee, liquidity, recovery, or basket-activation work. Do not use deleted V5
@@ -88,19 +102,18 @@ block when applicable, test results, and unresolved risks.
   Never replay the consumed Safe batch, re-propose its `WindDown`, or use those
   historical addresses as a current manifest.
 - **GitHub operations boundary:** workflow `324678194` (`NARA v4 epoch
-  maintainer`) was explicitly reactivated on 2026-08-14 after backlog recovery,
-  dedicated-key provisioning, heartbeat setup, and dry runs. Its current
-  resilience cadence runs at minutes `3,18,33,48` with
-  `V4_EPOCH_MAINTAINER_ENABLED=true` and the bounded production
-  routine guard. Workflow `324678196` (`NARA v4 liquidity maintainer`) is
-  separately active at minutes `17,47` with
-  `V4_OPERATIONS_KEEPER_ENABLED=true` and
-  `V4_LIQUIDITY_MAINTAINER_ENABLED=true`. Do not reuse or broaden either
-  keeper, change either deployment binding, schedule, or policy, or disable
-  either workflow without a new explicit user order and current
-  deployment-specific review.
-  Read `docs/CURRENT_STATE.md` and
-  `docs/NARA_V4_TEST_CONSOLE_CHECKPOINT_2026-08-15.md` for current evidence.
+  maintainer`) and workflow `324678196` (`NARA v4 liquidity maintainer`) are
+  active, separately credentialed, and separately gated. The epoch workflow
+  runs at minutes `3,18,33,48` with `V4_EPOCH_MAINTAINER_ENABLED=true`; its
+  Railway fallback is scheduled at `12,27,42,57`. The liquidity workflow runs
+  at `17,47` with `V4_OPERATIONS_KEEPER_ENABLED=true` and
+  `V4_LIQUIDITY_MAINTAINER_ENABLED=true`. Do not broaden or reuse either
+  keeper, change a deployment binding, schedule, or policy, or disable either
+  workflow without a new explicit user order and current deployment-specific
+  review. Read `docs/CURRENT_STATE.md`,
+  `docs/releases/NARA-20260828-v4-epoch-maintainer-resilience.md`, and
+  `docs/releases/NARA-20260827-v4-full-inventory-compound.md` for current
+  evidence.
 - **Product scope:** NARA Baskets only after a verified fresh-v4 deployment
   manifest and handoff exist. Baskets remain preview-only today. Lockboard and
   composability are deferred; Lotto and Arena are retired.

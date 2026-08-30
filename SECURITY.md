@@ -9,12 +9,19 @@ source-verified. The Compounder is deployed, source-verified, live-validated,
 and permanently bound to the Vault. The NARA/USDC pool is registered,
 initialized, seeded, and trading. The Safe owns seed LP NFT `2898124`; the
 Compounder owns validated LP NFT `2898486`. Public locking and reward use have
-not been activated. The epoch and liquidity maintainers are active under
-separate bounded policies, credentials, schedules, and deployment bindings;
-neither is authorized for Treasury Range Manager settlement.
+not been presented as generally available. The epoch and liquidity maintainers
+are active under separate bounded policies, credentials, schedules, and
+deployment bindings; neither is authorized for Treasury Range Manager
+settlement. The Position NFT Phase-2 baseline is deployed and finalized but
+remains `integrationReady: false`.
 
-Deployment does not imply activation, audit completion, economic safety, or a
-recommendation to transact. Canonical state and addresses are maintained in
+The canonical contracts and pool are in technical live testing with real assets
+on Base mainnet. Deployment and observed operation do not imply public product
+availability, audit completion, economic safety, legal approval, or a
+recommendation to transact. Transactions are irreversible; liquidity can be
+limited or unavailable; token values can fall to zero. This repository contains
+no evidence of completed jurisdiction-specific
+qualified legal review. Canonical state and addresses are maintained in
 [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md).
 
 ## Reporting a vulnerability
@@ -71,7 +78,9 @@ Important controls observable in the source include:
 - sealed reward-reserve behavior;
 - bounded epoch advancement and explicit stale-epoch failure;
 - reentrancy guards on value-moving external entry points;
-- role-gated ERC-20 reward notification;
+- zero deployed `REWARD_NOTIFIER_ROLE` holders and an operational prohibition
+  on `notifyTokenRewards`; the immutable function's role check alone is not the
+  current safety boundary;
 - direct ETH rejection except through defined payable paths;
 - bounded batch sizes and configurable-parameter caps;
 - explicit deployment-state verification and bytecode-size gates.
@@ -111,8 +120,10 @@ formal verification, or a warranty.
 
 The current Safe, treasury custody, keeper model, and operational procedures
 must be evaluated separately from contract correctness. Current limitations,
-including pending Engine lifecycle smoke, preview-only baskets, range-manager
-deployment and canary gates, and custody requirements, are documented in
+including pending Engine lifecycle smoke, bounded recurring automation,
+`integrationReady: false` Position NFT state, preview-only baskets,
+range-manager deployment and canary gates, and custody requirements, are
+documented in
 [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md).
 
 Never:

@@ -1,12 +1,19 @@
-# NARA v4 Current Session Handoff
+# NARA v4 Historical Activation Handoff
 
-Last updated: 2026-08-30.
+Activation checkpoint: 2026-08-09. Current-state annotation: 2026-08-30.
+
+> **Historical checkpoint.** This file preserves the 2026-08-09 activation
+> handoff. It is not current deployment or operations authority. Begin with
+> [CURRENT_STATE.md](CURRENT_STATE.md), the latest dated release records, and
+> verified manifests. The canonical contracts and pool are now in technical
+> live testing; that does not establish public product availability or legal
+> approval.
 
 Code, canonical receipts, and protected deployment artifacts are authoritative.
 Begin with [CURRENT_STATE.md](CURRENT_STATE.md) and
 [V4_LAUNCH_CHECKLIST.md](V4_LAUNCH_CHECKLIST.md).
 
-## Current state
+## 2026-08-09 checkpoint state
 
 The fresh v4 core is deployed on Base from immutable protected release commit
 `027af3f06bbe6dea2c187dfd8062e50c228f1c35`. The core configuration is
@@ -22,7 +29,7 @@ this table are source-verified:
 | `NARALiquidityGrowthVault` | `0xD7f7b44BF65EBa3E90fDe0642687ed22A323084D` | Deployed and verified; Safe-owned; Compounder binding permanently frozen |
 | `Create2HookDeployer` | `0xDE9E3Cac08b7a31Db18c7432d4C45DF4584Fd646` | Deployed and verified; Safe-owned |
 | `NARALiquidityGrowthHook` | `0x59AEf9799DEA01A7FB7dA73BEA10dfB08858A088` | Deployed and verified; `0x2088`; Safe-owned; pool registered |
-| `NARALiquidityCompounderV4` | `0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF` | Validated; owns LP NFT `2898486` with liquidity `9455824137787` |
+| `NARALiquidityCompounderV4` | `0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF` | Validated; owns LP NFT `2898486`; current liquidity requires the latest release/readback |
 
 Activated pool ID:
 `0x83edced1f39e6adf7469cd718eeb409824d948959263408d4cfb6e745c8db464`.

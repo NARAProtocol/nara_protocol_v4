@@ -1,6 +1,6 @@
 # NARA Roadmap
 
-Last updated: 2026-08-27.
+Last updated: 2026-08-30.
 
 > **Current-state override:** the fresh v4 core, Compounder, and exact
 > seven-contract Position NFT Phase-2 baseline are deployed and source-verified
@@ -15,13 +15,20 @@ Last updated: 2026-08-27.
 > manifests and `docs/releases/NARA-20260827-v4-full-inventory-compound.md`.
 > This file is product direction, not a deployment runbook.
 
+> The canonical contracts and pool are in technical live testing with real
+> assets on Base mainnet. This roadmap is not public product availability,
+> legal approval, an offer, financial promotion, or a recommendation. Future
+> consumer marketing or activation requires written jurisdiction-specific
+> review by qualified counsel.
+
 This roadmap is anchored to [CURRENT_STATE.md](CURRENT_STATE.md). Code and deployment scripts are the source of truth. If roadmap language conflicts with code, update the roadmap.
 
 ---
 
 ## Core Position
 
-NARA is a fixed-supply, time-preference yield protocol on Base.
+NARA is a fixed-supply protocol with time-weighted positions and variable
+reward accounting on Base.
 
 Current v4 thesis:
 
@@ -30,12 +37,14 @@ Current v4 thesis:
 - Base native USDC liquidity on Uniswap v4.
 - Dynamic liquidity-growth hook through `NARALiquidityGrowthHook`.
 - Fee routing through `NARALiquidityGrowthVault`.
-- The deployed and Safe-finalized Phase-2 baseline provides optional tradable
+- The deployed and Safe-finalized Phase-2 baseline provides optional
+  owner-transferable
   lock positions through `NARAPositionNFTV4` and `NARAPositionAccountV4`, with
   immutable on-chain art and stable marketplace metadata via the modular
   `NARAPositionRendererV5`. It is not consumer-available while smoke, hold, and
   handoff evidence remain incomplete.
-- Phase-3 public bond path through `NARABondDepositoryV4NFT`, not raw direct-lock bonds.
+- Undeployed Phase-3 bond-source candidate
+  `NARABondDepositoryV4NFT`; no offer or availability is authorized or promised.
 - Phase-3 Genesis reward accounting through `NARAGenesisRewardDistributorV4`.
 - Phase-3 lazy UX + read layer: `NARARouter` (permit+sync+lock, permissionless
   `syncEpochs()`) and `NARADashboardLens` / `NARAPositionDataLensV1` (typed
@@ -71,8 +80,10 @@ As of 2026-08-27:
   `5%/8%/12%/20%`. The constructor defaults use 20% curve-level caps, while
   the delayed-governance source hard ceiling is 50%; neither should be
   described as the current buy configuration.
-- Engine activation-backlog recovery is receipt-pinned. Recurring maintenance
-  and the Engine lock/activation/claim/unlock lifecycle smoke remain gated.
+- Engine activation-backlog recovery is receipt-pinned. Epoch and liquidity
+  maintenance are active under separate bounded policies, credentials, and
+  schedules. The Engine lock/activation/claim/unlock lifecycle smoke remains
+  pending.
 - The exact seven-contract Position NFT Phase-2 baseline is deployed,
   source-verified, and Safe-finalized at
   `0xCcBD8c59664958636369F8fe24B927aEBc3DF7cC`. Its evidence state is
@@ -83,23 +94,24 @@ As of 2026-08-27:
 - Do not repeat the core deployment.
 - Current v4 code uses `NARALiquidityGrowthHook` and `NARALiquidityGrowthVault`.
 - Current v4 launch pair is NARA/Base native USDC.
-- Current public bond path is `NARABondDepositoryV4NFT`.
+- The source-selected future bond path is `NARABondDepositoryV4NFT`; it is not
+  deployed, opened, offered, or available.
 - Current composability code is implemented locally but not deployed.
 
 Baseline repository verification — see
 [CURRENT_STATE.md](CURRENT_STATE.md#verification-evidence) for the commands and
-dated stamp. The broad-suite counts below are from 2026-08-09; the later
-Position NFT manifests and 2026-08-27 compound record are deployment-specific
-evidence:
+dated stamp. The Position NFT manifests and 2026-08-27 compound record are
+deployment-specific evidence:
 
-- Full Hardhat suite: 556 passing, with 7 opt-in Base-fork cases pending.
+- Deterministic non-fork Hardhat suite: 759 passing on 2026-08-30; opt-in
+  Base-fork cases were not exercised by the documentation-only pass.
 - Fresh deployment/receipt/Safe-batch evidence: 12 focused tests passing.
 - The most recent basket verification evidence is recorded separately in
   [CURRENT_STATE.md](CURRENT_STATE.md); rerun it before basket deployment.
 - `npm run size`: passed, all artifacts within EVM limits.
 - Slither v4: passed (exit 0).
-- `npm audit --audit-level=high` on 2026-08-08: 0 high / 0 critical after
-  overriding Mocha's `js-yaml` to fixed `4.3.1`; 8 low upstream findings remain
+- `npm audit --audit-level=high` on 2026-08-30: 0 high / 0 critical; 8 low
+  transitive `ethers` v5/`elliptic` findings remain
   in Hardhat Verify's legacy Ethers v5 dependency chain with no available fix.
 - The current-patch Aderyn rerun remains unavailable locally; do not present
   the 2026-06-08 Aderyn/Echidna results as verification of the 2026-07-28 patch.
@@ -541,7 +553,9 @@ If users do not understand rewards:
 5. Only then design and review new Phase-3 allocation/bond/Genesis and
    router/lens release paths; do not revive the quarantined broad allocation
    deployer.
-6. Open bonds only after the Phase-3 valuation, terms, capacity, treasury
-   routing, Genesis metadata, role, smoke, and observation gates pass.
+6. Consider bonds only after Phase-3 economic, terms, capacity, treasury
+   routing, Genesis metadata, role, smoke, observation, and written
+   jurisdiction-specific legal gates pass. No current document authorizes an
+   offer or activation.
 7. Deploy composability only after its dependencies have verified manifests and
    handoffs, then validate SY before Pendle outreach.

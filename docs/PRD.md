@@ -1,18 +1,25 @@
 # NARA Protocol PRD
 
-Last updated: 2026-08-09.
+Last updated: 2026-08-30.
 
 Status: v3 is retired. The fresh v4 core and Compounder are deployed and
 source-verified on Base mainnet. Hook/Vault Safe ownership is accepted; the
 NARA/USDC pool is initialized and seeded, LP NFT `2898124` is Safe-owned, and
 receipt-pinned buy/sell and same-block tax tests passed. The bounded Compounder
 validation minted LP NFT `2898486`, and the separate permanent Vault binding
-freeze succeeded. Engine backlog recovery succeeded, but the Engine lifecycle
-smoke and recurring maintenance remain gated. The current product launch scope
-is NARA Baskets only; Baskets remain preview-only, Lockboard is deferred, and
-Lotto and Arena are retired. Current authority includes
-`deployments/v4-compounder-activation-2026-08-09.json` and
-`docs/releases/NARA-20260809-v4-compounder-activation.md`.
+freeze succeeded. The latest receipt-pinned compound increased that position to
+liquidity `4386316228001171`. Both maintainers are active under separate bounded
+policies. The Position NFT Phase-2 baseline is deployed and finalized but
+remains `integrationReady: false`. The Engine lifecycle smoke remains pending;
+Baskets remain preview-only, Lockboard is deferred, and Lotto and Arena are
+retired. Current authority is [CURRENT_STATE.md](CURRENT_STATE.md) and its
+referenced manifests and release records.
+
+The canonical contracts and NARA/USDC pool are in technical live testing with
+real assets on Base mainnet. This PRD is an engineering specification, not
+public product availability, legal approval, financial promotion, or a
+recommendation to transact. This repository contains no evidence of completed
+jurisdiction-specific qualified legal review.
 
 Code and deployment scripts are the source of truth. If this PRD conflicts with Solidity, scripts, or [CURRENT_STATE.md](CURRENT_STATE.md), update this PRD.
 
@@ -20,7 +27,8 @@ Code and deployment scripts are the source of truth. If this PRD conflicts with 
 
 ## 1. Product Definition
 
-NARA v4 is a Base-native, fixed-supply, time-preference yield protocol.
+NARA v4 is a Base-native, fixed-supply protocol with time-weighted positions and
+variable reward accounting.
 
 The v4 product is built around:
 
@@ -28,36 +36,50 @@ The v4 product is built around:
 - A fresh NARA/USDC Uniswap v4 launch pair using Base native USDC.
 - Dynamic swap-fee capture through `NARALiquidityGrowthHook`.
 - Fee custody and routing through `NARALiquidityGrowthVault`.
-- Duration-weighted NARA, ETH, and ERC-20 reward accounting through `NARAEngine`.
-- Tradable lock positions through `NARAPositionNFTV4` and `NARAPositionAccountV4`.
-- NFT bond positions through `NARABondDepositoryV4NFT`.
-- Genesis reward accounting through `NARAGenesisRewardDistributorV4`.
-- Optional composability through `NARAStakingPoolV4`, `NARAStakingPoolSYV4`, and fractional position wrappers.
+- Duration-weighted NARA and ETH reward accounting through `NARAEngine`; its
+  generic ERC-20 notifier is prohibited for the deployed Engine.
+- Owner-transferable lock positions through `NARAPositionNFTV4` and
+  `NARAPositionAccountV4`; transferability does not guarantee a market, buyer,
+  liquidity, value, or exit.
+- Undeployed bond-position source through `NARABondDepositoryV4NFT`.
+- Undeployed Genesis-accounting source through
+  `NARAGenesisRewardDistributorV4`.
+- Optional undeployed composability source through `NARAStakingPoolV4`,
+  `NARAStakingPoolSYV4`, and fractional position wrappers.
 
-The frontend is a launch and education surface. It is not the protocol identity.
+The frontend is a planned/preview education and transaction-review surface; it
+is not a currently available product or the protocol identity.
 
 ---
 
 ## 2. Product Thesis
 
-NARA rewards committed capital and duration.
+NARA source assigns accounting weight based on recorded amount and duration.
+Variable NARA emissions and contributed ETH are allocated across eligible
+active weight; amounts can be zero.
 
 The design objective is a protocol where:
 
 - Finite NARA emissions flow to active committed weight.
-- ETH and ERC-20 rewards can route to the same active committed weight.
+- NARA emissions and contributed ETH can be accounted across active committed
+  weight. The deployed Engine's generic ERC-20 notifier must remain unused.
 - Duration changes economic weight, not only display status.
-- Lock positions can be traded as NFTs.
-- NFT positions can later become ERC-20 surfaces through stNARA or fractional wrappers.
+- Lock positions can be owner-transferred as NFTs; marketplace support is not
+  implied.
+- Optional undeployed source could later create ERC-20 representations through
+  stNARA or fractional wrappers after separate gates.
 - Core rules are deployed in contracts, while product surfaces can iterate.
 
 In plain terms:
 
 - NARA emission is finite.
-- Protocol reward flow is open-ended through ETH and ERC-20 reward routes.
-- Duration is part of the asset.
-- NFT position ownership makes commitment portable.
-- Composability turns committed positions into DeFi building blocks.
+- The deployed Engine accounts contributed ETH; its generic ERC-20 notifier is
+  prohibited.
+- Duration is an accounting and unlock input.
+- ERC-721 control can be transferred, but no market, value, liquidity, buyer,
+  or exit is implied.
+- Composability code is optional, undeployed source and has no availability
+  commitment.
 
 ---
 
@@ -70,23 +92,28 @@ Deployed and liquidity-activated:
 - Fresh Safe-owned Hook and Vault, wired Safe-owned Compounder, initialized and
   seeded NARA/USDC pool, and Safe-owned LP NFT `2898124`.
 - Live buy/sell and same-block tax tests with reconciled Vault accounting.
-- Validated Compounder-owned LP NFT `2898486` with liquidity `9455824137787`.
-  The Compounder banks unmatched `1718.586695052747189931 NARA` and
-  `24.518753 USDC`; the Vault balances and temporary allowances were zero at
-  the freeze block.
+- At the latest receipt-pinned compound, Compounder-owned LP NFT `2898486` had
+  liquidity `4386316228001171`; `28.423769295100595183 NARA / 2.326460 USDC`
+  remained banked and Vault balances were zero.
+- The seven-contract Position NFT Phase-2 baseline is deployed,
+  source-verified, and Safe-finalized, with `integrationReady: false`.
 
-In repo, ready to deploy:
+Source present; deployment not authorized:
 
 - v4 source code in `contracts/v4/`.
 - v4 deployment and verification scripts in `scripts/`.
 - v4 composability code in `contracts/v4/composability/`.
 
+Each future module still requires applicable security, economic, legal,
+integration, monitoring, custody, and user-exit review plus explicit human
+approval.
+
 Not live today:
 
 - Full public product launch and production-readiness claim.
-- Authorized recurring Compounder/Engine maintenance.
 - Public lock, activation, claim, and unlock lifecycle availability.
-- Fresh v4 allocation stack.
+- Position NFT consumer integration; the deployment remains
+  `integrationReady: false`.
 - Public v4 NFT bond market.
 - Deployed v4 composability layer.
 - Pendle market for `NARAStakingPoolSYV4`.
@@ -105,13 +132,19 @@ Fresh v4 remaining launch scope:
   lifecycle smoke.
 - Deploy allocations with NFT bonds closed.
 - Run `npm run verify:v4:allocations`.
-- Open public lock flow through `NARAPositionNFTV4`.
+- Consider a public Position NFT flow only after lifecycle, integration,
+  monitoring, disclosure, exit, and jurisdiction-specific legal gates pass; no
+  current activation is authorized.
 - Open bonds only after terms, capacity, treasury routing, Genesis metadata, and roles are reviewed.
 - Deploy composability only after core and allocation verification.
 
 ---
 
-## 4. Primary User Loops
+## 4. Source-Level Future User Loops
+
+These are design requirements for flows that remain unavailable unless current
+deployment, integration, product, and legal gates are all satisfied. They are
+not instructions, recommendations, or an invitation to transact.
 
 ### v4 Committed Participant
 
@@ -119,14 +152,17 @@ Fresh v4 remaining launch scope:
 - Approve or permit NARA spending.
 - Mint a `NARAPositionNFTV4` lock position.
 - Wait through activation according to v4 epoch rules.
-- Earn NARA, ETH, and supported ERC-20 rewards based on active weight.
+- Account for variable NARA emissions and contributed ETH based on active
+  weight; amounts can be zero. The deployed Engine's ERC-20 notifier is
+  prohibited.
 - Claim rewards over time.
 - Extend the lock if desired.
 - Unlock after maturity unless the position is an eternal Genesis position.
 
 ### Genesis Participant
 
-- Receive or mint a Genesis-aware position through an approved launch path.
+- If a separately reviewed and authorized future Genesis path exists, receive
+  or mint a Genesis-aware position through that exact verified path.
 - Hold an NFT with Genesis metadata:
   - `roundId`
   - `tierId`
@@ -135,12 +171,16 @@ Fresh v4 remaining launch scope:
   - `rewardWeight`
   - `isEternal`
 - Claim Genesis ETH or ERC-20 rewards through `NARAPositionNFTV4`.
-- Understand that eternal Genesis positions cannot unlock principal through the normal path; after maturity they exit through `burnEternalGenesis`, which removes Genesis reward weight and returns principal.
+- Understand that eternal Genesis source positions cannot use the normal unlock
+  path. After maturity, `burnEternalGenesis` attempts to remove Genesis reward
+  weight and release the recorded NARA amount when contract conditions pass;
+  execution, token value, and recovery are not guaranteed.
 
 ### NFT Bond Buyer
 
 - Buy through `NARABondDepositoryV4NFT` after the market is intentionally opened.
-- Receive a tradable Genesis position NFT.
+- Receive an owner-transferable Genesis position NFT; no market, buyer,
+  liquidity, value, or exit is guaranteed.
 - Enter the engine reward system through the NFT position.
 - Create ETH flow for the protocol through the bond purchase split.
 - Accept that bond terms, capacity, and pricing are controlled by timelocked roles and should start inactive.
@@ -168,7 +208,9 @@ Fresh v4 remaining launch scope:
 - Bind the NFT into the created wrapper with `bind(uint256 tokenId, uint256 fractions)`.
 - Trade or transfer fractional balances.
 - Claim pro-rata rewards.
-- Unlock after maturity and claim principal pro rata.
+- After maturity and when contract conditions pass, source attempts the unlock
+  and pro-rata disbursement of recorded NARA; execution, token value, and
+  recovery are not guaranteed.
 
 ### Operator
 
@@ -216,7 +258,9 @@ Fresh v4 remaining launch scope:
 - `EPOCH_LENGTH` is set in the constructor; deployments must check the actual value.
 - Rejects direct ETH transfers.
 - Accepts ETH rewards through `notifyEthRewards()`.
-- Accepts non-NARA ERC-20 rewards through `notifyTokenRewards(address token, uint256 amount)` from `REWARD_NOTIFIER_ROLE` callers.
+- Contains a generic non-NARA ERC-20 notification function, but the deployed
+  Engine has no authorized notifier and this path is prohibited because of the
+  documented accounting issue. Do not grant `REWARD_NOTIFIER_ROLE` or call it.
 - Rejects NARA as an ERC-20 bribe token.
 - Supports `lockWithPermit(uint256 amount, uint64 durationEpochs, uint256 minWeight, uint256 deadline, uint8 v, bytes32 r, bytes32 s)`.
 - Supports ERC-1363 `onTransferReceived(address operator, address from, uint256 value, bytes data)` locking when flat lock ETH fee is zero.
@@ -236,13 +280,12 @@ Fresh v4 remaining launch scope:
 
 - Custodies pool fees from the hook.
 - Starts in `RouteMode.Liquidity`.
-- Supports route modes:
-  - `Liquidity`
-  - `Engine`
-  - `Split`
-  - `Genesis`
-  - `GenesisSplit`
-- Can route NARA and USDC into LP compounding, engine rewards, Genesis rewards, or split flows depending on mode and configuration.
+- Supports `Liquidity`, `Genesis`, and `GenesisSplit` only when their required
+  reviewed dependencies are deployed and bound. The `Engine` and `Split` enum
+  values exist in immutable code but permanently revert
+  `EngineTokenRoutingDisabled`.
+- The current deployment uses `Liquidity`. Genesis modes are unavailable until
+  a separately verified distributor is deployed and bound.
 - `setHook(address)` is one-time.
 - `setCompounder(address)` is optional; without a reviewed compounder, fees can accumulate in the vault. Compound/split callers must be owner or allowed with `setCompoundKeeper(address,bool)`.
 
@@ -265,25 +308,31 @@ Fresh v4 remaining launch scope:
 - Supports ETH and ERC-20 reward distribution for Genesis positions.
 - Used by `NARAPositionNFTV4` Genesis claim paths.
 
-### `NARABondVaultV4`
+### `NARABondVaultV4` (undeployed source)
 
 - Holds v4 bond inventory.
 - Uses timelocked market and cap controls.
-- Approved launch allocation target is `V4_BOND_AMOUNT_NARA=200000`.
-- Approved minimum treasury float is `V4_MIN_TREASURY_FLOAT_NARA=150000`.
-- These are approved operator overrides; current executable defaults must not be
-  treated as approval to use different values.
+- The cited operator plan internally selected
+  `V4_BOND_AMOUNT_NARA=200000` and `V4_MIN_TREASURY_FLOAT_NARA=150000` as
+  engineering inputs. This is not legal, regulatory, economic, or activation
+  approval, and the source is not deployed or funded.
 
-### `NARABondDepositoryV4NFT`
+### `NARABondDepositoryV4NFT` (undeployed source)
 
-- Preferred public v4 bond market.
-- Mints tradable Genesis position NFTs for buyers.
+- Canonical undeployed bond-source candidate; no offer or market is available.
+- If separately deployed and opened, source can mint owner-transferable Genesis
+  position NFTs for a recipient; no buyer, market, liquidity, value, or exit is
+  guaranteed.
 - Starts with inactive terms by default through `V4_BOND_ACTIVE=false`.
 - Initial capacity starts at `0`.
 - `executeTerms()` requires the depository to be paused.
 - `addCapacity(uint256 amount)` requires the depository to be paused.
-- Legacy `buyBond` and `buyBondFor` revert; public purchases must use `buyBondWithQuote` or `buyBondForWithQuote`.
-- Bond quotes are EIP-712 signed by `PRICE_SIGNER_ROLE` and include buyer, recipient, ETH input, payout bounds, deadline, nonce, and active terms timestamp.
+- Legacy `buyBond` and `buyBondFor` revert; the source-level quote functions are
+  `buyBondWithQuote` and `buyBondForWithQuote`. Function names do not establish
+  public availability.
+- Source quotes are EIP-712 signed by `PRICE_SIGNER_ROLE` and include the
+  caller/recipient, ETH input, payout bounds, deadline, nonce, and active terms
+  timestamp.
 
 ### `NARAOpsVaultV4`
 
@@ -295,6 +344,9 @@ Fresh v4 remaining launch scope:
 
 ## 6. Composability Components
 
+> **Source only.** These components are not deployed, integrated, offered, or
+> publicly available. The following describes conditional contract behavior.
+
 ### `NARAStakingPoolV4`
 
 - ERC-20 `stNARA` wrapper over pooled v4 position NFTs.
@@ -303,7 +355,8 @@ Fresh v4 remaining launch scope:
 - `deposit(uint256 naraAmount, uint256 minShares)` mints stNARA.
 - `lockLiquid(uint256 grossAmount, uint256 minWeight)` lets `LOCKER_ROLE` lock idle liquid NARA into max-duration NFT positions.
 - `harvest()` and `batchHarvest(uint256 start, uint256 end)` harvest underlying positions.
-- NARA rewards compound into pool value.
+- Claimed NARA amounts are retained in pool accounting; this does not guarantee
+  token value, exchange-rate growth, or return.
 - USDC and ETH rewards distribute through reward indexes.
 - `queueRedeem(uint256 shares)` burns shares and creates a redemption claim.
 - `claimRedemption(uint256 id)` pays only when ready and liquid.
@@ -336,8 +389,10 @@ Fresh v4 remaining launch scope:
 - `harvest()` claims rewards.
 - `claimRewards(address to)` pays pro-rata NARA emission and USDC rewards.
 - `unlockPosition()` unlocks after maturity and auto-harvests final rewards.
-- `claimPrincipal(address to)` pays principal pro rata.
-- Final claimant receives principal dust.
+- `claimPrincipal(address to)` attempts to disburse the recorded NARA amount pro
+  rata when contract conditions pass; execution, token value, and recovery are
+  not guaranteed.
+- Source assigns residual accounting dust to the final eligible claimant.
 - `totalSupply()` remains equal to `fractionCount` after principal claims.
 
 ---
@@ -358,7 +413,9 @@ Fresh v4 remaining launch scope:
 
 ### Bond Inventory
 
-- Approved bond inventory is `V4_BOND_AMOUNT_NARA=200000`.
+- The operator plan's internally selected engineering input is
+  `V4_BOND_AMOUNT_NARA=200000`; this is not legal/regulatory or activation
+  approval.
 - The script rejects values above `290,000 NARA`.
 - Bond terms start inactive by default.
 - Bond capacity starts at `0`.
@@ -366,19 +423,22 @@ Fresh v4 remaining launch scope:
 
 ### Treasury Float
 
-- Approved minimum float is `V4_MIN_TREASURY_FLOAT_NARA=150000`.
+- The operator plan's internally selected minimum-float input is
+  `V4_MIN_TREASURY_FLOAT_NARA=150000`; this is not legal/regulatory or
+  activation approval.
 - It preserves the locked `70,000 NARA` LP allocation, `40,000 NARA` external
   team vesting allocation, and `40,000 NARA` treasury allocation.
-- The controlled initial pool seed is `60,000 NARA + 300 USDC`, targeting
-  `$0.005` per NARA and approximately `$5,000` FDV. The remaining `10,000 NARA`
-  LP allocation stays in custody
-  until separately reviewed liquidity additions.
+- The controlled initial pool seed was `60,000 NARA + 300 USDC`. That is
+  historical deployment evidence, not a price target, valuation, expected
+  return, liquidity promise, or exit. A historical plan reserved a remaining
+  `10,000 NARA`; its current custody and balance require a fresh verified read.
 
-### Commitment-Weighted Yield
+### Commitment-Weighted Accounting
 
 - Active reward share is based on active weight.
 - Weight depends on amount and duration.
-- Rewards can include NARA, ETH, and non-NARA ERC-20 tokens.
+- The deployed supported rails are NARA emissions and ETH. The generic ERC-20
+  notifier is prohibited.
 
 ### Liquidity Growth
 

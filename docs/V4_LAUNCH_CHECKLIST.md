@@ -1,6 +1,12 @@
 # V4 Launch Checklist
 
-Last updated: 2026-08-21.
+Last updated: 2026-08-30.
+
+> **Technical live testing on Base mainnet — not public product availability.**
+> This checklist governs engineering evidence. It does not establish audit
+> completion, safety, legal approval, jurisdictional availability, or a
+> recommendation to transact. This repository contains no evidence of completed
+> jurisdiction-specific qualified legal review.
 
 > **Active fixed-v4 checklist.** The candidate must be a fresh full-v4
 > deployment from one immutable reviewed origin commit. Controlled Stage A and
@@ -10,7 +16,7 @@ Last updated: 2026-08-21.
 
 Use this file when starting cold.
 
-## Current checkpoint — pool and Compounder activated; operations gates remain
+## Current checkpoint — pool and Compounder in technical live testing
 
 Fresh core deployment from protected origin commit
 `027af3f06bbe6dea2c187dfd8062e50c228f1c35` has completed on Base and all
@@ -41,11 +47,13 @@ Vault accounting, transfers, and receipt blocks. A later same-block 20-action
 buy and exact 20-action reversal also reconciled.
 
 Stop before public product activation. The bounded Compounder validation minted
-LP NFT `2898486` with liquidity `9455824137787`, and the separate permanent
-Vault binding freeze succeeded. Engine backlog recovery also succeeded.
-Recurring maintenance and the Engine lifecycle smoke remain gated, and baskets
-remain preview-only. Current machine evidence:
-`deployments/v4-compounder-activation-2026-08-09.json`.
+LP NFT `2898486`, and the separate permanent Vault binding freeze succeeded.
+At the latest receipt-pinned compound, that position had liquidity
+`4386316228001171`. Engine backlog recovery also succeeded. Both maintainers
+are active under separate bounded policies, credentials, and schedules. The
+Engine lifecycle smoke remains pending; the Position NFT Phase-2 manifest
+remains `integrationReady: false`; baskets remain preview-only. Current
+authority is `CURRENT_STATE.md` and its referenced manifests/releases.
 
 ---
 
@@ -218,15 +226,16 @@ Pass criteria:
 
 Latest known local result:
 
-- Full Hardhat suite (`npm test`): 556 passing with 7 opt-in Base-fork cases
-  pending as of 2026-08-09.
+- Deterministic non-fork Hardhat suite: 759 passing on 2026-08-30. Opt-in
+  Base-fork cases were not exercised by that documentation-only pass and must
+  be rerun when relevant to a release candidate.
 - Fresh deployment/receipt/Safe-batch evidence: 12 focused tests passing.
 - Slither v4 scoped run: completed with exit 0 on 2026-07-29.
 - Echidna v4 engine harness: 13/13 properties passed on 2026-06-08; historical
   evidence for the current liquidity correction.
 - `npm run size`: all deployable artifacts below EVM bytecode limits.
 - `NARAEngine` deployed bytecode: 24,554 bytes.
-- `NARAStakingPoolSYV4` deployed bytecode: 8,503 bytes.
+- `NARAStakingPoolSYV4` deployed bytecode: 8,506 bytes.
 - `npm audit --audit-level=high`: 0 high / 0 critical on 2026-07-28.
 
 Static analysis:

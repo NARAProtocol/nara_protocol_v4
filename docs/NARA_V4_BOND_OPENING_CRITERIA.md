@@ -1,169 +1,142 @@
 # NARA v4 Bond Opening Criteria
 
-Last updated: 2026-05-28.  
-Audience: protocol operator. This is an internal decision document.  
-The bond depository deploys with `V4_BOND_ACTIVE=false` and capacity=0. Bonds open only when every criterion below is satisfied.
+Last updated: 2026-08-30.
 
----
+Status: internal signed-quote-era release criteria. Bonds are not deployed,
+funded, opened, offered, or publicly available. This document does not
+authorize deployment, funding, terms, capacity, a transaction, promotion, or an
+offer. This repository contains no evidence of completed jurisdiction-specific
+qualified legal review.
 
-## Hard Prerequisites (No Exceptions)
+The current source candidate is
+`contracts/v4/NARABondDepositoryV4NFT.sol`. It requires signed, bounded EIP-712
+quotes. The legacy `buyBond` and `buyBondFor` entry points revert
+`SignedQuoteRequired`; the quote-bound paths are `buyBondWithQuote` and
+`buyBondForWithQuote`. The contract does not contain the TWAP or
+`minOracleLiquidity` pricing controls described by earlier versions of this
+document.
 
-```
-□ Fresh v4 core is deployed and verified (smoke test passed).
-□ NARA/USDC pool has at least $500 of real liquidity seeded.
-□ NARA/USDC TWAP is at least 24 hours old.
-□ `minOracleLiquidity` threshold in NARABondDepositoryV4NFT is set and enforced.
-□ NARABondVaultV4 is funded (target 250,000 NARA; hard cap 290,000).
-□ NARABondDepositoryV4NFT is deployed and roles are assigned to Safe.
-□ NARAGenesisRewardDistributorV4 is deployed and bound to NARAPositionNFTV4.
-□ Bond terms are set with at least MIN_PRICE_DELAY = 1 day before opening.
-□ Bond capacity is explicitly set (non-zero) by Safe, not deployer.
-□ ETH split ratio (rewardSplitWad) is confirmed: configurable 0–100%, set at opening.
-□ All admin roles have been transferred from deployer to Safe.
-```
+## Stop conditions
 
----
+Keep bonds unavailable if any of the following is true:
 
-## Liquidity Depth Gate
+- the exact bond, Vault, Position NFT, Genesis distributor, Engine, treasury,
+  or Safe deployment/binding lacks a protected, verified manifest;
+- Position NFT `integrationReady` is `false` or its value-bearing lifecycle and
+  downstream handoff are incomplete;
+- a current security/economic review, threat model, capacity analysis,
+  monitoring plan, or tested exit behavior is absent;
+- current custody, inventory, role-holder, pause, terms, capacity, or pending-
+  change state has not been independently read and reconciled;
+- any `PRICE_SIGNER_ROLE`, `TERMS_ROLE`, `PAUSER_ROLE`, treasury, or admin
+  authority is broader than the approved release plan;
+- terms are stale, unbounded, active before review, or executable without the
+  required pause and timelock;
+- quote issuance lacks authentication, authorization, nonce/replay controls,
+  expiry, recipient binding, value binding, payout bounds, monitoring, and
+  revocation procedures;
+- fees, custody, irreversible lock behavior, variable/possibly-zero rewards,
+  transfer limits, token/liquidity/value risk, and exit behavior are not shown
+  before confirmation; or
+- written jurisdiction-specific qualified-counsel review of the entity,
+  audience, terms, disclosures, promotion, access controls, and transaction
+  journey is absent.
 
-Bond price is derived from NARA/USDC TWAP. Thin liquidity = manipulable price = bond buyers extract vault NARA at wrong discount.
+No price target, valuation threshold, projected proceeds, discount scenario,
+return, yield, dividend, market-impact claim, or future fee distribution is an
+opening criterion.
 
-**Minimum before opening bonds:**
-- At least **$500 depth** in the NARA/USDC pool.
-- TWAP interval must span at least **24 hours of real price history**.
-- `engine.totalLocked > 0` — at least one real active locker exists before bonds are opened (avoids empty-weight-share edge case on first bond ETH distribution).
+## Required immutable evidence
 
-If the pool is too thin, bonds stay closed. A $1k liquidity launch means bonds open only after the initial liquidity has settled and the price oracle has history.
+Before any opening proposal, a new protected release must record:
 
----
+1. full protocol origin and exact generated ABI/artifact source;
+2. verified Base addresses, runtimes, constructor inputs, and start blocks;
+3. Position NFT/Engine/Genesis/Vault/treasury/Safe bindings;
+4. role enumeration and complete relevant grant/revoke history;
+5. source, focused, invariant, fork, quote/replay, custody, failure-path, and
+   end-to-end exit tests;
+6. current inventory/capacity reconciliation without treating planned treasury
+   allocations as funded balances;
+7. simulation and decoded Safe payloads for every deployment/configuration
+   action;
+8. operations, pause/close, monitoring, incident, and recovery procedures; and
+9. an explicit downstream/public-documentation handoff whose availability state
+   remains closed until every gate passes.
 
-## Genesis Metadata Decision
+Deployment evidence and technical testing do not establish economic safety,
+legal compliance, suitability, product availability, liquidity, value, or an
+exit.
 
-Before the first bond term is activated:
-```
-□ roundId and tierId for the Genesis batch are decided.
-□ rewardMultiplierBps is confirmed (100–50,000 bps; 10,000 = 1×, 50,000 = 5×).
-□ isEternal flag decision is documented (eternal locks cannot be force-unlocked).
-□ NARAGenesisRewardDistributorV4 has sufficient USDC or token balance for bonus rewards.
-```
+## Terms and capacity review
 
----
+The source `BondTerms` fields are:
 
-## Pricing Parameters
+- `naraPerEthWad`;
+- `discountBps`, bounded by `MAX_DISCOUNT_BPS = 3_000`;
+- `rewardSplitWad`, bounded by `MAX_REWARD_SPLIT_WAD`;
+- `minDepositWei`;
+- `maxPayoutNara`;
+- `remainingCapacityNara`;
+- `lockDurationEpochs`;
+- Genesis round, tier, reward-weight, and eternal-position fields; and
+- `active`.
 
-Review these before each bond term activation:
+For any future proposal:
 
-| Parameter | Description | Safe range |
-|---|---|---|
-| Base discount | Starting discount applied to TWAP price | 5–15% |
-| Max discount | Ceiling on total discount (TWAP + base + inventory boost) | < 30% |
-| Demand penalty | Reduces discount as purchases accumulate in a period | Must be active |
-| Min/max bond price | Hard clamps on ETH-per-NARA | Set to prevent manipulation extremes |
-| Term duration | How long a bond term stays valid | MAX_TERMS_AGE = 2 days |
-| Execution delay | MIN_PRICE_DELAY before terms can be used | 1 day minimum |
+- start inactive and with zero capacity;
+- document the independent basis, time, source, and limitations for every
+  proposed pricing input;
+- treat `MIN_PRICE_DELAY = 1 day` and `MAX_TERMS_AGE = 2 days` as source bounds,
+  not evidence that terms are fair, current, or legally approved;
+- require pause before `executeTerms` and `addCapacity` as the source does;
+- keep capacity within freshly verified `vault.availableToPull()` and the
+  separately approved release cap;
+- verify the Engine lock fee, net/gross payout math, min/max payout, quote
+  expiry, nonce, terms timestamp, and recipient; and
+- issue no quote until the complete user-facing terms and legal journey are
+  approved.
 
----
+## Signed-quote controls
 
-## Vault Health Check
+Each quote must bind the exact buyer, recipient, `msg.value`, minimum and
+maximum payout, deadline, current buyer nonce, and `termsActivatedAt`. Accept
+only an authorized `PRICE_SIGNER_ROLE` EOA signature or the source-defined
+ERC-1271 contract-wallet format. Test expiry, replay, cross-recipient,
+cross-value, stale-terms, signer-revocation, contract-signature, payout-cap, and
+capacity failure cases.
 
-Before each capacity top-up:
-```
-□ Vault NARA balance > planned capacity.
-□ Treasury float remains >= 10,030 NARA after capacity is set.
-□ Ops vault vesting is on track (if ops allocation exists).
-```
+Quote signing is a privileged offchain service and must have its own scoped key,
+authentication, authorization, audit logs, rate/cap controls, revocation plan,
+and incident runbook. Never reuse a keeper, deployer, treasury, Safe-owner, or
+application credential.
 
----
+## Conditional opening sequence
 
-## Bond Opening Checklist (Per Term)
+Only after a new explicit human order and every preceding gate passes:
 
-Run this before setting each new bond term:
+1. re-read current chain state at a pinned block;
+2. generate and independently review the exact deployment/configuration/Safe
+   artifacts;
+3. deploy and verify the separately approved contracts if still undeployed;
+4. verify all bindings and roles before funding;
+5. fund only the reviewed capped amount;
+6. propose terms while the depository remains paused;
+7. wait the complete timelock and revalidate all assumptions;
+8. execute terms and add only the reviewed capacity while paused;
+9. keep `active=false` until the legal, UI, monitoring, and incident gates are
+   rechecked; and
+10. activate only through a separately decoded, simulated, and human-approved
+    transaction, followed by receipt-pinned readback.
 
-```
-□ Pool liquidity > $500 (check on-chain)
-□ TWAP > 24h history (verify twapSecondsAgo against bond pricing call)
-□ No active stale terms (MAX_TERMS_AGE expiry check)
-□ Capacity is non-zero and within vault balance
-□ rewardSplitWad confirmed (configurable 0–100%; no fixed default)
-□ Genesis metadata confirmed for this round
-□ Term delay set (MIN_PRICE_DELAY = 1 day)
-□ Bond purchase fee (if any) reviewed
-□ Safe multisig has signed the term proposal
-```
+This sequence is a future control outline, not current authorization. No current
+document authorizes `Genesis`, `GenesisSplit`, a bond sale, or public promotion.
 
----
+## Monitoring and closure
 
-## Things That Keep Bonds Closed
-
-If any of these are true, bonds must remain closed:
-
-- Deployer still holds bond vault or depository roles.
-- TWAP < 24h history.
-- Pool depth < $500.
-- Treasury float would drop below 10,030 NARA after capacity is activated.
-- Genesis metadata is unconfirmed.
-- `notifyEthRewards` split is below 50%.
-- `minOracleLiquidity` is not set.
-- activeTotalWeight == 0 (no live lockers).
-
----
-
-## After Opening
-
-Monitor each 24h window:
-```
-□ Bond purchases within expected range (no flash drain)
-□ ETH split reaching engine notifyEthRewards() (verify with event logs)
-□ NARA vault balance decreasing at expected rate
-□ No stale-term reverts in mempool
-□ Vault capacity has not been exhausted prematurely
-```
-
-If purchases are suspiciously concentrated in a single block: inspect for TWAP manipulation. If detected, close the term immediately via the Safe.
-
----
-
-## Pilot Batch #1 Strategic Blueprint (Capital Formation Round 1)
-
-Bonds function as decentralized on-chain Series fundraising rounds, swapping discounted future tokens for real ETH cash flow without market sell pressure.
-
-### Strategic Gates for Batch #1
-1. **Valuation Gate:** $NARA Spot Price $\ge \mathbf{\$1.00\text{ USD}}$. Prevents exhausting the 250k reserve at micro-cap levels.
-2. **Pilot Batch Capacity:** **`20,000 NARA`** (2.0% of total supply / 8% of bond reserve).
-3. **Discount Setting:** `15% – 20%` (e.g. `$0.80 – $0.85 / NARA`).
-4. **Lock Structure:** Mandatory 365-day (1-Year) lock minted as **Genesis Position NFTs** at `4.00x` duration multiplier.
-
-### Cash Flow Impact of Pilot Batch #1
-* **Gross ETH Raised:** `~$16,000 – $17,000 USD in ETH`.
-* **50% Direct Locker Dividend:** `~$8,000+ USD in ETH` sent to `engine.notifyEthRewards()`, generating instant real-yield cash flow to active lockers.
-* **50% Treasury Growth:** `~$8,000+ USD in ETH` to protocol reserves.
-* **0 AMM Sell Pressure:** 100% of tokens locked for 1 year.
-
----
-
-## Macro Reserve Scale Reference (250,000 NARA Vault)
-
-| $NARA Spot Price | Gross 250k Vault Value | Raised at 20% Discount | 50% Direct Locker ETH Yield | 50% Treasury Reserve |
-| :---: | :---: | :---: | :---: | :---: |
-| **$1.00** | $250,000 | $200,000 | **$100,000 in ETH** | $100,000 in ETH |
-| **$5.00** | $1,250,000 | $1,000,000 | **$500,000 in ETH** | $500,000 in ETH |
-| **$10.00** | $2,500,000 | $2,000,000 | **$1,000,000 in ETH** | $1,000,000 in ETH |
-| **$50.00** | $12,500,000 | $10,000,000 | **$5,000,000 in ETH** | $5,000,000 in ETH |
-| **$100.00** | $25,000,000 | $20,000,000 | **$10,000,000 in ETH** | $10,000,000 in ETH |
-
----
-
-## The Phased AMM USDC Fee-Sharing Switch (Bond NFT Superpower)
-
-Inside `NARALiquidityGrowthVault.sol`, dynamic routing allows protocol governance to switch Uniswap v4 AMM trading fees to Genesis Bond NFT holders:
-
-```
-[Phase 1: Liquidity Launch] ──► [Phase 2: Bond Sale] ──► [Phase 3: Activate USDC Cash Flow]
-     RouteMode.Liquidity           Mint Genesis NFTs          Safe calls vault.setRouteMode(
- (100% Fees -> POL Depth)       (Reward Weight Stamped)          RouteMode.GenesisSplit)
-```
-
-### Key Operating Invariants
-1. **Decoupled Deployment:** Bonds can be issued while the Vault is compounding 100% into POL (`RouteMode.Liquidity`). Genesis reward weights are permanently recorded at mint time.
-2. **The Safe Switch:** When trading volume on Uniswap v4 grows, the Safe multisig executes `vault.setRouteMode(RouteMode.GenesisSplit)` with e.g. `splitGenesisShareBps = 5000` (50% split).
-3. **Direct USDC Dividend Streams:** From that block forward, 50% of all USDC buy swap fees are delivered directly to `NARAGenesisRewardDistributorV4`, allowing Genesis Bond NFT holders to claim continuous real USDC cash flow directly from Uniswap trading volume!
+If a future release is explicitly opened, monitor quote issuance, nonce use,
+capacity, Vault inventory, terms age, role changes, pause state, ETH routing,
+Engine/Genesis accounting, failed deliveries, concentration, and exit behavior.
+Define quantitative alert and automatic-stop thresholds in that release. The
+human-controlled pause/closure path must be tested before opening, not first
+used during an incident.

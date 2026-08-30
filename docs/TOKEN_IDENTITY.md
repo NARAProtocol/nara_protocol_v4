@@ -38,8 +38,9 @@ must never be used as fallbacks:
   `0x65E247AA3aa9C0131b2984b894c3D24c41341D7A`
 
 The fresh address is recorded in `docs/CURRENT_STATE.md` and the protocol
-deployment manifests. The monitor, baskets, and every application remain
-blocked until an explicit immutable downstream handoff updates them.
+deployment manifests. Each downstream consumer must trace its configuration to
+an immutable handoff and exact protocol origin; no planned, local, or
+conversation-derived address may replace it.
 
 ## Deployment enforcement
 

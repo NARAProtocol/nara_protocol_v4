@@ -1,5 +1,12 @@
 # NARA v4 test-console and operations checkpoint — 2026-08-15
 
+> **Historical checkpoint.** This file records the state observed on
+> 2026-08-15. It is not current authority for Position NFT deployment,
+> automation, liquidity, or product availability. Use `CURRENT_STATE.md` and
+> its latest referenced manifests/releases. The canonical contracts and pool
+> are in technical live testing; this does not establish public availability or
+> legal approval.
+
 Change ID: `NARA-20260815-v4-test-console-checkpoint`
 
 Status: live Base evidence recorded; console improvements remain local on the
@@ -306,8 +313,9 @@ warning threshold. That is a performance task, not a correctness failure.
 4. Observe the GitHub maintainer plus external heartbeat for 24 hours and adjust
    only the monitor timing if alerts are early or noisy. Do not alter Engine
    scheduling to satisfy the monitor.
-5. Liquidity automation remains disabled. Baskets remain preview-only.
-   Position NFTs and related periphery are not deployed and must remain gated.
+5. At this 2026-08-15 checkpoint, liquidity automation was disabled, baskets
+   were preview-only, and Position NFT/periphery was not deployed. This state
+   was superseded; use `CURRENT_STATE.md` for the current gates.
 6. No independent audit was performed by this checkpoint. Do not describe the
    console or protocol as bug-free, audited, or fully production-ready.
 7. Coinbase funding and paymaster code is deployed fail-closed but remains
