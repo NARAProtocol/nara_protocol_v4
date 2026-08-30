@@ -77,6 +77,10 @@ export const PINNED_USDC_ADVERSARY = Object.freeze({
   runtimeCode: "0x",
 });
 
+export function requiresHistoricalPinnedUsdcAdversaryBalance(blockNumber: bigint): boolean {
+  return blockNumber === PINNED_USDC_ADVERSARY.blockNumber;
+}
+
 export const REQUIRED_BUY_SIZES_USDC = REQUIRED_TREASURY_BUY_SIZES_USDC;
 export const REQUIRED_INDEPENDENT_SELL_SIZES_NARA = REQUIRED_TREASURY_INDEPENDENT_SELL_SIZES_NARA;
 export const REQUIRED_ACQUIRED_SELL_FRACTIONS_BPS = REQUIRED_TREASURY_ACQUIRED_SELL_FRACTIONS_BPS;

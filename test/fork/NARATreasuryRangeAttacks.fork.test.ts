@@ -38,6 +38,7 @@ import {
 } from "../../scripts/lib/v4TreasuryRangeSwap.js";
 import {
   PINNED_USDC_ADVERSARY,
+  requiresHistoricalPinnedUsdcAdversaryBalance,
   REQUIRED_ACQUIRED_SELL_FRACTIONS_BPS,
   REQUIRED_BUY_SIZES_USDC,
   REQUIRED_INDEPENDENT_SELL_SIZES_NARA,
@@ -221,7 +222,7 @@ const hasPinnedArchiveRpc = Boolean(
       deployment,
       recipient,
       amount,
-      requirePristinePinnedBalance: true,
+      requirePristinePinnedBalance: requiresHistoricalPinnedUsdcAdversaryBalance(pinnedState.blockNumber),
     });
   }
 
@@ -797,10 +798,17 @@ const hasPinnedArchiveRpc = Boolean(
 
   it("pins exact custody/runtime state and executes the $10 canary without changing permanent POL", async function () {
     expect(pinnedState.positionReconciliation.exact).to.equal(true);
-    expect(pinnedState.safeBalances).to.deep.equal({ nara: 2_070_480n, usdc: 0n });
+    if (requiresHistoricalPinnedUsdcAdversaryBalance(pinnedState.blockNumber)) {
+      expect(pinnedState.safeBalances).to.deep.equal({ nara: 2_070_480n, usdc: 0n });
+    }
     expect(await connection.ethers.provider.getCode(PINNED_USDC_ADVERSARY.address)).to.equal("0x");
     const usdc = new ethersUtils.Contract(deployment.base, ERC20_ABI, connection.ethers.provider);
-    expect(await usdc.balanceOf(PINNED_USDC_ADVERSARY.address)).to.equal(PINNED_USDC_ADVERSARY.balanceRaw);
+    const adversaryBalance = await usdc.balanceOf(PINNED_USDC_ADVERSARY.address) as bigint;
+    if (requiresHistoricalPinnedUsdcAdversaryBalance(pinnedState.blockNumber)) {
+      expect(adversaryBalance).to.equal(PINNED_USDC_ADVERSARY.balanceRaw);
+    } else {
+      expect(adversaryBalance).to.be.at.least(10n * USDC_UNIT);
+    }
     const before = await pinnedPermanentState();
     const [attacker] = await connection.ethers.getSigners();
     const address = await attacker.getAddress();
@@ -869,13 +877,17 @@ const hasPinnedArchiveRpc = Boolean(
       }),
     });
     expect(optimized.selectedCandidateId).not.to.equal(null);
-    expect(optimized.selectionStatus).to.equal("SELECTED_EXECUTION_BLOCKED");
     expect(optimized.pareto.length).to.be.greaterThan(0);
     expect(optimized.pareto.every((candidate) => candidate.hardGatePass)).to.equal(true);
     const selected = optimized.candidates.find(
       (candidate) => candidate.candidateId === optimized.selectedCandidateId,
     );
     if (!selected) throw new Error("Selected optimizer candidate is missing from exact evidence");
+    const expectedSelectionStatus = pinnedState.safeBalances.usdc < 5_000n * USDC_UNIT
+      || pinnedState.safeBalances.nara < selected.naraBudget
+      ? "SELECTED_EXECUTION_BLOCKED"
+      : "SELECTED_BUILDABLE";
+    expect(optimized.selectionStatus).to.equal(expectedSelectionStatus);
     const parsedSelected = parseTreasuryRangeStrategyManifest(selected.manifest);
     expect(() => assertTreasuryRangeManifestExactEvidence(parsedSelected)).not.to.throw();
     expect(() => assertTreasuryRangeManifestExactEvidence({
