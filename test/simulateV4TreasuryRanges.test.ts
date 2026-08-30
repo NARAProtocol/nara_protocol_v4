@@ -1,6 +1,10 @@
 import { expect } from "chai";
 import { ethers } from "ethers";
-import { hookConfigurationHash } from "../scripts/simulateV4TreasuryRanges.js";
+import {
+  PINNED_USDC_ADVERSARY,
+  hookConfigurationHash,
+  requiresHistoricalPinnedUsdcAdversaryBalance,
+} from "../scripts/simulateV4TreasuryRanges.js";
 
 describe("v4 treasury range simulator manifest hashing", function () {
   it("hashes exactly ten sorted label/expected pairs with canonical JSON and keccak256", function () {
@@ -23,5 +27,10 @@ describe("v4 treasury range simulator manifest hashing", function () {
   it("refuses incomplete Hook read-check configuration", function () {
     expect(() => hookConfigurationHash({ readChecks: [] }))
       .to.throw("exactly 10 readChecks");
+  });
+
+  it("requires the historical USDC fixture balance only at its exact audit pin", function () {
+    expect(requiresHistoricalPinnedUsdcAdversaryBalance(PINNED_USDC_ADVERSARY.blockNumber)).to.equal(true);
+    expect(requiresHistoricalPinnedUsdcAdversaryBalance(PINNED_USDC_ADVERSARY.blockNumber + 1n)).to.equal(false);
   });
 });
