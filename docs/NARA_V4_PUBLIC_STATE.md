@@ -136,7 +136,7 @@ available from this release.
   available from this release.
 - **Maintenance:** user calls can advance up to eight epochs, but this is a
   bounded buffer rather than indefinite keeperlessness. The guarded v4 epoch
-  maintainer is active on its bounded twice-hourly schedule. After RPC failures
+  maintainer is active at minutes `3,18,33,48` of every UTC hour. After RPC failures
   let backlog exceed the routine limit, the explicitly approved 2026-08-26
   recovery advanced epochs `1500..1661`; Base receipt block `50466604` read
   current/stored epoch `1661 / 1661` with zero backlog. See `CURRENT_STATE.md`

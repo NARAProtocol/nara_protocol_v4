@@ -1,0 +1,8 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": "../.."
+  },
+  "include": ["src/**/*.ts", "../../scripts/lib/v4LiveConfig.ts", "../../scripts/lib/v4TreasuryRangeManifest.ts"]
+}

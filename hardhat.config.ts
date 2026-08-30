@@ -9,6 +9,18 @@ import "dotenv/config";
 const PRIVATE_KEY = process.env.PRIVATE_KEY ?? "";
 const BASE_SEPOLIA_RPC_URL = process.env.BASE_SEPOLIA_RPC_URL ?? "";
 const BASE_RPC_URL = process.env.BASE_MAINNET_RPC_URL || process.env.BASE_RPC_URL || "https://mainnet.base.org";
+const TREASURY_FORK_BLOCK_RAW = process.env.V4_TREASURY_FORK_BLOCK?.trim();
+let treasuryForkBlock: number | undefined;
+if (TREASURY_FORK_BLOCK_RAW) {
+  if (!/^\d+$/.test(TREASURY_FORK_BLOCK_RAW)) {
+    throw new Error("V4_TREASURY_FORK_BLOCK must be an unsigned integer");
+  }
+  const parsed = BigInt(TREASURY_FORK_BLOCK_RAW);
+  if (parsed > BigInt(Number.MAX_SAFE_INTEGER)) {
+    throw new Error("V4_TREASURY_FORK_BLOCK exceeds the Hardhat safe block-number range");
+  }
+  treasuryForkBlock = Number(parsed);
+}
 
 const networks = {
   default: {
@@ -62,6 +74,7 @@ if (BASE_RPC_URL) {
     hardfork: "isthmus",
     forking: {
       url: BASE_RPC_URL,
+      ...(treasuryForkBlock === undefined ? {} : { blockNumber: treasuryForkBlock }),
     },
   };
   // Immutable incident-state fork used only by the end-to-end liquidity

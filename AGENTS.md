@@ -2,7 +2,7 @@
 
 This file is read by AI coding assistants that look for `AGENTS.md` on entry (OpenAI Codex, Cursor, DeepSeek, Gemini, and others). The companion file [CLAUDE.md](CLAUDE.md) carries the same context framed for Claude / Anthropic models.
 
-Last updated: 2026-08-09.
+Last updated: 2026-08-30.
 
 ## Cross-Repository Role
 
@@ -58,9 +58,10 @@ block when applicable, test results, and unresolved risks.
   same-block live tax paths reconciled, and the bounded Compounder validation
   minted Compounder-owned LP NFT `2898486` with liquidity `9455824137787`.
   The Vault binding is permanently frozen to the deployed Compounder. Engine
-  backlog recovery succeeded, and the separately hardened epoch maintainer is
-  active on its bounded twice-hourly schedule. Liquidity maintenance remains
-  disabled. Raw lock/activation/unlock and post-fee lock paths are exercised;
+  backlog recovery succeeded, and the separately hardened epoch and liquidity
+  maintainers are active under different gas-only keys, schedules, enable
+  variables, and bounded policies. Raw lock/activation/unlock and post-fee lock
+  paths are exercised;
   post-fee unlock and positive ETH-allocation claim evidence remain pending.
   Baskets remain preview-only. Do not claim whole-stack production readiness.
 - **Read-first liquidity state:** read `docs/CURRENT_STATE.md`,
@@ -70,6 +71,14 @@ block when applicable, test results, and unresolved risks.
   `docs/UNISWAP_V4_HOOK.md`, and `docs/V4_LAUNCH_CHECKLIST.md` before pool,
   fee, liquidity, recovery, or basket-activation work. Do not use deleted V5
   plans or sources as instructions.
+- **Treasury range candidate boundary:** before any tactical range work, read
+  `docs/releases/NARA-20260828-v4-treasury-range-manager.md`,
+  `docs/architecture/NARA_TREASURY_RANGE_MANAGER_V1.md`, and
+  `docs/runbooks/NARA_V4_TREASURY_RANGE_SETTLER_RUNBOOK.md`. The manager is an
+  implemented/tested and internal-audit-remediated candidate only: it is not
+  funded, deployed, activated, independently externally audited, or part of
+  permanent POL. Never describe optimizer output as a profit guarantee or
+  reuse an existing keeper for the settler.
 - **Historical withdrawal completed:** human Safe signers retired the 2026-07-30
   NARA/USDC pool on 2026-08-08 in Base transaction
   `0xd3b4c1790b586c399e48307afa3c282a279ac395212f0242a98835781a430523`.
@@ -79,13 +88,16 @@ block when applicable, test results, and unresolved risks.
   historical addresses as a current manifest.
 - **GitHub operations boundary:** workflow `324678194` (`NARA v4 epoch
   maintainer`) was explicitly reactivated on 2026-08-14 after backlog recovery,
-  dedicated-key provisioning, heartbeat setup, and dry runs. It runs at minutes
-  `7,37` with `V4_EPOCH_MAINTAINER_ENABLED=true` and the bounded production
-  routine guard. Workflow `324678196` (`NARA v4 liquidity maintainer`) remains
-  `disabled_manually`; `V4_OPERATIONS_KEEPER_ENABLED` and
-  `V4_LIQUIDITY_MAINTAINER_ENABLED` remain `false`. Do not broaden epoch-keeper
-  authority, change its deployment binding, or activate liquidity maintenance
-  without a new explicit user order and current deployment-specific review.
+  dedicated-key provisioning, heartbeat setup, and dry runs. Its current
+  resilience cadence runs at minutes `3,18,33,48` with
+  `V4_EPOCH_MAINTAINER_ENABLED=true` and the bounded production
+  routine guard. Workflow `324678196` (`NARA v4 liquidity maintainer`) is
+  separately active at minutes `17,47` with
+  `V4_OPERATIONS_KEEPER_ENABLED=true` and
+  `V4_LIQUIDITY_MAINTAINER_ENABLED=true`. Do not reuse or broaden either
+  keeper, change either deployment binding, schedule, or policy, or disable
+  either workflow without a new explicit user order and current
+  deployment-specific review.
   Read `docs/CURRENT_STATE.md` and
   `docs/NARA_V4_TEST_CONSOLE_CHECKPOINT_2026-08-15.md` for current evidence.
 - **Product scope:** NARA Baskets only after a verified fresh-v4 deployment
@@ -185,6 +197,7 @@ buying`, `Confirm Buy`, `Confirm Exit`.
 | Bond depository (NFT) — launch path | `NARABondDepositoryV4NFT`         | `contracts/v4/NARABondDepositoryV4NFT.sol`                       |
 | Uniswap v4 liquidity hook           | `NARALiquidityGrowthHook`         | `contracts/v4/NARALiquidityGrowthHook.sol`                       |
 | Uniswap v4 fee vault                | `NARALiquidityGrowthVault`        | `contracts/v4/NARALiquidityGrowthVault.sol`                      |
+| Treasury tactical ranges (candidate)| `NARATreasuryRangeManagerV1`      | `contracts/v4/NARATreasuryRangeManagerV1.sol`                    |
 | Ops vesting vault                   | `NARAOpsVaultV4`                  | `contracts/v4/NARAOpsVaultV4.sol`                                |
 | Composability — staking pool        | `NARAStakingPoolV4`               | `contracts/v4/composability/NARAStakingPoolV4.sol`               |
 | Composability — Pendle SY           | `NARAStakingPoolSYV4`             | `contracts/v4/composability/NARAStakingPoolSYV4.sol`             |
@@ -208,6 +221,8 @@ npm run test:bond-nft:v4
 npm run test:nft:v4
 npm run test:composability:v4
 npm run test:invariants:v4
+npm run test:treasury-ranges:v4
+npm run typecheck:treasury-range-settler:v4
 npm run size               # compiled-runtime/creation size check
 npm run slither:v4         # static analysis
 npm run aderyn:v4          # static analysis

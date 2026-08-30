@@ -117,6 +117,7 @@ if ($Targets.Count -eq 0) {
     "contracts\v4\NARALiquidityGrowthHook.sol",
     "contracts\v4\NARALiquidityGrowthVault.sol",
     "contracts\v4\NARAOpsVaultV4.sol",
+    "contracts\v4\NARATreasuryRangeManagerV1.sol",
     "contracts\v4\NARAArtMetadataV1.sol",
     "contracts\v4\NARAArtSecurityPrintV1.sol",
     "contracts\v4\NARAArtCorePlateV1.sol",

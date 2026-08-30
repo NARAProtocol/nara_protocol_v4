@@ -14,6 +14,7 @@
 3. [NARA Engine & Adaptive Mathematical Models](#3-nara-engine--adaptive-mathematical-models)
 4. [Uniswap v4 Dynamic Fee Hook & Fee Vault](#4-uniswap-v4-dynamic-fee-hook--fee-vault)
 5. [Liquidity Compounder & POL Flywheel](#5-liquidity-compounder--pol-flywheel)
+   - [5.1 Treasury Range Manager Candidate](#51-treasury-range-manager-candidate)
 6. [Position NFTs & Generative On-Chain Art Engine](#6-position-nfts--generative-on-chain-art-engine)
 7. [Bond Markets & Genesis Reward Distribution](#7-bond-markets--genesis-reward-distribution)
 8. [Composability Layer (stNARA, SY-stNARA, Fractional Positions)](#8-composability-layer-stnara-sy-stnara-fractional-positions)
@@ -92,22 +93,20 @@ $$\text{CirculatingSupply} = \text{TotalSupply} - \text{EngineBalance} - \text{R
 
 ## 3. NARA Engine & Adaptive Mathematical Models
 
-The `NARAEngine` (`contracts/v4/NARAEngine.sol`) is the heart of the time-preference yield mechanism and the **universal revenue sink of the entire ecosystem**. It manages epochs, locking duration multipliers, emission calculations, stress feedback, and multi-asset reward accounting.
+The `NARAEngine` (`contracts/v4/NARAEngine.sol`) is the heart of the time-preference yield mechanism and the primary accounting sink for revenue explicitly assigned to lockers. It manages epochs, locking duration multipliers, emission calculations, stress feedback, and multi-asset reward accounting.
 
-### 3.0 The Universal Value Capture Moat (All Fees Flow to Lockers)
-The primary architectural invariant of NARA is that **no revenue sits isolated in sub-contracts**. Every current protocol module and all future ecosystem dApps are engineered to route their cash flow directly into `NARAEngine` to reward active position lockers:
+### 3.0 Locker Value-Capture Rails
+Eligible protocol revenue routes into the configured Engine reward rails where a module's reviewed design explicitly requires it. Treasury principal, tactical range proceeds, tactical LP fees, and cancellation outputs are not Engine revenue: the Treasury Range Manager returns all of them directly to the immutable production Safe. Future modules require their own reviewed routing decision rather than inheriting a universal cash-flow rule.
 
 1. **Decentralized Bonds (`NARABondDepositoryV4NFT.sol`):** `50%` of all ETH paid by bond purchasers is immediately pushed into `engine.notifyEthRewards()`.
 2. **Category Baskets (`NARAIndexFeeCollectorV2.sol`):** `100%` of basket trading and minting fees are converted via Chainlink oracles into native ETH and pushed into `engine.notifyEthRewards()`, while NARA fees are sent to `engine.depositRewards()`.
 3. **Uniswap v4 AMM Fees (`NARALiquidityGrowthVault.sol`):** RouteMode options stream trading fees into POL depth compounding or directly to Genesis Bond lockers (`RouteMode.GenesisSplit`).
 4. **Third-Party Bribes (`BribeRouterV4.sol`):** External protocols seeking NARA governance or liquidity alignment route bribe tokens and ETH directly to `NARAEngine`.
-5. **Future Ecosystem Applications (Games, Launchpads, Vaults):** Any new product built in the workspace is bound by protocol rules to route protocol revenue into `engine.notifyEthRewards()`.
+5. **Future Ecosystem Applications (Games, Launchpads, Vaults):** A future product may route eligible protocol revenue into Engine rewards only when its reviewed specification and deployed bindings require that behavior.
 
-```
-[Bond ETH 50%] ──┐
-[Basket Fees]  ──┼──► NARAEngine.notifyEthRewards() ──► 100% Real ETH Cash Dividends to Lockers
-[Future dApps] ──┤
-[Bribes]       ──┘
+```text
+[Reviewed eligible fee rails] --> NARAEngine reward accounting --> eligible locker rewards
+[Treasury tactical ranges]    --> immutable production Safe
 ```
 
 ### 3.1 Epoch Lifecycle & JIT Advance
@@ -228,6 +227,48 @@ Uniswap v4 encodes hook permissions into the lowest bits of the deployed hook ad
 4. **Position NFT Custody:** The Uniswap v4 LP NFT (`tokenId: 2898486`) is held directly by the Compounder contract (`473,995,658,948,700` liquidity units, ~10.05% of active pool liquidity).
 5. **Exact-Spend Invariant:** Pulls exact allowances from Vault, guaranteeing zero stuck funds in intermediate stages.
 6. **7-Day Recovery Timelock:** Owner POL-removal operations (`WindDown`, `MigratePosition`, `RecoverPoolTokens`) require `RECOVERY_DELAY = 7 days`.
+
+### 5.1 Treasury Range Manager Candidate
+
+`NARATreasuryRangeManagerV1.sol` is an implemented and tested, but undeployed,
+Safe-bound periphery candidate for tactical one-sided NARA/USDC ranges. It is
+strictly separate from permanent POL: it owns only manager-registered tactical
+PositionManager NFTs, never changes the Hook/Vault/Compounder, and sends every
+settlement or cancellation output directly to the immutable production Safe.
+
+The companion planner reads a pinned PoolManager spot, pool liquidity, active
+positions, Hook configuration and pending updates, runtime bindings, and
+separate Safe/Treasury balances. It evaluates 21 profile/budget candidates and
+selects deterministically only from complete exact-fork evidence. "Optimal"
+means best under that tested family and objective function; it is not a market
+prediction or profit guarantee. A new snapshot requires a new plan and a new
+human-reviewed Safe proposal. The settler never replans or reinvests proceeds.
+
+The 2026-08-30 internal-audit remediation closes all five retained findings:
+exact 21-candidate/strict-row evidence, durable signed-nonce lineage, bounded
+fatal RPC/sweep deadlines, and Circle USDC implementation/control-state
+binding. Strategy schema v2 pins the USDC proxy and implementation hashes,
+implementation/admin slots, admin/owner/pauser/blacklister, pause and monitored
+blacklist state, plus the code-hash-bound Base Multicall3 reader. Deployment,
+order, settlement, and exact rebroadcast paths fail closed before signing on
+drift. Cancellation has a clearly labelled exit-only bypass and cannot promise
+success under incompatible token behavior. The internal review is not an
+independent external audit or security clearance.
+
+At the 2026-08-28 candidate checkpoint, the pinned Base fork was block
+`50537172` and the selected candidate was `CONSERVATIVE-100000-NARA` with 12
+orders and status `SELECTED_EXECUTION_BLOCKED`. The Safe lacked the required
+NARA and 5,000 USDC budget, so no deployment/order packet was authorized. A
+fully traversed range becomes Safe-held inventory only in a later settlement
+transaction; an actor's same-transaction buy/reverse cannot be intercepted.
+
+Authority and operating documents:
+
+- [`architecture/NARA_TREASURY_RANGE_MANAGER_V1.md`](architecture/NARA_TREASURY_RANGE_MANAGER_V1.md)
+- [`security/NARA_TREASURY_RANGE_MANAGER_THREAT_MODEL.md`](security/NARA_TREASURY_RANGE_MANAGER_THREAT_MODEL.md)
+- [`security/NARA_TREASURY_RANGE_MANAGER_REMEDIATION_2026-08-30.md`](security/NARA_TREASURY_RANGE_MANAGER_REMEDIATION_2026-08-30.md)
+- [`runbooks/NARA_V4_TREASURY_RANGE_SETTLER_RUNBOOK.md`](runbooks/NARA_V4_TREASURY_RANGE_SETTLER_RUNBOOK.md)
+- [`releases/NARA-20260828-v4-treasury-range-manager.md`](releases/NARA-20260828-v4-treasury-range-manager.md)
 
 ---
 
@@ -435,11 +476,13 @@ Located in `nara-swarm-monitor/`. Powered by Ponder framework for real-time Base
 
 ### 12.2 GitHub Operational Keepers
 - **`v4-epoch-maintainer.yml` (ACTIVE):**
-  - Schedule: `7,37 * * * *` (Twice hourly).
+  - Schedule: `3,18,33,48 * * * *` (Four times hourly).
   - Dedicated Gas-Only Key: `0xE3DDa33EdB0f8b6aa39e4ce853Ba7C4A29e520DD`.
   - Operations: Calls `advanceEpoch()` / `advanceEpochs()`, verifies runtime bytecode hashes, pings external heartbeat monitor.
-- **`v4-liquidity-maintainer.yml` (DISABLED):**
-  - Manually disabled. Compounder operations require dedicated human authorization and validation.
+- **`v4-liquidity-maintainer.yml` (ACTIVE):**
+  - Schedule: `17,47 * * * *` (Twice hourly).
+  - Dedicated Gas-Only Key: `0x0f8ADa55B394E58e9BC667c23a1EEcED12216272`.
+  - Operations: Runs the bounded, deployment-bound `compoundAll()` policy only when its independent gates and trigger conditions pass; otherwise emits the required idle heartbeat.
 
 ---
 

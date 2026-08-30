@@ -1,6 +1,6 @@
 # NARA v4 Current Session Handoff
 
-Last updated: 2026-08-09.
+Last updated: 2026-08-30.
 
 Code, canonical receipts, and protected deployment artifacts are authoritative.
 Begin with [CURRENT_STATE.md](CURRENT_STATE.md) and
@@ -34,6 +34,26 @@ Treasury: `0xfe3A8678A9c729438BB11718bD1391E7Ab491E8e`.
 
 Core verification readback block: `49719008`.
 
+### Treasury Range Manager candidate - not deployed
+
+`NARA-20260828-v4-treasury-range-manager` was implemented and tested at
+historical pre-remediation candidate commit
+`b34b78330f2f40b514d2bf6a0e5cff96c92ff928`. The 2026-08-30 remediation
+closes the five retained internal-audit findings but does not yet have an
+immutable protected release commit. It adds a Safe-bound tactical
+range manager, exact planner/optimizer, adversarial fork simulator, unsigned
+Safe builders, and a separate permissionless gas-only settler. It changes no
+current deployment, permanent POL position, Hook/Vault/Compounder binding,
+keeper role, schedule, or production manifest.
+
+The Base-fork checkpoint at block `50537172` selected
+`CONSERVATIVE-100000-NARA`, 12 candidate orders, with
+`SELECTED_EXECUTION_BLOCKED`. The production Safe lacks the proposed 100,000
+NARA and 5,000 USDC budget. No manager address or deployment receipt exists and
+no transaction was signed or broadcast. Read
+[`releases/NARA-20260828-v4-treasury-range-manager.md`](releases/NARA-20260828-v4-treasury-range-manager.md)
+before any range-manager work.
+
 ## Exact activation boundary
 
 - The production Safe accepted Hook and Vault ownership in transaction
@@ -62,7 +82,9 @@ Core verification readback block: `49719008`.
   and stored epochs were both `35`; at later pinned block `49735219`, the gap
   was one epoch (`36 / 35`) and JIT-recoverable.
 - Baskets remain preview-only.
-- No recurring v4 operations or liquidity-maintainer workflow is active.
+- The epoch and liquidity maintainers are active under separate bounded
+  policies, credentials, schedules, and deployment bindings. Neither is the
+  Treasury Range Settler, and neither may be reused or broadened for it.
 
 This records onchain activation and tax behavior. It is not an overall
 production-readiness claim.
@@ -92,8 +114,8 @@ The current epoch-automation authority is
 
 ## Next gated work
 
-1. Configure and explicitly authorize recurring Engine maintenance, and keep
-   monitoring the backlog so it never again exceeds the eight-epoch JIT buffer.
+1. Monitor the separately active epoch and liquidity maintainers and keep the
+   Engine backlog within its eight-epoch JIT buffer.
 2. Complete and receipt-pin the Engine lock, activation, claim, and unlock
    lifecycle smoke.
 3. Complete the monitored observation period.
@@ -104,6 +126,12 @@ The current epoch-automation authority is
    manifests and explicit downstream handoffs exist.
 6. Reconcile public documentation last. Do not turn the activation evidence
    into an overall production-ready, audited, safe, or complete claim.
+7. For the Treasury Range Manager candidate, preserve the completed internal
+   audit/remediation evidence, then complete protected review/CI, an immutable
+   release commit, separately approved Safe funding, fresh schema-v2 state
+   regeneration, receipt-pinned deployment, two-host settler rehearsal, and a
+   monitored canary before any activation claim. No independent external audit
+   is claimed.
 
 ## Verification commands
 

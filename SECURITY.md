@@ -9,7 +9,9 @@ source-verified. The Compounder is deployed, source-verified, live-validated,
 and permanently bound to the Vault. The NARA/USDC pool is registered,
 initialized, seeded, and trading. The Safe owns seed LP NFT `2898124`; the
 Compounder owns validated LP NFT `2898486`. Public locking and reward use have
-not been activated, and recurring maintenance remains disabled.
+not been activated. The epoch and liquidity maintainers are active under
+separate bounded policies, credentials, schedules, and deployment bindings;
+neither is authorized for Treasury Range Manager settlement.
 
 Deployment does not imply activation, audit completion, economic safety, or a
 recommendation to transact. Canonical state and addresses are maintained in
@@ -109,8 +111,8 @@ formal verification, or a warranty.
 
 The current Safe, treasury custody, keeper model, and operational procedures
 must be evaluated separately from contract correctness. Current limitations,
-including disabled recurring maintenance, pending Engine lifecycle smoke,
-preview-only baskets, and custody requirements, are documented in
+including pending Engine lifecycle smoke, preview-only baskets, range-manager
+deployment and canary gates, and custody requirements, are documented in
 [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md).
 
 Never:

@@ -1,6 +1,6 @@
 # NARA v4 Contract Index
 
-Last updated: 2026-08-21.
+Last updated: 2026-08-30.
 **Start here for v4.** Maps every active v4 contract to its purpose, deploy step, and canonical doc.
 Active sources live **only** in `contracts/v4/`. Everything else is archived/retired.
 
@@ -26,6 +26,23 @@ Active sources live **only** in `contracts/v4/`. Everything else is archived/ret
 | `NARALiquidityGrowthVault.sol` | Receives hook fees. Reachable routes: Liquidity (default), Genesis, GenesisSplit. Legacy Engine and Split selections permanently revert. | `UNISWAP_V4_HOOK.md`, `research/V4_1K_LIQUIDITY_LAUNCH_PLAN_2026-05-05.md` |
 | `NARALiquidityCompounderV4.sol` | Production `ILiquidityCompounder`. Adds balanced Vault NARA/USDC inventory as a permanent **full-range** Uniswap v4 position (PositionManager + Permit2). One-sided inventory remains banked until matching counterasset exists. No-swap, exact-spend, remainder-banking, POL custody. | `UNISWAP_V4_HOOK.md`, `V4_OPPORTUNITY_GAPS.md` |
 | `utils/Create2HookDeployer.sol` | Mines + deploys the hook at the required `0x2088` address. | `NARA_V4_LAUNCH_RUNBOOK.md` |
+
+## Treasury Range Manager candidate (implemented/tested/remediated; not deployed)
+
+This periphery is separate from permanent POL and has no production address.
+Its deployment and order builders remain blocked until protected review/CI,
+approved Safe funding, a fresh schema-v2 state pin, and explicit human approval.
+The completed internal audit/remediation is not an independent external audit
+or security clearance.
+
+| Contract | Purpose | Doc |
+|---|---|---|
+| `NARATreasuryRangeManagerV1.sol` | Immutable Safe-bound owner of explicitly registered one-sided tactical NARA/USDC PositionManager NFTs. Safe alone creates/cancels; anyone may settle a terminal range; every output goes to the Safe. It never replans or reinvests. | `architecture/NARA_TREASURY_RANGE_MANAGER_V1.md`, `releases/NARA-20260828-v4-treasury-range-manager.md` |
+
+The offchain planner/optimizer, adversarial simulator, unsigned Safe builders,
+and gas-only settler live under `scripts/` and
+`services/v4-treasury-range-settler/`; they are not additional contracts or
+custody authorities.
 
 ## Engine internals
 

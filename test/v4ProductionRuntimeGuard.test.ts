@@ -144,4 +144,19 @@ describe("v4 production runtime guard enforcement", () => {
     expect(workflow).to.contain("pull_request:");
     expect(workflow).to.contain("workflow_dispatch:");
   });
+
+  it("keeps protected CI coverage for the treasury range settler", () => {
+    const workflow = source(".github/workflows/ci.yml");
+    const packageJson = JSON.parse(source("package.json")) as { scripts: Record<string, string> };
+
+    expect(packageJson.scripts["test:treasury-range-settler:v4"])
+      .to.equal("node --import tsx --test services/v4-treasury-range-settler/test/operations.test.ts");
+    expect(packageJson.scripts["typecheck:treasury-range-settler:v4"])
+      .to.equal("tsc --noEmit -p services/v4-treasury-range-settler/tsconfig.json");
+    expect(workflow).to.contain("npm run test:treasury-range-settler:v4");
+    expect(workflow).to.contain("npm run typecheck:treasury-range-settler:v4");
+    expect(workflow).to.contain("contracts/v4/NARATreasuryRangeManagerV1.sol");
+    expect(source("scripts/runSlitherV4.ps1"))
+      .to.contain("contracts\\v4\\NARATreasuryRangeManagerV1.sol");
+  });
 });
