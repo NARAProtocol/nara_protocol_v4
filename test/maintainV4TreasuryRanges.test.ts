@@ -2,6 +2,7 @@ import { expect } from "chai";
 import { ethers } from "ethers";
 import { treasuryRangeHookConfigurationHash } from "../scripts/lib/v4TreasuryRangeManifest.js";
 import {
+  createTreasuryRangeProvider,
   isTreasuryRangeOneSided,
   sqrtPriceX96AtTick,
 } from "../scripts/lib/v4TreasuryRangeSafeBuilder.js";
@@ -43,6 +44,15 @@ function settlerEnvironment(overrides: NodeJS.ProcessEnv = {}): NodeJS.ProcessEn
 }
 
 describe("v4 treasury range operations", function () {
+  it("disables JSON-RPC batching for packet construction", function () {
+    const provider = createTreasuryRangeProvider("https://rpc.example");
+    try {
+      expect(provider._getOption("batchMaxCount")).to.equal(1);
+    } finally {
+      provider.destroy();
+    }
+  });
+
   it("uses the inverse NARA-price/tick orientation at exact boundaries", function () {
     const lower = 291_960;
     const upper = 295_980;

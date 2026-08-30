@@ -41,6 +41,14 @@ export const TREASURY_RANGE_MAX_SNAPSHOT_AGE_SECONDS = 15 * 60;
 export const TREASURY_RANGE_DEFAULT_DEADLINE_SECONDS = 15 * 60;
 export const TREASURY_RANGE_MAX_DEADLINE_SECONDS = 30 * 60;
 
+export function createTreasuryRangeProvider(rpcUrl: string): ethers.JsonRpcProvider {
+  return new ethers.JsonRpcProvider(
+    rpcUrl,
+    { chainId: Number(TREASURY_RANGE_CHAIN_ID), name: "base" },
+    { staticNetwork: true, batchMaxCount: 1 },
+  );
+}
+
 export const TREASURY_RANGE_MANAGER_ABI = [
   "function NARA() view returns(address)",
   "function USDC() view returns(address)",
@@ -358,7 +366,7 @@ export async function readTreasuryRangeBuildContext(
   const head = repositoryHead(repositoryRoot);
   if (head !== strategy.repositoryHead) throw new Error("Strategy repositoryHead is not the current committed HEAD");
   const protectedRelease = readTreasuryRangeProtectedReleaseEvidence(repositoryRoot, head);
-  const provider = new ethers.JsonRpcProvider(requiredBaseRpcUrl(), { chainId: Number(TREASURY_RANGE_CHAIN_ID), name: "base" }, { staticNetwork: true });
+  const provider = createTreasuryRangeProvider(requiredBaseRpcUrl());
   const network = await provider.getNetwork();
   if (network.chainId !== TREASURY_RANGE_CHAIN_ID) throw new Error("RPC is not Base chain 8453");
   const latest = await provider.getBlock("latest");
