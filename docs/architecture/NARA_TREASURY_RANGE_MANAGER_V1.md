@@ -1,6 +1,6 @@
 # NARA Treasury Range Manager V1 Architecture
 
-Status: dedicated-custody remediation candidate; not merged, deployed, funded, activated, or approved for production execution.
+Status: dedicated-custody source merged in protected PR #62 at `a20ce9c40c174d032cacdf602efa6afe8c6585f9`; not deployed, funded, activated, or approved for production execution.
 
 Change IDs: `NARA-20260828-v4-treasury-range-manager` and
 `NARA-20260831-v4-treasury-range-dedicated-safe`.
@@ -17,7 +17,7 @@ This design offers transparent liquidity at pre-authorized prices. It does not m
 flowchart LR
     D[Protocol deployment Safe 2-of-3] -->|owns CREATE2 deployer; deployment only| X[CREATE2 deployer]
     X --> M[Range Manager]
-    S[Treasury Range Safe 1-of-1 candidate] -->|Safe-only create or cancel| M
+    S[Treasury Range Safe 1-of-1 canary custody] -->|Safe-only create or cancel| M
     M -->|one-sided mint| P[Uniswap v4 PositionManager]
     P --> C[Canonical NARA/USDC pool]
     C -->|Swap events| W[Independent settlers]
@@ -170,9 +170,10 @@ The repository may contain implementation, fork simulations, optimizer output, a
 9. at least 48 hours of canary evidence before considering expansion.
 
 Protected PR #52 established the original source candidate, and PR #59 established
-the bounded 100,000 NARA plus 500 USDC canary policy. Neither commit separates
-the deployment and custody Safe roles. The dedicated-Safe remediation must be
-reviewed and merged before item 1 is complete for launch. Human production
-acceptance and items 2 through 9 remain outstanding.
+the bounded 100,000 NARA plus 500 USDC canary policy. Neither commit separated
+the deployment and custody Safe roles. Protected PR #62 established that role
+separation and completed item 1. The internal and automated review record for
+item 2 is present without any external-audit claim; items 3 through 9 remain
+separate staged actions.
 
 No source artifact or candidate manifest authorizes signing or broadcast.

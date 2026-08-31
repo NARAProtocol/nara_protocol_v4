@@ -49,7 +49,7 @@ local operator tooling and is not a protocol repository component.
 The documentation state and downstream handoff boundary are recorded in
 [`NARA-20260830-documentation-convergence.md`](releases/NARA-20260830-documentation-convergence.md).
 
-## DEDICATED-SAFE REMEDIATION CANDIDATE - Treasury Range Manager V1 (not merged or deployed)
+## PROTECTED DEDICATED-SAFE SOURCE - Treasury Range Manager V1 (merged, not deployed)
 
 Change ID `NARA-20260828-v4-treasury-range-manager` adds an undeployed
 Safe-bound periphery manager for tactical one-sided NARA/USDC ranges, an exact
@@ -63,13 +63,14 @@ The pre-remediation implementation commit was
 2026-08-30 internal-audit remediation as GitHub-verified source commit
 `35091010de09802f39ccda7e726ff8c4b240e165`. That immutable source evidence is
 not deployment authority. PR #59 later merged the bounded 500-USDC canary policy
-at commit `5a6b449df7d50b25d71715b3bbedc720ef6960ee`. Neither protected commit
-separated deployment authority from tactical custody, so neither is current
-launch authority. No manager address, deployment receipt, funding, activation,
-or production transaction exists.
+at commit `5a6b449df7d50b25d71715b3bbedc720ef6960ee`. Protected PR #62 then merged the
+dedicated-Safe role correction as GitHub-verified commit
+`a20ce9c40c174d032cacdf602efa6afe8c6585f9`; all required PR checks passed.
+That commit is current source authority, but no manager address, deployment
+receipt, funding, activation, or production transaction exists.
 
-Change `NARA-20260831-v4-treasury-range-dedicated-safe` is an unmerged
-remediation candidate with two explicit, non-interchangeable roles:
+Change `NARA-20260831-v4-treasury-range-dedicated-safe` is protected source with
+two explicit, non-interchangeable roles:
 
 - protocol 2-of-3 Safe `0xd65c0e390Dc187A22c52c03816591CC736C0D755`
   owns the canonical CREATE2 deployer and may execute only the manager
@@ -98,7 +99,7 @@ Treasury must never be substituted for Safe custody.
 That 5,000-USDC strategy is historical and retired. Change
 `NARA-20260831-v4-treasury-range-500-usdc-canary` narrows the only permitted
 launch candidate to `CONSERVATIVE-100000-NARA`: 100,000 NARA plus 500 USDC,
-with exactly 200 USDC exposed across four bid ranges and 300 USDC protected in
+with exactly 200 USDC exposed across four bid ranges and 300 USDC unallocated/unexposed in
 the dedicated Treasury Range Safe. It preserves all 21 candidates and the full external adversarial
 matrix as comparative evidence, but only the approved canary can pass optimizer
 and packet-builder launch gates. Matrix-row v3 binds every result to the
@@ -134,11 +135,11 @@ internal remediation is not an independent external audit or security
 clearance.
 
 The original remediation and protected-release evidence is recorded in
-[`NARA_TREASURY_RANGE_MANAGER_REMEDIATION_2026-08-30.md`](security/NARA_TREASURY_RANGE_MANAGER_REMEDIATION_2026-08-30.md). The later, still-unmerged dedicated-Safe remediation currently passes 86 focused Hardhat tests, 35 settler tests, 784 repository non-fork tests, 4/4 pinned-fork cases at Base block `50537172`, strict settler TypeScript, and the build gate. Prior protected releases passed build/test/size, Slither, Aderyn, Echidna, and CodeQL; the dedicated-Safe remediation must earn its own protected CI result. Gitleaks remains unavailable locally and is not claimed as a pass.
+[`NARA_TREASURY_RANGE_MANAGER_REMEDIATION_2026-08-30.md`](security/NARA_TREASURY_RANGE_MANAGER_REMEDIATION_2026-08-30.md). The dedicated-Safe release passed 86 focused Hardhat tests, 35 settler tests, 784 repository non-fork tests, 4/4 pinned-fork cases at Base block `50537172`, strict settler TypeScript, and the build gate locally. PR #62 then passed build/test/size, Slither, Aderyn, Echidna, and CodeQL before its signed protected merge. Gitleaks remains unavailable locally and is not claimed as a pass.
 
-Before any production use: the dedicated-Safe remediation must pass protected
-review and merge; the 1-of-1 risk must be explicitly accepted or the Safe must
-be upgraded and re-pinned; fresh schema-v3 live-state/matrix evidence and a new
+Before any production use: the 1-of-1 risk must be explicitly accepted for the
+bounded canary or the Safe must be upgraded and re-pinned; fresh schema-v3
+live-state/matrix evidence and a new
 unsigned deployment proposal must be generated; the protocol Safe must execute
 the approved deployment; deterministic receipt evidence must verify it; exactly
 100,000 NARA plus 500 USDC funding to the dedicated Safe must be separately
