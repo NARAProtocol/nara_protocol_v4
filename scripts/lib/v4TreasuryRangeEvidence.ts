@@ -1,6 +1,12 @@
 import { ethers } from "ethers";
 
-export const TREASURY_RANGE_MATRIX_ROW_SCHEMA = "nara.v4.treasury-range-matrix-row.v3" as const;
+export const TREASURY_RANGE_MATRIX_ROW_SCHEMA = "nara.v4.treasury-range-matrix-row.v4" as const;
+export const TREASURY_RANGE_MATRIX_ROUTE_KIND = "universal-router-prefunded-settle-v1" as const;
+export const TREASURY_RANGE_MATRIX_QUOTE_POLICY = "per-swap-explicit-quote-status-v1" as const;
+export const TREASURY_RANGE_UNQUOTED_ADVERSARIAL_REASONS = [
+  "same_block_transactions", "same_transaction_actions", "atomic_buy_reverse",
+] as const;
+export type TreasuryRangeUnquotedAdversarialReason = typeof TREASURY_RANGE_UNQUOTED_ADVERSARIAL_REASONS[number];
 export const REQUIRED_TREASURY_RANGE_SCENARIOS = ["A", "B", "C", "D", "E", "F", "G", "H"] as const;
 export const REQUIRED_TREASURY_BUY_SIZES_USDC = [
   10n, 25n, 50n, 100n, 250n, 500n, 1_000n, 2_500n, 5_000n, 7_500n, 10_000n, 20_000n,
@@ -11,7 +17,7 @@ export const REQUIRED_TREASURY_ACQUIRED_SELL_FRACTIONS_BPS = [2_500n, 5_000n, 10
 const USDC_UNIT = 10n ** 6n;
 const NARA_UNIT = 10n ** 18n;
 const RESERVED_BINDING_KEYS = new Set([
-  "schemaVersion", "candidateId", "repositoryHead", "chainId", "blockNumber", "blockHash",
+  "schemaVersion", "routeKind", "quotePolicy", "candidateId", "repositoryHead", "chainId", "blockNumber", "blockHash",
   "currentSqrtPriceX96", "currentTick", "hookConfigurationHash",
   "humanUsdcPerNaraNumerator", "humanUsdcPerNaraDenominator", "matrixHash",
 ]);
@@ -28,6 +34,24 @@ export type TreasuryRangeEvidenceBinding = Readonly<{
   hookConfigurationHash: string;
   humanUsdcPerNara: Readonly<{ numerator: bigint; denominator: bigint }>;
 }>;
+
+export type TreasuryRangeQuoteEvidence =
+  | Readonly<{
+    status: "available";
+    quotedOutputRaw: string;
+  }>
+  | Readonly<{
+    status: "pool_manager_prefund_required";
+    quotedOutputRaw: "0";
+    errorFingerprint: string;
+    poolManagerBalanceRaw: string;
+    requiredHookFeeRaw: string;
+  }>
+  | Readonly<{
+    status: "unquoted_adversarial_execution";
+    quotedOutputRaw: "0";
+    reason: TreasuryRangeUnquotedAdversarialReason;
+  }>;
 
 export type TreasuryRangeEvidenceClaims = Readonly<{
   candidateId: string;
@@ -50,6 +74,8 @@ export type TreasuryRangeEvidenceClaims = Readonly<{
 
 export type VerifiedTreasuryRangeMatrix = Readonly<{
   matrixHash: string;
+  routeKind: typeof TREASURY_RANGE_MATRIX_ROUTE_KIND;
+  quotePolicy: typeof TREASURY_RANGE_MATRIX_QUOTE_POLICY;
   candidateId: string;
   repositoryHead: string;
   chainId: bigint;
@@ -101,6 +127,8 @@ function normalizedBinding(binding: TreasuryRangeEvidenceBinding): Readonly<Reco
   }
   return {
     schemaVersion: TREASURY_RANGE_MATRIX_ROW_SCHEMA,
+    routeKind: TREASURY_RANGE_MATRIX_ROUTE_KIND,
+    quotePolicy: TREASURY_RANGE_MATRIX_QUOTE_POLICY,
     candidateId: binding.candidateId,
     repositoryHead,
     chainId: binding.chainId.toString(),
@@ -164,6 +192,111 @@ function hash(row: Readonly<Record<string, unknown>>, key: string): string {
   const value = text(row, key).toLowerCase();
   if (!ethers.isHexString(value, 32)) throw new Error(`Evidence ${key} must be bytes32`);
   return value;
+}
+
+export function assertTreasuryRangeQuoteEvidence(
+  value: unknown,
+  label = "Treasury range quote evidence",
+): TreasuryRangeQuoteEvidence {
+  const evidence = object(value, label);
+  const status = text(evidence, "status");
+  if (status === "available") {
+    const keys = Object.keys(evidence).sort();
+    if (keys.length !== 2 || keys[0] !== "quotedOutputRaw" || keys[1] !== "status") {
+      throw new Error(`${label} available keys are not exact`);
+    }
+    const quotedOutputRaw = positive(evidence, "quotedOutputRaw").toString();
+    return { status, quotedOutputRaw };
+  }
+  if (status === "pool_manager_prefund_required") {
+    const expected = [
+      "errorFingerprint", "poolManagerBalanceRaw", "quotedOutputRaw", "requiredHookFeeRaw", "status",
+    ];
+    const keys = Object.keys(evidence).sort();
+    if (keys.length !== expected.length || keys.some((key, index) => key !== expected[index])) {
+      throw new Error(`${label} prefund-proof keys are not exact`);
+    }
+    if (evidence.quotedOutputRaw !== "0") throw new Error(`${label} prefund-proof quotedOutputRaw must be exactly 0`);
+    const errorFingerprint = hash(evidence, "errorFingerprint");
+    const poolManagerBalance = decimal(evidence, "poolManagerBalanceRaw");
+    const requiredHookFee = positive(evidence, "requiredHookFeeRaw");
+    if (poolManagerBalance >= requiredHookFee) {
+      throw new Error(`${label} must prove PoolManager balance below the required Hook fee`);
+    }
+    return {
+      status,
+      quotedOutputRaw: "0",
+      errorFingerprint,
+      poolManagerBalanceRaw: poolManagerBalance.toString(),
+      requiredHookFeeRaw: requiredHookFee.toString(),
+    };
+  }
+  if (status === "unquoted_adversarial_execution") {
+    const keys = Object.keys(evidence).sort();
+    if (keys.length !== 3 || keys[0] !== "quotedOutputRaw" || keys[1] !== "reason" || keys[2] !== "status") {
+      throw new Error(`${label} unquoted-adversarial keys are not exact`);
+    }
+    if (evidence.quotedOutputRaw !== "0") {
+      throw new Error(`${label} unquoted-adversarial quotedOutputRaw must be exactly 0`);
+    }
+    const reason = text(evidence, "reason");
+    if (!(TREASURY_RANGE_UNQUOTED_ADVERSARIAL_REASONS as readonly string[]).includes(reason)) {
+      throw new Error(`${label} unquoted-adversarial reason is unsupported`);
+    }
+    return {
+      status,
+      quotedOutputRaw: "0",
+      reason: reason as TreasuryRangeUnquotedAdversarialReason,
+    };
+  }
+  throw new Error(`${label} status is unsupported`);
+}
+
+function requireQuotedOrPrefundEvidence(
+  row: Readonly<Record<string, unknown>>,
+  key: string,
+): Exclude<TreasuryRangeQuoteEvidence, { status: "unquoted_adversarial_execution" }> {
+  const evidence = assertTreasuryRangeQuoteEvidence(row[key], `Evidence ${key}`);
+  if (evidence.status === "unquoted_adversarial_execution") {
+    throw new Error(`Evidence ${key} must be quoted or carry exact PoolManager-prefund proof`);
+  }
+  return evidence;
+}
+
+function requireQuotedOrPrefundEvidenceArray(
+  row: Readonly<Record<string, unknown>>,
+  key: string,
+  count: number,
+): readonly TreasuryRangeQuoteEvidence[] {
+  const value = row[key];
+  if (!Array.isArray(value) || value.length !== count) {
+    throw new Error(`Evidence ${key} must contain exactly ${count} quote-evidence entries`);
+  }
+  return value.map((entry, index) => {
+    const evidence = assertTreasuryRangeQuoteEvidence(entry, `Evidence ${key}[${index}]`);
+    if (evidence.status === "unquoted_adversarial_execution") {
+      throw new Error(`Evidence ${key}[${index}] must be quoted or carry exact PoolManager-prefund proof`);
+    }
+    return evidence;
+  });
+}
+
+function requireUnquotedAdversarialEvidenceArray(
+  row: Readonly<Record<string, unknown>>,
+  key: string,
+  count: number,
+  expectedReason: TreasuryRangeUnquotedAdversarialReason,
+): void {
+  const value = row[key];
+  if (!Array.isArray(value) || value.length !== count) {
+    throw new Error(`Evidence ${key} must contain exactly ${count} unquoted-adversarial entries`);
+  }
+  value.forEach((entry, index) => {
+    const evidence = assertTreasuryRangeQuoteEvidence(entry, `Evidence ${key}[${index}]`);
+    if (evidence.status !== "unquoted_adversarial_execution" || evidence.reason !== expectedReason) {
+      throw new Error(`Evidence ${key}[${index}] must use unquoted reason ${expectedReason}`);
+    }
+  });
 }
 
 function strings(row: Readonly<Record<string, unknown>>, key: string): readonly string[] {
@@ -260,22 +393,26 @@ function validateScenarioRow(row: Readonly<Record<string, unknown>>, key: string
     exactKeys(row, [
       "scenario", "kind", "sizeUsdc", "status", "transactionHash", "transactionBlockNumber",
       "grossInputRaw", "outputRaw", "hookVaultFeeRaw", "lpFeeRaw", "gasUsed", "startTick", "endTick",
+      "quoteEvidence",
     ], key);
     requireExecutedSwap(row, BigInt(text(row, "sizeUsdc")) * USDC_UNIT);
+    requireQuotedOrPrefundEvidence(row, "quoteEvidence");
     return;
   }
   if (key.startsWith("A:independent_sell:")) {
     exactKeys(row, [
       "scenario", "kind", "sizeNara", "status", "transactionHash", "transactionBlockNumber",
       "grossInputRaw", "outputRaw", "hookVaultFeeRaw", "lpFeeRaw", "gasUsed", "startTick", "endTick",
+      "quoteEvidence",
     ], key);
     requireExecutedSwap(row, BigInt(text(row, "sizeNara")) * NARA_UNIT);
+    requireQuotedOrPrefundEvidence(row, "quoteEvidence");
     return;
   }
   if (key === "B:same_block_transactions") {
     exactKeys(row, [
       "scenario", "kind", "sizeEachUsdc", "transactionStatuses", "transactionHashes",
-      "transactionBlockNumbers", "hookFeesRaw", "gasUsed",
+      "transactionBlockNumbers", "hookFeesRaw", "gasUsed", "executionQuoteEvidence",
     ], key);
     const hashes = strings(row, "transactionHashes");
     const blocks = strings(row, "transactionBlockNumbers");
@@ -288,23 +425,29 @@ function validateScenarioRow(row: Readonly<Record<string, unknown>>, key: string
         || fees.some((value) => !/^\d+$/.test(value)) || gas.some((value) => !/^\d+$/.test(value) || BigInt(value) === 0n)) {
       throw new Error("Same-block evidence is malformed");
     }
+    requireUnquotedAdversarialEvidenceArray(
+      row, "executionQuoteEvidence", 2, "same_block_transactions",
+    );
     return;
   }
   if (key === "C:same_transaction_actions") {
     exactKeys(row, [
       "scenario", "kind", "sizeEachUsdc", "status", "transactionHash", "transactionBlockNumber",
-      "hookFeesRaw", "gasUsed",
+      "hookFeesRaw", "gasUsed", "executionQuoteEvidence",
     ], key);
     executed(row);
     hash(row, "transactionHash");
     positive(row, "transactionBlockNumber");
     if (strings(row, "hookFeesRaw").length !== 2 || positive(row, "gasUsed") === 0n) throw new Error("Same-transaction evidence is malformed");
+    requireUnquotedAdversarialEvidenceArray(
+      row, "executionQuoteEvidence", 2, "same_transaction_actions",
+    );
     return;
   }
   if (key === "D:cross_block_pressure_reset") {
     exactKeys(row, [
       "scenario", "kind", "transactionStatuses", "transactionHashes", "transactionBlockNumbers",
-      "hookFeesRaw", "blocks",
+      "hookFeesRaw", "blocks", "quoteEvidence",
     ], key);
     const hashes = strings(row, "transactionHashes");
     const blocks = strings(row, "transactionBlockNumbers").map(BigInt);
@@ -313,6 +456,7 @@ function validateScenarioRow(row: Readonly<Record<string, unknown>>, key: string
     if (hashes.length !== 2 || !hashes.every((value) => ethers.isHexString(value, 32)) || blocks.length !== 2 || blocks[1] <= blocks[0]
         || duplicatedBlocks.length !== 2 || duplicatedBlocks.some((value, index) => value !== blocks[index])
         || strings(row, "hookFeesRaw").length !== 2) throw new Error("Cross-block reset evidence is malformed");
+    requireQuotedOrPrefundEvidenceArray(row, "quoteEvidence", 2);
     return;
   }
   if (key === "E:buy_settle_sell") {
@@ -323,7 +467,7 @@ function validateScenarioRow(row: Readonly<Record<string, unknown>>, key: string
       "nearMarketNaraSoldRaw", "permanentPolUnchanged", "safeUsdcDeltaRaw", "hookVaultUsdcFeeRaw",
       "buyHookFeeRaw", "buyLpFeeRaw", "sellHookFeeRaw", "sellLpFeeRaw", "safeNaraDeltaRaw",
       "fullSafeUsdcDeltaRaw", "vaultNaraDeltaRaw", "vaultUsdcDeltaRaw", "unsettledInventory",
-      "buyGasUsed", "settleGasUsed", "sellGasUsed",
+      "buyGasUsed", "settleGasUsed", "sellGasUsed", "buyQuoteEvidence", "sellQuoteEvidence",
     ], key);
     executed(row, "buyStatus");
     executed(row, "settlementStatus");
@@ -336,17 +480,21 @@ function validateScenarioRow(row: Readonly<Record<string, unknown>>, key: string
     const fees = decimal(row, "rangeLpFeesUsdcRaw");
     decimal(row, "nearMarketNaraSoldRaw");
     if (safeDelta !== principal + fees) throw new Error("Settlement USDC delta does not reconcile to principal plus fees");
+    requireQuotedOrPrefundEvidence(row, "buyQuoteEvidence");
+    requireQuotedOrPrefundEvidence(row, "sellQuoteEvidence");
     return;
   }
   if (key === "F:atomic_buy_reverse_no_settlement_window") {
     exactKeys(row, [
       "scenario", "kind", "status", "transactionHash", "transactionBlockNumber", "swapCount",
-      "gasUsed", "limitationObserved",
+      "gasUsed", "limitationObserved", "sizingQuoteEvidence", "executionQuoteEvidence",
     ], key);
     executed(row);
     hash(row, "transactionHash");
     positive(row, "transactionBlockNumber");
     if (row.swapCount !== 2 || row.limitationObserved !== true || positive(row, "gasUsed") === 0n) throw new Error("Atomic reversal evidence is malformed");
+    requireQuotedOrPrefundEvidence(row, "sizingQuoteEvidence");
+    requireUnquotedAdversarialEvidenceArray(row, "executionQuoteEvidence", 2, "atomic_buy_reverse");
     return;
   }
   if (key === "G:buy_reverse_without_settlement") {
@@ -355,12 +503,15 @@ function validateScenarioRow(row: Readonly<Record<string, unknown>>, key: string
       "sellTransactionHash", "sellBlockNumber", "roundTripLossUsdcRaw", "unsettledOrderCount",
       "buyHookFeeRaw", "buyLpFeeRaw", "sellHookFeeRaw", "sellLpFeeRaw", "safeNaraDeltaRaw",
       "safeUsdcDeltaRaw", "vaultNaraDeltaRaw", "vaultUsdcDeltaRaw", "unsettledInventory",
+      "buyQuoteEvidence", "sellQuoteEvidence",
     ], key);
     executed(row, "buyStatus");
     executed(row, "sellStatus");
     for (const field of ["buyTransactionHash", "sellTransactionHash"]) hash(row, field);
     for (const field of ["buyBlockNumber", "sellBlockNumber"]) positive(row, field);
     positive(row, "roundTripLossUsdcRaw");
+    requireQuotedOrPrefundEvidence(row, "buyQuoteEvidence");
+    requireQuotedOrPrefundEvidence(row, "sellQuoteEvidence");
     return;
   }
   if (key === "H:buy_settle_reverse") {
@@ -370,6 +521,7 @@ function validateScenarioRow(row: Readonly<Record<string, unknown>>, key: string
       "sellTransactionHash", "sellBlockNumber", "roundTripLossUsdcRaw", "permanentPolUnchanged",
       "buyHookFeeRaw", "buyLpFeeRaw", "sellHookFeeRaw", "sellLpFeeRaw", "safeNaraDeltaRaw",
       "safeUsdcDeltaRaw", "vaultNaraDeltaRaw", "vaultUsdcDeltaRaw", "unsettledInventory",
+      "buyQuoteEvidence", "sellQuoteEvidence",
     ], key);
     executed(row, "buyStatus");
     executed(row, "settlementStatus");
@@ -378,13 +530,15 @@ function validateScenarioRow(row: Readonly<Record<string, unknown>>, key: string
     for (const field of ["buyBlockNumber", "settlementBlockNumber", "sellBlockNumber"]) positive(row, field);
     if (strings(row, "settledOrderIds").length === 0 || row.permanentPolUnchanged !== true) throw new Error("Settled reversal evidence is incomplete");
     positive(row, "roundTripLossUsdcRaw");
+    requireQuotedOrPrefundEvidence(row, "buyQuoteEvidence");
+    requireQuotedOrPrefundEvidence(row, "sellQuoteEvidence");
     return;
   }
   if (key.startsWith("G:acquired_inventory_sell_fraction:")) {
     exactKeys(row, [
       "scenario", "kind", "fractionBps", "buyStatus", "sellStatus", "buyTransactionHash",
       "buyBlockNumber", "sellTransactionHash", "sellBlockNumber", "acquiredNaraRaw", "soldNaraRaw",
-      "usdcOutputRaw",
+      "usdcOutputRaw", "buyQuoteEvidence", "sellQuoteEvidence",
     ], key);
     executed(row, "buyStatus");
     executed(row, "sellStatus");
@@ -394,13 +548,15 @@ function validateScenarioRow(row: Readonly<Record<string, unknown>>, key: string
     const sold = positive(row, "soldNaraRaw");
     const fraction = BigInt(text(row, "fractionBps"));
     if (sold !== acquired * fraction / 10_000n || positive(row, "usdcOutputRaw") === 0n) throw new Error("Acquired-inventory sell evidence is inconsistent");
+    requireQuotedOrPrefundEvidence(row, "buyQuoteEvidence");
+    requireQuotedOrPrefundEvidence(row, "sellQuoteEvidence");
     return;
   }
   if (key === "H:bid_settlement_after_independent_sell") {
     exactKeys(row, [
       "scenario", "kind", "sellStatus", "settlementStatus", "sellTransactionHash", "sellBlockNumber",
       "settlementTransactionHash", "settlementBlockNumber",
-      "settledOrderIds", "treasuryNaraAccumulatedRaw",
+      "settledOrderIds", "treasuryNaraAccumulatedRaw", "sellQuoteEvidence",
     ], key);
     executed(row, "sellStatus");
     executed(row, "settlementStatus");
@@ -412,6 +568,7 @@ function validateScenarioRow(row: Readonly<Record<string, unknown>>, key: string
     if (settled.length === 0 || positive(row, "treasuryNaraAccumulatedRaw") === 0n) {
       throw new Error("Bid settlement evidence must prove settled orders and positive NARA accumulation");
     }
+    requireQuotedOrPrefundEvidence(row, "sellQuoteEvidence");
     return;
   }
   throw new Error(`Unsupported treasury range evidence row ${key}`);
@@ -432,6 +589,8 @@ export function assertTreasuryRangeMatrix(
   const first = object(rows[0], "matrix row 0");
   const common = {
     schemaVersion: text(first, "schemaVersion"),
+    routeKind: text(first, "routeKind"),
+    quotePolicy: text(first, "quotePolicy"),
     candidateId: text(first, "candidateId"),
     repositoryHead: text(first, "repositoryHead").toLowerCase(),
     chainId: decimal(first, "chainId"),
@@ -447,6 +606,8 @@ export function assertTreasuryRangeMatrix(
     matrixHash: hash(first, "matrixHash"),
   };
   if (common.schemaVersion !== TREASURY_RANGE_MATRIX_ROW_SCHEMA
+      || common.routeKind !== TREASURY_RANGE_MATRIX_ROUTE_KIND
+      || common.quotePolicy !== TREASURY_RANGE_MATRIX_QUOTE_POLICY
       || !/^(?:CONSERVATIVE|AGGRESSIVE|ADVERSARIAL)-\d+-NARA$/.test(common.candidateId)
       || !/^[0-9a-f]{40}$/.test(common.repositoryHead)
       || common.chainId === 0n || common.blockNumber === 0n) throw new Error("Treasury range matrix binding is invalid");
@@ -467,7 +628,9 @@ export function assertTreasuryRangeMatrix(
   }
   const unhashedRows = rows.map((raw, index) => {
     const row = object(raw, `matrix row ${index}`);
-    if (text(row, "schemaVersion") !== common.schemaVersion || text(row, "candidateId") !== common.candidateId
+    if (text(row, "schemaVersion") !== common.schemaVersion
+        || text(row, "routeKind") !== common.routeKind || text(row, "quotePolicy") !== common.quotePolicy
+        || text(row, "candidateId") !== common.candidateId
         || text(row, "repositoryHead").toLowerCase() !== common.repositoryHead || decimal(row, "chainId") !== common.chainId
         || decimal(row, "blockNumber") !== common.blockNumber || hash(row, "blockHash") !== common.blockHash
         || decimal(row, "currentSqrtPriceX96") !== common.currentSqrtPriceX96
@@ -506,6 +669,8 @@ export function assertTreasuryRangeMatrix(
   }
   return {
     ...common,
+    routeKind: TREASURY_RANGE_MATRIX_ROUTE_KIND,
+    quotePolicy: TREASURY_RANGE_MATRIX_QUOTE_POLICY,
     crystallizedUsdc: decimal(keyed.get("E:buy_settle_sell")!, "safeUsdcDeltaRaw"),
     treasuryNaraAccumulated: decimal(keyed.get("H:bid_settlement_after_independent_sell")!, "treasuryNaraAccumulatedRaw"),
     nearMarketNaraSold: decimal(keyed.get("E:buy_settle_sell")!, "nearMarketNaraSoldRaw"),

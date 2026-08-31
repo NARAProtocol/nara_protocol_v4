@@ -24,7 +24,7 @@ import {
   rescaleStrategyProfile,
   type PlannedStrategyProfile,
 } from "../../scripts/lib/v4TreasuryRangePlanner.js";
-import { readV4TreasuryRangeState } from "../../scripts/lib/v4TreasuryRangeState.js";
+import { BASE_V4_QUOTER, readV4TreasuryRangeState } from "../../scripts/lib/v4TreasuryRangeState.js";
 import {
   TREASURY_RANGE_CANARY_CHANGE_ID_PREFIX,
   TREASURY_RANGE_STRATEGY_SCHEMA,
@@ -38,6 +38,7 @@ import { bindTreasuryRangeMatrixRows } from "../../scripts/lib/v4TreasuryRangeEv
 import {
   UNIVERSAL_ROUTER_ABI,
   buildV4ExactInputCall,
+  buildV4PostSwapSettleAllForkControlCall,
   cumulativeHookFee,
   incrementalHookFees,
   parseV4SwapReceipt,
@@ -68,6 +69,9 @@ const ERC20_ABI = [
 ] as const;
 const PERMIT2_ABI = [
   "function approve(address token,address spender,uint160 amount,uint48 expiration)",
+] as const;
+const QUOTER_ABI = [
+  "function quoteExactInputSingle(((address currency0,address currency1,uint24 fee,int24 tickSpacing,address hooks) poolKey,bool zeroForOne,uint128 exactAmount,bytes hookData) params) returns (uint256 amountOut,uint256 gasEstimate)",
 ] as const;
 const MANAGER_ABI = [
   "function createSellNaraOrder(int24,int24,uint128,uint128,bytes32,uint64) returns (uint256,uint256)",
@@ -433,6 +437,7 @@ const hasPinnedArchiveRpc = Boolean(
         grossInputRaw: result.grossInput.toString(), outputRaw: result.actualOutput.toString(),
         hookVaultFeeRaw: result.hookFee.toString(), lpFeeRaw: result.lpFee.toString(),
         gasUsed: result.gasUsed.toString(), startTick: result.startTick.toString(), endTick: result.endTick.toString(),
+        quoteEvidence: result.quoteEvidence,
       });
     }
     for (const size of [10n, 25n, 50n, 100n, 250n]) expect(normalBuyExecution[size.toString()]).to.equal(true);
@@ -461,6 +466,7 @@ const hasPinnedArchiveRpc = Boolean(
         grossInputRaw: result.grossInput.toString(), outputRaw: result.actualOutput.toString(),
         hookVaultFeeRaw: result.hookFee.toString(), lpFeeRaw: result.lpFee.toString(),
         gasUsed: result.gasUsed.toString(), startTick: result.startTick.toString(), endTick: result.endTick.toString(),
+        quoteEvidence: result.quoteEvidence,
       });
     }
 
@@ -474,6 +480,11 @@ const hasPinnedArchiveRpc = Boolean(
       transactionBlockNumbers: sameBlock.receipts.map((receipt) => receipt.blockNumber.toString()),
       hookFeesRaw: sameBlock.observedFees.map(String),
       gasUsed: sameBlock.receipts.map((receipt) => receipt.gasUsed.toString()),
+      executionQuoteEvidence: sameBlock.receipts.map(() => ({
+        status: "unquoted_adversarial_execution",
+        quotedOutputRaw: "0",
+        reason: "same_block_transactions",
+      })),
     });
 
     profileSnapshot = await revertTo(profileSnapshot);
@@ -485,6 +496,11 @@ const hasPinnedArchiveRpc = Boolean(
       transactionBlockNumber: multiAction.receipt.blockNumber.toString(),
       hookFeesRaw: multiAction.parsed.hookFees.map((fee) => fee.feeAmount.toString()),
       gasUsed: multiAction.receipt.gasUsed.toString(),
+      executionQuoteEvidence: multiAction.parsed.swaps.map(() => ({
+        status: "unquoted_adversarial_execution",
+        quotedOutputRaw: "0",
+        reason: "same_transaction_actions",
+      })),
     });
 
     profileSnapshot = await revertTo(profileSnapshot);
@@ -509,6 +525,7 @@ const hasPinnedArchiveRpc = Boolean(
       transactionBlockNumbers: [splitFirst.blockNumber!.toString(), splitSecond.blockNumber!.toString()],
       hookFeesRaw: [splitFirst.hookFee.toString(), splitSecond.hookFee.toString()],
       blocks: [splitFirst.blockNumber!.toString(), splitSecond.blockNumber!.toString()],
+      quoteEvidence: [splitFirst.quoteEvidence, splitSecond.quoteEvidence],
     });
 
     profileSnapshot = await revertTo(profileSnapshot);
@@ -568,6 +585,7 @@ const hasPinnedArchiveRpc = Boolean(
       vaultUsdcDeltaRaw: (eVaultEnd.usdc - eVaultStart.usdc).toString(),
       unsettledInventory: await activeRangeInventory(deployed.manager, deployed.ids),
       buyGasUsed: eBuy.gasUsed.toString(), settleGasUsed: eReceipt!.gasUsed.toString(), sellGasUsed: eSell.gasUsed.toString(),
+      buyQuoteEvidence: eBuy.quoteEvidence, sellQuoteEvidence: eSell.quoteEvidence,
     });
 
     profileSnapshot = await revertTo(profileSnapshot);
@@ -627,6 +645,12 @@ const hasPinnedArchiveRpc = Boolean(
       transactionHash: atomicReceipt!.hash, transactionBlockNumber: atomicReceipt!.blockNumber.toString(),
       swapCount: atomicParsed.swaps.length,
       gasUsed: atomicReceipt!.gasUsed.toString(), limitationObserved: true,
+      sizingQuoteEvidence: previewAtomicBuy.quoteEvidence,
+      executionQuoteEvidence: atomicParsed.swaps.map(() => ({
+        status: "unquoted_adversarial_execution",
+        quotedOutputRaw: "0",
+        reason: "atomic_buy_reverse",
+      })),
     });
 
     profileSnapshot = await revertTo(profileSnapshot);
@@ -659,6 +683,7 @@ const hasPinnedArchiveRpc = Boolean(
       vaultNaraDeltaRaw: (gVaultEnd.nara - gVaultStart.nara).toString(),
       vaultUsdcDeltaRaw: (gVaultEnd.usdc - gVaultStart.usdc).toString(),
       unsettledInventory: await activeRangeInventory(deployed.manager, deployed.ids),
+      buyQuoteEvidence: gBuy.quoteEvidence, sellQuoteEvidence: gSell.quoteEvidence,
     });
 
     profileSnapshot = await revertTo(profileSnapshot);
@@ -700,6 +725,7 @@ const hasPinnedArchiveRpc = Boolean(
       vaultNaraDeltaRaw: (hVaultEnd.nara - hVaultStart.nara).toString(),
       vaultUsdcDeltaRaw: (hVaultEnd.usdc - hVaultStart.usdc).toString(),
       unsettledInventory: await activeRangeInventory(deployed.manager, deployed.ids),
+      buyQuoteEvidence: hBuy.quoteEvidence, sellQuoteEvidence: hSell.quoteEvidence,
     });
 
     for (const fraction of REQUIRED_ACQUIRED_SELL_FRACTIONS_BPS) {
@@ -723,6 +749,7 @@ const hasPinnedArchiveRpc = Boolean(
         buyTransactionHash: buy.transactionHash!, buyBlockNumber: buy.blockNumber!.toString(),
         sellTransactionHash: sell.transactionHash!, sellBlockNumber: sell.blockNumber!.toString(),
         acquiredNaraRaw: acquired.toString(), soldNaraRaw: sellInput.toString(), usdcOutputRaw: sell.actualOutput.toString(),
+        buyQuoteEvidence: buy.quoteEvidence, sellQuoteEvidence: sell.quoteEvidence,
       });
     }
 
@@ -763,6 +790,7 @@ const hasPinnedArchiveRpc = Boolean(
         settlementBlockNumber: bidSettlementReceipt.blockNumber.toString(),
       }),
       settledOrderIds: bidIds.map(String), treasuryNaraAccumulatedRaw: treasuryNaraAccumulated.toString(),
+      sellQuoteEvidence: bidTraversal.quoteEvidence,
     });
 
     await assertPermanentStateUnchanged(permanentBefore);
@@ -837,6 +865,134 @@ const hasPinnedArchiveRpc = Boolean(
     expect(result.vaultUsdcDelta).to.equal(result.hookFee);
     expect(result.lpFee > 0n).to.equal(true);
     await assertPermanentStateUnchanged(before);
+  });
+
+  it("keeps the official Quoter and ordinary post-swap route live at baseline control sizes", async function () {
+    const poolKey = deriveV4PoolKey({
+      token: deployment.token,
+      base: deployment.base,
+      hook: deployment.hook,
+      fee: deployment.poolFee,
+      tickSpacing: deployment.tickSpacing,
+    });
+    const [attacker] = await connection.ethers.getSigners();
+    const attackerAddress = await attacker.getAddress();
+    const quoter = new ethersUtils.Contract(BASE_V4_QUOTER, QUOTER_ABI, connection.ethers.provider);
+    const router = new ethersUtils.Contract(deployment.universalRouter, UNIVERSAL_ROUTER_ABI, attacker);
+    const permit2 = new ethersUtils.Contract(deployment.permit2, PERMIT2_ABI, attacker);
+    const controls = [
+      ...[10n, 25n, 50n, 100n, 250n].map((size) => ({
+        inputCurrency: deployment.base,
+        outputCurrency: deployment.token,
+        amountIn: size * USDC_UNIT,
+      })),
+      ...REQUIRED_INDEPENDENT_SELL_SIZES_NARA.map((size) => ({
+        inputCurrency: deployment.token,
+        outputCurrency: deployment.base,
+        amountIn: size * NARA_UNIT,
+      })),
+    ];
+    for (const control of controls) {
+      rootSnapshot = await revertTo(rootSnapshot);
+      if (control.inputCurrency === deployment.base) {
+        await fundUsdc(attackerAddress, control.amountIn);
+      } else {
+        await fundForkAccountFromTreasury({
+          provider: connection.ethers.provider,
+          deployment,
+          recipient: attackerAddress,
+          token: deployment.token,
+          amount: control.amountIn,
+        });
+      }
+      const latest = await connection.ethers.provider.getBlock("latest");
+      const deadline = BigInt(latest!.timestamp) + 600n;
+      const zeroForOne = ethersUtils.getAddress(control.inputCurrency) === poolKey.currency0;
+      const [quote] = await quoter.quoteExactInputSingle.staticCall([
+        [poolKey.currency0, poolKey.currency1, poolKey.fee, poolKey.tickSpacing, poolKey.hook],
+        zeroForOne,
+        control.amountIn,
+        "0x",
+      ], { blockTag: latest!.number }) as readonly [bigint, bigint];
+      expect(quote).to.be.greaterThan(0n);
+      const call = buildV4PostSwapSettleAllForkControlCall({
+        poolKey,
+        inputCurrency: control.inputCurrency,
+        legs: [{ amountIn: control.amountIn, amountOutMinimum: quote }],
+        aggregateAmountOutMinimum: quote,
+        deadline,
+      });
+      const input = new ethersUtils.Contract(control.inputCurrency, ERC20_ABI, attacker);
+      const output = new ethersUtils.Contract(control.outputCurrency, ERC20_ABI, connection.ethers.provider);
+      const outputBefore = await output.balanceOf(attackerAddress) as bigint;
+      await (await input.approve(deployment.permit2, control.amountIn)).wait();
+      await (await permit2.approve(
+        control.inputCurrency,
+        deployment.universalRouter,
+        control.amountIn,
+        deadline,
+      )).wait();
+      const receipt = await (await router.execute(
+        call.commands,
+        call.inputs,
+        call.deadline,
+        { gasLimit: 3_000_000n },
+      )).wait();
+      expect(receipt!.status).to.equal(1);
+      expect((await output.balanceOf(attackerAddress) as bigint) - outputBefore).to.be.greaterThan(0n);
+      const parsed = parseV4SwapReceipt(receipt!.logs, {
+        poolManager: deployment.poolManager,
+        hook: deployment.hook,
+      }, deployment.poolId);
+      expect(parsed.swaps).to.have.length(1);
+      expect(parsed.hookFees).to.have.length(1);
+    }
+  });
+
+  it("executes a depleted comparative reversal only after proving the exact prefund condition", async function () {
+    rootSnapshot = await revertTo(rootSnapshot);
+    const baseProfile = scenarioPlan.profiles.find((candidate) => candidate.name === "CONSERVATIVE");
+    if (!baseProfile) throw new Error("CONSERVATIVE profile is missing");
+    const profile = finalizeTreasuryRangeProfile({
+      state: pinnedState,
+      profile: rescaleStrategyProfile(baseProfile, 15_000n * NARA_UNIT),
+      hookConfiguration: scenarioPlan.hookConfiguration,
+      hookConfigurationHash: scenarioPlan.hookConfigurationHash,
+      repositoryHead: currentRepositoryHead(),
+    }).profile;
+    const permanentBefore = await pinnedPermanentState();
+    await deployProfile(profile);
+    const [attacker] = await connection.ethers.getSigners();
+    const attackerAddress = await attacker.getAddress();
+    const traversalInput = 20_000n * USDC_UNIT;
+    await fundUsdc(attackerAddress, traversalInput);
+    const buy = await executeExactForkSwap({
+      provider: connection.ethers.provider,
+      signer: attacker,
+      deployment,
+      amountIn: traversalInput,
+      inputCurrency: deployment.base,
+    });
+    expect(buy.status).to.equal("executed");
+    const acquiredNara = buy.actualOutput;
+    const sell = await executeExactForkSwap({
+      provider: connection.ethers.provider,
+      signer: attacker,
+      deployment,
+      amountIn: acquiredNara,
+      inputCurrency: deployment.token,
+    });
+    expect(sell.status).to.equal("executed");
+    expect(sell.quoteEvidence.status).to.equal("pool_manager_prefund_required");
+    if (sell.quoteEvidence.status !== "pool_manager_prefund_required") {
+      throw new Error("Expected exact PoolManager prefund evidence");
+    }
+    expect(BigInt(sell.quoteEvidence.requiredHookFeeRaw))
+      .to.be.greaterThan(BigInt(sell.quoteEvidence.poolManagerBalanceRaw));
+    expect(sell.traderNaraDelta).to.equal(-acquiredNara);
+    expect(sell.vaultNaraDelta).to.equal(sell.hookFee);
+    expect(sell.vaultUsdcDelta).to.equal(0n);
+    await assertPermanentStateUnchanged(permanentBefore);
   });
 
   it("parses every finalized profile with the canonical ops schema and shared whole-manifest hash", function () {
