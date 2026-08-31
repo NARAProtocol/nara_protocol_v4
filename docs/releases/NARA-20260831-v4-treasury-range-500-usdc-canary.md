@@ -1,6 +1,6 @@
 # NARA v4 Treasury Range 500-USDC Canary
 
-Evidence state: **PROTECTED SOURCE + HISTORICAL/FRESH EXACT FORK PASS / NOT FUNDED / NOT DEPLOYED / NOT SIGNED / NOT BROADCAST / NOT ACTIVATED**
+Evidence state: **PROTECTED CANARY POLICY + HISTORICAL/FRESH EXACT FORK PASS / DEDICATED-SAFE REMEDIATION NOT YET MERGED / NOT FUNDED / NOT DEPLOYED / NOT SIGNED / NOT BROADCAST / NOT ACTIVATED**
 
 Change ID: `NARA-20260831-v4-treasury-range-500-usdc-canary`
 
@@ -17,15 +17,33 @@ Treasury Range Manager canary. It does not modify the manager contract,
 permanent POL, Hook, Vault, Compounder, existing keepers, production roles, or
 deployment manifests.
 
+## Launch-role correction
+
+PR #59 bounded the canary amount but still inherited the old ambiguous Safe
+role. It is therefore not sufficient launch source by itself. Change
+`NARA-20260831-v4-treasury-range-dedicated-safe` makes the protocol 2-of-3 Safe
+the deployment executor only and makes the separate Treasury Range Safe the
+immutable manager authority, inventory custodian, order/cancellation signer,
+and settlement recipient. The tracked custody policy records only the dedicated
+Safe owner count/hash, not its raw owner address.
+
+The currently pinned dedicated Safe is 1-of-1. Funding it creates a material
+single-signer loss and availability risk. Deployment and order builders require
+an exact explicit acknowledgement, but no code gate replaces the required human
+choice to accept that risk for this bounded canary or upgrade to an approved
+multisig first. Nothing in this record moves funds.
+
+This launch keeps every create, cancel, or rebalance sequence (settle/cancel followed by a fresh create) behind manual human review and dedicated Treasury Range Safe approval. Permissionless terminal settlement may be automated by the gas-only settlers. A future release could add hands-off range creation through a separately reviewed, tightly permissioned Safe module or controller, but it is not included here and must leave the non-upgradeable manager's immutable custody authority and settlement recipient unchanged.
+
 ## Exact capital policy
 
 | Item | Exact limit |
 |---|---:|
 | Approved candidate | `CONSERVATIVE-100000-NARA` |
 | NARA allocated to eight sell ranges | 100,000 NARA |
-| Total Safe USDC required | 500 USDC |
+| Total dedicated Treasury Range Safe USDC required | 500 USDC |
 | USDC exposed across four buy ranges | 200 USDC (`40 / 50 / 50 / 60`) |
-| USDC protected in the Safe | 300 USDC |
+| USDC unallocated/unexposed reserve in the dedicated Safe | 300 USDC |
 
 This is not a $500-total position. The market value of the 100,000 NARA is
 additional and changes with spot. The strategy is a bounded canary, not a
@@ -47,14 +65,17 @@ profit guarantee, managed-investment promise, or claim of maximum return.
   predeployment order ID.
   It compares each human range, side, ticks, raw input, expected output,
   minimum, liquidity, dust, and tolerance.
+- Strategy schema v3 binds both distinct Safe roles/runtime hashes and the exact
+  tracked custody-policy file/hash. Legacy ambiguous `addresses.safe`, legacy
+  strategy v2, role swaps, and deployment evidence v2 fail closed.
 - Retired 5,000-USDC change IDs, a non-500 total, a non-200/300 split, a
   different NARA budget, or a changed per-order allocation fail closed.
-- Order construction requires the production Safe itself to hold at least
+- Order construction requires the dedicated Treasury Range Safe itself to hold at least
   100,000 NARA and the full 500 USDC. Funding only the exposed 200 USDC is not
-  sufficient because the 300-USDC protected reserve must remain in Safe
+  sufficient because the 300-USDC unallocated/unexposed reserve must remain in dedicated-Safe
   custody.
 - Bid-side fork evidence must prove at least one crossed bid, an executed
-  settlement, and positive NARA returned to the Safe for every candidate. A
+  settlement, and positive NARA returned to the dedicated Safe for every candidate. A
   no-op `not_applicable` row is invalid.
 - The predeployment builder rejects strategy manifests that claim an existing
   manager address, runtime hash, or deployment receipt. Because the deployment
@@ -67,28 +88,30 @@ profit guarantee, managed-investment promise, or claim of maximum return.
 | Gate | Current result |
 |---|---|
 | Exact dependency install | `npm ci` passed; lockfile unchanged |
-| Focused planner/optimizer/simulator regressions | 18 passing locally |
-| Complete Treasury Range Manager Hardhat suite | 72 passing locally |
-| Treasury Range settler Node suite | 32 passing locally |
+| Current dedicated-Safe focused suite | 86 Hardhat plus 35 settler tests: 121 passing locally |
 | Strict TypeScript | Changed-source/test target set and settler project passed; repository-wide target remains unsuitable because of pre-existing unrelated errors |
-| Repository non-fork suite | 770 passing locally |
-| Historical pinned fork | 4/4 passed at Base block `50537172`; all 21 candidates and exact 30-row matrices completed |
+| Repository non-fork suite | 784 passing locally |
+| Historical pinned fork | Current remediation rerun passed 4/4 at Base block `50537172`; all 21 candidates and exact 30-row matrices completed |
 | Fresh pinned fork and 21-candidate matrix | 4/4 passed at Base block `50684125`; all 21 candidates and exact 30-row matrices completed |
 | Build and bytecode | passed; manager runtime 23,620 bytes and initcode 28,095 bytes, within EVM limits |
 | Slither | completed on all v4 targets; manager retained 17 previously triaged raw signals, exit zero |
-| Aderyn / Echidna | unavailable locally; both passed on PR and post-merge protected CI |
+| Aderyn / Echidna | unavailable locally; current remediation awaits protected CI (prior protected releases passed) |
 | Dependency audit | production graph 0 vulnerabilities; development graph 8 low-severity `elliptic` advisories with no available fix |
 | Independent review | adversarial PASS and architecture PASS after matrix-context hardening |
 | Secret scan | focused changed-content patterns found 0; Gitleaks unavailable and not claimed |
 | Protected PR and post-merge CI | PR #59 merged; build/test/size, Slither, Aderyn, Echidna, and CodeQL passed before and after merge |
 | Production writes | none |
+| Dedicated-Safe remediation | Current branch under review; not protected release or deployment authority |
 
-Counts above must be refreshed from final command output before this record is
-used as release evidence.
+These local counts describe the unmerged remediation tree. Protected CI and the
+post-merge commit remain the release authority.
 
-The JSON matrix is commit- and state-bound release evidence, not a cryptographic
+The JSON matrix is commit- and state-bound historical release evidence, not a cryptographic
 attestation by an external auditor. Protected immutable generation, CI, and
 human review remain mandatory.
+
+The hashes below predate the dedicated-Safe schema/policy binding and are now
+retired for packet construction. They remain reproducibility evidence only.
 
 ## Immutable fork evidence
 
@@ -117,10 +140,15 @@ not Safe-import files.
    candidates was regenerated from that exact clean commit and recorded above.
 3. Confirmed: exact evidence validates only the approved candidate and every
    candidate includes successful bid-side settlement evidence.
-4. Only after this evidence record is merged may a fresh unsigned deployment proposal be
-   built. Treasury-to-Safe funding, Safe signing, deployment, order creation,
-   settler activation, or broadcast each remain separate human approvals.
-5. Keep the canary under monitored observation for at least 48 hours before
+4. Required: merge the dedicated-Safe remediation through a protected PR with
+   fresh automated and independent review evidence.
+5. Required: explicitly accept the pinned 1-of-1 custody risk for this bounded
+   canary or upgrade/re-pin an approved multisig before funding.
+6. Only from the exact protected remediation commit may a fresh unsigned
+   deployment proposal be built. Treasury-to-dedicated-Safe funding, protocol
+   Safe deployment signing, deployment, dedicated-Safe order creation, settler
+   activation, or broadcast each remain separate human approvals.
+7. Keep the canary under monitored observation for at least 48 hours before
    considering any expansion.
 
 No source merge, CI result, simulation, or unsigned packet moves funds.

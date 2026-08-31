@@ -13,6 +13,7 @@ import {
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { ethers } from "ethers";
 import { canonicalProductionV4Deployment, requiredBaseRpcUrl } from "./v4LiveConfig.js";
+import { canonicalTreasuryRangeAuthorities } from "./v4TreasuryRangeConfig.js";
 import { parseDecimalRational } from "./v4TreasuryRangeMath.js";
 import {
   buildAndSimulateSafeBatch,
@@ -21,7 +22,12 @@ import {
   type SafeBatchCall,
   type SafeBatchSimulationEvidence,
 } from "./v4SafeBatch.js";
-import { readCanonicalNaraSafeEvidence, type CanonicalSafeEvidence } from "./v4SafeEvidence.js";
+import {
+  readCanonicalNaraSafeEvidence,
+  readTreasuryRangeSafeEvidence,
+  type CanonicalSafeEvidence,
+  type TreasuryRangeSafeEvidence,
+} from "./v4SafeEvidence.js";
 import {
   prettyTreasuryRangeJson,
   sha256Hex,
@@ -40,6 +46,17 @@ export const TREASURY_RANGE_CHAIN_ID = 8453n;
 export const TREASURY_RANGE_MAX_SNAPSHOT_AGE_SECONDS = 15 * 60;
 export const TREASURY_RANGE_DEFAULT_DEADLINE_SECONDS = 15 * 60;
 export const TREASURY_RANGE_MAX_DEADLINE_SECONDS = 30 * 60;
+export const TREASURY_RANGE_CANONICAL_UPSTREAM_URL = "https://github.com/NARAProtocol/nara_protocol_v4.git";
+export const TREASURY_RANGE_CANONICAL_PROTECTED_REF = "refs/remotes/origin/main";
+export const TREASURY_RANGE_DEPLOYMENT_REVIEW_CHECKS = [
+  "Verify predicted manager, CREATE2 salt, initcode hash, and constructor-simulated runtime hash.",
+  "Verify every immutable binding and the deployment deadline.",
+  "Confirm the protocol 2-of-3 Safe executes deployment while the dedicated Treasury Safe is the immutable custody recipient.",
+  "Acknowledge the dedicated Treasury Safe is currently 1-of-1 and keep capital at or below the approved canary budget.",
+  "Recheck Safe nonce, current Base block, Hook configuration, and strategy hash immediately before signing.",
+  "Acknowledge this candidate is internally reviewed but not independently externally audited or production-approved.",
+  "Do not import, sign, or execute after the recorded deadline.",
+] as const;
 
 export function createTreasuryRangeProvider(rpcUrl: string): ethers.JsonRpcProvider {
   return new ethers.JsonRpcProvider(
@@ -100,7 +117,8 @@ export interface TreasuryRangeBuildContext {
   provider: ethers.JsonRpcProvider;
   strategy: TreasuryRangeStrategyManifest;
   block: ethers.Block;
-  safeEvidence: CanonicalSafeEvidence;
+  deploymentExecutorSafeEvidence: CanonicalSafeEvidence;
+  treasuryRangeSafeEvidence: TreasuryRangeSafeEvidence;
   productionRuntime: Record<string, { address: string; codeHash: string }>;
   usdcDependency: CircleFiatTokenDependencyEvidence;
   usdcDependencyEnforcement: "exact" | "emergency_exit_bypass";
@@ -119,7 +137,12 @@ export interface TreasuryRangeSafeReview {
   blockHash: string;
   blockTimestamp: number;
   validUntil: number;
-  safe: CanonicalSafeEvidence;
+  signingSafeRole: "deployment_executor" | "treasury_custody";
+  signingSafe: CanonicalSafeEvidence | TreasuryRangeSafeEvidence;
+  safeRoles: {
+    deploymentExecutorSafe: string;
+    treasuryRangeSafe: string;
+  };
   calls: readonly SafeBatchCall[];
   simulation: SafeBatchSimulationEvidence;
   runtime: Record<string, { address: string; codeHash: string }>;
@@ -143,8 +166,8 @@ export interface TreasuryRangeViewCheck {
 }
 
 export interface TreasuryRangeManagerSafetyState {
-  safeNaraAllowance: string;
-  safeUsdcAllowance: string;
+  treasuryRangeSafeNaraAllowance: string;
+  treasuryRangeSafeUsdcAllowance: string;
   managerNaraPermit2Allowance: string;
   managerUsdcPermit2Allowance: string;
   permit2NaraPositionManagerAllowance: string;
@@ -180,7 +203,7 @@ export async function forceRebuildTreasuryRangeManagerArtifact(tasks: TreasuryRa
 }
 
 export interface TreasuryRangeManagerDeploymentEvidence {
-  schemaVersion: "nara.v4.treasury-range-manager-deployment.v2";
+  schemaVersion: "nara.v4.treasury-range-manager-deployment.v3";
   status: "deployed_verified";
   originCommit: string;
   deploymentTransactionHash: string;
@@ -189,7 +212,7 @@ export interface TreasuryRangeManagerDeploymentEvidence {
   predictedAddress: string;
   deployedAddress: string;
   runtimeCodeHash: string;
-  safeExecution: {
+  deploymentExecutorSafeExecution: {
     safe: string;
     transactionHash: string;
     safeTransactionHash: string;
@@ -200,6 +223,14 @@ export interface TreasuryRangeManagerDeploymentEvidence {
     multiSendCallOnly: string;
     multiSendCallOnlyCodeHash: string;
     innerCalls: readonly SafeBatchCall[];
+  };
+  treasuryRangeSafePolicy: {
+    address: string;
+    runtimeCodeHash: string;
+    version: "1.4.1";
+    threshold: "1";
+    ownerCount: 1;
+    ownerSetHash: string;
   };
   create2Deployment: {
     deployer: string;
@@ -234,6 +265,24 @@ export function safeTreasuryRangeError(error: unknown): string {
 
 function repositoryHead(repositoryRoot: string): string {
   return execFileSync("git", ["rev-parse", "HEAD"], { cwd: repositoryRoot, encoding: "utf8" }).trim().toLowerCase();
+}
+
+export function assertTreasuryRangeStrategyRelease(
+  repositoryRoot: string,
+  strategyCommit: string,
+  head: string,
+  options: Readonly<{ emergencyExit?: boolean }> = {},
+): void {
+  if (strategyCommit === head) return;
+  if (!options.emergencyExit) throw new Error("Strategy repositoryHead is not the current committed HEAD");
+  try {
+    execFileSync("git", ["merge-base", "--is-ancestor", strategyCommit, head], {
+      cwd: repositoryRoot,
+      stdio: "ignore",
+    });
+  } catch {
+    throw new Error("Emergency cancellation strategy commit is not an ancestor of the current protected release");
+  }
 }
 
 function gitOutput(repositoryRoot: string, args: readonly string[]): string {
@@ -293,12 +342,16 @@ export function readTreasuryRangeProtectedReleaseEvidence(
   repositoryRoot: string,
   head: string,
   environment: NodeJS.ProcessEnv = process.env,
+  policy: Readonly<{ expectedUpstreamUrl: string; protectedRef: string }> = {
+    expectedUpstreamUrl: TREASURY_RANGE_CANONICAL_UPSTREAM_URL,
+    protectedRef: TREASURY_RANGE_CANONICAL_PROTECTED_REF,
+  },
 ): TreasuryRangeProtectedReleaseEvidence {
-  const expectedUpstreamUrl = environment.V4_TREASURY_RANGE_EXPECTED_UPSTREAM_URL?.trim();
-  const protectedRef = environment.V4_TREASURY_RANGE_PROTECTED_REF?.trim();
+  const expectedUpstreamUrl = policy.expectedUpstreamUrl.trim();
+  const protectedRef = policy.protectedRef.trim();
   const releaseCommit = environment.V4_TREASURY_RANGE_RELEASE_COMMIT?.trim().toLowerCase();
   if (!expectedUpstreamUrl || !protectedRef || !releaseCommit) {
-    throw new Error("Explicit protected release evidence is required: expected upstream URL, protected ref, and release commit");
+    throw new Error("Tracked protected release policy and an explicit release commit are required");
   }
   assertRemoteHasNoEmbeddedHttpCredentials(expectedUpstreamUrl);
   if (!/^[0-9a-f]{40}$/.test(releaseCommit) || releaseCommit !== head) {
@@ -333,7 +386,7 @@ export function readTreasuryRangeProtectedReleaseEvidence(
     }
     remoteCommit = remoteSha.toLowerCase();
     if (protectedCommit !== remoteCommit) throw new Error("Local origin ref does not match the remote protected ref");
-    execFileSync("git", ["merge-base", "--is-ancestor", releaseCommit, remoteCommit], { cwd: repositoryRoot, stdio: "ignore" });
+    if (releaseCommit !== remoteCommit) throw new Error("Release commit is not the exact current protected-ref tip");
   } catch {
     throw new Error("Release commit lacks matching live remote protected-ref attestation");
   }
@@ -366,10 +419,15 @@ export function assertTreasuryRangePinnedBlockFreshness(
   manifestPinnedState: TreasuryRangeStrategyManifest["pinnedState"],
   latest: TreasuryRangeBlockIdentity | null,
   pinned: TreasuryRangeBlockIdentity | null,
+  options: Readonly<{ emergencyExit?: boolean }> = {},
 ): asserts latest is TreasuryRangeBlockIdentity {
   if (!latest?.hash || /^0x0{64}$/i.test(latest.hash)) {
     throw new Error("RPC latest block is missing a canonical hash");
   }
+  // Cancellation is reconstructed from the fresh active-order state and exact
+  // Safe simulation. It must remain available long after the creation snapshot
+  // expires and must not require an archival RPC read of that old block.
+  if (options.emergencyExit) return;
   if (!pinned?.hash
       || pinned.number !== manifestPinnedState.blockNumber
       || pinned.hash.toLowerCase() !== manifestPinnedState.blockHash) {
@@ -388,25 +446,27 @@ export async function readTreasuryRangeBuildContext(
   repositoryRoot: string,
   strategyPath: string,
   strategy: TreasuryRangeStrategyManifest,
-  options: Readonly<{ enforceUsdcDependency?: boolean }> = {},
+  options: Readonly<{ enforceUsdcDependency?: boolean; emergencyExit?: boolean }> = {},
 ): Promise<TreasuryRangeBuildContext> {
   assertTreasuryRangeRepositoryEvidence(repositoryRoot, strategyPath);
   const head = repositoryHead(repositoryRoot);
-  if (head !== strategy.repositoryHead) throw new Error("Strategy repositoryHead is not the current committed HEAD");
+  assertTreasuryRangeStrategyRelease(repositoryRoot, strategy.repositoryHead, head, options);
   const protectedRelease = readTreasuryRangeProtectedReleaseEvidence(repositoryRoot, head);
   const provider = createTreasuryRangeProvider(requiredBaseRpcUrl());
   const network = await provider.getNetwork();
   if (network.chainId !== TREASURY_RANGE_CHAIN_ID) throw new Error("RPC is not Base chain 8453");
   const latest = await provider.getBlock("latest");
-  const pinned = await provider.getBlock(strategy.pinnedState.blockNumber);
-  assertTreasuryRangePinnedBlockFreshness(strategy.pinnedState, latest, pinned);
+  const pinned = options.emergencyExit ? null : await provider.getBlock(strategy.pinnedState.blockNumber);
+  assertTreasuryRangePinnedBlockFreshness(strategy.pinnedState, latest, pinned, options);
 
   const production = canonicalProductionV4Deployment();
+  const authorities = canonicalTreasuryRangeAuthorities(production);
   const coreManifest = JSON.parse(readFileSync(production.manifestPath, "utf8")) as {
     infrastructure: { officialV4Quoter: string };
   };
   const exactAddresses: ReadonlyArray<[string, string, string]> = [
-    ["safe", strategy.addresses.safe, production.safe],
+    ["deploymentExecutorSafe", strategy.addresses.deploymentExecutorSafe, authorities.deploymentExecutorSafe],
+    ["treasuryRangeSafe", strategy.addresses.treasuryRangeSafe, authorities.treasuryRangeSafe],
     ["nara", strategy.addresses.nara, production.token],
     ["usdc", strategy.addresses.usdc, production.base],
     ["hook", strategy.addresses.hook, production.hook],
@@ -433,7 +493,16 @@ export async function readTreasuryRangeBuildContext(
   const expectedCore: ReadonlyArray<[string, string, string]> = [
     ["nara", production.token, production.runtimeCodeHashes.token],
     ["hook", production.hook, production.runtimeCodeHashes.hook],
-    ["safe", production.safe, production.runtimeCodeHashes.safe],
+    [
+      "deploymentExecutorSafe",
+      authorities.deploymentExecutorSafe,
+      authorities.deploymentExecutorSafeRuntimeCodeHash,
+    ],
+    [
+      "treasuryRangeSafe",
+      authorities.treasuryRangeSafe,
+      authorities.treasuryRangeSafeRuntimeCodeHash,
+    ],
   ];
   const productionRuntime: Record<string, { address: string; codeHash: string }> = {};
   for (const [label, target, expectedHash] of expectedCore) {
@@ -522,7 +591,7 @@ export async function readTreasuryRangeBuildContext(
     ["Compounder.permit2", compounderPermit2, production.permit2],
     ["Compounder.vault", compounderVault, production.vault],
     ["Compounder.hooks", compounderHook, production.hook],
-    ["CREATE2 owner", create2Owner, production.safe],
+    ["CREATE2 owner", create2Owner, authorities.deploymentExecutorSafe],
   ];
   for (const [label, actual, expected] of reciprocal) {
     if (ethers.getAddress(actual) !== ethers.getAddress(expected)) throw new Error(`${label} reciprocal binding mismatch`);
@@ -530,12 +599,28 @@ export async function readTreasuryRangeBuildContext(
   if (String(hookPoolId).toLowerCase() !== production.poolId || hookRegistered !== true) throw new Error("Hook pool registration differs from production");
   if (BigInt(compounderFee) !== BigInt(production.poolFee) || BigInt(compounderSpacing) !== BigInt(production.tickSpacing) ||
       String(compounderPoolId).toLowerCase() !== production.poolId) throw new Error("Compounder PoolKey binding differs from production");
-  const safeEvidence = await readCanonicalNaraSafeEvidence(provider, production.safe, production.safeCodeHash, latest.number);
+  const [deploymentExecutorSafeEvidence, treasuryRangeSafeEvidence] = await Promise.all([
+    readCanonicalNaraSafeEvidence(
+      provider,
+      authorities.deploymentExecutorSafe,
+      authorities.deploymentExecutorSafeRuntimeCodeHash,
+      latest.number,
+    ),
+    readTreasuryRangeSafeEvidence(provider, {
+      address: authorities.treasuryRangeSafe,
+      safeRuntimeCodeHash: authorities.treasuryRangeSafeRuntimeCodeHash,
+      version: authorities.treasuryRangeSafeVersion,
+      threshold: authorities.treasuryRangeSafeThreshold,
+      ownerCount: authorities.treasuryRangeSafeOwnerCount,
+      ownerSetHash: authorities.treasuryRangeSafeOwnerSetHash,
+    }, latest.number),
+  ]);
   const preliminaryContext: TreasuryRangeBuildContext = {
     provider,
     strategy,
     block: latest,
-    safeEvidence,
+    deploymentExecutorSafeEvidence,
+    treasuryRangeSafeEvidence,
     productionRuntime,
     protectedRelease,
     usdcDependency: strategy.externalDependencies.usdc,
@@ -590,7 +675,8 @@ export async function assertTreasuryRangeViewChecks(
   context: TreasuryRangeBuildContext,
   values: unknown,
   label: string,
-): Promise<void> {
+  options: Readonly<{ emergencyExit?: boolean }> = {},
+): Promise<Record<string, unknown>> {
   if (!Array.isArray(values) || values.length === 0) throw new Error(`${label} must contain live Hook view checks`);
   const curveOutputs = "uint32 mediumPressureBps,uint32 highPressureBps,uint32 extremePressureBps,uint16 baseFeeBps,uint16 mediumFeeBps,uint16 highFeeBps,uint16 extremeFeeBps,uint16 maxFeeBps";
   const required = new Map<string, { method: string; args: readonly string[]; abi: string; pending?: boolean }>([
@@ -606,6 +692,7 @@ export async function assertTreasuryRangeViewChecks(
     ["hook.poolRegistered", { method: "poolRegistered", args: [], abi: "function poolRegistered() view returns(bool)" }],
   ]);
   const seen = new Set<string>();
+  const snapshot: Record<string, unknown> = {};
   for (const [index, raw] of values.entries()) {
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error(`${label}[${index}] must be an object`);
     const check = raw as Partial<TreasuryRangeViewCheck>;
@@ -623,16 +710,23 @@ export async function assertTreasuryRangeViewChecks(
     const contract = new ethers.Contract(target, [requiredCheck.abi], context.provider);
     const actual = await contract.getFunction(check.method)(...check.args, { blockTag: context.block.number });
     const normalizedActual = JSON.parse(stable(actual));
-    if (stable(normalizedActual) !== stable(check.expected)) throw new Error(`${check.label} differs from the strategy manifest at the JIT block`);
-    if (requiredCheck.pending && (!Array.isArray(normalizedActual) || normalizedActual.at(-1) !== false)) {
+    snapshot[check.label] = normalizedActual;
+    const immutableExitBinding = check.label === "hook.registeredPoolId" || check.label === "hook.poolRegistered";
+    if ((!options.emergencyExit || immutableExitBinding) && stable(normalizedActual) !== stable(check.expected)) {
+      throw new Error(`${check.label} differs from the strategy manifest at the JIT block`);
+    }
+    if (!options.emergencyExit && requiredCheck.pending
+        && (!Array.isArray(normalizedActual) || normalizedActual.at(-1) !== false)) {
       throw new Error(`${check.label} reports a pending Hook change`);
     }
   }
   if (values.length !== required.size) throw new Error(`${label} must contain exactly the canonical Hook check set`);
   for (const requiredLabel of required.keys()) if (!seen.has(requiredLabel)) throw new Error(`${label} is missing ${requiredLabel}`);
-  if (treasuryRangeHookConfigurationHash(values as Array<{ label: string; expected: unknown }>) !== context.strategy.hookConfigurationHash) {
+  if (!options.emergencyExit
+      && treasuryRangeHookConfigurationHash(values as Array<{ label: string; expected: unknown }>) !== context.strategy.hookConfigurationHash) {
     throw new Error("Live canonical Hook checks differ from hookConfigurationHash");
   }
+  return snapshot;
 }
 
 export function recomputeAndAssertTreasuryRangeOrder(
@@ -708,14 +802,15 @@ export async function readTreasuryRangeManagerSafetyState(
   managerAddress: string,
 ): Promise<TreasuryRangeManagerSafetyState> {
   const production = canonicalProductionV4Deployment();
+  const authorities = canonicalTreasuryRangeAuthorities(production);
   const manager = ethers.getAddress(managerAddress);
   const nara = new ethers.Contract(production.token, ERC20_APPROVAL_ABI, context.provider);
   const usdc = new ethers.Contract(production.base, ERC20_APPROVAL_ABI, context.provider);
   const permit2 = new ethers.Contract(production.permit2, PERMIT2_APPROVAL_ABI, context.provider);
   const blockTag = context.block.number;
   const [
-    safeNaraAllowance,
-    safeUsdcAllowance,
+    treasuryRangeSafeNaraAllowance,
+    treasuryRangeSafeUsdcAllowance,
     managerNaraPermit2Allowance,
     managerUsdcPermit2Allowance,
     permit2Nara,
@@ -723,8 +818,8 @@ export async function readTreasuryRangeManagerSafetyState(
     managerNaraBalance,
     managerUsdcBalance,
   ] = await Promise.all([
-    nara.allowance(production.safe, manager, { blockTag }) as Promise<bigint>,
-    usdc.allowance(production.safe, manager, { blockTag }) as Promise<bigint>,
+    nara.allowance(authorities.treasuryRangeSafe, manager, { blockTag }) as Promise<bigint>,
+    usdc.allowance(authorities.treasuryRangeSafe, manager, { blockTag }) as Promise<bigint>,
     nara.allowance(manager, production.permit2, { blockTag }) as Promise<bigint>,
     usdc.allowance(manager, production.permit2, { blockTag }) as Promise<bigint>,
     permit2.allowance(manager, production.token, production.positionManager, { blockTag }) as Promise<ethers.Result>,
@@ -733,8 +828,8 @@ export async function readTreasuryRangeManagerSafetyState(
     usdc.balanceOf(manager, { blockTag }) as Promise<bigint>,
   ]);
   const state: TreasuryRangeManagerSafetyState = {
-    safeNaraAllowance: BigInt(safeNaraAllowance).toString(),
-    safeUsdcAllowance: BigInt(safeUsdcAllowance).toString(),
+    treasuryRangeSafeNaraAllowance: BigInt(treasuryRangeSafeNaraAllowance).toString(),
+    treasuryRangeSafeUsdcAllowance: BigInt(treasuryRangeSafeUsdcAllowance).toString(),
     managerNaraPermit2Allowance: BigInt(managerNaraPermit2Allowance).toString(),
     managerUsdcPermit2Allowance: BigInt(managerUsdcPermit2Allowance).toString(),
     permit2NaraPositionManagerAllowance: BigInt(permit2Nara[0]).toString(),
@@ -760,22 +855,48 @@ function requireDeploymentObject(value: unknown, label: string): Record<string, 
   return value as Record<string, unknown>;
 }
 
+function requireDeploymentExactKeys(
+  value: Record<string, unknown>,
+  allowed: readonly string[],
+  label: string,
+): void {
+  const expected = new Set(allowed);
+  const actual = Object.keys(value);
+  if (actual.length !== expected.size || actual.some((key) => !expected.has(key))) {
+    throw new Error(`${label} has missing or extra fields`);
+  }
+}
+
 function deploymentInteger(value: unknown, label: string): number {
-  const parsed = Number(value);
-  if (!Number.isSafeInteger(parsed) || parsed < 0) throw new Error(`${label} must be a non-negative safe integer`);
-  return parsed;
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) {
+    throw new Error(`${label} must be a JSON non-negative safe integer`);
+  }
+  return value;
+}
+
+function deploymentSignedInteger(value: unknown, label: string): number {
+  if (typeof value !== "number" || !Number.isSafeInteger(value)) {
+    throw new Error(`${label} must be a JSON safe integer`);
+  }
+  return value;
+}
+
+function deploymentDecimalString(value: unknown, label: string): string {
+  if (typeof value !== "string" || !/^\d+$/.test(value)) throw new Error(`${label} must be an unsigned integer string`);
+  return value;
 }
 
 function deploymentBytes(value: unknown, label: string, length?: number): string {
-  const parsed = String(value).toLowerCase();
+  if (typeof value !== "string") throw new Error(`${label} must be a hex string`);
+  const parsed = value.toLowerCase();
   if (!ethers.isHexString(parsed, length)) throw new Error(`${label} is malformed`);
   return parsed;
 }
 
 function deploymentCall(value: unknown, label: string): SafeBatchCall {
   const call = requireDeploymentObject(value, label);
-  const rawValue = String(call.value);
-  if (!/^\d+$/.test(rawValue)) throw new Error(`${label}.value must be an unsigned integer string`);
+  requireDeploymentExactKeys(call, ["to", "value", "data"], label);
+  const rawValue = deploymentDecimalString(call.value, `${label}.value`);
   return {
     to: ethers.getAddress(String(call.to)),
     value: BigInt(rawValue).toString(),
@@ -785,49 +906,99 @@ function deploymentCall(value: unknown, label: string): SafeBatchCall {
 
 export function parseTreasuryRangeManagerDeploymentEvidence(value: unknown): TreasuryRangeManagerDeploymentEvidence {
   const root = requireDeploymentObject(value, "manager deployment manifest");
-  if (root.schemaVersion !== "nara.v4.treasury-range-manager-deployment.v2" || root.status !== "deployed_verified") {
-    throw new Error("Manager deployment evidence must use the exact deployed_verified v2 schema");
+  requireDeploymentExactKeys(root, [
+    "schemaVersion", "status", "originCommit", "deploymentTransactionHash", "deploymentBlock",
+    "deploymentBlockHash", "predictedAddress", "deployedAddress", "runtimeCodeHash",
+    "deploymentExecutorSafeExecution", "treasuryRangeSafePolicy", "create2Deployment", "constructorBindings",
+  ], "manager deployment manifest");
+  if (root.schemaVersion !== "nara.v4.treasury-range-manager-deployment.v3" || root.status !== "deployed_verified") {
+    throw new Error("Manager deployment evidence must use the exact deployed_verified v3 schema");
   }
   const originCommit = String(root.originCommit).toLowerCase();
   if (!/^[0-9a-f]{40}$/.test(originCommit)) throw new Error("manager deployment originCommit is malformed");
   const bindings = requireDeploymentObject(root.constructorBindings, "manager deployment constructorBindings");
-  const safeRoot = requireDeploymentObject(root.safeExecution, "manager deployment safeExecution");
-  const safeTransactionRoot = requireDeploymentObject(safeRoot.safeTransaction, "manager deployment safeTransaction");
+  const safeRoot = requireDeploymentObject(
+    root.deploymentExecutorSafeExecution,
+    "manager deployment deploymentExecutorSafeExecution",
+  );
+  const safeTransactionRoot = requireDeploymentObject(
+    safeRoot.safeTransaction,
+    "manager deployment deploymentExecutorSafeExecution.safeTransaction",
+  );
+  const treasurySafeRoot = requireDeploymentObject(
+    root.treasuryRangeSafePolicy,
+    "manager deployment treasuryRangeSafePolicy",
+  );
   const create2Root = requireDeploymentObject(root.create2Deployment, "manager deployment create2Deployment");
+  requireDeploymentExactKeys(bindings, [
+    "treasurySafe", "nara", "usdc", "liquidityVault", "poolManager", "positionManager", "permit2", "hook",
+    "poolFee", "tickSpacing", "poolId", "deploymentDeadline",
+  ], "manager deployment constructorBindings");
+  requireDeploymentExactKeys(safeRoot, [
+    "safe", "transactionHash", "safeTransactionHash", "nonce", "executionSuccessLogIndex", "safeTransaction",
+    "packedTransactionsHash", "multiSendCallOnly", "multiSendCallOnlyCodeHash", "innerCalls",
+  ], "manager deployment deploymentExecutorSafeExecution");
+  requireDeploymentExactKeys(safeTransactionRoot, [
+    "to", "value", "data", "operation", "safeTxGas", "baseGas", "gasPrice", "gasToken", "refundReceiver", "nonce",
+  ], "manager deployment deploymentExecutorSafeExecution.safeTransaction");
+  requireDeploymentExactKeys(treasurySafeRoot, [
+    "address", "runtimeCodeHash", "version", "threshold", "ownerCount", "ownerSetHash",
+  ], "manager deployment treasuryRangeSafePolicy");
+  requireDeploymentExactKeys(create2Root, [
+    "deployer", "deployedAddress", "salt", "initCodeHash", "deployedLogIndex",
+  ], "manager deployment create2Deployment");
   if (!Array.isArray(safeRoot.innerCalls) || safeRoot.innerCalls.length !== 1) {
-    throw new Error("Manager deployment evidence must contain exactly one Safe inner deploy call");
+    throw new Error("Manager deployment evidence must contain exactly one deployment-executor Safe inner call");
   }
   const safeTransaction = {
     to: ethers.getAddress(String(safeTransactionRoot.to)),
-    value: String(safeTransactionRoot.value),
-    data: deploymentBytes(safeTransactionRoot.data, "safeExecution.safeTransaction.data"),
-    operation: deploymentInteger(safeTransactionRoot.operation, "safeExecution.safeTransaction.operation"),
-    safeTxGas: String(safeTransactionRoot.safeTxGas),
-    baseGas: String(safeTransactionRoot.baseGas),
-    gasPrice: String(safeTransactionRoot.gasPrice),
+    value: deploymentDecimalString(safeTransactionRoot.value, "deploymentExecutorSafeExecution.safeTransaction.value"),
+    data: deploymentBytes(safeTransactionRoot.data, "deploymentExecutorSafeExecution.safeTransaction.data"),
+    operation: deploymentInteger(
+      safeTransactionRoot.operation,
+      "deploymentExecutorSafeExecution.safeTransaction.operation",
+    ),
+    safeTxGas: deploymentDecimalString(safeTransactionRoot.safeTxGas, "deploymentExecutorSafeExecution.safeTransaction.safeTxGas"),
+    baseGas: deploymentDecimalString(safeTransactionRoot.baseGas, "deploymentExecutorSafeExecution.safeTransaction.baseGas"),
+    gasPrice: deploymentDecimalString(safeTransactionRoot.gasPrice, "deploymentExecutorSafeExecution.safeTransaction.gasPrice"),
     gasToken: ethers.getAddress(String(safeTransactionRoot.gasToken)),
     refundReceiver: ethers.getAddress(String(safeTransactionRoot.refundReceiver)),
-    nonce: String(safeTransactionRoot.nonce),
+    nonce: deploymentDecimalString(safeTransactionRoot.nonce, "deploymentExecutorSafeExecution.safeTransaction.nonce"),
   } as SafeBatchSimulationEvidence["safeTransaction"];
   for (const [label, candidate] of [
     ["value", safeTransaction.value], ["safeTxGas", safeTransaction.safeTxGas], ["baseGas", safeTransaction.baseGas],
     ["gasPrice", safeTransaction.gasPrice], ["nonce", safeTransaction.nonce],
   ] as const) {
-    if (!/^\d+$/.test(candidate)) throw new Error(`safeExecution.safeTransaction.${label} must be an unsigned integer string`);
+    if (!/^\d+$/.test(candidate)) {
+      throw new Error(`deploymentExecutorSafeExecution.safeTransaction.${label} must be an unsigned integer string`);
+    }
   }
-  const safeNonce = String(safeRoot.nonce);
-  if (!/^\d+$/.test(safeNonce) || safeNonce !== safeTransaction.nonce) {
-    throw new Error("safeExecution.nonce must exactly match the Safe transaction nonce");
+  const safeNonce = deploymentDecimalString(safeRoot.nonce, "deploymentExecutorSafeExecution.nonce");
+  if (safeNonce !== safeTransaction.nonce) {
+    throw new Error("deploymentExecutorSafeExecution.nonce must exactly match the Safe transaction nonce");
   }
   const poolFee = deploymentInteger(bindings.poolFee, "constructorBindings.poolFee");
-  const tickSpacing = Number(bindings.tickSpacing);
-  const deploymentDeadline = String(bindings.deploymentDeadline);
+  const tickSpacing = deploymentSignedInteger(bindings.tickSpacing, "constructorBindings.tickSpacing");
+  const deploymentDeadline = deploymentDecimalString(bindings.deploymentDeadline, "constructorBindings.deploymentDeadline");
   if (poolFee > 0xffffff || !Number.isSafeInteger(tickSpacing) || tickSpacing < -0x800000 || tickSpacing > 0x7fffff ||
       !/^\d+$/.test(deploymentDeadline) || BigInt(deploymentDeadline) > ((1n << 64n) - 1n)) {
     throw new Error("Manager deployment constructor numeric bindings are malformed");
   }
+  if (treasurySafeRoot.version !== "1.4.1" || treasurySafeRoot.threshold !== "1"
+      || treasurySafeRoot.ownerCount !== 1) {
+    throw new Error("Manager deployment Treasury Safe policy must preserve the exact approved 1-of-1 topology");
+  }
+  const deploymentExecutorSafe = ethers.getAddress(String(safeRoot.safe));
+  const treasuryRangeSafe = ethers.getAddress(String(treasurySafeRoot.address));
+  const constructorTreasurySafe = ethers.getAddress(String(bindings.treasurySafe));
+  if (deploymentExecutorSafe === treasuryRangeSafe) {
+    throw new Error("Manager deployment executor and Treasury custody Safe must be distinct");
+  }
+  if (constructorTreasurySafe !== treasuryRangeSafe) {
+    throw new Error("Manager constructor Treasury Safe must match the receipt-bound custody policy");
+  }
   return {
-    schemaVersion: "nara.v4.treasury-range-manager-deployment.v2",
+    schemaVersion: "nara.v4.treasury-range-manager-deployment.v3",
     status: "deployed_verified",
     originCommit,
     deploymentTransactionHash: deploymentBytes(root.deploymentTransactionHash, "deploymentTransactionHash", 32),
@@ -836,17 +1007,51 @@ export function parseTreasuryRangeManagerDeploymentEvidence(value: unknown): Tre
     predictedAddress: ethers.getAddress(String(root.predictedAddress)),
     deployedAddress: ethers.getAddress(String(root.deployedAddress)),
     runtimeCodeHash: deploymentBytes(root.runtimeCodeHash, "runtimeCodeHash", 32),
-    safeExecution: {
-      safe: ethers.getAddress(String(safeRoot.safe)),
-      transactionHash: deploymentBytes(safeRoot.transactionHash, "safeExecution.transactionHash", 32),
-      safeTransactionHash: deploymentBytes(safeRoot.safeTransactionHash, "safeExecution.safeTransactionHash", 32),
+    deploymentExecutorSafeExecution: {
+      safe: deploymentExecutorSafe,
+      transactionHash: deploymentBytes(
+        safeRoot.transactionHash,
+        "deploymentExecutorSafeExecution.transactionHash",
+        32,
+      ),
+      safeTransactionHash: deploymentBytes(
+        safeRoot.safeTransactionHash,
+        "deploymentExecutorSafeExecution.safeTransactionHash",
+        32,
+      ),
       nonce: safeNonce,
-      executionSuccessLogIndex: deploymentInteger(safeRoot.executionSuccessLogIndex, "safeExecution.executionSuccessLogIndex"),
+      executionSuccessLogIndex: deploymentInteger(
+        safeRoot.executionSuccessLogIndex,
+        "deploymentExecutorSafeExecution.executionSuccessLogIndex",
+      ),
       safeTransaction,
-      packedTransactionsHash: deploymentBytes(safeRoot.packedTransactionsHash, "safeExecution.packedTransactionsHash", 32),
+      packedTransactionsHash: deploymentBytes(
+        safeRoot.packedTransactionsHash,
+        "deploymentExecutorSafeExecution.packedTransactionsHash",
+        32,
+      ),
       multiSendCallOnly: ethers.getAddress(String(safeRoot.multiSendCallOnly)),
-      multiSendCallOnlyCodeHash: deploymentBytes(safeRoot.multiSendCallOnlyCodeHash, "safeExecution.multiSendCallOnlyCodeHash", 32),
-      innerCalls: safeRoot.innerCalls.map((call, index) => deploymentCall(call, `safeExecution.innerCalls[${index}]`)),
+      multiSendCallOnlyCodeHash: deploymentBytes(
+        safeRoot.multiSendCallOnlyCodeHash,
+        "deploymentExecutorSafeExecution.multiSendCallOnlyCodeHash",
+        32,
+      ),
+      innerCalls: safeRoot.innerCalls.map((call, index) => deploymentCall(
+        call,
+        `deploymentExecutorSafeExecution.innerCalls[${index}]`,
+      )),
+    },
+    treasuryRangeSafePolicy: {
+      address: treasuryRangeSafe,
+      runtimeCodeHash: deploymentBytes(
+        treasurySafeRoot.runtimeCodeHash,
+        "treasuryRangeSafePolicy.runtimeCodeHash",
+        32,
+      ),
+      version: String(treasurySafeRoot.version) as "1.4.1",
+      threshold: String(treasurySafeRoot.threshold) as "1",
+      ownerCount: deploymentInteger(treasurySafeRoot.ownerCount, "treasuryRangeSafePolicy.ownerCount") as 1,
+      ownerSetHash: deploymentBytes(treasurySafeRoot.ownerSetHash, "treasuryRangeSafePolicy.ownerSetHash", 32),
     },
     create2Deployment: {
       deployer: ethers.getAddress(String(create2Root.deployer)),
@@ -856,7 +1061,7 @@ export function parseTreasuryRangeManagerDeploymentEvidence(value: unknown): Tre
       deployedLogIndex: deploymentInteger(create2Root.deployedLogIndex, "create2Deployment.deployedLogIndex"),
     },
     constructorBindings: {
-      treasurySafe: ethers.getAddress(String(bindings.treasurySafe)),
+      treasurySafe: constructorTreasurySafe,
       nara: ethers.getAddress(String(bindings.nara)),
       usdc: ethers.getAddress(String(bindings.usdc)),
       liquidityVault: ethers.getAddress(String(bindings.liquidityVault)),
@@ -885,8 +1090,8 @@ export async function readVerifiedTreasuryRangeManagerDeployment(
     throw new Error("Manager deployment manifest SHA-256 differs from the strategy reference");
   }
   const evidence = parseTreasuryRangeManagerDeploymentEvidence(JSON.parse(raw));
-  if (evidence.schemaVersion !== "nara.v4.treasury-range-manager-deployment.v2" || evidence.status !== "deployed_verified") {
-    throw new Error("Manager deployment evidence is not an exact-provenance deployed_verified v2 record");
+  if (evidence.schemaVersion !== "nara.v4.treasury-range-manager-deployment.v3" || evidence.status !== "deployed_verified") {
+    throw new Error("Manager deployment evidence is not an exact-provenance deployed_verified v3 record");
   }
   if (!/^\d+$/.test(evidence.constructorBindings.deploymentDeadline) || BigInt(evidence.constructorBindings.deploymentDeadline) > ((1n << 64n) - 1n)) {
     throw new Error("Manager deployment deadline evidence is invalid");
@@ -908,8 +1113,9 @@ export async function readVerifiedTreasuryRangeManagerDeployment(
     throw new Error("Manager predicted/deployed/configured addresses differ");
   }
   const production = canonicalProductionV4Deployment();
+  const authorities = canonicalTreasuryRangeAuthorities(production);
   const expectedBindings: ReadonlyArray<[string, string | number, string | number]> = [
-    ["treasurySafe", evidence.constructorBindings.treasurySafe, production.safe],
+    ["treasurySafe", evidence.constructorBindings.treasurySafe, authorities.treasuryRangeSafe],
     ["nara", evidence.constructorBindings.nara, production.token],
     ["usdc", evidence.constructorBindings.usdc, production.base],
     ["liquidityVault", evidence.constructorBindings.liquidityVault, production.vault],
@@ -927,14 +1133,35 @@ export async function readVerifiedTreasuryRangeManagerDeployment(
       : typeof expected === "string" ? String(actual).toLowerCase() === String(expected).toLowerCase() : BigInt(actual) === BigInt(expected);
     if (!matches) throw new Error(`Manager deployment constructor ${label} differs from production`);
   }
-  if (evidence.safeExecution.safe !== production.safe || evidence.safeExecution.transactionHash !== evidence.deploymentTransactionHash ||
-      evidence.safeExecution.nonce !== evidence.safeExecution.safeTransaction.nonce ||
-      evidence.create2Deployment.deployer !== production.create2HookDeployer ||
-      evidence.create2Deployment.deployedAddress !== evidence.deployedAddress) {
+  const execution = evidence.deploymentExecutorSafeExecution;
+  const treasuryPolicy = evidence.treasuryRangeSafePolicy;
+  if (execution.safe !== authorities.deploymentExecutorSafe
+      || execution.transactionHash !== evidence.deploymentTransactionHash
+      || execution.nonce !== execution.safeTransaction.nonce
+      || evidence.create2Deployment.deployer !== production.create2HookDeployer
+      || evidence.create2Deployment.deployedAddress !== evidence.deployedAddress) {
     throw new Error("Manager deployment Safe/Create2 provenance fields disagree");
   }
+  if (treasuryPolicy.address !== authorities.treasuryRangeSafe
+      || treasuryPolicy.runtimeCodeHash !== authorities.treasuryRangeSafeRuntimeCodeHash
+      || treasuryPolicy.version !== authorities.treasuryRangeSafeVersion
+      || BigInt(treasuryPolicy.threshold) !== authorities.treasuryRangeSafeThreshold
+      || treasuryPolicy.ownerCount !== authorities.treasuryRangeSafeOwnerCount
+      || treasuryPolicy.ownerSetHash !== authorities.treasuryRangeSafeOwnerSetHash
+      || treasuryPolicy.address !== evidence.constructorBindings.treasurySafe) {
+    throw new Error("Manager deployment Treasury Safe policy or constructor binding differs from the tracked custody policy");
+  }
+  const currentTreasurySafe = context.treasuryRangeSafeEvidence;
+  if (currentTreasurySafe.address !== treasuryPolicy.address
+      || currentTreasurySafe.safeRuntimeCodeHash !== treasuryPolicy.runtimeCodeHash
+      || currentTreasurySafe.version !== treasuryPolicy.version
+      || currentTreasurySafe.threshold !== treasuryPolicy.threshold
+      || currentTreasurySafe.ownerCount !== treasuryPolicy.ownerCount
+      || currentTreasurySafe.ownerSetHash !== treasuryPolicy.ownerSetHash) {
+    throw new Error("Current Treasury Safe topology differs from receipt-bound deployment evidence");
+  }
   const create2Interface = new ethers.Interface(CREATE2_DEPLOYER_ABI);
-  const deployCall = evidence.safeExecution.innerCalls[0];
+  const deployCall = execution.innerCalls[0];
   if (deployCall.to !== production.create2HookDeployer || BigInt(deployCall.value) !== 0n) {
     throw new Error("Manager deployment inner call is not a zero-value call to the canonical CREATE2 deployer");
   }
@@ -946,27 +1173,27 @@ export async function readVerifiedTreasuryRangeManagerDeployment(
     throw new Error("Manager deployment inner calldata differs from the recorded salt/initcode hash");
   }
   const multiSend = new ethers.Interface(["function multiSend(bytes transactions)"]).parseTransaction({
-    data: evidence.safeExecution.safeTransaction.data,
+    data: execution.safeTransaction.data,
   });
   if (!multiSend || multiSend.name !== "multiSend") throw new Error("Manager deployment Safe payload is not MultiSendCallOnly.multiSend");
-  if (ethers.keccak256(multiSend.args[0]).toLowerCase() !== evidence.safeExecution.packedTransactionsHash ||
-      stable(decodeMultiSendCalls(multiSend.args[0])) !== stable(evidence.safeExecution.innerCalls)) {
+  if (ethers.keccak256(multiSend.args[0]).toLowerCase() !== execution.packedTransactionsHash ||
+      stable(decodeMultiSendCalls(multiSend.args[0])) !== stable(execution.innerCalls)) {
     throw new Error("Manager deployment packed Safe calls do not reproduce the exact inner deploy call");
   }
   const executionPlan: SafeBatchSimulationEvidence = {
-    safeTransaction: evidence.safeExecution.safeTransaction,
-    safeTxHash: evidence.safeExecution.safeTransactionHash,
-    packedTransactionsHash: evidence.safeExecution.packedTransactionsHash,
-    multiSendCallOnly: evidence.safeExecution.multiSendCallOnly,
-    multiSendCallOnlyCodeHash: evidence.safeExecution.multiSendCallOnlyCodeHash,
+    safeTransaction: execution.safeTransaction,
+    safeTxHash: execution.safeTransactionHash,
+    packedTransactionsHash: execution.packedTransactionsHash,
+    multiSendCallOnly: execution.multiSendCallOnly,
+    multiSendCallOnlyCodeHash: execution.multiSendCallOnlyCodeHash,
     simulatedAtBlock: evidence.deploymentBlock,
     simulation: "PASS: Safe.simulateAndRevert -> canonical MultiSendCallOnly.multiSend",
   };
   const verifiedExecution = await decodeAndVerifySafeExecution(
     context.provider,
-    production.safe,
+    authorities.deploymentExecutorSafe,
     evidence.deploymentTransactionHash,
-    evidence.safeExecution.innerCalls,
+    execution.innerCalls,
     executionPlan,
   );
   const [receipt, block] = await Promise.all([
@@ -975,13 +1202,13 @@ export async function readVerifiedTreasuryRangeManagerDeployment(
   ]);
   if (!receipt || receipt.status !== 1 || receipt.blockNumber !== evidence.deploymentBlock || receipt.blockHash.toLowerCase() !== evidence.deploymentBlockHash ||
       !block?.hash || block.hash.toLowerCase() !== evidence.deploymentBlockHash ||
-      verifiedExecution.safeTransactionHash.toLowerCase() !== evidence.safeExecution.safeTransactionHash) {
+      verifiedExecution.safeTransactionHash.toLowerCase() !== execution.safeTransactionHash) {
     throw new Error("Manager deployment receipt/block/Safe execution evidence is not canonical");
   }
   const safeExecutionEvent = new ethers.Interface(["event ExecutionSuccess(bytes32 indexed txHash,uint256 payment)"]).getEvent("ExecutionSuccess");
   if (!safeExecutionEvent) throw new Error("Safe ExecutionSuccess ABI is unavailable");
-  const safeLogs = receipt.logs.filter((log) => ethers.getAddress(log.address) === production.safe && log.topics[0]?.toLowerCase() === safeExecutionEvent.topicHash.toLowerCase());
-  if (safeLogs.length !== 1 || safeLogs[0].index !== evidence.safeExecution.executionSuccessLogIndex) {
+  const safeLogs = receipt.logs.filter((log) => ethers.getAddress(log.address) === authorities.deploymentExecutorSafe && log.topics[0]?.toLowerCase() === safeExecutionEvent.topicHash.toLowerCase());
+  if (safeLogs.length !== 1 || safeLogs[0].index !== execution.executionSuccessLogIndex) {
     throw new Error("Manager deployment evidence does not bind the exact Safe ExecutionSuccess log");
   }
   const deployedEvent = create2Interface.getEvent("Deployed");
@@ -1114,7 +1341,11 @@ export function treasuryRangeSafeMarkdownReview(review: TreasuryRangeSafeReview)
     `Status: **UNEXECUTED / HUMAN REVIEW REQUIRED / DO NOT IMPORT AFTER DEADLINE**\n\n` +
     `- Change ID: \`${review.changeId}\`\n- Repository HEAD: \`${review.repositoryHead}\`\n` +
     `- Strategy hash: \`${review.strategyHash}\`\n- Base block/hash: \`${review.blockNumber}\` / \`${review.blockHash}\`\n` +
-    `- Safe nonce: \`${review.safe.nonce}\`\n- Deadline: \`${review.validUntil}\`\n` +
+    `- Signing Safe role: \`${review.signingSafeRole}\`\n` +
+    `- Signing Safe: \`${review.signingSafe.address}\`\n` +
+    `- Deployment executor Safe: \`${review.safeRoles.deploymentExecutorSafe}\`\n` +
+    `- Treasury custody Safe: \`${review.safeRoles.treasuryRangeSafe}\`\n` +
+    `- Safe nonce: \`${review.signingSafe.nonce}\`\n- Deadline: \`${review.validUntil}\`\n` +
     `- Safe transaction hash: \`${review.simulation.safeTxHash}\`\n- Simulation: ${review.simulation.simulation}\n\n` +
     `## External dependency gate\n\n` +
     `- USDC enforcement: \`${usdc.enforcement}\`\n` +
@@ -1126,6 +1357,160 @@ export function treasuryRangeSafeMarkdownReview(review: TreasuryRangeSafeReview)
     `## Calls\n\n| # | Target | Value | Calldata |\n|---:|---|---:|---|\n${calls}\n\n` +
     `## Required human checks\n\n${review.checks.map((check) => `- [ ] ${check}`).join("\n")}\n\n` +
     `## Machine review details\n\n\`\`\`json\n${JSON.stringify(review.details, null, 2)}\n\`\`\`\n`;
+}
+
+function packetObject(value: unknown, label: string): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(`${label} must be an object`);
+  return value as Record<string, unknown>;
+}
+
+function packetUnsigned(value: unknown, label: string): bigint {
+  if (typeof value !== "string" || !/^\d+$/.test(value)) throw new Error(`${label} must be an unsigned integer string`);
+  return BigInt(value);
+}
+
+function assertExactTreasuryRangeCalls(actual: readonly SafeBatchCall[], expected: readonly SafeBatchCall[]): void {
+  if (actual.length !== expected.length) throw new Error("Treasury Range packet call count differs from the exact approved intent");
+  actual.forEach((call, index) => {
+    const wanted = expected[index];
+    if (ethers.getAddress(call.to) !== ethers.getAddress(wanted.to)
+        || BigInt(call.value) !== BigInt(wanted.value)
+        || ethers.hexlify(call.data).toLowerCase() !== ethers.hexlify(wanted.data).toLowerCase()) {
+      throw new Error(`Treasury Range packet call ${index} differs from the exact approved intent`);
+    }
+  });
+}
+
+function assertTreasuryRangePacketRoles(context: TreasuryRangeBuildContext, details: Record<string, unknown>): void {
+  const authorities = canonicalTreasuryRangeAuthorities(canonicalProductionV4Deployment());
+  if (ethers.getAddress(context.deploymentExecutorSafeEvidence.address) !== authorities.deploymentExecutorSafe
+      || ethers.getAddress(context.treasuryRangeSafeEvidence.address) !== authorities.treasuryRangeSafe
+      || authorities.deploymentExecutorSafe === authorities.treasuryRangeSafe) {
+    throw new Error("Treasury Range packet context has role-swapped or noncanonical Safe evidence");
+  }
+  const safeRoles = packetObject(details.safeRoles, "packet details.safeRoles");
+  if (ethers.getAddress(String(safeRoles.deploymentExecutorSafe)) !== authorities.deploymentExecutorSafe
+      || ethers.getAddress(String(safeRoles.treasuryRangeSafe)) !== authorities.treasuryRangeSafe) {
+    throw new Error("Treasury Range packet details have role-swapped or noncanonical Safes");
+  }
+}
+
+export function assertTreasuryRangePacketCallShape(
+  slug: "deployment" | "orders" | "cancellation",
+  context: TreasuryRangeBuildContext,
+  calls: readonly SafeBatchCall[],
+  details: Record<string, unknown>,
+  validUntil: number,
+): void {
+  const production = canonicalProductionV4Deployment();
+  if (!Number.isSafeInteger(validUntil) || validUntil <= 0 || calls.length === 0
+      || calls.some((call) => BigInt(call.value) !== 0n)) {
+    throw new Error("Treasury Range packets require a valid deadline and only zero-value calls");
+  }
+  assertTreasuryRangePacketRoles(context, details);
+  if (slug === "deployment") {
+    if (calls.length !== 1 || ethers.getAddress(calls[0].to) !== ethers.getAddress(production.create2HookDeployer)) {
+      throw new Error("Treasury Range deployment packet must contain exactly one canonical CREATE2 deployer call");
+    }
+    const parsed = new ethers.Interface(CREATE2_DEPLOYER_ABI).parseTransaction({ data: calls[0].data, value: 0n });
+    if (!parsed || parsed.name !== "deploy") throw new Error("Treasury Range deployment packet call must be deploy(bytes32,bytes)");
+    const salt = ethers.hexlify(parsed.args[0]).toLowerCase();
+    const initCode = ethers.hexlify(parsed.args[1]).toLowerCase();
+    const initCodeHash = ethers.keccak256(initCode).toLowerCase();
+    const predicted = ethers.getCreate2Address(production.create2HookDeployer, salt, initCodeHash);
+    if (ethers.getAddress(String(details.deployer)) !== production.create2HookDeployer
+        || String(details.salt).toLowerCase() !== salt
+        || String(details.initCodeHash).toLowerCase() !== initCodeHash
+        || ethers.getAddress(String(details.predictedManager)) !== predicted
+        || packetUnsigned(details.deploymentDeadline, "packet details.deploymentDeadline") !== BigInt(validUntil)) {
+      throw new Error("Treasury Range deployment calldata differs from the reviewed CREATE2 intent");
+    }
+    return;
+  }
+
+  const managerValue = context.strategy.addresses.treasuryRangeManager;
+  if (!managerValue || !ethers.isAddress(managerValue)) {
+    throw new Error("Treasury Range order and cancellation packets require the receipt-bound manager address");
+  }
+  const manager = ethers.getAddress(managerValue);
+  if (ethers.getAddress(String(details.managerAddress)) !== manager
+      || packetUnsigned(details.deadline, "packet details.deadline") !== BigInt(validUntil)) {
+    throw new Error("Treasury Range packet manager or deadline differs from the reviewed intent");
+  }
+  const managerInterface = new ethers.Interface(TREASURY_RANGE_MANAGER_ABI);
+  if (slug === "cancellation") {
+    if (!Array.isArray(details.cancellations) || details.cancellations.length < 1 || details.cancellations.length > 16) {
+      throw new Error("Treasury Range cancellation details must contain between 1 and 16 reviewed orders");
+    }
+    const seen = new Set<string>();
+    const expected = details.cancellations.map((raw, index) => {
+      const cancellation = packetObject(raw, `packet details.cancellations[${index}]`);
+      const orderId = packetUnsigned(cancellation.orderId, `packet details.cancellations[${index}].orderId`);
+      const minNaraOut = packetUnsigned(cancellation.minNaraOut, `packet details.cancellations[${index}].minNaraOut`);
+      const minUsdcOut = packetUnsigned(cancellation.minUsdcOut, `packet details.cancellations[${index}].minUsdcOut`);
+      if (orderId === 0n || seen.has(orderId.toString()) || (minNaraOut === 0n && minUsdcOut === 0n)
+          || !ethers.isHexString(cancellation.strategyHash, 32)) {
+        throw new Error("Treasury Range cancellation review details are invalid or duplicated");
+      }
+      seen.add(orderId.toString());
+      return {
+        to: manager,
+        value: "0",
+        data: managerInterface.encodeFunctionData("cancel", [orderId, minNaraOut, minUsdcOut, BigInt(validUntil)]),
+      };
+    });
+    assertExactTreasuryRangeCalls(calls, expected);
+    return;
+  }
+
+  const enabledOrders = context.strategy.proposedOrders.filter((order) => order.enabled);
+  if (enabledOrders.length < 1 || enabledOrders.length > 16 || stable(details.orders) !== stable(enabledOrders)) {
+    throw new Error("Treasury Range order review details differ from the enabled strategy orders");
+  }
+  const naraInput = enabledOrders.filter((order) => order.side === "SELL_NARA")
+    .reduce((sum, order) => sum + BigInt(order.inputAmountRaw), 0n);
+  const usdcInput = enabledOrders.filter((order) => order.side === "BUY_NARA")
+    .reduce((sum, order) => sum + BigInt(order.inputAmountRaw), 0n);
+  if (packetUnsigned(details.exactNaraApprovalRaw, "packet details.exactNaraApprovalRaw") !== naraInput
+      || packetUnsigned(details.exactUsdcApprovalRaw, "packet details.exactUsdcApprovalRaw") !== usdcInput
+      || details.finalAssertion !== "assertOperationalClean()") {
+    throw new Error("Treasury Range order approval or final assertion details differ from the strategy");
+  }
+  const tokenInterface = new ethers.Interface(ERC20_APPROVAL_ABI);
+  const expected: SafeBatchCall[] = [];
+  if (naraInput > 0n) expected.push({
+    to: context.strategy.addresses.nara,
+    value: "0",
+    data: tokenInterface.encodeFunctionData("approve", [manager, naraInput]),
+  });
+  if (usdcInput > 0n) expected.push({
+    to: context.strategy.addresses.usdc,
+    value: "0",
+    data: tokenInterface.encodeFunctionData("approve", [manager, usdcInput]),
+  });
+  for (const order of enabledOrders) {
+    expected.push({
+      to: manager,
+      value: "0",
+      data: managerInterface.encodeFunctionData(
+        order.side === "SELL_NARA" ? "createSellNaraOrder" : "createBuyNaraOrder",
+        [order.tickLower, order.tickUpper, BigInt(order.inputAmountRaw), BigInt(order.minimumOutputAmountRaw),
+          context.strategy.strategyHash, BigInt(validUntil)],
+      ),
+    });
+  }
+  if (naraInput > 0n) expected.push({
+    to: context.strategy.addresses.nara,
+    value: "0",
+    data: tokenInterface.encodeFunctionData("approve", [manager, 0n]),
+  });
+  if (usdcInput > 0n) expected.push({
+    to: context.strategy.addresses.usdc,
+    value: "0",
+    data: tokenInterface.encodeFunctionData("approve", [manager, 0n]),
+  });
+  expected.push({ to: manager, value: "0", data: managerInterface.encodeFunctionData("assertOperationalClean") });
+  assertExactTreasuryRangeCalls(calls, expected);
 }
 
 export async function buildAndWriteTreasuryRangePacket(options: {
@@ -1141,16 +1526,24 @@ export async function buildAndWriteTreasuryRangePacket(options: {
 }): Promise<{ jsonPath: string; markdownPath: string; review: TreasuryRangeSafeReview }> {
   const { context } = options;
   refuseStalePackets(options.outputDirectory, options.slug);
-  if (options.calls.length === 0) throw new Error("Safe packet must contain at least one call");
-  const safeNonce = BigInt(context.safeEvidence.nonce);
+  assertTreasuryRangePacketCallShape(options.slug, context, options.calls, options.details, options.validUntil);
+  const signingSafeRole = options.slug === "deployment" ? "deployment_executor" : "treasury_custody";
+  const signingSafe = options.slug === "deployment"
+    ? context.deploymentExecutorSafeEvidence
+    : context.treasuryRangeSafeEvidence;
+  const safeNonce = BigInt(signingSafe.nonce);
   const simulation = await buildAndSimulateSafeBatch(
     context.provider,
-    context.safeEvidence.address,
+    signingSafe.address,
     safeNonce,
     options.calls,
     context.block.number,
   );
-  const currentNonce = await new ethers.Contract(context.safeEvidence.address, ["function nonce() view returns(uint256)"], context.provider).nonce();
+  const currentNonce = await new ethers.Contract(
+    signingSafe.address,
+    ["function nonce() view returns(uint256)"],
+    context.provider,
+  ).nonce();
   if (BigInt(currentNonce) !== safeNonce) throw new Error("Safe nonce changed during packet construction");
   const currentBlock = await context.provider.getBlock(context.block.number);
   if (!currentBlock?.hash || currentBlock.hash.toLowerCase() !== context.block.hash?.toLowerCase()) {
@@ -1163,14 +1556,19 @@ export async function buildAndWriteTreasuryRangePacket(options: {
     purpose: options.purpose,
     noBroadcast: true,
     humanApprovalRequired: true,
-    repositoryHead: context.strategy.repositoryHead,
+    repositoryHead: context.protectedRelease.releaseCommit,
     strategyHash: context.strategy.strategyHash,
     chainId: "8453",
     blockNumber: context.block.number,
     blockHash: context.block.hash!,
     blockTimestamp: context.block.timestamp,
     validUntil: deadline,
-    safe: context.safeEvidence,
+    signingSafeRole,
+    signingSafe,
+    safeRoles: {
+      deploymentExecutorSafe: context.deploymentExecutorSafeEvidence.address,
+      treasuryRangeSafe: context.treasuryRangeSafeEvidence.address,
+    },
     calls: options.calls,
     simulation,
     runtime: context.productionRuntime,
@@ -1187,7 +1585,7 @@ export async function buildAndWriteTreasuryRangePacket(options: {
       name: `UNEXECUTED ${options.purpose}`,
       description: `Human-review-only packet; strategy ${context.strategy.strategyHash}; nonce ${safeNonce}; expires ${deadline}`,
       txBuilderVersion: "1.18.0",
-      createdFromSafeAddress: context.safeEvidence.address,
+      createdFromSafeAddress: signingSafe.address,
       checksum: simulation.safeTxHash,
     },
     transactions: options.calls.map((call) => ({ to: call.to, value: call.value, data: call.data, contractMethod: null, contractInputsValues: null })),
@@ -1200,7 +1598,11 @@ export async function buildAndWriteTreasuryRangePacket(options: {
   const markdownPath = resolve(options.outputDirectory, `${stem}.md`);
   durableWriteNew(pendingJson, prettyTreasuryRangeJson(transactionBuilder));
   durableWriteNew(pendingMarkdown, treasuryRangeSafeMarkdownReview(review));
-  const nonceBeforePublish = await new ethers.Contract(context.safeEvidence.address, ["function nonce() view returns(uint256)"], context.provider).nonce();
+  const nonceBeforePublish = await new ethers.Contract(
+    signingSafe.address,
+    ["function nonce() view returns(uint256)"],
+    context.provider,
+  ).nonce();
   if (BigInt(nonceBeforePublish) !== safeNonce) throw new Error("Safe nonce changed before atomic packet publication; pending files remain non-importable");
   renameSync(pendingMarkdown, markdownPath);
   renameSync(pendingJson, jsonPath);

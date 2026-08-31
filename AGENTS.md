@@ -89,13 +89,19 @@ block when applicable, test results, and unresolved risks.
   `docs/releases/NARA-20260828-v4-treasury-range-manager.md`,
   `docs/releases/NARA-20260831-v4-treasury-range-500-usdc-canary.md`,
   `docs/architecture/NARA_TREASURY_RANGE_MANAGER_V1.md`, and
-  `docs/runbooks/NARA_V4_TREASURY_RANGE_SETTLER_RUNBOOK.md`. The manager is an
-  implemented/tested and internal-audit-remediated candidate. The exact
-  500-USDC source policy and historical/fresh matrix-v3 evidence bind protected
-  commit `5a6b449df7d50b25d71715b3bbedc720ef6960ee`: it is not funded, deployed,
+  `docs/runbooks/NARA_V4_TREASURY_RANGE_SETTLER_RUNBOOK.md`, and
+  `deployments/v4-treasury-range-custody-policy-2026-08-31.json`. The protected
+  500-USDC policy commit `5a6b449df7d50b25d71715b3bbedc720ef6960ee`
+  and its historical/fresh matrix evidence predate the dedicated-Safe role
+  correction and are not launch authority by themselves. Current candidate
+  architecture uses the protocol 2-of-3 Safe only to execute CREATE2 deployment
+  and the distinct, policy-pinned Treasury Range Safe for immutable custody,
+  order/cancellation authority, and all settlements. The dedicated Safe is
+  currently 1-of-1; require explicit human risk acceptance or an approved
+  multisig upgrade/re-pin before funding. The manager is not funded, deployed,
   activated, independently externally audited, or part of permanent POL. Never
-  describe optimizer output as a profit guarantee or reuse an existing keeper
-  for the settler.
+  import a legacy single-Safe packet/evidence file, describe optimizer output as
+  a profit guarantee, or reuse an existing keeper for the settler.
 - **Historical withdrawal completed:** human Safe signers retired the 2026-07-30
   NARA/USDC pool on 2026-08-08 in Base transaction
   `0xd3b4c1790b586c399e48307afa3c282a279ac395212f0242a98835781a430523`.

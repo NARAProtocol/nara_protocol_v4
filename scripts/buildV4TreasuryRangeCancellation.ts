@@ -3,6 +3,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ethers } from "ethers";
 import { canonicalProductionV4Deployment } from "./lib/v4LiveConfig.js";
+import { canonicalTreasuryRangeAuthorities } from "./lib/v4TreasuryRangeConfig.js";
 import { loadTreasuryRangeStrategyManifest } from "./lib/v4TreasuryRangeManifest.js";
 import {
   TREASURY_RANGE_MANAGER_ABI,
@@ -54,19 +55,28 @@ async function main(): Promise<void> {
   if (!managerValue) throw new Error("RANGE_MANAGER_ADDRESS is required");
   const managerAddress = ethers.getAddress(managerValue);
   const strategyPath = resolve(process.env.V4_TREASURY_RANGE_STRATEGY_MANIFEST?.trim() || DEFAULT_STRATEGY);
-  const strategy = loadTreasuryRangeStrategyManifest(strategyPath);
+  const strategy = loadTreasuryRangeStrategyManifest(strategyPath, { emergencyExit: true });
   // Exit construction deliberately remains available even when the external
   // USDC dependency has drifted; creation/deployment paths fail closed.
-  const context = await readTreasuryRangeBuildContext(REPOSITORY_ROOT, strategyPath, strategy, { enforceUsdcDependency: false });
+  const context = await readTreasuryRangeBuildContext(REPOSITORY_ROOT, strategyPath, strategy, {
+    enforceUsdcDependency: false,
+    emergencyExit: true,
+  });
   const production = canonicalProductionV4Deployment();
+  const authorities = canonicalTreasuryRangeAuthorities(production);
   const deploymentEvidence = await readVerifiedTreasuryRangeManagerDeployment(REPOSITORY_ROOT, context, managerAddress);
   const expectedRuntimeHash = deploymentEvidence.runtimeCodeHash;
-  await assertTreasuryRangeViewChecks(context, strategy.hookConfiguration.readChecks, "hookConfiguration.readChecks");
+  const hookEmergencyExitSnapshot = await assertTreasuryRangeViewChecks(
+    context,
+    strategy.hookConfiguration.readChecks,
+    "hookConfiguration.readChecks",
+    { emergencyExit: true },
+  );
   const manager = new ethers.Contract(managerAddress, TREASURY_RANGE_MANAGER_ABI, context.provider);
   const managerSafetyState = await readTreasuryRangeManagerSafetyState(context, managerAddress);
   if (BigInt(await manager.MAX_SETTLE_BATCH({ blockTag: context.block.number })) !== 16n) throw new Error("Range Manager batch cap differs from 16");
   const bindings: ReadonlyArray<[string, string | number]> = [
-    ["NARA", production.token], ["USDC", production.base], ["TREASURY_SAFE", production.safe],
+    ["NARA", production.token], ["USDC", production.base], ["TREASURY_SAFE", authorities.treasuryRangeSafe],
     ["LIQUIDITY_VAULT", production.vault], ["POOL_MANAGER", production.poolManager],
     ["POSITION_MANAGER", production.positionManager], ["PERMIT2", production.permit2], ["HOOK", production.hook],
     ["POOL_FEE", production.poolFee], ["TICK_SPACING", production.tickSpacing], ["POOL_ID", production.poolId],
@@ -117,16 +127,25 @@ async function main(): Promise<void> {
       deadline: deadline.toString(),
       reason,
       cancellations: reviewedOrders,
+      hookEmergencyExitSnapshot: {
+        treatment: "recorded_without_curve_or_pending-state veto because cancellation must remain available",
+        values: hookEmergencyExitSnapshot,
+      },
       managerPoolTokenBalances: {
         treatment: "alert-only because direct ERC20 donations are permissionless and cancellation cannot sweep them",
         naraRaw: managerSafetyState.managerNaraBalance,
         usdcRaw: managerSafetyState.managerUsdcBalance,
       },
+      safeRoles: {
+        deploymentExecutorSafe: authorities.deploymentExecutorSafe,
+        treasuryRangeSafe: authorities.treasuryRangeSafe,
+      },
     },
     checks: [
       "Confirm the cancellation reason and every active order ID/token ID/strategy hash.",
+      "Confirm the dedicated Treasury Safe, not the deployment-executor Safe, signs this cancellation packet.",
       "Review both per-order NARA and USDC minimum outputs; neither asset can be redirected away from the Safe.",
-      "Confirm current pool and Hook state and any partial-fill exposure.",
+      "Review the recorded current/pending Hook snapshot and any partial-fill exposure; curve/depth drift does not block emergency exit.",
       "Confirm every Safe->Manager, Manager->Permit2, and Permit2->PositionManager allowance is zero; donated manager balances are report-only.",
       "Confirm the complete Safe simulateAndRevert result; cancellation deliberately does not call the forceable-balance assertOperationalClean gate.",
       "Acknowledge emergency_exit_bypass: attached USDC dependency evidence is the strategy snapshot, not a JIT exact/healthy assertion; this bypass is cancellation-only.",

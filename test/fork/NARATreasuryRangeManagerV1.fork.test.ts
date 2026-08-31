@@ -1,7 +1,7 @@
 /**
  * Pinned Base fork proof for the real NARA pool and Uniswap v4 periphery.
  *
- * This test impersonates the production Safe and Treasury only inside the local fork and funds only
+ * This test impersonates the dedicated Treasury Range Safe and Treasury only inside the local fork and funds only
  * their fork ETH gas balances. It reproduces the real funding prerequisite by calling the actual ERC20
  * transfers from Treasury to Safe; it never edits token storage. It then proves the manager's binding
  * checks and one-sided MINT_POSITION/SETTLE_PAIR then BURN_POSITION/TAKE_PAIR encoding against the
@@ -14,7 +14,8 @@ import hre from "hardhat";
 const PINNED_BLOCK = 50_537_172;
 const PINNED_BLOCK_HASH = "0x6e896c222c2b8313fc232d174136d58212835c39a06378f2dbf2b73c0101b7d9";
 
-const SAFE = "0xd65c0e390Dc187A22c52c03816591CC736C0D755";
+const DEPLOYMENT_EXECUTOR_SAFE = "0xd65c0e390Dc187A22c52c03816591CC736C0D755";
+const TREASURY_RANGE_SAFE = "0x5050BC6dc3E07313D52D05cecD53f727D6CDa245";
 const TREASURY = "0xfe3A8678A9c729438BB11718bD1391E7Ab491E8e";
 const TREASURY_DELEGATION_CODE = "0xef010063c0c19a282a1b52b07dd5a65b58948a07dae32b";
 const NARA = "0xB6333F5D4cEd8dffA80F3F13697D6aA3BB3f19c1";
@@ -57,7 +58,10 @@ const rpcUrl = process.env.BASE_MAINNET_RPC_URL || process.env.BASE_RPC_URL;
 
 (rpcUrl ? describe : describe.skip)("NARATreasuryRangeManagerV1 - pinned Base fork", function () {
   it("binds the live stack and round-trips real one-sided positions without disturbing permanent POL", async function () {
-    this.timeout(180_000);
+    // Public/archive RPC latency can exceed three minutes while Hardhat lazily
+    // hydrates real Uniswap v4 storage. Keep the proof bounded, but do not turn
+    // provider slowness into a false contract failure.
+    this.timeout(600_000);
     const { ethers } = await hre.network.connect({
       network: "baseFork",
       chainType: "op",
@@ -66,11 +70,14 @@ const rpcUrl = process.env.BASE_MAINNET_RPC_URL || process.env.BASE_RPC_URL;
 
     const pinned = await ethers.provider.getBlock(PINNED_BLOCK);
     expect(pinned?.hash).to.equal(PINNED_BLOCK_HASH);
-    await ethers.provider.send("hardhat_impersonateAccount", [SAFE]);
+    await ethers.provider.send("hardhat_impersonateAccount", [TREASURY_RANGE_SAFE]);
+    await ethers.provider.send("hardhat_impersonateAccount", [DEPLOYMENT_EXECUTOR_SAFE]);
     await ethers.provider.send("hardhat_impersonateAccount", [TREASURY]);
-    await ethers.provider.send("hardhat_setBalance", [SAFE, ethers.toBeHex(10n ** 18n)]);
+    await ethers.provider.send("hardhat_setBalance", [TREASURY_RANGE_SAFE, ethers.toBeHex(10n ** 18n)]);
+    await ethers.provider.send("hardhat_setBalance", [DEPLOYMENT_EXECUTOR_SAFE, ethers.toBeHex(10n ** 18n)]);
     await ethers.provider.send("hardhat_setBalance", [TREASURY, ethers.toBeHex(10n ** 18n)]);
-    const safeSigner = await ethers.getSigner(SAFE);
+    const safeSigner = await ethers.getSigner(TREASURY_RANGE_SAFE);
+    const deploymentExecutorSigner = await ethers.getSigner(DEPLOYMENT_EXECUTOR_SAFE);
     const treasurySigner = await ethers.getSigner(TREASURY);
     const [deployer] = await ethers.getSigners();
 
@@ -81,8 +88,8 @@ const rpcUrl = process.env.BASE_MAINNET_RPC_URL || process.env.BASE_RPC_URL;
     const positionManager: any = new ethers.Contract(POSITION_MANAGER, POSITION_MANAGER_ABI, ethers.provider);
     const permit2: any = new ethers.Contract(PERMIT2, PERMIT2_ABI, ethers.provider);
 
-    expect(await nara.balanceOf(SAFE)).to.equal(2_070_480n);
-    expect(await usdc.balanceOf(SAFE)).to.equal(0n);
+    expect(await nara.balanceOf(TREASURY_RANGE_SAFE)).to.equal(0n);
+    expect(await usdc.balanceOf(TREASURY_RANGE_SAFE)).to.equal(0n);
     expect(await nara.balanceOf(TREASURY)).to.equal(231_654_347945195939825307n);
     expect(await usdc.balanceOf(TREASURY)).to.equal(4_398_903041n);
     expect(await ethers.provider.getCode(TREASURY)).to.equal(TREASURY_DELEGATION_CODE);
@@ -93,13 +100,14 @@ const rpcUrl = process.env.BASE_MAINNET_RPC_URL || process.env.BASE_RPC_URL;
 
     const block = await latestBlock(ethers);
     const manager: any = await ethers.deployContract("NARATreasuryRangeManagerV1", [
-      SAFE, NARA, USDC, VAULT, POOL_MANAGER, POSITION_MANAGER, PERMIT2, HOOK,
+      TREASURY_RANGE_SAFE, NARA, USDC, VAULT, POOL_MANAGER, POSITION_MANAGER, PERMIT2, HOOK,
       POOL_FEE, TICK_SPACING, POOL_ID, BigInt(block.timestamp + 3_600),
     ], deployer);
     await manager.waitForDeployment();
     const managerAddress = await manager.getAddress();
     expect(await manager.assertOperationalClean()).to.equal(true);
     expect(await manager.canonicalPoolKey()).to.deep.equal([USDC, NARA, 3_000n, 60n, HOOK]);
+    expect(await manager.TREASURY_SAFE()).to.equal(TREASURY_RANGE_SAFE);
 
     const [, currentTick] = await manager.currentPoolState();
     const tick = Number(currentTick);
@@ -109,6 +117,15 @@ const rpcUrl = process.env.BASE_MAINNET_RPC_URL || process.env.BASE_RPC_URL;
     const sellLower = sellUpper - TICK_SPACING;
     const buyLower = ceilAligned + TICK_SPACING;
     const buyUpper = buyLower + TICK_SPACING;
+
+    await expect(manager.connect(deploymentExecutorSigner).createSellNaraOrder(
+      sellLower,
+      sellUpper,
+      SELL_INPUT,
+      1n,
+      ethers.keccak256(ethers.toUtf8Bytes("fork-deployment-executor-rejected")),
+      BigInt((await latestBlock(ethers)).timestamp + 3_600),
+    )).to.be.revertedWithCustomError(manager, "UnauthorizedSafe").withArgs(DEPLOYMENT_EXECUTOR_SAFE);
 
     // An approval cannot manufacture inventory: the unfunded Safe attempt rolls back before registration.
     const nextBeforeFailedCreate = await positionManager.nextTokenId();
@@ -130,14 +147,14 @@ const rpcUrl = process.env.BASE_MAINNET_RPC_URL || process.env.BASE_RPC_URL;
     // Reproduce the actual operational prerequisite with ERC20 transfers from Treasury, never storage edits.
     const treasuryNaraBeforeFunding = await nara.balanceOf(TREASURY);
     const treasuryUsdcBeforeFunding = await usdc.balanceOf(TREASURY);
-    const safeNaraBeforeFunding = await nara.balanceOf(SAFE);
-    const safeUsdcBeforeFunding = await usdc.balanceOf(SAFE);
-    await (await treasuryNara.transfer(SAFE, SELL_INPUT)).wait();
-    await (await treasuryUsdc.transfer(SAFE, BUY_INPUT)).wait();
+    const safeNaraBeforeFunding = await nara.balanceOf(TREASURY_RANGE_SAFE);
+    const safeUsdcBeforeFunding = await usdc.balanceOf(TREASURY_RANGE_SAFE);
+    await (await treasuryNara.transfer(TREASURY_RANGE_SAFE, SELL_INPUT)).wait();
+    await (await treasuryUsdc.transfer(TREASURY_RANGE_SAFE, BUY_INPUT)).wait();
     expect(treasuryNaraBeforeFunding - (await nara.balanceOf(TREASURY))).to.equal(SELL_INPUT);
     expect(treasuryUsdcBeforeFunding - (await usdc.balanceOf(TREASURY))).to.equal(BUY_INPUT);
-    expect((await nara.balanceOf(SAFE)) - safeNaraBeforeFunding).to.equal(SELL_INPUT);
-    expect((await usdc.balanceOf(SAFE)) - safeUsdcBeforeFunding).to.equal(BUY_INPUT);
+    expect((await nara.balanceOf(TREASURY_RANGE_SAFE)) - safeNaraBeforeFunding).to.equal(SELL_INPUT);
+    expect((await usdc.balanceOf(TREASURY_RANGE_SAFE)) - safeUsdcBeforeFunding).to.equal(BUY_INPUT);
 
     const roundTrip = async (
       token: any,
@@ -147,8 +164,8 @@ const rpcUrl = process.env.BASE_MAINNET_RPC_URL || process.env.BASE_RPC_URL;
       upper: number,
       orderId: bigint,
     ) => {
-      const safeNaraBefore = await nara.balanceOf(SAFE);
-      const safeUsdcBefore = await usdc.balanceOf(SAFE);
+      const safeNaraBefore = await nara.balanceOf(TREASURY_RANGE_SAFE);
+      const safeUsdcBefore = await usdc.balanceOf(TREASURY_RANGE_SAFE);
       const tokenId = await positionManager.nextTokenId();
       const deadline = BigInt((await latestBlock(ethers)).timestamp + 3_600);
       await (await token.approve(managerAddress, input)).wait();
@@ -166,7 +183,7 @@ const rpcUrl = process.env.BASE_MAINNET_RPC_URL || process.env.BASE_RPC_URL;
       expect(await manager.tokenIdToOrderId(tokenId)).to.equal(orderId);
       expect(await positionManager.ownerOf(tokenId)).to.equal(managerAddress);
       expect(await positionManager.getPositionLiquidity(tokenId)).to.equal(order.liquidity);
-      expect(await token.allowance(SAFE, managerAddress)).to.equal(0n);
+      expect(await token.allowance(TREASURY_RANGE_SAFE, managerAddress)).to.equal(0n);
       expect(await token.allowance(managerAddress, PERMIT2)).to.equal(0n);
       expect((await permit2.allowance(managerAddress, await token.getAddress(), POSITION_MANAGER)).amount)
         .to.equal(0n);
@@ -179,8 +196,8 @@ const rpcUrl = process.env.BASE_MAINNET_RPC_URL || process.env.BASE_RPC_URL;
       expect(await usdc.balanceOf(managerAddress)).to.equal(0n);
       expect(await manager.assertOperationalClean()).to.equal(true);
 
-      const safeNaraAfter = await nara.balanceOf(SAFE);
-      const safeUsdcAfter = await usdc.balanceOf(SAFE);
+      const safeNaraAfter = await nara.balanceOf(TREASURY_RANGE_SAFE);
+      const safeUsdcAfter = await usdc.balanceOf(TREASURY_RANGE_SAFE);
       if (side === "sell") {
         expect(safeUsdcAfter).to.equal(safeUsdcBefore);
         expect(safeNaraAfter).to.be.at.least(safeNaraBefore - 1n);

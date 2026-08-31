@@ -1,12 +1,13 @@
 # NARA Treasury Range Manager V1 Architecture
 
-Status: implementation candidate; not deployed, activated, or approved for production execution.
+Status: dedicated-custody remediation candidate; not merged, deployed, funded, activated, or approved for production execution.
 
-Change ID: `NARA-20260828-v4-treasury-range-manager`
+Change IDs: `NARA-20260828-v4-treasury-range-manager` and
+`NARA-20260831-v4-treasury-range-dedicated-safe`.
 
 ## Purpose
 
-`NARATreasuryRangeManagerV1` is a narrowly scoped Uniswap v4 periphery contract for Safe-authorized, one-sided treasury ranges in the canonical NARA/USDC pool. It is separate from permanent protocol-owned liquidity. A range that reaches its terminal boundary may be burned permissionlessly, with both currencies transferred directly to the immutable production Safe. V1 never automatically redeploys settlement proceeds.
+`NARATreasuryRangeManagerV1` is a narrowly scoped Uniswap v4 periphery contract for Safe-authorized, one-sided treasury ranges in the canonical NARA/USDC pool. It is separate from permanent protocol-owned liquidity. A range that reaches its terminal boundary may be burned permissionlessly, with both currencies transferred directly to the immutable Treasury Range Safe. V1 never automatically redeploys settlement proceeds.
 
 This design offers transparent liquidity at pre-authorized prices. It does not manufacture volume, restrict transfers, select counterparties, or guarantee a market outcome.
 
@@ -14,7 +15,9 @@ This design offers transparent liquidity at pre-authorized prices. It does not m
 
 ```mermaid
 flowchart LR
-    S[Production Safe] -->|Safe-only create or cancel| M[Range Manager]
+    D[Protocol deployment Safe 2-of-3] -->|owns CREATE2 deployer; deployment only| X[CREATE2 deployer]
+    X --> M[Range Manager]
+    S[Treasury Range Safe 1-of-1 candidate] -->|Safe-only create or cancel| M
     M -->|one-sided mint| P[Uniswap v4 PositionManager]
     P --> C[Canonical NARA/USDC pool]
     C -->|Swap events| W[Independent settlers]
@@ -26,14 +29,16 @@ flowchart LR
 The three operational domains remain independent:
 
 1. Existing permanent POL continues through the seed position, Vault, and Compounder without modification.
-2. The Range Manager owns only registered tactical order positions for operational purposes.
-3. Off-chain settlers have gas only. They cannot create, cancel, edit, register, or redirect an order.
+2. The protocol 2-of-3 Safe is only the manager deployment executor because it owns the canonical CREATE2 deployer.
+3. The dedicated Treasury Range Safe holds tactical inventory, is the immutable manager authority, and receives all terminal assets.
+4. The Range Manager owns only registered tactical order positions for operational purposes.
+5. Off-chain settlers have gas only. They cannot create, cancel, edit, register, or redirect an order.
 
 ## Immutable deployment bindings
 
 The non-upgradeable contract is permanently bound to:
 
-- the production Safe and direct settlement recipient;
+- the dedicated Treasury Range Safe as sole order authority and direct settlement recipient;
 - NARA and USDC, with `currency0 = USDC` and `currency1 = NARA`;
 - PoolManager, PositionManager, and Permit2;
 - the existing NARA liquidity Hook and Vault;
@@ -47,11 +52,13 @@ JIT constructor immutable, so the builder derives the exact runtime from freshly
 rebuilt initcode and constructor simulation, then records its runtime hash,
 initcode hash, salt, predicted address, and deadline in the nonce-bound unsigned
 proposal. Postdeployment order and cancellation builders still require the
-receipt-pinned runtime hash and immutable getter checks.
+receipt-pinned runtime hash and immutable getter checks. The unsigned deployment
+packet is executed by the separate protocol 2-of-3 Safe; that executor receives
+no manager authority and cannot create or cancel an order.
 
 ## Circle USDC dependency boundary
 
-Base USDC is treated as an administratively upgradeable external dependency, not as a fixed implementation merely because its proxy address and proxy runtime remain unchanged. Strategy schema v2 records Circle's Zeppelinos proxy mechanism, exact implementation/admin storage slots, proxy and implementation address/runtime hashes, proxy admin, token owner, pauser, blacklister, paused state, and blacklist state for the Safe, PoolManager, PositionManager, Permit2, Vault, Compounder, and Range Manager when known. The Base Multicall3 reader address/runtime hash used to batch caller-independent token views is also pinned.
+Base USDC is treated as an administratively upgradeable external dependency, not as a fixed implementation merely because its proxy address and proxy runtime remain unchanged. Strategy schema v3 records both Safe roles and Circle's Zeppelinos proxy mechanism, exact implementation/admin storage slots, proxy and implementation address/runtime hashes, proxy admin, token owner, pauser, blacklister, paused state, and blacklist state for the Treasury Range Safe, PoolManager, PositionManager, Permit2, Vault, Compounder, and Range Manager when known. The deployment executor Safe is not a USDC actor and is therefore not included in the token blacklist actor set. The Base Multicall3 reader address/runtime hash used to batch caller-independent token views is also pinned.
 
 State generation records that evidence at the pinned block. Deployment and order builders re-read it at the JIT packet block, add the predicted or deployed manager to the exact actor set, and require full equality before serialization. The settler performs the same observation independently through all three providers and rejects disagreement, drift, pause, or any monitored blacklist state before nonce selection, signing, or exact rebroadcast. Proxy bytecode equality alone is never accepted as implementation identity.
 
@@ -61,13 +68,16 @@ This is detection and fail-closed containment, not control over Circle. A privil
 
 | Operation | Authorized caller | Recipient |
 | --- | --- | --- |
-| Create sell or buy order | Immutable Safe | Manager mints registered NFT |
-| Cancel active order | Immutable Safe | Immutable Safe |
-| Pause or unpause creation | Immutable Safe | Not applicable |
-| Settle terminal order | Anyone | Immutable Safe |
-| Quarantine unregistered PositionManager NFT | Immutable Safe | Immutable Safe |
+| Deploy manager through canonical CREATE2 deployer | Protocol deployment Safe (2-of-3) | Not applicable |
+| Create sell or buy order | Immutable Treasury Range Safe | Manager mints registered NFT |
+| Cancel active order | Immutable Treasury Range Safe | Treasury Range Safe |
+| Pause or unpause creation | Immutable Treasury Range Safe | Not applicable |
+| Settle terminal order | Anyone | Treasury Range Safe |
+| Quarantine unregistered PositionManager NFT | Immutable Treasury Range Safe | Treasury Range Safe |
 
 There is no generic call executor, configurable recipient, upgrade authority, settlement allowlist, keeper reward, or general recovery function.
+
+For this release, every create, cancel, or rebalance sequence (settle/cancel followed by a fresh create) requires manual human review and approval through the dedicated Treasury Range Safe. Permissionless terminal settlement may be automated by the gas-only settlers. A future release could add hands-off range creation through a separately reviewed, tightly permissioned Safe module or controller, but it is not part of this release and must not change the non-upgradeable manager's immutable custody authority or settlement recipient.
 
 ## Order lifecycle
 
@@ -80,7 +90,7 @@ None -> Active -> Settled
 
 Creation is blocked while paused. Settlement and cancellation remain available. A terminal state cannot become active again.
 
-Creation accepts a Safe-reviewed `strategyHash` and deadline. It validates aligned ticks, strict one-sided composition, nonzero input and output minimum, deterministic full-conversion principal, and bounded integer widths. It pulls only the approved maximum input, grants call-scoped ERC-20 and Permit2 allowances, mints the expected next PositionManager token ID, clears both allowance layers, and returns deterministic dust to the Safe.
+Creation accepts a Treasury-Range-Safe-reviewed `strategyHash` and deadline. It validates aligned ticks, strict one-sided composition, nonzero input and output minimum, deterministic full-conversion principal, and bounded integer widths. It pulls only the approved maximum input, grants call-scoped ERC-20 and Permit2 allowances, mints the expected next PositionManager token ID, clears both allowance layers, and returns deterministic dust to the Treasury Range Safe.
 
 Cancellation accepts independent NARA and USDC output floors plus a deadline. This prevents a stale cancellation packet from silently accepting a materially changed inventory composition.
 
@@ -104,7 +114,7 @@ The contract compares exact sqrt boundaries. Off-chain planning uses bigint/rati
 
 Settlement validates Active state, registered token ownership, nonzero position liquidity, and the side-specific terminal sqrt boundary. It marks the order terminal before calling PositionManager; a revert restores the entire transaction.
 
-The PositionManager call uses `BURN_POSITION + TAKE_PAIR`. The immutable Safe is encoded as recipient. The stored minimum applies to the expected output currency, while the contract measures both Safe balance deltas and verifies the position has no remaining liquidity. Principal, accrued LP fees, and rounding balances all go to the Safe.
+The PositionManager call uses `BURN_POSITION + TAKE_PAIR`. The immutable Treasury Range Safe is encoded as recipient. The stored minimum applies to the expected output currency, while the contract measures both Treasury Range Safe balance deltas and verifies the position has no remaining liquidity. Principal, accrued LP fees, and rounding balances all go to that Safe.
 
 `settleMany` is bounded and never loops over historical orders. Settlers paginate registered active IDs, prefilter through `isSettleable`, and simulate the exact batch before submission.
 
@@ -116,7 +126,7 @@ V1 therefore enforces the achievable invariant:
 
 > An unregistered PositionManager NFT can never become an order or be settled, cancelled, or treated as managed treasury principal.
 
-Only the exact token ID observed during the manager's synchronous mint can be registered. Unsolicited safe transfers are rejected. A Safe-only quarantine function may transfer an unregistered PositionManager NFT only to the immutable Safe; it can never operate on a registered order token.
+Only the exact token ID observed during the manager's synchronous mint can be registered. Unsolicited safe transfers are rejected. A Treasury-Range-Safe-only quarantine function may transfer an unregistered PositionManager NFT only to that immutable Safe; it can never operate on a registered order token.
 
 Operational enumeration uses the order registry, never `PositionManager.balanceOf(manager)`. A balance mismatch is an alert, not a reason to stop valid settlements.
 
@@ -154,12 +164,15 @@ The repository may contain implementation, fork simulations, optimizer output, a
 3. exact canary strategy and human-reviewed output minimums;
 4. unsigned deployment packet review and Safe approval;
 5. receipt-pinned deployment/runtime manifest;
-6. fresh order packet built from current state and Safe nonce;
-7. two independently operated settlers and monitoring;
-8. at least 48 hours of canary evidence before considering expansion.
+6. explicit human acceptance of the dedicated Safe's current 1-of-1 custody risk, or a verified upgrade to an approved multisig topology before funding;
+7. fresh order packet built from current state and the Treasury Range Safe nonce;
+8. two independently operated settlers and monitoring;
+9. at least 48 hours of canary evidence before considering expansion.
 
-Protected PR #52 completed item 1 and the automated review portions of item 2
-for source commit `35091010de09802f39ccda7e726ff8c4b240e165`. Human production
-acceptance and items 3 through 8 remain outstanding.
+Protected PR #52 established the original source candidate, and PR #59 established
+the bounded 100,000 NARA plus 500 USDC canary policy. Neither commit separates
+the deployment and custody Safe roles. The dedicated-Safe remediation must be
+reviewed and merged before item 1 is complete for launch. Human production
+acceptance and items 2 through 9 remain outstanding.
 
 No source artifact or candidate manifest authorizes signing or broadcast.

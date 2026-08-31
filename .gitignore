@@ -33,6 +33,8 @@ deployments/*
 !deployments/v4-position-nft-phase2-2026-08-21.json
 !deployments/v4-position-nft-phase2-source-verification-2026-08-21.json
 !deployments/v4-position-nft-phase2-finalized-2026-08-21.json
+!deployments/v4-treasury-range-custody-policy-2026-08-31.json
+!deployments/v4-treasury-range-manager-deployment-*.json
 slither-reports/
 aderyn-reports/
 crytic-export/

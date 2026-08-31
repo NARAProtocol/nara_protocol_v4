@@ -5,6 +5,10 @@ import { assertTreasuryRangeMatrix } from "./v4TreasuryRangeEvidence.js";
 import { compareRational, formatRational, sqrtPriceX96ToHumanUsdcPerNara } from "./v4TreasuryRangeMath.js";
 import type { VerifiedTreasuryRangeMatrix } from "./v4TreasuryRangeEvidence.js";
 import {
+  TREASURY_RANGE_CUSTODY_POLICY_REPOSITORY_PATH,
+  canonicalTreasuryRangeAuthorities,
+} from "./v4TreasuryRangeConfig.js";
+import {
   TREASURY_RANGE_CANARY_EXPOSED_USDC,
   TREASURY_RANGE_CANARY_CANDIDATE_ID,
   TREASURY_RANGE_CANARY_NARA_BUDGET,
@@ -20,7 +24,7 @@ import {
   type CircleFiatTokenDependencyEvidence,
 } from "./v4UsdcDependency.js";
 
-export const TREASURY_RANGE_STRATEGY_SCHEMA = "nara.v4.treasury-range-strategy.v2" as const;
+export const TREASURY_RANGE_STRATEGY_SCHEMA = "nara.v4.treasury-range-strategy.v3" as const;
 export const TREASURY_RANGE_CANARY_CHANGE_ID_PREFIX = "NARA-20260831-v4-treasury-range-500-usdc-canary" as const;
 
 export type TreasuryRangeOrderSide = "SELL_NARA" | "BUY_NARA";
@@ -47,6 +51,11 @@ export interface TreasuryRangeStrategyManifest {
   status: "candidate_no_broadcast";
   changeId: string;
   repositoryHead: string;
+  custodyPolicy: {
+    changeId: string;
+    manifestPath: string;
+    manifestSha256: string;
+  };
   pinnedState: {
     chainId: "8453";
     blockNumber: number;
@@ -54,7 +63,8 @@ export interface TreasuryRangeStrategyManifest {
     timestamp: number;
   };
   addresses: Record<string, string> & {
-    safe: string;
+    deploymentExecutorSafe: string;
+    treasuryRangeSafe: string;
     nara: string;
     usdc: string;
     hook: string;
@@ -110,6 +120,12 @@ type JsonObject = Record<string, unknown>;
 function object(value: unknown, label: string): JsonObject {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(`${label} must be an object`);
   return value as JsonObject;
+}
+
+function exactKeys(value: JsonObject, expected: readonly string[], label: string): void {
+  const actual = Object.keys(value).sort();
+  const wanted = [...expected].sort();
+  if (JSON.stringify(actual) !== JSON.stringify(wanted)) throw new Error(`${label} has missing or extra fields`);
 }
 
 function string(value: unknown, label: string): string {
@@ -193,6 +209,11 @@ export function treasuryRangeStrategyHash(manifest: Omit<TreasuryRangeStrategyMa
 
 function parseOrder(value: unknown, index: number, spacing: number): TreasuryRangeStrategyOrder {
   const item = object(value, `proposedOrders[${index}]`);
+  exactKeys(item, [
+    "side", "humanPriceLower", "humanPriceUpper", "tickLower", "tickUpper", "inputAmountRaw",
+    "expectedOutputAmountRaw", "minimumOutputAmountRaw", "expectedLiquidity", "expectedDustNaraRaw",
+    "expectedDustUsdcRaw", "toleranceBps", "enabled", ...(item.orderId === undefined ? [] : ["orderId"]),
+  ], `proposedOrders[${index}]`);
   const side = string(item.side, `proposedOrders[${index}].side`);
   if (side !== "SELL_NARA" && side !== "BUY_NARA") throw new Error(`proposedOrders[${index}].side is invalid`);
   const tickLower = integer(item.tickLower, `proposedOrders[${index}].tickLower`);
@@ -233,39 +254,92 @@ function parseOrder(value: unknown, index: number, spacing: number): TreasuryRan
   return result;
 }
 
-export function parseTreasuryRangeStrategyManifest(value: unknown): TreasuryRangeStrategyManifest {
+export function parseTreasuryRangeStrategyManifest(
+  value: unknown,
+  options: Readonly<{ emergencyExit?: boolean }> = {},
+): TreasuryRangeStrategyManifest {
   const root = object(value, "strategy manifest");
+  exactKeys(root, [
+    "schemaVersion", "status", "changeId", "repositoryHead", "custodyPolicy", "pinnedState", "addresses",
+    "runtimeCodeHashes", "externalDependencies", "poolId", "poolKey", "currentSlot0", "hookConfiguration",
+    "hookConfigurationHash", "pendingHookConfiguration", "existingPositions", "proposedOrders", "budget",
+    "simulationMatrix", ...(root.managerDeployment === undefined ? [] : ["managerDeployment"]), "strategyHash",
+    "noBroadcast",
+  ], "strategy manifest");
   if (root.schemaVersion !== TREASURY_RANGE_STRATEGY_SCHEMA) throw new Error("Unsupported treasury-range strategy schema");
   if (root.status !== "candidate_no_broadcast" || root.noBroadcast !== true) {
     throw new Error("Strategy manifest must remain candidate_no_broadcast with noBroadcast=true");
   }
   const repositoryHead = string(root.repositoryHead, "repositoryHead").toLowerCase();
   if (!/^[0-9a-f]{40}$/.test(repositoryHead)) throw new Error("repositoryHead must be a full commit SHA");
+  const authorities = canonicalTreasuryRangeAuthorities();
+  const custodyPolicyRaw = object(root.custodyPolicy, "custodyPolicy");
+  exactKeys(custodyPolicyRaw, ["changeId", "manifestPath", "manifestSha256"], "custodyPolicy");
+  const custodyPolicy = {
+    changeId: string(custodyPolicyRaw.changeId, "custodyPolicy.changeId"),
+    manifestPath: string(custodyPolicyRaw.manifestPath, "custodyPolicy.manifestPath"),
+    manifestSha256: bytes32(custodyPolicyRaw.manifestSha256, "custodyPolicy.manifestSha256"),
+  };
+  if (custodyPolicy.changeId !== authorities.custodyPolicyChangeId
+      || custodyPolicy.manifestPath !== TREASURY_RANGE_CUSTODY_POLICY_REPOSITORY_PATH
+      || custodyPolicy.manifestSha256 !== `0x${authorities.custodyPolicySha256}`) {
+    throw new Error("Strategy custodyPolicy does not bind the exact tracked Treasury Safe policy");
+  }
   const pinned = object(root.pinnedState, "pinnedState");
+  exactKeys(pinned, ["chainId", "blockNumber", "blockHash", "timestamp"], "pinnedState");
   if (String(pinned.chainId) !== "8453") throw new Error("Strategy manifest must target Base chain 8453");
   const blockNumber = integer(pinned.blockNumber, "pinnedState.blockNumber");
   const timestamp = integer(pinned.timestamp, "pinnedState.timestamp");
   if (blockNumber < 1 || timestamp < 1) throw new Error("pinnedState block/timestamp must be positive");
   const addressesRaw = object(root.addresses, "addresses");
+  if (addressesRaw.safe !== undefined) {
+    throw new Error("Legacy ambiguous addresses.safe is forbidden; both Safe roles must be explicit");
+  }
+  exactKeys(addressesRaw, [
+    "deploymentExecutorSafe", "treasuryRangeSafe", "nara", "usdc", "hook", "poolManager", "positionManager",
+    "permit2", "liquidityVault", "liquidityCompounder", "universalRouter", "officialV4Quoter",
+    "create2HookDeployer", "stateView", "treasury",
+    ...(addressesRaw.treasuryRangeManager === undefined ? [] : ["treasuryRangeManager"]),
+  ], "addresses");
   const addresses = Object.fromEntries(Object.entries(addressesRaw).map(([key, item]) => [key, address(item, `addresses.${key}`)]));
   for (const key of [
-    "safe", "nara", "usdc", "hook", "poolManager", "positionManager", "permit2",
+    "deploymentExecutorSafe", "treasuryRangeSafe", "nara", "usdc", "hook", "poolManager", "positionManager", "permit2",
     "liquidityVault", "liquidityCompounder", "universalRouter", "officialV4Quoter", "create2HookDeployer",
   ] as const) {
     if (!addresses[key]) throw new Error(`addresses.${key} is required`);
   }
   const hashesRaw = object(root.runtimeCodeHashes, "runtimeCodeHashes");
+  if (hashesRaw.safe !== undefined) {
+    throw new Error("Legacy ambiguous runtimeCodeHashes.safe is forbidden; both Safe roles must be explicit");
+  }
+  exactKeys(hashesRaw, [
+    "deploymentExecutorSafe", "treasuryRangeSafe", "nara", "usdc", "hook", "poolManager", "positionManager",
+    "permit2", "liquidityVault", "liquidityCompounder", "universalRouter", "officialV4Quoter",
+    "create2HookDeployer", "stateView", ...(hashesRaw.rangeManager === undefined ? [] : ["rangeManager"]),
+  ], "runtimeCodeHashes");
   const runtimeCodeHashes = Object.fromEntries(Object.entries(hashesRaw).map(([key, item]) => [key, bytes32(item, `runtimeCodeHashes.${key}`)]));
+  for (const key of ["deploymentExecutorSafe", "treasuryRangeSafe"] as const) {
+    if (!runtimeCodeHashes[key]) throw new Error(`runtimeCodeHashes.${key} is required`);
+  }
   const externalDependenciesRaw = object(root.externalDependencies, "externalDependencies");
+  exactKeys(externalDependenciesRaw, ["usdc"], "externalDependencies");
   const usdcDependency = parseCircleFiatTokenDependencyEvidence(externalDependenciesRaw.usdc);
   const poolKeyRaw = object(root.poolKey, "poolKey");
+  exactKeys(poolKeyRaw, ["currency0", "currency1", "fee", "tickSpacing", "hooks"], "poolKey");
   const fee = integer(poolKeyRaw.fee, "poolKey.fee");
   const tickSpacing = integer(poolKeyRaw.tickSpacing, "poolKey.tickSpacing");
   if (tickSpacing <= 0) throw new Error("poolKey.tickSpacing must be positive");
   const slot0Raw = object(root.currentSlot0, "currentSlot0");
+  exactKeys(slot0Raw, [
+    "sqrtPriceX96", "tick", ...(slot0Raw.protocolFee === undefined ? [] : ["protocolFee"]),
+    ...(slot0Raw.lpFee === undefined ? [] : ["lpFee"]),
+  ], "currentSlot0");
   const proposedRaw = root.proposedOrders;
   if (!Array.isArray(proposedRaw)) throw new Error("proposedOrders must be an array");
   const budgetRaw = object(root.budget, "budget");
+  exactKeys(budgetRaw, [
+    "totalNaraAllocatedRaw", "totalUsdcBudgetRaw", "exposedUsdcRaw", "protectedUsdcReserveRaw",
+  ], "budget");
   const matrix = root.simulationMatrix;
   const positions = root.existingPositions;
   if (!Array.isArray(matrix) || !Array.isArray(positions)) throw new Error("simulationMatrix/existingPositions must be arrays");
@@ -274,6 +348,7 @@ export function parseTreasuryRangeStrategyManifest(value: unknown): TreasuryRang
     status: "candidate_no_broadcast",
     changeId: string(root.changeId, "changeId"),
     repositoryHead,
+    custodyPolicy,
     pinnedState: {
       chainId: "8453",
       blockNumber,
@@ -312,6 +387,7 @@ export function parseTreasuryRangeStrategyManifest(value: unknown): TreasuryRang
     ...(root.managerDeployment === undefined ? {} : {
       managerDeployment: (() => {
         const deployment = object(root.managerDeployment, "managerDeployment");
+        exactKeys(deployment, ["manifestPath", "manifestSha256"], "managerDeployment");
         return {
           manifestPath: string(deployment.manifestPath, "managerDeployment.manifestPath"),
           manifestSha256: bytes32(deployment.manifestSha256, "managerDeployment.manifestSha256"),
@@ -326,6 +402,12 @@ export function parseTreasuryRangeStrategyManifest(value: unknown): TreasuryRang
     throw new Error("hookConfigurationHash does not bind hookConfiguration.readChecks");
   }
   if (BigInt(manifest.currentSlot0.sqrtPriceX96) === 0n) throw new Error("currentSlot0.sqrtPriceX96 must be non-zero");
+  if (manifest.addresses.deploymentExecutorSafe !== authorities.deploymentExecutorSafe
+      || manifest.addresses.treasuryRangeSafe !== authorities.treasuryRangeSafe
+      || manifest.runtimeCodeHashes.deploymentExecutorSafe !== authorities.deploymentExecutorSafeRuntimeCodeHash
+      || manifest.runtimeCodeHashes.treasuryRangeSafe !== authorities.treasuryRangeSafeRuntimeCodeHash) {
+    throw new Error("Strategy Safe roles differ from the tracked custody policy");
+  }
   const enabled = manifest.proposedOrders.filter((order) => order.enabled);
   const allocatedNara = enabled.filter((order) => order.side === "SELL_NARA").reduce((sum, order) => sum + BigInt(order.inputAmountRaw), 0n);
   const exposedUsdc = enabled.filter((order) => order.side === "BUY_NARA").reduce((sum, order) => sum + BigInt(order.inputAmountRaw), 0n);
@@ -339,13 +421,15 @@ export function parseTreasuryRangeStrategyManifest(value: unknown): TreasuryRang
     throw new Error("Strategy does not bind the exact 500 USDC canary budget");
   }
   if (manifest.strategyHash !== treasuryRangeStrategyHash(manifest)) throw new Error("Strategy manifest hash is invalid");
-  if (manifest.pendingHookConfiguration !== null) throw new Error("Pending Hook configuration must be resolved before building a Safe packet");
+  if (!options.emergencyExit && manifest.pendingHookConfiguration !== null) {
+    throw new Error("Pending Hook configuration must be resolved before deployment or order creation");
+  }
   if (manifest.externalDependencies.usdc.proxyAddress !== manifest.addresses.usdc ||
       manifest.externalDependencies.usdc.proxyRuntimeCodeHash !== manifest.runtimeCodeHashes.usdc) {
     throw new Error("USDC dependency evidence does not bind the strategy proxy address/runtime hash");
   }
   const expectedUsdcAccounts = treasuryRangeUsdcMonitoredAccounts({
-    safe: manifest.addresses.safe,
+    treasuryRangeSafe: manifest.addresses.treasuryRangeSafe,
     poolManager: manifest.addresses.poolManager,
     positionManager: manifest.addresses.positionManager,
     permit2: manifest.addresses.permit2,
@@ -363,8 +447,11 @@ export function parseTreasuryRangeStrategyManifest(value: unknown): TreasuryRang
   return manifest;
 }
 
-export function loadTreasuryRangeStrategyManifest(path: string): TreasuryRangeStrategyManifest {
-  return parseTreasuryRangeStrategyManifest(JSON.parse(readFileSync(path, "utf8")));
+export function loadTreasuryRangeStrategyManifest(
+  path: string,
+  options: Readonly<{ emergencyExit?: boolean }> = {},
+): TreasuryRangeStrategyManifest {
+  return parseTreasuryRangeStrategyManifest(JSON.parse(readFileSync(path, "utf8")), options);
 }
 
 export function assertTreasuryRangeManifestExactEvidence(manifest: TreasuryRangeStrategyManifest): void {
@@ -472,27 +559,45 @@ export function assertTreasuryRangeCanonicalCanaryOrders(
   });
 }
 
-export function assertTreasuryRangeCanarySafeFunding(
+export function assertTreasuryRangeCanaryCustodyFunding(
   manifest: TreasuryRangeStrategyManifest,
-  safeBalances: Readonly<{ nara: bigint; usdc: bigint }>,
+  treasuryRangeSafeBalances: Readonly<{ nara: bigint; usdc: bigint }>,
 ): void {
   assertTreasuryRangeCanaryLaunchManifest(manifest);
-  assertTreasuryRangeCanaryFundingBalances({
+  assertTreasuryRangeCanaryCustodyBalances({
     requiredNara: BigInt(manifest.budget.totalNaraAllocatedRaw),
     requiredUsdc: BigInt(manifest.budget.totalUsdcBudgetRaw),
     exposedUsdc: BigInt(manifest.budget.exposedUsdcRaw),
     protectedUsdc: BigInt(manifest.budget.protectedUsdcReserveRaw),
-  }, safeBalances);
+  }, treasuryRangeSafeBalances);
 }
 
-export function assertTreasuryRangeCanaryFundingBalances(
+export function assertTreasuryRangeCanaryCustodyBalances(
   allocation: Readonly<{ requiredNara: bigint; requiredUsdc: bigint; exposedUsdc: bigint; protectedUsdc: bigint }>,
-  safeBalances: Readonly<{ nara: bigint; usdc: bigint }>,
+  treasuryRangeSafeBalances: Readonly<{ nara: bigint; usdc: bigint }>,
 ): void {
   const { requiredNara, requiredUsdc, exposedUsdc, protectedUsdc } = allocation;
-  if (safeBalances.nara < requiredNara) throw new Error("Safe NARA balance is below the exact canary budget");
-  if (safeBalances.usdc < requiredUsdc) throw new Error("Safe USDC balance is below the exact canary budget");
-  if (safeBalances.usdc - exposedUsdc < protectedUsdc) {
-    throw new Error("Canary orders would breach the protected Safe USDC reserve");
+  if (treasuryRangeSafeBalances.nara < requiredNara) {
+    throw new Error("Treasury Range Safe NARA balance is below the exact canary budget");
+  }
+  if (treasuryRangeSafeBalances.nara > requiredNara) {
+    throw new Error("Treasury Range Safe NARA balance exceeds the exact canary budget");
+  }
+  if (treasuryRangeSafeBalances.usdc < requiredUsdc) {
+    throw new Error("Treasury Range Safe USDC balance is below the exact canary budget");
+  }
+  if (treasuryRangeSafeBalances.usdc > requiredUsdc) {
+    throw new Error("Treasury Range Safe USDC balance exceeds the exact canary budget");
+  }
+  if (treasuryRangeSafeBalances.usdc - exposedUsdc < protectedUsdc) {
+    throw new Error("Canary orders would breach the protected Treasury Range Safe USDC reserve");
+  }
+}
+
+export function assertTreasuryRangeInitialCanaryOrderState(
+  state: Readonly<{ orderCount: bigint; activeOrderCount: bigint }>,
+): void {
+  if (state.orderCount !== 0n || state.activeOrderCount !== 0n) {
+    throw new Error("Initial Treasury Range canary requires a manager with zero historical and zero active orders");
   }
 }

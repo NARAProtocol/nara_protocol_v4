@@ -52,8 +52,121 @@ export interface CanonicalSafeEvidence {
   verifiedAtBlockHash: string;
 }
 
+export interface TreasuryRangeSafePolicy {
+  address: string;
+  safeRuntimeCodeHash: string;
+  version: "1.4.1";
+  threshold: bigint;
+  ownerCount: number;
+  ownerSetHash: string;
+}
+
+export interface TreasuryRangeSafeEvidence {
+  address: string;
+  version: "1.4.1";
+  threshold: string;
+  ownerCount: number;
+  ownerSetHash: string;
+  nonce: string;
+  modules: string[];
+  guard: string;
+  fallbackHandler: string;
+  singleton: string;
+  safeRuntimeCodeHash: string;
+  singletonRuntimeCodeHash: string;
+  fallbackHandlerRuntimeCodeHash: string;
+  verifiedAtBlock: number;
+  verifiedAtBlockHash: string;
+}
+
 function normalizedSet(addresses: readonly string[]): string[] {
   return addresses.map((value) => ethers.getAddress(value).toLowerCase()).sort();
+}
+
+export function safeOwnerSetHash(addresses: readonly string[]): string {
+  return ethers.keccak256(
+    ethers.AbiCoder.defaultAbiCoder().encode(["address[]"], [normalizedSet(addresses)]),
+  ).toLowerCase();
+}
+
+export interface TreasuryRangeSafeSnapshot {
+  address: string;
+  version: string;
+  threshold: bigint;
+  owners: readonly string[];
+  nonce: bigint;
+  modules: readonly string[];
+  nextModule: string;
+  guard: string;
+  fallbackHandler: string;
+  singleton: string;
+  safeRuntimeCodeHash: string;
+  singletonRuntimeCodeHash: string;
+  fallbackHandlerRuntimeCodeHash: string;
+  verifiedAtBlock: number;
+  verifiedAtBlockHash: string;
+}
+
+export function assertTreasuryRangeSafeSnapshot(
+  policy: TreasuryRangeSafePolicy,
+  snapshot: TreasuryRangeSafeSnapshot,
+): TreasuryRangeSafeEvidence {
+  const safe = ethers.getAddress(policy.address);
+  if (!ethers.isHexString(policy.safeRuntimeCodeHash, 32)) {
+    throw new Error("Treasury Range Safe policy runtime code hash must be bytes32");
+  }
+  if (!ethers.isHexString(policy.ownerSetHash, 32) || policy.threshold <= 0n || policy.ownerCount <= 0) {
+    throw new Error("Treasury Range Safe policy owner configuration is invalid");
+  }
+  if (!ethers.isHexString(snapshot.verifiedAtBlockHash, 32) || /^0x0{64}$/i.test(snapshot.verifiedAtBlockHash)) {
+    throw new Error("Treasury Range Safe verification block does not have a canonical non-zero block hash");
+  }
+  const normalizedOwners = snapshot.owners.map((value) => ethers.getAddress(value));
+  const modules = snapshot.modules.map((value) => ethers.getAddress(value));
+  const ownerSetHash = safeOwnerSetHash(normalizedOwners);
+  if (ethers.getAddress(snapshot.address) !== safe) {
+    throw new Error("Treasury Range Safe snapshot address differs from the pinned policy");
+  }
+  if (snapshot.safeRuntimeCodeHash.toLowerCase() !== policy.safeRuntimeCodeHash.toLowerCase()) {
+    throw new Error("Treasury Range Safe runtime code hash differs from the pinned policy");
+  }
+  if (ethers.getAddress(snapshot.singleton) !== ethers.getAddress(BASE_SAFE_141_SINGLETON)
+      || snapshot.singletonRuntimeCodeHash.toLowerCase() !== BASE_SAFE_141_SINGLETON_CODEHASH) {
+    throw new Error("Treasury Range Safe is not bound to the approved Base Safe 1.4.1 singleton");
+  }
+  if (snapshot.version !== policy.version || snapshot.threshold !== policy.threshold) {
+    throw new Error("Treasury Range Safe version or threshold differs from the pinned policy");
+  }
+  if (normalizedOwners.length !== policy.ownerCount || ownerSetHash !== policy.ownerSetHash.toLowerCase()) {
+    throw new Error("Treasury Range Safe owner set differs from the pinned policy");
+  }
+  if (ethers.getAddress(snapshot.guard) !== ethers.ZeroAddress) {
+    throw new Error("Treasury Range Safe must not have an active guard");
+  }
+  if (ethers.getAddress(snapshot.fallbackHandler) !== ethers.getAddress(NARA_SAFE_FALLBACK_HANDLER)
+      || snapshot.fallbackHandlerRuntimeCodeHash.toLowerCase() !== NARA_SAFE_FALLBACK_HANDLER_CODEHASH) {
+    throw new Error("Treasury Range Safe fallback handler differs from the approved code-pinned handler");
+  }
+  if (modules.length !== 0 || ethers.getAddress(snapshot.nextModule) !== ethers.getAddress(SAFE_MODULE_SENTINEL)) {
+    throw new Error("Treasury Range Safe must not have active modules");
+  }
+  return {
+    address: safe,
+    version: "1.4.1",
+    threshold: snapshot.threshold.toString(),
+    ownerCount: normalizedOwners.length,
+    ownerSetHash,
+    nonce: snapshot.nonce.toString(),
+    modules,
+    guard: ethers.getAddress(snapshot.guard),
+    fallbackHandler: ethers.getAddress(snapshot.fallbackHandler),
+    singleton: ethers.getAddress(snapshot.singleton),
+    safeRuntimeCodeHash: snapshot.safeRuntimeCodeHash.toLowerCase(),
+    singletonRuntimeCodeHash: snapshot.singletonRuntimeCodeHash.toLowerCase(),
+    fallbackHandlerRuntimeCodeHash: snapshot.fallbackHandlerRuntimeCodeHash.toLowerCase(),
+    verifiedAtBlock: snapshot.verifiedAtBlock,
+    verifiedAtBlockHash: snapshot.verifiedAtBlockHash,
+  };
 }
 
 export async function readCanonicalNaraSafeEvidence(
@@ -151,4 +264,67 @@ export async function readCanonicalNaraSafeEvidence(
     verifiedAtBlock: blockNumber,
     verifiedAtBlockHash: block.hash,
   };
+}
+
+export async function readTreasuryRangeSafeEvidence(
+  provider: ethers.Provider,
+  policy: TreasuryRangeSafePolicy,
+  blockNumber: number,
+): Promise<TreasuryRangeSafeEvidence> {
+  const safe = ethers.getAddress(policy.address);
+  if (!ethers.isHexString(policy.safeRuntimeCodeHash, 32)) {
+    throw new Error("Treasury Range Safe policy runtime code hash must be bytes32");
+  }
+  if (!ethers.isHexString(policy.ownerSetHash, 32) || policy.threshold <= 0n || policy.ownerCount <= 0) {
+    throw new Error("Treasury Range Safe policy owner configuration is invalid");
+  }
+  const block = await provider.getBlock(blockNumber);
+  if (!block?.hash || /^0x0{64}$/i.test(block.hash)) {
+    throw new Error("Treasury Range Safe verification block does not have a canonical non-zero block hash");
+  }
+  const callAtBlock = { blockTag: blockNumber };
+  const contract = new ethers.Contract(safe, NARA_SAFE_ABI, provider);
+  const [
+    safeCode,
+    singletonCode,
+    singleton,
+    version,
+    nonce,
+    threshold,
+    owners,
+    guardStorage,
+    fallbackHandlerStorage,
+    fallbackHandlerCode,
+    modulesPage,
+  ] = await Promise.all([
+    provider.getCode(safe, blockNumber),
+    provider.getCode(BASE_SAFE_141_SINGLETON, blockNumber),
+    contract.masterCopy(callAtBlock),
+    contract.VERSION(callAtBlock),
+    contract.nonce(callAtBlock),
+    contract.getThreshold(callAtBlock),
+    contract.getOwners(callAtBlock),
+    contract.getStorageAt(SAFE_GUARD_STORAGE_SLOT, 1, callAtBlock),
+    contract.getStorageAt(SAFE_FALLBACK_HANDLER_STORAGE_SLOT, 1, callAtBlock),
+    provider.getCode(NARA_SAFE_FALLBACK_HANDLER, blockNumber),
+    contract.getModulesPaginated(SAFE_MODULE_SENTINEL, 10, callAtBlock),
+  ]);
+
+  return assertTreasuryRangeSafeSnapshot(policy, {
+    address: safe,
+    version: String(version),
+    threshold: BigInt(threshold),
+    owners: owners as string[],
+    nonce: BigInt(nonce),
+    modules: modulesPage[0] as string[],
+    nextModule: String(modulesPage[1]),
+    guard: ethers.getAddress(ethers.dataSlice(guardStorage, 12)),
+    fallbackHandler: ethers.getAddress(ethers.dataSlice(fallbackHandlerStorage, 12)),
+    singleton: String(singleton),
+    safeRuntimeCodeHash: ethers.keccak256(safeCode).toLowerCase(),
+    singletonRuntimeCodeHash: ethers.keccak256(singletonCode).toLowerCase(),
+    fallbackHandlerRuntimeCodeHash: ethers.keccak256(fallbackHandlerCode).toLowerCase(),
+    verifiedAtBlock: blockNumber,
+    verifiedAtBlockHash: block.hash,
+  });
 }

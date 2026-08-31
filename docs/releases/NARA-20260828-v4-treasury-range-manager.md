@@ -1,6 +1,6 @@
 # NARA v4 Treasury Range Manager Candidate
 
-Evidence state: **PROTECTED SOURCE MERGED + INTERNAL AUDIT REMEDIATED CANDIDATE / NOT DEPLOYED / NOT ACTIVATED / NO EXTERNAL AUDIT CLAIM**
+Evidence state: **HISTORICAL PROTECTED CANDIDATE / SUPERSEDED FOR LAUNCH BY DEDICATED-SAFE REMEDIATION / NOT DEPLOYED / NOT ACTIVATED / NO EXTERNAL AUDIT CLAIM**
 
 Change ID: `NARA-20260828-v4-treasury-range-manager`
 
@@ -12,6 +12,17 @@ see
 The amounts later in this document are intentionally preserved as historical
 facts, not current launch parameters.
 
+Dedicated-custody correction: the historical implementation below used the
+protocol 2-of-3 Safe for both deployment execution and tactical custody. That
+conflation is not launch authority. Change
+`NARA-20260831-v4-treasury-range-dedicated-safe` separates the roles: the
+protocol Safe may execute only the CREATE2 deployment, while the dedicated
+Treasury Range Safe is the immutable manager authority, inventory custodian,
+order/cancellation signer, and settlement recipient. The dedicated Safe is
+currently a pinned 1-of-1 candidate; explicit human risk acceptance or an
+approved multisig upgrade is required before funding. No remediation branch,
+test, or document constitutes a deployment or transaction.
+
 Origin remote: `https://github.com/NARAProtocol/nara_protocol_v4`
 
 Historical pre-remediation implementation commit: `b34b78330f2f40b514d2bf6a0e5cff96c92ff928`
@@ -19,8 +30,9 @@ Historical pre-remediation implementation commit: `b34b78330f2f40b514d2bf6a0e5cf
 Protected PR #52 merged the 2026-08-30 remediation as GitHub-verified source
 commit `35091010de09802f39ccda7e726ff8c4b240e165`. The protected PR and
 post-merge `main` checks passed. This immutable source evidence is not
-deployment authority. All strategy and deployment evidence must be regenerated
-from that exact commit before human signing.
+deployment authority. The old single-Safe strategy/deployment model must not be
+regenerated for signing; current builders require the dedicated-Safe policy and
+new protected source.
 
 This change adds the immutable Safe-bound manager contract, exact state reader/planner/optimizer, adversarial Base-fork matrix, three unsigned Safe packet builders, and a separate event-driven permissionless settler. It does not modify permanent POL, the active Hook, existing production maintainer workflows or services, schedules, keys, roles, or production manifests. The protected CI workflow is extended only to run the settler tests and strict TypeScript check and to require the manager in Slither target discovery.
 
@@ -29,19 +41,19 @@ No production transaction was signed, submitted, broadcast, or proposed for imme
 The final internal remediation record is
 [`NARA_TREASURY_RANGE_MANAGER_REMEDIATION_2026-08-30.md`](../security/NARA_TREASURY_RANGE_MANAGER_REMEDIATION_2026-08-30.md).
 
-Live-state correction requiring a new pinned preflight: current review found the production Safe effectively unfunded while material NARA/USDC inventory remains at the separate EIP-7702-delegated Treasury address. The order builder reads only Safe balances and therefore fails closed. Any Treasury-to-Safe funding is a separate explicitly approved action, is not included in these builders, and requires re-pinning/re-hashing/rebuilding afterward.
+Live-state correction requiring a new pinned preflight: current review found the dedicated Treasury Range Safe holds zero NARA/USDC while material inventory remains at the separate EIP-7702-delegated Treasury address. The protocol deployment Safe is not custody and must not be funded for this strategy. The order builder reads only dedicated-Safe balances and therefore fails closed. Any Treasury-to-dedicated-Safe funding is a separate explicitly approved action, is not included in these builders, and requires re-pinning/re-hashing/rebuilding afterward.
 
 ## Operations design
 
-- Deployment uses the existing Safe-owned CREATE2 deployer and binds the constructor to the production Safe, NARA, USDC, Vault, PoolManager, PositionManager, Permit2, Hook, fee, tick spacing, PoolId, and a short deadline.
+- Deployment uses the existing protocol-Safe-owned CREATE2 deployer but binds the constructor to the distinct dedicated Treasury Range Safe, NARA, USDC, Vault, PoolManager, PositionManager, Permit2, Hook, fee, tick spacing, PoolId, and a short deadline. The executor receives no order authority.
 - Order creation atomically approves exact total inputs, creates strategy-hash/deadline-bound orders, resets approvals, and calls `assertOperationalClean()`.
 - Cancellation requires explicit order IDs, reviewed `minNaraOut`/`minUsdcOut`, reason, and short deadline. It directly verifies allowance layers but deliberately does not gate on forceable manager token balances or append `assertOperationalClean()`. Its cancellation-only `emergency_exit_bypass` keeps packet construction available after USDC dependency drift and visibly labels snapshot-only evidence; it cannot make an incompatible token transfer succeed.
-- Every builder requires protected-origin ancestry plus live credential-free `git ls-remote` equality with the configured upstream branch, a clean tracked repository HEAD while permitting only the exact resolved untracked generated strategy file, recent strategy block/hash/timestamp, canonical addresses/runtime hashes/reciprocal bindings, complete active and pending Hook curve/depth checks, canonical Safe 1.4.1 evidence/nonce, whole-batch `simulateAndRevert`, and a no-overwrite JIT output.
+- Every builder requires protected-origin ancestry plus live credential-free `git ls-remote` equality with the configured upstream branch, a clean tracked repository HEAD while permitting only the exact resolved untracked generated strategy file, recent strategy block/hash/timestamp, canonical addresses/runtime hashes/reciprocal bindings, complete active and pending Hook curve/depth checks, role-specific Safe 1.4.1 topology evidence/nonce, whole-batch `simulateAndRevert`, per-slug call-shape validation, and a no-overwrite JIT output.
 - Before it reads the manager artifact, the deployment builder forces Hardhat `clean` and a no-test forced build so an ignored or previously tampered artifact cannot survive as deployment input.
 - Order creation imports the simulator's shared exact integer planner and recomputes each enabled order's price/tick alignment, JIT one-sidedness, liquidity, exact input/dust, output, tolerance, and minimum before encoding.
-- Deployment consumption requires a hash-pinned v2 manifest binding the exact successful Safe execution/nonce/inner call and `ExecutionSuccess` log plus the exact Create2HookDeployer `Deployed(address,salt,initCodeHash)` event/receipt.
+- Deployment consumption requires a hash-pinned v3 manifest binding the exact successful protocol-Safe execution/nonce/inner call and `ExecutionSuccess` log, exact Create2HookDeployer `Deployed(address,salt,initCodeHash)` event/receipt, and sanitized dedicated-Safe policy. Legacy v2 evidence is refused.
 - The settler listens to the canonical PoolManager Swap topic on two independent WebSockets, uses independent HTTP polling/full sweeps, bounds pagination and the contract's 16-order settlement batch, simulates on all three providers, and requires all-three receipt/state agreement.
-- Each sweep checks manager/core/infrastructure runtime hashes on all three providers and compares a pinned canonical hash of active and pending Hook curves/depths, so governance-state drift is visible without bytecode drift. Strategy v2 additionally binds Circle USDC proxy implementation/admin slots, proxy/implementation/Multicall3 reader hashes, admin/owner/pauser/blacklister, pause state, and blacklist state for the exact actor set. Three-provider disagreement or drift blocks writes before nonce selection.
+- Each sweep checks manager/core/infrastructure runtime hashes and both Safe roles on all three providers and compares a pinned canonical hash of active and pending Hook curves/depths, so governance-state drift is visible without bytecode drift. Strategy v3 additionally binds the custody policy plus Circle USDC proxy implementation/admin slots, proxy/implementation/Multicall3 reader hashes, admin/owner/pauser/blacklister, pause state, and blacklist state for the actual token actor set. Three-provider disagreement or drift blocks writes before nonce selection.
 - Every critical RPC has a source-labelled deadline and each sweep has a watchdog. A hang destroys providers, stops watchers, and exits nonzero for supervised restart; three-of-three agreement is never weakened.
 - The service signs and durably records the exact raw transaction, hash, nonce, and order intent before broadcast. That pending transaction blocks further writes but not sweeps, heartbeats, or alerts. A dropped view or terminal race retains the signed nonce lineage until the exact hash has a canonical confirmed receipt. Crash recovery may rebroadcast only the identical raw transaction after fresh all-three bindings, USDC dependency validation, and all-three exact-calldata simulation; the service never blindly replaces it or submits a nonce chain. For a successful settlement receipt, full receipt-bound accounting is appended durably before pending state is cleared. A canonically confirmed reverted receipt also consumes the nonce and clears the pending record after its terminal state is classified; it is never represented as successful accounting.
 - Three distinct RPC URL origins are enforced, but hostnames cannot prove vendor, account/control-plane, or infrastructure independence. Production activation requires a separate human attestation of those properties.
@@ -85,10 +97,10 @@ The service monitors manager NFT balance versus registered active ownership and 
 | Settler type-check | `npx tsc -p services/v4-treasury-range-settler/tsconfig.json --noEmit` passed |
 | Dependency audit | `npm audit --audit-level=high` exited zero; eight low-severity `elliptic` advisories remain with no available fix |
 
-The historical strategy hash and evidence hashes above use the pre-remediation
-schema and cannot be used by current builders. Strategy schema v2 requires a
-fresh pinned state with USDC proxy/implementation/control evidence and a newly
-computed whole-manifest hash.
+The historical strategy hash and evidence hashes above use superseded schemas
+and cannot be used by current builders. Strategy schema v3 requires a fresh
+pinned state, both distinct Safe roles, the hash-pinned custody policy, USDC
+proxy/implementation/control evidence, and a newly computed whole-manifest hash.
 
 ### 2026-08-30 remediation checkpoint
 
@@ -131,7 +143,7 @@ Changed contracts/interfaces: NARATreasuryRangeManagerV1; no existing production
 Generated artifact or ABI source: rebuild Hardhat artifacts from exact protected origin commit 35091010de09802f39ccda7e726ff8c4b240e165
 Deployment manifest: none
 Chain and verification block: Base 8453 fork pinned to block 50537172; no deployed manager address
-Depends-on: approved Safe funding, fresh state pin/schema-v2 evidence, explicit human Safe approval
+Depends-on: dedicated-Safe remediation merge, explicit 1-of-1 risk acceptance or approved multisig upgrade, approved dedicated-Safe funding, fresh state pin/schema-v3 evidence, explicit human Safe approval
 Unblocks: controlled deployment-proposal preparation from the exact source; deployment-dependent orders, settler canary, monitor integration, and public documentation remain blocked
 Downstream repositories reviewed: none updated; deployment-dependent consumers remain blocked until verified deployment evidence exists
 Commands and results: 93 focused, 759 non-fork, 4 pinned-fork cases, strict TypeScript, build, bytecode size, dependency audit, protected Slither/Aderyn/Echidna, and CodeQL passed
@@ -145,7 +157,8 @@ Secret scan: focused changed-content scan passed; Gitleaks remains unavailable; 
 
 - Explicit human production acceptance. The completed internal audit and protected gates are not represented as an independent external audit or security guarantee.
 - Fresh live re-pin and regenerated strategy immediately before any human signing review.
-- Explicitly approved Treasury-to-Safe funding; the current Safe is effectively unfunded and the builder refuses to substitute Treasury custody.
+- Explicit human acceptance of the dedicated Safe's current 1-of-1 risk, or a verified approved multisig upgrade before funding.
+- Explicitly approved Treasury-to-dedicated-Treasury-Range-Safe funding; the dedicated Safe is unfunded and the builder refuses to substitute either Treasury or protocol-Safe custody.
 - Receipt-pinned deployment verification and explicit human approval.
 - Separate canary approval, two-instance infrastructure rehearsal, bounded gas funding, alert/heartbeat validation, and at least 48 hours of monitored canary behavior before any expansion.
 - Ongoing post-confirmation receipt/block-hash monitoring for a reorg deeper than the configured confirmation window.

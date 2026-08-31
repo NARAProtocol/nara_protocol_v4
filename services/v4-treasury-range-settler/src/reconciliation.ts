@@ -1,5 +1,13 @@
 import { ethers } from "ethers";
 import { canonicalProductionV4Deployment, type ProductionV4Deployment } from "../../../scripts/lib/v4LiveConfig.js";
+import {
+  canonicalTreasuryRangeAuthorities,
+  type TreasuryRangeAuthorities,
+} from "../../../scripts/lib/v4TreasuryRangeConfig.js";
+import {
+  readCanonicalNaraSafeEvidence,
+  readTreasuryRangeSafeEvidence,
+} from "../../../scripts/lib/v4SafeEvidence.js";
 import { treasuryRangeHookConfigurationHash } from "../../../scripts/lib/v4TreasuryRangeManifest.js";
 import {
   CIRCLE_FIAT_TOKEN_ADMIN_SLOT,
@@ -46,8 +54,8 @@ export interface SweepSnapshot {
   point: CanonicalPoint;
   activeOrders: RangeOrderSnapshot[];
   settleableOrderIds: bigint[];
-  safeNaraBalance: bigint;
-  safeUsdcBalance: bigint;
+  treasuryRangeSafeNaraBalance: bigint;
+  treasuryRangeSafeUsdcBalance: bigint;
   unknownPositionCount: bigint;
   allowanceClean: true;
   managerNaraBalance: bigint;
@@ -225,10 +233,11 @@ function assertEqualBigints(values: readonly bigint[], errorCode: string): bigin
 
 function expectedUsdcDependency(
   production: ProductionV4Deployment,
+  authorities: TreasuryRangeAuthorities,
   config: SettlerConfig,
 ): CircleFiatTokenDependencyEvidence {
   const monitoredAccounts = treasuryRangeUsdcMonitoredAccounts({
-    safe: production.safe,
+    treasuryRangeSafe: authorities.treasuryRangeSafe,
     poolManager: production.poolManager,
     positionManager: production.positionManager,
     permit2: production.permit2,
@@ -261,6 +270,7 @@ function expectedUsdcDependency(
 
 export class Reconciler {
   readonly production: ProductionV4Deployment;
+  readonly authorities: TreasuryRangeAuthorities;
   readonly runtimeGate: FatalRuntimeGate;
   readonly rpc: RpcDeadlineSet;
 
@@ -271,6 +281,7 @@ export class Reconciler {
     runtimeGate = new FatalRuntimeGate(),
   ) {
     this.production = production;
+    this.authorities = canonicalTreasuryRangeAuthorities(production);
     this.runtimeGate = runtimeGate;
     this.rpc = new RpcDeadlineSet(runtimeGate, config.rpcRequestTimeoutMs);
   }
@@ -294,7 +305,16 @@ export class Reconciler {
       ["nara", this.production.token, this.production.runtimeCodeHashes.token],
       ["vault", this.production.vault, this.production.runtimeCodeHashes.vault],
       ["compounder", this.production.compounder, this.production.runtimeCodeHashes.compounder],
-      ["safe", this.production.safe, this.production.runtimeCodeHashes.safe],
+      [
+        "deployment_executor_safe",
+        this.authorities.deploymentExecutorSafe,
+        this.authorities.deploymentExecutorSafeRuntimeCodeHash,
+      ],
+      [
+        "treasury_range_safe",
+        this.authorities.treasuryRangeSafe,
+        this.authorities.treasuryRangeSafeRuntimeCodeHash,
+      ],
       ["usdc", this.production.base, this.config.infrastructureRuntimeCodeHashes.usdc],
       ["pool_manager", this.production.poolManager, this.config.infrastructureRuntimeCodeHashes.poolManager],
       ["position_manager", this.production.positionManager, this.config.infrastructureRuntimeCodeHashes.positionManager],
@@ -303,13 +323,37 @@ export class Reconciler {
     await allSettledOrThrow(runtimes.flatMap(([label, target, expectedHash]) =>
       providers.map(([source, provider]) => assertRuntime(provider, source, this.rpc, target, expectedHash, point.number, label))
     ));
-    const expectedUsdc = expectedUsdcDependency(this.production, this.config);
+    const deploymentExecutorSafeEvidence = await allSettledOrThrow(providers.map(([source, provider]) =>
+      this.rpc.one(source, "deploymentExecutorSafe.policy", () => readCanonicalNaraSafeEvidence(
+        provider,
+        this.authorities.deploymentExecutorSafe,
+        this.authorities.deploymentExecutorSafeRuntimeCodeHash,
+        point.number,
+      ))
+    ));
+    const treasuryRangeSafeEvidence = await allSettledOrThrow(providers.map(([source, provider]) =>
+      this.rpc.one(source, "treasuryRangeSafe.policy", () => readTreasuryRangeSafeEvidence(provider, {
+        address: this.authorities.treasuryRangeSafe,
+        safeRuntimeCodeHash: this.authorities.treasuryRangeSafeRuntimeCodeHash,
+        version: this.authorities.treasuryRangeSafeVersion,
+        threshold: this.authorities.treasuryRangeSafeThreshold,
+        ownerCount: this.authorities.treasuryRangeSafeOwnerCount,
+        ownerSetHash: this.authorities.treasuryRangeSafeOwnerSetHash,
+      }, point.number))
+    ));
+    if (new Set(deploymentExecutorSafeEvidence.map(stable)).size !== 1
+        || new Set(treasuryRangeSafeEvidence.map(stable)).size !== 1
+        || deploymentExecutorSafeEvidence[0].verifiedAtBlockHash.toLowerCase() !== point.hash.toLowerCase()
+        || treasuryRangeSafeEvidence[0].verifiedAtBlockHash.toLowerCase() !== point.hash.toLowerCase()) {
+      throw new Error("SAFE_POLICY_RPC_DISAGREEMENT");
+    }
+    const expectedUsdc = expectedUsdcDependency(this.production, this.authorities, this.config);
     const usdcDependencies = await allSettledOrThrow(providers.map(([source, provider]) =>
       readCircleFiatTokenDependency(
         provider,
         this.production.base,
         treasuryRangeUsdcMonitoredAccounts({
-          safe: this.production.safe,
+          treasuryRangeSafe: this.authorities.treasuryRangeSafe,
           poolManager: this.production.poolManager,
           positionManager: this.production.positionManager,
           permit2: this.production.permit2,
@@ -336,7 +380,7 @@ export class Reconciler {
     const expected: ReadonlyArray<[string, string | bigint | number]> = [
       ["NARA", this.production.token],
       ["USDC", this.production.base],
-      ["TREASURY_SAFE", this.production.safe],
+      ["TREASURY_SAFE", this.authorities.treasuryRangeSafe],
       ["LIQUIDITY_VAULT", this.production.vault],
       ["POOL_MANAGER", this.production.poolManager],
       ["POSITION_MANAGER", this.production.positionManager],
@@ -434,31 +478,31 @@ export class Reconciler {
     const permit2Contracts = contracts(this.production.permit2, PERMIT2_ABI, this.providers);
     const [
       managerNftBalance,
-      safeNaraBalance,
-      safeUsdcBalance,
+      treasuryRangeSafeNaraBalance,
+      treasuryRangeSafeUsdcBalance,
       managerNaraBalance,
       managerUsdcBalance,
-      safeNaraAllowance,
-      safeUsdcAllowance,
+      treasuryRangeSafeNaraAllowance,
+      treasuryRangeSafeUsdcAllowance,
       managerNaraPermit2Allowance,
       managerUsdcPermit2Allowance,
       permit2Nara,
       permit2Usdc,
     ] = await allSettledOrThrow([
       compareCall(positionManagers, "balanceOf", [this.config.managerAddress], canonical.number, this.rpc),
-      compareCall(naraContracts, "balanceOf", [this.production.safe], canonical.number, this.rpc),
-      compareCall(usdcContracts, "balanceOf", [this.production.safe], canonical.number, this.rpc),
+      compareCall(naraContracts, "balanceOf", [this.authorities.treasuryRangeSafe], canonical.number, this.rpc),
+      compareCall(usdcContracts, "balanceOf", [this.authorities.treasuryRangeSafe], canonical.number, this.rpc),
       compareCall(naraContracts, "balanceOf", [this.config.managerAddress], canonical.number, this.rpc),
       compareCall(usdcContracts, "balanceOf", [this.config.managerAddress], canonical.number, this.rpc),
-      compareCall(naraContracts, "allowance", [this.production.safe, this.config.managerAddress], canonical.number, this.rpc),
-      compareCall(usdcContracts, "allowance", [this.production.safe, this.config.managerAddress], canonical.number, this.rpc),
+      compareCall(naraContracts, "allowance", [this.authorities.treasuryRangeSafe, this.config.managerAddress], canonical.number, this.rpc),
+      compareCall(usdcContracts, "allowance", [this.authorities.treasuryRangeSafe, this.config.managerAddress], canonical.number, this.rpc),
       compareCall(naraContracts, "allowance", [this.config.managerAddress, this.production.permit2], canonical.number, this.rpc),
       compareCall(usdcContracts, "allowance", [this.config.managerAddress, this.production.permit2], canonical.number, this.rpc),
       compareCall(permit2Contracts, "allowance", [this.config.managerAddress, this.production.token, this.production.positionManager], canonical.number, this.rpc),
       compareCall(permit2Contracts, "allowance", [this.config.managerAddress, this.production.base, this.production.positionManager], canonical.number, this.rpc),
     ]);
     const allowances = [
-      BigInt(safeNaraAllowance as bigint), BigInt(safeUsdcAllowance as bigint),
+      BigInt(treasuryRangeSafeNaraAllowance as bigint), BigInt(treasuryRangeSafeUsdcAllowance as bigint),
       BigInt(managerNaraPermit2Allowance as bigint), BigInt(managerUsdcPermit2Allowance as bigint),
       BigInt((permit2Nara as ethers.Result)[0]), BigInt((permit2Usdc as ethers.Result)[0]),
     ];
@@ -469,8 +513,8 @@ export class Reconciler {
       point: canonical,
       activeOrders: orders,
       settleableOrderIds,
-      safeNaraBalance: BigInt(safeNaraBalance as bigint),
-      safeUsdcBalance: BigInt(safeUsdcBalance as bigint),
+      treasuryRangeSafeNaraBalance: BigInt(treasuryRangeSafeNaraBalance as bigint),
+      treasuryRangeSafeUsdcBalance: BigInt(treasuryRangeSafeUsdcBalance as bigint),
       unknownPositionCount,
       allowanceClean: true,
       managerNaraBalance: BigInt(managerNaraBalance as bigint),
@@ -637,7 +681,8 @@ export class Reconciler {
       if (address !== this.production.token && address !== this.production.base) continue;
       try {
         const transfer = TRANSFER_INTERFACE.parseLog(log);
-        if (transfer?.name === "Transfer" && ethers.getAddress(transfer.args.to) === this.production.safe) {
+        if (transfer?.name === "Transfer"
+            && ethers.getAddress(transfer.args.to) === this.authorities.treasuryRangeSafe) {
           if (address === this.production.token) naraTransfers += BigInt(transfer.args.value);
           else usdcTransfers += BigInt(transfer.args.value);
         }
