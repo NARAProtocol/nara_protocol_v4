@@ -155,6 +155,18 @@ describe("NARATreasuryRangeManagerV1", function () {
       await f.poolManager.getAddress(), await f.positionManager.getAddress(), await f.permit2.getAddress(),
       await f.hook.getAddress(), POOL_FEE, TICK_SPACING, f.poolId,
     ];
+    const firstDeadlineManager: any = await f.ethers.deployContract(
+      "NARATreasuryRangeManagerV1", [...args, now + 1_000n], f.deployer,
+    );
+    const secondDeadlineManager: any = await f.ethers.deployContract(
+      "NARATreasuryRangeManagerV1", [...args, now + 1_001n], f.deployer,
+    );
+    await Promise.all([firstDeadlineManager.waitForDeployment(), secondDeadlineManager.waitForDeployment()]);
+    const [firstRuntime, secondRuntime] = await Promise.all([
+      f.ethers.provider.getCode(await firstDeadlineManager.getAddress()),
+      f.ethers.provider.getCode(await secondDeadlineManager.getAddress()),
+    ]);
+    expect(f.ethers.keccak256(firstRuntime)).not.to.equal(f.ethers.keccak256(secondRuntime));
     await expect(
       f.ethers.deployContract("NARATreasuryRangeManagerV1", [...args, now - 1n], f.deployer),
     ).to.be.revertedWithCustomError(f.manager, "DeadlineExpired");

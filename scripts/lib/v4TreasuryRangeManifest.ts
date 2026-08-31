@@ -420,6 +420,20 @@ export function assertTreasuryRangeCanaryLaunchManifest(manifest: TreasuryRangeS
   assertTreasuryRangeCanonicalCanaryOrders(manifest);
 }
 
+export function assertTreasuryRangePredeploymentManifest(
+  manifest: Readonly<{
+    addresses: Readonly<Record<string, string | undefined>>;
+    runtimeCodeHashes: Readonly<Record<string, string | undefined>>;
+    managerDeployment?: unknown;
+  }>,
+): void {
+  if (manifest.addresses.treasuryRangeManager !== undefined
+      || manifest.runtimeCodeHashes.rangeManager !== undefined
+      || manifest.managerDeployment !== undefined) {
+    throw new Error("Deployment manifest must not claim pre-existing Treasury Range Manager evidence");
+  }
+}
+
 export function assertTreasuryRangeCanonicalCanaryOrders(
   manifest: Pick<TreasuryRangeStrategyManifest, "proposedOrders" | "currentSlot0" | "hookConfigurationHash">
     & Readonly<{ poolKey: Pick<TreasuryRangeStrategyManifest["poolKey"], "tickSpacing"> }>,

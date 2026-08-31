@@ -7,6 +7,7 @@ import { canonicalProductionV4Deployment } from "./lib/v4LiveConfig.js";
 import {
   assertTreasuryRangeCanaryLaunchManifest,
   assertTreasuryRangeManifestExactEvidence,
+  assertTreasuryRangePredeploymentManifest,
   loadTreasuryRangeStrategyManifest,
 } from "./lib/v4TreasuryRangeManifest.js";
 import {
@@ -31,6 +32,7 @@ export async function buildV4TreasuryRangeManagerDeployment(): Promise<void> {
   const strategy = loadTreasuryRangeStrategyManifest(strategyPath);
   assertTreasuryRangeManifestExactEvidence(strategy);
   assertTreasuryRangeCanaryLaunchManifest(strategy);
+  assertTreasuryRangePredeploymentManifest(strategy);
   // Never trust ignored/cacheable artifact bytes. Rebuild before taking the
   // JIT block/nonce/deadline snapshot used by the proposal.
   await forceRebuildTreasuryRangeManagerArtifact(hre.tasks);
@@ -84,10 +86,10 @@ export async function buildV4TreasuryRangeManagerDeployment(): Promise<void> {
   const runtimeBytes = ethers.getBytes(simulatedRuntime).length;
   if (runtimeBytes > 24_576) throw new Error(`Manager runtime exceeds EIP-170: ${runtimeBytes} bytes`);
   const runtimeCodeHash = ethers.keccak256(simulatedRuntime).toLowerCase();
-  const expectedRuntimeHash = strategy.runtimeCodeHashes.rangeManager?.toLowerCase();
-  if (!expectedRuntimeHash || runtimeCodeHash !== expectedRuntimeHash) {
-    throw new Error("Constructor-simulated manager runtime hash differs from the strategy manifest");
-  }
+  // A predeployment strategy cannot contain the manager runtime hash: the
+  // deployment deadline is a JIT constructor immutable. The exact runtime is
+  // instead derived from freshly rebuilt initcode, simulated at the pinned JIT
+  // block, and recorded in the nonce-bound proposal below.
   const call = {
     to: production.create2HookDeployer,
     value: "0",
