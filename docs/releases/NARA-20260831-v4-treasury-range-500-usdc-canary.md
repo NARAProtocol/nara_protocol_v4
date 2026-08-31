@@ -1,6 +1,6 @@
 # NARA v4 Treasury Range 500-USDC Canary
 
-Evidence state: **PROTECTED CANARY POLICY + HISTORICAL/FRESH EXACT FORK PASS / DEDICATED-SAFE REMEDIATION NOT YET MERGED / NOT FUNDED / NOT DEPLOYED / NOT SIGNED / NOT BROADCAST / NOT ACTIVATED**
+Evidence state: **PROTECTED DEDICATED-SAFE SOURCE + HISTORICAL/FRESH EXACT FORK PASS / NOT FUNDED / NOT DEPLOYED / NOT SIGNED / NOT BROADCAST / NOT ACTIVATED**
 
 Change ID: `NARA-20260831-v4-treasury-range-500-usdc-canary`
 
@@ -10,6 +10,12 @@ Protected PR #59 merged the source policy as GitHub-verified commit
 `5a6b449df7d50b25d71715b3bbedc720ef6960ee`. All PR and post-merge NARA CI and
 CodeQL gates passed. This is immutable source/evidence authority, not deployment
 or transaction authority.
+
+Protected PR #62 merged the dedicated-Safe role correction as GitHub-verified
+commit `a20ce9c40c174d032cacdf602efa6afe8c6585f9`. Build/test/size, Slither,
+Aderyn, Echidna, and CodeQL passed before the signed protected merge. This is
+the current source authority; it still does not move funds or authorize a
+transaction by itself.
 
 This release changes only planner, optimizer, evidence, manifest-ingestion,
 packet-builder gates, regressions, and documentation for a smaller first
@@ -95,16 +101,16 @@ profit guarantee, managed-investment promise, or claim of maximum return.
 | Fresh pinned fork and 21-candidate matrix | 4/4 passed at Base block `50684125`; all 21 candidates and exact 30-row matrices completed |
 | Build and bytecode | passed; manager runtime 23,620 bytes and initcode 28,095 bytes, within EVM limits |
 | Slither | completed on all v4 targets; manager retained 17 previously triaged raw signals, exit zero |
-| Aderyn / Echidna | unavailable locally; current remediation awaits protected CI (prior protected releases passed) |
+| Aderyn / Echidna | unavailable locally; both passed in protected PR #62 CI |
 | Dependency audit | production graph 0 vulnerabilities; development graph 8 low-severity `elliptic` advisories with no available fix |
 | Independent review | adversarial PASS and architecture PASS after matrix-context hardening |
 | Secret scan | focused changed-content patterns found 0; Gitleaks unavailable and not claimed |
-| Protected PR and post-merge CI | PR #59 merged; build/test/size, Slither, Aderyn, Echidna, and CodeQL passed before and after merge |
+| Protected PR and CI | PR #62 merged at signed commit `a20ce9c40c174d032cacdf602efa6afe8c6585f9`; build/test/size, Slither, Aderyn, Echidna, and CodeQL passed |
 | Production writes | none |
-| Dedicated-Safe remediation | Current branch under review; not protected release or deployment authority |
+| Dedicated-Safe remediation | Protected source merged through PR #62; still not deployment or transaction authority |
 
-These local counts describe the unmerged remediation tree. Protected CI and the
-post-merge commit remain the release authority.
+The local counts are supporting evidence. The signed PR #62 merge commit and
+its protected CI remain the source authority.
 
 The JSON matrix is commit- and state-bound historical release evidence, not a cryptographic
 attestation by an external auditor. Protected immutable generation, CI, and
@@ -140,12 +146,12 @@ not Safe-import files.
    candidates was regenerated from that exact clean commit and recorded above.
 3. Confirmed: exact evidence validates only the approved candidate and every
    candidate includes successful bid-side settlement evidence.
-4. Required: merge the dedicated-Safe remediation through a protected PR with
+4. Completed: dedicated-Safe remediation merged through protected PR #62 with
    fresh automated and independent review evidence.
 5. Required: explicitly accept the pinned 1-of-1 custody risk for this bounded
    canary or upgrade/re-pin an approved multisig before funding.
-6. Only from the exact protected remediation commit may a fresh unsigned
-   deployment proposal be built. Treasury-to-dedicated-Safe funding, protocol
+6. In progress: build a fresh unsigned deployment proposal only from the exact
+   protected dedicated-Safe source. Treasury-to-dedicated-Safe funding, protocol
    Safe deployment signing, deployment, dedicated-Safe order creation, settler
    activation, or broadcast each remain separate human approvals.
 7. Keep the canary under monitored observation for at least 48 hours before

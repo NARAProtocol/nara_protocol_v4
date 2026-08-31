@@ -19,9 +19,10 @@ conflation is not launch authority. Change
 protocol Safe may execute only the CREATE2 deployment, while the dedicated
 Treasury Range Safe is the immutable manager authority, inventory custodian,
 order/cancellation signer, and settlement recipient. The dedicated Safe is
-currently a pinned 1-of-1 candidate; explicit human risk acceptance or an
-approved multisig upgrade is required before funding. No remediation branch,
-test, or document constitutes a deployment or transaction.
+currently a pinned 1-of-1 canary custody Safe; explicit human risk acceptance or
+an approved multisig upgrade is required before funding. The protected
+remediation source, tests, and documents do not constitute a deployment or
+transaction.
 
 Origin remote: `https://github.com/NARAProtocol/nara_protocol_v4`
 
@@ -143,7 +144,7 @@ Changed contracts/interfaces: NARATreasuryRangeManagerV1; no existing production
 Generated artifact or ABI source: rebuild Hardhat artifacts from exact protected origin commit 35091010de09802f39ccda7e726ff8c4b240e165
 Deployment manifest: none
 Chain and verification block: Base 8453 fork pinned to block 50537172; no deployed manager address
-Depends-on: dedicated-Safe remediation merge, explicit 1-of-1 risk acceptance or approved multisig upgrade, approved dedicated-Safe funding, fresh state pin/schema-v3 evidence, explicit human Safe approval
+Depends-on: explicit 1-of-1 risk acceptance or approved multisig upgrade, approved dedicated-Safe funding, fresh state pin/schema-v3 evidence, explicit human Safe approval
 Unblocks: controlled deployment-proposal preparation from the exact source; deployment-dependent orders, settler canary, monitor integration, and public documentation remain blocked
 Downstream repositories reviewed: none updated; deployment-dependent consumers remain blocked until verified deployment evidence exists
 Commands and results: 93 focused, 759 non-fork, 4 pinned-fork cases, strict TypeScript, build, bytecode size, dependency audit, protected Slither/Aderyn/Echidna, and CodeQL passed
