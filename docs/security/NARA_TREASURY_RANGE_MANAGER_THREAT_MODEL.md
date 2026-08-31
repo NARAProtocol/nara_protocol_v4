@@ -5,20 +5,25 @@ or production approval.
 
 Change ID: `NARA-20260828-v4-treasury-range-manager`
 
+Current launch boundary: `NARA-20260831-v4-treasury-range-500-usdc-canary`
+
+Dedicated-Safe change ID: `NARA-20260831-v4-treasury-range-dedicated-safe`
+
 ## Scope and assets
 
-This model covers the Range Manager contract, its PositionManager NFTs, Safe-authorized order capital, unsigned Safe builders, exact state reader and simulator, and the event-driven settlement service. The active Hook, Vault, Compounder, permanent positions, Safe implementation, Uniswap v4 contracts, Permit2, NARA, and Circle-controlled USDC proxy/implementation are external dependencies and are not modified.
+This model covers the Range Manager contract, its PositionManager NFTs, Treasury-Range-Safe-authorized order capital, unsigned Safe builders, exact state reader and simulator, and the event-driven settlement service. The active Hook, Vault, Compounder, permanent positions, Safe implementation, Uniswap v4 contracts, Permit2, NARA, and Circle-controlled USDC proxy/implementation are external dependencies and are not modified.
 
-Assets at risk include treasury NARA/USDC committed to active ranges, converted principal, tactical LP fees, Safe approvals, tactical position NFTs, settler gas, and the integrity of strategy and deployment evidence.
+Assets at risk include treasury NARA/USDC committed to active ranges, converted principal, tactical LP fees, Treasury Range Safe approvals, tactical position NFTs, settler gas, and the integrity of strategy and deployment evidence.
 
 ## Trust model
 
 Trusted within their explicit boundaries:
 
-- the production 2-of-3 Safe may create, cancel, pause, unpause, and quarantine;
-- human Safe reviewers validate strategy, calldata, current nonce, deadlines, and output floors;
+- the production 2-of-3 Safe may execute only the manager deployment packet through the canonical CREATE2 deployer;
+- the distinct Treasury Range Safe is the immutable manager authority, inventory custodian, order/cancellation signer, settlement recipient, and the only Safe that may create, cancel, pause, unpause, or quarantine;
+- human reviewers validate the packet for the Safe whose role it exercises: deployment calldata, current nonce, deadline, and runtime evidence for the protocol Safe; strategy, order calldata, deadlines, and output floors for the Treasury Range Safe;
 - the canonical Base PoolManager, PositionManager, Permit2, tokens, deployed Hook, and Base Multicall3 reader are trusted only when code hashes and bindings match pinned evidence;
-- Circle USDC control roles and its proxy implementation/admin slots are trusted only while three-provider observations match strategy-v2 evidence and remain healthy;
+- Circle USDC control roles and its proxy implementation/admin slots are trusted only while three-provider observations match strategy-v3 and matrix-row-v4 evidence and remain healthy;
 - the reviewed repository commit and receipt-pinned manifests are release evidence.
 
 Untrusted:
@@ -32,15 +37,15 @@ Untrusted:
 
 ## Security invariants
 
-- Only the immutable Safe can cause treasury capital to enter an order.
-- Settlement and cancellation recipients are always the immutable Safe.
+- Only the immutable Treasury Range Safe can cause treasury capital to enter an order.
+- Settlement and cancellation recipients are always the immutable Treasury Range Safe.
 - A settler cannot create, edit, cancel, pause, quarantine, or redirect an order.
 - An order settles only while Active and at its exact side-specific terminal sqrt boundary.
 - Settled and Cancelled states are terminal.
 - A registered managed NFT has active liquidity only while its order is Active and zero liquidity after a terminal action.
 - No supplied external token ID can be registered as an order.
 - An unregistered PositionManager NFT cannot be settled, cancelled, or accounted as treasury principal.
-- Managed principal, Safe deltas, position liquidity, dust, and allowances are reconcilable.
+- Managed principal, Treasury Range Safe deltas, position liquidity, dust, and allowances are reconcilable.
 - Creation and cancellation packets expire.
 - No write function loops over the complete historical order set.
 - There is no delegatecall, arbitrary external call, arbitrary recipient, or generic managed-asset recovery.
@@ -51,19 +56,19 @@ Untrusted:
 
 ### Unauthorized creation or cancellation
 
-All capital-entry, cancellation, pause, and quarantine functions check the immutable Safe directly. There is no mutable owner role. A compromised settler key cannot use these paths. Safe compromise remains catastrophic within the contract's bounded surface: attackers controlling the Safe can create economically harmful orders or cancel them at adverse prices, but cannot change immutable recipients or bindings.
+All capital-entry, cancellation, pause, and quarantine functions check the immutable Treasury Range Safe directly. There is no mutable owner role. The protocol 2-of-3 Safe has no manager authority after executing deployment, and a compromised settler key cannot use these paths. Treasury Range Safe compromise remains catastrophic within the contract's bounded surface: an attacker controlling it can create economically harmful orders or cancel them at adverse prices, but cannot change immutable recipients or bindings.
 
-Mitigations include 2-of-3 review, short deadlines, strategy-hash binding, exact allowance totals, output floors, whole-batch simulation, and fresh nonce/state verification.
+Mitigations include role-separated human review, explicit acceptance of the bounded 1-of-1 canary custody risk, short deadlines, strategy-hash binding, exact allowance totals, output floors, whole-batch simulation, and fresh nonce/state verification. The protocol Safe's 2-of-3 threshold protects deployment only; it does not mitigate later Treasury Range Safe order authority.
 
 ### NFT injection
 
 PositionManager `_mint` and ordinary `transferFrom` bypass receiver callbacks. An attacker can force an unrelated PositionManager NFT onto the manager. Preventing ownership is impossible at the recipient contract.
 
-The manager rejects unsolicited safe transfers, registers only its synchronous expected mint, and keys every operation through the immutable registry. A Safe-only quarantine transfers only an unregistered PositionManager token to the Safe and rejects registered token IDs. The service alerts when PositionManager ownership count differs from registered active positions but continues processing valid orders. Injection therefore causes monitoring/reconciliation work, not registration or settlement authority.
+The manager rejects unsolicited safe transfers, registers only its synchronous expected mint, and keys every operation through the immutable registry. A Treasury-Range-Safe-only quarantine transfers only an unregistered PositionManager token to that Safe and rejects registered token IDs. The service alerts when PositionManager ownership count differs from registered active positions but continues processing valid orders. Injection therefore causes monitoring/reconciliation work, not registration or settlement authority.
 
 ### Recipient substitution
 
-Callers supply no settlement or cancellation recipient. `TAKE_PAIR` always encodes the immutable Safe. Balance-delta checks measure the Safe, not the caller or manager. No generic recovery or arbitrary call can bypass that restriction.
+Callers supply no settlement or cancellation recipient. `TAKE_PAIR` always encodes the immutable Treasury Range Safe. Balance-delta checks measure that Safe, not the caller or manager. No generic recovery or arbitrary call can bypass that restriction.
 
 ### Reentrancy and callback behavior
 
@@ -71,19 +76,20 @@ Create, settle, cancel, and quarantine are guarded. Terminal status and active-s
 
 ### Permit2 and ERC-20 allowance leakage
 
-Creation uses exact, call-scoped ERC-20-to-Permit2 and Permit2-to-PositionManager approvals. Both layers are reset after mint. The manager rejects observed transfer-tax behavior and returns deterministic dust to the Safe. `assertOperationalClean()` and Safe batch review expose residual balances and allowances.
+Creation uses exact, call-scoped ERC-20-to-Permit2 and Permit2-to-PositionManager approvals. Both layers are reset after mint. The manager rejects observed transfer-tax behavior and returns deterministic dust to the Treasury Range Safe. `assertOperationalClean()` and Treasury Range Safe batch review expose residual balances and allowances.
 
 Residual risk: a nonstandard token could change behavior after deployment. NARA
 runtime is pinned. For Base USDC, proxy runtime alone is insufficient because
 Circle can upgrade the implementation without changing the proxy address or
-runtime. Strategy schema v2 therefore pins the exact implementation/admin
+runtime. Strategy schema v3 therefore pins the exact implementation/admin
 slots, implementation address/runtime, proxy admin, owner, pauser,
 blacklister, pause state, monitored actor blacklist state, and the code hash of
-the Multicall3 reader used for token views. Deployment and order builders read
+the Multicall3 reader used for token views. Matrix-row schema v4 additionally
+binds the exact route and quote status for each adversarial row. Deployment and order builders read
 this state just in time; all three settlement providers must independently
 agree with it before nonce selection.
 
-Safe cancellation deliberately uses a visibly labelled
+Treasury Range Safe cancellation deliberately uses a visibly labelled
 `emergency_exit_bypass` for this dependency gate. The bypass preserves an exit
 attempt after administrative drift but cannot make a paused, blacklisted, or
 otherwise incompatible token transfer succeed.
@@ -92,11 +98,11 @@ otherwise incompatible token transfer succeed.
 
 The reversed human-price/tick orientation is a primary hazard. Contract checks use exact `sqrtPriceX96` boundaries and v4 liquidity math. Off-chain utilities use bigint/rational arithmetic only for financial values. Both sides, equality boundaries, negative tick alignment, dust, and integer-width limits require unit, fuzz, and fork coverage.
 
-The Safe supplies a nonzero output minimum no higher than deterministic full-conversion principal. An unrealistically tight minimum can delay settlement even after traversal, producing a self-inflicted availability failure. Builders must show expected principal, minimum, and tolerance explicitly.
+The Treasury Range Safe supplies a nonzero output minimum no higher than deterministic full-conversion principal. An unrealistically tight minimum can delay settlement even after traversal, producing a self-inflicted availability failure. Builders must show expected principal, minimum, and tolerance explicitly.
 
 ### Settlement front-running and MEV
 
-Permissionless settlement gives callers no recipient choice or reward, so front-running a valid settlement should produce the same Safe-directed state transition. A trader can influence pool price before settlement. The terminal check is current-state based, and the approved minimum bounds crystallization.
+Permissionless settlement gives callers no recipient choice or reward, so front-running a valid settlement should produce the same Treasury-Range-Safe-directed state transition. A trader can influence pool price before settlement. The terminal check is current-state based, and the approved minimum bounds crystallization.
 
 A partially filled order cannot settle. A terminally crossed order can cross back before an off-chain settlement confirms. This is a timing limitation, not a promise of atomic execution.
 
@@ -128,7 +134,7 @@ Exact-output swaps remain unsupported by the active Hook and are not used by str
 
 ### Oracle and external-market assumptions
 
-Settlement uses no oracle or TWAP; it enforces completion of a predefined pool range and a Safe-approved raw output floor. The optimizer may compare human prices for reporting but cannot guarantee fair value, demand, arbitrage availability, or profitability relative to another venue. External price manipulation can make an otherwise valid range economically unattractive; Safe review owns that decision.
+Settlement uses no oracle or TWAP; it enforces completion of a predefined pool range and a Treasury-Range-Safe-approved raw output floor. The optimizer may compare human prices for reporting but cannot guarantee fair value, demand, arbitrage availability, or profitability relative to another venue. External price manipulation can make an otherwise valid range economically unattractive; Treasury Range Safe review owns that decision.
 
 ### Unknown token transfers and operational cleanliness
 
@@ -141,19 +147,19 @@ Settler configuration is environment-only. Logs are allowlisted structured field
 ## Failure response
 
 - Pause creation if strategy, binding, or reconciliation evidence becomes questionable.
-- Keep settlement and Safe cancellation available while creation is paused.
+- Keep settlement and Treasury Range Safe cancellation available while creation is paused.
 - Stop builders on nonce, block-hash, runtime, binding, pending-Hook, deadline, or strategy-hash drift.
-- Stop builders and settler writes on USDC implementation/control/health or Multicall3 reader drift; preserve the separately labelled Safe cancellation path for an exit attempt.
-- Stop and restart a settler on an RPC or whole-sweep deadline, and stop writes on RPC disagreement, unknown registered ownership, post-settlement liquidity, or Safe-delta mismatch.
+- Stop builders and settler writes on USDC implementation/control/health or Multicall3 reader drift; preserve the separately labelled Treasury Range Safe cancellation path for an exit attempt.
+- Stop and restart a settler on an RPC or whole-sweep deadline, and stop writes on RPC disagreement, unknown registered ownership, post-settlement liquidity, or Treasury Range Safe delta mismatch.
 - Retain signed nonce lineage until the exact hash has a canonical confirmed receipt; never replace it with a different intent based only on provider-local absence.
-- Treat unsolicited NFTs and tokens as reconciliation alerts; never register them or redirect them to a non-Safe recipient.
+- Treat unsolicited NFTs and tokens as reconciliation alerts; never register them or redirect them to a recipient other than the Treasury Range Safe.
 - Preserve logs, block/hash evidence, calldata, receipt, runtime hashes, and sanitized manifests.
 
 ## Residual risks and acceptance boundary
 
 - Same-transaction buy/reverse cannot be interrupted by V1.
 - Crossed but unsettled positions can re-enter their range.
-- Safe compromise can authorize economically harmful orders within immutable bindings.
+- Treasury Range Safe compromise can authorize economically harmful orders within immutable bindings.
 - Uniswap, Permit2, Base, token, or Hook defects remain external dependency risks.
 - Circle can upgrade, pause, blacklist, or otherwise change USDC after a pinned check and before transaction inclusion; the fail-closed checks reduce but cannot remove that race.
 - Sequencer censorship, reorgs, RPC outages, and gas starvation can delay settlement.
@@ -164,7 +170,15 @@ Settler configuration is environment-only. Logs are allowlisted structured field
 The internal review completed senior analysis, independent adversarial review,
 strongest-model architecture review, focused regressions, full non-fork tests,
 fork tests, and available static analysis. This is not an independent external
-audit or a security guarantee. Protected source commit
-`35091010de09802f39ccda7e726ff8c4b240e165` passed review/CI and is the rebuild
-origin. Production acceptance still requires fresh signing-time evidence, a
-monitored canary, and explicit human Safe approval of nonce-bound artifacts.
+audit or a security guarantee. Protected commit
+`35091010de09802f39ccda7e726ff8c4b240e165` remains the manager-contract
+internal-review origin. Later protected commits added the bounded canary,
+dedicated-Safe role separation, strategy-v3, matrix-row-v4, and deployment
+tooling hardening; the latest protected commit that changed functional
+implementation was `162c24be080398b65c76e542a48ccb608cd1fb43` before this
+evidence correction.
+Neither historical commit is packet authority by itself. Every production
+rebuild must bind the exact then-current protected `origin/main` tip after all
+launch-evidence corrections merge. Production acceptance still requires fresh
+signing-time evidence, a monitored canary, and explicit human approval by the
+applicable Safe of the exact nonce-bound artifact.

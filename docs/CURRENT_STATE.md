@@ -69,9 +69,11 @@ dedicated-Safe role correction as GitHub-verified commit
 Protected PR #64 then merged the exact prefunded-swap route and strict
 quote-evidence hardening as GitHub-verified commit
 `162c24be080398b65c76e542a48ccb608cd1fb43`; all required protected checks were
-green. That commit is current source authority, but no manager address,
-deployment receipt, funding, signature, broadcast, activation, or production
-transaction exists.
+green. That is the latest protected commit that changed functional
+implementation before later launch-evidence-only corrections; every deployment
+proposal must bind the exact then-current protected `origin/main` tip. No
+manager address, deployment receipt, funding, signature, broadcast, activation,
+or production transaction exists.
 
 Change `NARA-20260831-v4-treasury-range-dedicated-safe` is protected source with
 two explicit, non-interchangeable roles:
@@ -92,6 +94,17 @@ is not persisted in the policy or generated evidence. This topology has a
 material single-key loss/availability risk. Production funding requires an
 explicit human decision to accept that bounded risk or a verified approved
 multisig upgrade and re-pinned policy first.
+
+On 2026-08-31, the human operator explicitly accepted the current 1-of-1
+custody, signer-loss, and availability risk only for the bounded canary whose
+required pre-order balance is exactly 100,000 NARA plus 500 USDC. The approved
+strategy allocates exactly 200 USDC across four prospective buy ranges and
+requires exactly 300 USDC to remain unallocated/unexposed after any separately
+approved funding and order-creation actions. The accepted scope authorizes only
+correction of conflicting evidence and preparation of a fresh unsigned
+deployment packet. It is not a Safe signature and does not authorize funding,
+order creation, settler activation, signing, or broadcast. The exact builder
+acknowledgement remains a per-packet fail-closed requirement.
 
 The final candidate checkpoint pinned Base fork block `50537172`, block hash
 `0x6e896c222c2b8313fc232d174136d58212835c39a06378f2dbf2b73c0101b7d9`.
@@ -148,15 +161,15 @@ clearance.
 The original remediation and protected-release evidence is recorded in
 [`NARA_TREASURY_RANGE_MANAGER_REMEDIATION_2026-08-30.md`](security/NARA_TREASURY_RANGE_MANAGER_REMEDIATION_2026-08-30.md). The dedicated-Safe release passed 86 focused Hardhat tests, 35 settler tests, 784 repository non-fork tests, 4/4 pinned-fork cases at Base block `50537172`, strict settler TypeScript, and the build gate locally. PR #62 then passed build/test/size, Slither, Aderyn, Echidna, and CodeQL before its signed protected merge. PR #64 later passed all required protected checks before its verified merge; no new local aggregate count is claimed here. Gitleaks remains unavailable locally and is not claimed as a pass.
 
-Before any production use: the 1-of-1 risk must be explicitly accepted for the
-bounded canary or the Safe must be upgraded and re-pinned; fresh strategy-v3
-live-state evidence, fresh matrix-row-v4 evidence, and a new
+Before any production use: the bounded 1-of-1 risk acceptance is recorded;
+fresh strategy-v3 live-state evidence, fresh matrix-row-v4 evidence, and a new
 unsigned deployment proposal must be generated; the protocol Safe must execute
 the approved deployment; deterministic receipt evidence must verify it; exactly
 100,000 NARA plus 500 USDC funding to the dedicated Safe must be separately
 approved; fresh order packets must be approved; two independent settler
 instances must be activated; and at least 48 hours of monitored canary behavior
-must complete before expansion. No valid current packet exists. See
+must complete before expansion. No reusable or tracked packet exists; every
+proposal must be generated just in time and expires. See
 [`NARA-20260828-v4-treasury-range-manager.md`](releases/NARA-20260828-v4-treasury-range-manager.md)
 and
 [`NARA-20260831-v4-treasury-range-500-usdc-canary.md`](releases/NARA-20260831-v4-treasury-range-500-usdc-canary.md).

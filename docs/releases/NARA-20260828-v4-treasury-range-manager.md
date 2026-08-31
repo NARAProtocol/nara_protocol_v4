@@ -135,6 +135,13 @@ promises, or authority to trade.
 
 ### Cross-repository handoff status
 
+Historical cutoff: this handoff records the protected PR #52 state. Later PRs
+#59, #62, and #64 added the bounded canary, distinct Safe roles, strategy-v3,
+matrix-row-v4, and deployment-tooling hardening. The 1-of-1 bounded-canary risk
+was explicitly accepted on 2026-08-31 only for evidence correction and fresh
+unsigned deployment-packet preparation. Use the 2026-08-31 canary release and
+`CURRENT_STATE.md` for the current launch boundary.
+
 ```text
 Change-ID: NARA-20260828-v4-treasury-range-manager
 Origin remote: https://github.com/NARAProtocol/nara_protocol_v4
@@ -154,11 +161,11 @@ Onchain or production writes: none
 Secret scan: focused changed-content scan passed; Gitleaks remains unavailable; no secrets or RPC values are recorded in this handoff
 ```
 
-## Acceptance gates still outstanding
+## Acceptance gates outstanding at this release cutoff
 
 - Explicit human production acceptance. The completed internal audit and protected gates are not represented as an independent external audit or security guarantee.
 - Fresh live re-pin and regenerated strategy immediately before any human signing review.
-- Explicit human acceptance of the dedicated Safe's current 1-of-1 risk, or a verified approved multisig upgrade before funding.
+- At this cutoff, explicit human acceptance of the dedicated Safe's current 1-of-1 risk, or a verified approved multisig upgrade before funding. The bounded risk acceptance was later recorded on 2026-08-31; funding remains separately unauthorized.
 - Explicitly approved Treasury-to-dedicated-Treasury-Range-Safe funding; the dedicated Safe is unfunded and the builder refuses to substitute either Treasury or protocol-Safe custody.
 - Receipt-pinned deployment verification and explicit human approval.
 - Separate canary approval, two-instance infrastructure rehearsal, bounded gas funding, alert/heartbeat validation, and at least 48 hours of monitored canary behavior before any expansion.

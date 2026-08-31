@@ -48,32 +48,38 @@ historical pre-remediation candidate commit
 `b34b78330f2f40b514d2bf6a0e5cff96c92ff928`. The 2026-08-30 remediation
 closes the five retained internal-audit findings and was merged through
 protected PR #52 as GitHub-verified source commit
-`35091010de09802f39ccda7e726ff8c4b240e165`. It adds a Safe-bound tactical range
-manager, exact planner/optimizer, adversarial fork simulator, unsigned Safe
-builders, and a separate permissionless gas-only settler. It changes no current
-deployment, permanent POL position, Hook/Vault/Compounder binding, keeper role,
-schedule, or production manifest.
+`35091010de09802f39ccda7e726ff8c4b240e165`. Later protected PRs #59, #62, and
+#64 added the exact 500-USDC policy, distinct-Safe role correction, strategy-v3,
+matrix-row-v4, and prefunded-route/quote hardening. The latest protected commit
+that changed functional implementation was
+`162c24be080398b65c76e542a48ccb608cd1fb43` before later launch-evidence-only
+corrections. The manager, exact planner/optimizer,
+adversarial fork simulator, unsigned Safe builders, and separate permissionless
+gas-only settler change no current permanent POL position,
+Hook/Vault/Compounder binding, keeper role, schedule, or production manifest.
 
-The Base-fork checkpoint at block `50537172` selected
-`CONSERVATIVE-100000-NARA`, 12 candidate orders, with
-`SELECTED_EXECUTION_BLOCKED`. The production Safe lacks the proposed 100,000
-NARA and 5,000 USDC budget. No manager address or deployment receipt exists and
-no transaction was signed or broadcast. Read
-[`releases/NARA-20260828-v4-treasury-range-manager.md`](releases/NARA-20260828-v4-treasury-range-manager.md)
-before any range-manager work.
+The old 100,000-NARA plus 5,000-USDC strategy is historical and must not be
+imported. The active policy is
+`NARA-20260831-v4-treasury-range-500-usdc-canary`: only
+`CONSERVATIVE-100000-NARA` may reach a launch builder. Its required pre-order
+dedicated-Safe balance is exactly 100,000 NARA plus exactly 500 USDC. If later
+order creation is separately approved, the strategy allocates 200 USDC across
+four buy ranges and requires 300 USDC to remain unallocated/unexposed. All 21
+candidates and full external attack sizes remain mandatory evidence.
+Strategy-v3 and matrix-row-v4 bind the
+two distinct Safe roles, tracked custody-policy hash, repository/block, pinned
+sqrt price, tick, Hook configuration, exact human price, prefunded route, quote
+status, and reconstructed raw canonical order vector.
 
-The 5,000-USDC strategy is now historical and must not be imported. The active
-source policy is `NARA-20260831-v4-treasury-range-500-usdc-canary`: only
-`CONSERVATIVE-100000-NARA` may reach a launch builder, with 200 USDC exposed
-and 300 USDC protected. All 21 candidates and full external attack sizes remain
-mandatory evidence. Matrix-row v3 binds repository/block, pinned sqrt price,
-tick, Hook configuration, exact human price, and the reconstructed raw canonical
-order vector. The canary still requires a protected immutable source commit,
-fresh pinned-fork results, and separate human approvals. Protected PR #59
-merged GitHub-verified commit `5a6b449df7d50b25d71715b3bbedc720ef6960ee`;
-historical block `50537172` and fresh block `50684125` complete matrix-v3 runs
-both passed 4/4 and remained `SELECTED_EXECUTION_BLOCKED`. It is not funded,
-deployed, signed, broadcast, or activated. Read
+The protocol 2-of-3 Safe may execute only the CREATE2 manager deployment packet
+for this surface. The currently 1-of-1 dedicated Treasury Range Safe is the
+proposed immutable manager authority, inventory custodian, order/cancellation
+signer, and settlement recipient. On 2026-08-31, the human operator explicitly
+accepted that bounded canary's custody, signer-loss, and availability risk only
+to correct launch evidence and prepare a fresh unsigned deployment packet.
+Funding, order creation, settler activation, signing, and broadcast remain
+separately unauthorized. No manager address, deployment receipt, or reusable
+current packet exists. Read
 [`releases/NARA-20260831-v4-treasury-range-500-usdc-canary.md`](releases/NARA-20260831-v4-treasury-range-500-usdc-canary.md).
 
 ## Exact activation boundary
@@ -149,11 +155,13 @@ The current epoch-automation authority is
 6. Reconcile public documentation last. Do not turn the activation evidence
    into an overall production-ready, audited, safe, or complete claim.
 7. For the Treasury Range Manager candidate, preserve the completed internal
-   audit/remediation, protected source, and historical/fresh matrix-v3 evidence,
-   then complete separately approved Safe funding, fresh JIT schema-v2 state
-   regeneration, receipt-pinned deployment, two-host settler rehearsal, and a
-   monitored canary before any activation claim. No independent external audit
-   is claimed.
+   audit/remediation and protected source, regenerate fresh strategy-v3 and
+   matrix-row-v4 evidence from the exact then-current protected `origin/main`,
+   prepare and separately approve the JIT deployment packet, finalize receipt-pinned
+   deployment evidence, then obtain separate approvals for exact dedicated-Safe
+   funding and order creation. Two independent settler instances and a monitored
+   canary remain later gates before any activation or expansion claim. No
+   independent external audit is claimed.
 
 ## Verification commands
 

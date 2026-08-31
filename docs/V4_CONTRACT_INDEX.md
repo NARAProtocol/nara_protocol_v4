@@ -30,15 +30,22 @@ Active sources live **only** in `contracts/v4/`. Everything else is archived/ret
 ## Treasury Range Manager candidate (implemented/tested/remediated; not deployed)
 
 This periphery is separate from permanent POL and has no production address.
-Its deployment and order builders remain blocked until approved Safe funding,
-a fresh schema-v2 state pin, and explicit human approval. Protected source
-commit `35091010de09802f39ccda7e726ff8c4b240e165` passed the repository gates.
+The recorded 1-of-1 canary risk acceptance permits deployment-proposal
+preparation, while the builder still requires the exact per-packet environment
+acknowledgement, fresh strategy-v3 and matrix-row-v4 evidence, the exact current
+protected `origin/main` tip, and just-in-time protocol-Safe state. The order builder
+additionally requires a finalized deployment and exact dedicated-Safe funding.
+Protected commit `35091010de09802f39ccda7e726ff8c4b240e165` remains the
+manager-contract internal-review origin; the latest functional-code change was
+`162c24be080398b65c76e542a48ccb608cd1fb43` before later
+launch-evidence-only corrections. Every packet binds the exact then-current
+protected `origin/main` tip.
 The completed internal audit/remediation is not an independent external audit
 or security clearance.
 
 | Contract | Purpose | Doc |
 |---|---|---|
-| `NARATreasuryRangeManagerV1.sol` | Immutable Safe-bound owner of explicitly registered one-sided tactical NARA/USDC PositionManager NFTs. Safe alone creates/cancels; anyone may settle a terminal range; every output goes to the Safe. It never replans or reinvests. | `architecture/NARA_TREASURY_RANGE_MANAGER_V1.md`, `releases/NARA-20260828-v4-treasury-range-manager.md` |
+| `NARATreasuryRangeManagerV1.sol` | Immutable dedicated-Treasury-Range-Safe-bound owner of explicitly registered one-sided tactical NARA/USDC PositionManager NFTs. That Safe alone creates/cancels; anyone may settle a terminal range; every output goes to that Safe. The separate protocol 2-of-3 Safe executes deployment only. The manager never replans or reinvests. | `architecture/NARA_TREASURY_RANGE_MANAGER_V1.md`, `releases/NARA-20260831-v4-treasury-range-500-usdc-canary.md` |
 
 The offchain planner/optimizer, adversarial simulator, unsigned Safe builders,
 and gas-only settler live under `scripts/` and
