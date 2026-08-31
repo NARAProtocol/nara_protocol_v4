@@ -13,6 +13,12 @@ import hre from "hardhat";
 import {
   BPS,
   NARA_UNIT,
+  TREASURY_RANGE_CANARY_CANDIDATE_ID,
+  TREASURY_RANGE_CANARY_EXPOSED_USDC,
+  TREASURY_RANGE_CANARY_NARA_BUDGET,
+  TREASURY_RANGE_CANARY_PROTECTED_USDC,
+  TREASURY_RANGE_MINIMUM_PROTECTED_USDC_BPS,
+  TREASURY_RANGE_NOMINAL_USDC_BUDGET,
   USDC_UNIT,
   rescaleStrategyProfile,
   serializePlannedRange,
@@ -62,6 +68,9 @@ export type OptimizerCandidate = Readonly<{
   naraBudget: bigint;
   metrics?: ExactForkCandidateMetrics;
   hardGates: Readonly<{
+    approvedCanaryCandidate: boolean;
+    exactApprovedCanaryAllocation: boolean;
+    exactCanaryUsdcBudget: boolean;
     majorityUsdcProtected: boolean;
     routeContinuity: boolean;
     oneSidedTwentyPercent: boolean;
@@ -207,15 +216,24 @@ export function optimizeTreasuryRanges(params: {
       const id = candidateId(draftProfile.name, naraBudget);
       const metrics = candidateEvidenceComplete ? params.metrics.get(id) : undefined;
       const { profile, manifest } = params.finalizeProfile(draftProfile, metrics);
+      const candidateTotalUsdc = profile.exposedUsdcInput + profile.protectedUsdc;
       const hardGates = {
-        majorityUsdcProtected: profile.protectedUsdc * BPS >= 5_000n * USDC_UNIT * 6_000n,
+        approvedCanaryCandidate: id === TREASURY_RANGE_CANARY_CANDIDATE_ID,
+        exactApprovedCanaryAllocation: profile.name === "CONSERVATIVE"
+          && naraBudget === TREASURY_RANGE_CANARY_NARA_BUDGET
+          && profile.totalNaraInput === TREASURY_RANGE_CANARY_NARA_BUDGET
+          && profile.exposedUsdcInput === TREASURY_RANGE_CANARY_EXPOSED_USDC
+          && profile.protectedUsdc === TREASURY_RANGE_CANARY_PROTECTED_USDC,
+        exactCanaryUsdcBudget: candidateTotalUsdc === TREASURY_RANGE_NOMINAL_USDC_BUDGET,
+        majorityUsdcProtected: profile.protectedUsdc * BPS
+          >= candidateTotalUsdc * TREASURY_RANGE_MINIMUM_PROTECTED_USDC_BPS,
         routeContinuity: routeContinuity(metrics),
         oneSidedTwentyPercent: profile.twentyPercentBandCompatible,
         exactInputOnly: metrics?.exactInputOnly === true,
         exactForkScenarioCoverage: metrics !== undefined,
       };
       const safeExposedUsdcShortfall = shortfall(profile.exposedUsdcInput, params.safeBalances.usdc);
-      const safeUsdcShortfall = shortfall(5_000n * USDC_UNIT, params.safeBalances.usdc);
+      const safeUsdcShortfall = shortfall(candidateTotalUsdc, params.safeBalances.usdc);
       const safeNaraShortfall = shortfall(naraBudget, params.safeBalances.nara);
       draft.push({
         candidateId: id,
@@ -229,7 +247,7 @@ export function optimizeTreasuryRanges(params: {
           safeExposedUsdcShortfall,
           safeUsdcShortfall,
           safeNaraShortfall,
-          treasuryUsdcShortfall: shortfall(5_000n * USDC_UNIT, params.treasuryBalances.usdc),
+          treasuryUsdcShortfall: shortfall(candidateTotalUsdc, params.treasuryBalances.usdc),
           treasuryNaraShortfall: shortfall(naraBudget, params.treasuryBalances.nara),
           buildRefusedUntilSafeFunded: safeUsdcShortfall > 0n || safeNaraShortfall > 0n,
         },
@@ -250,7 +268,7 @@ export function optimizeTreasuryRanges(params: {
       pareto,
       selectedCandidateId: null,
       selectionStatus: "BLOCKED_EXACT_FORK_RESULTS_REQUIRED",
-      selectionRule: `No selection until metrics contain exactly the ${REQUIRED_TREASURY_RANGE_CANDIDATE_COUNT} canonical candidate IDs and every hard gate passes.`,
+      selectionRule: `No selection until metrics contain exactly the ${REQUIRED_TREASURY_RANGE_CANDIDATE_COUNT} canonical candidate IDs and the approved ${TREASURY_RANGE_CANARY_CANDIDATE_ID} passes every hard gate.`,
     };
   }
   return {
@@ -260,7 +278,7 @@ export function optimizeTreasuryRanges(params: {
     selectionStatus: selected.safeFunding.buildRefusedUntilSafeFunded
       ? "SELECTED_EXECUTION_BLOCKED"
       : "SELECTED_BUILDABLE",
-    selectionRule: "Pareto filter, then lowest measured slippage, highest next-transaction round-trip loss, highest crystallized USDC, lowest near-market NARA sold, highest protected USDC, highest NARA accumulation, lowest NARA budget, lexical id.",
+    selectionRule: `Human-approved ${TREASURY_RANGE_CANARY_CANDIDATE_ID} only, after complete 21-candidate evidence and every hard gate.`,
   };
 }
 
@@ -365,6 +383,9 @@ async function main(): Promise<void> {
       chainId: state.chainId,
       blockNumber: state.blockNumber,
       blockHash: state.blockHash,
+      currentSqrtPriceX96: state.sqrtPriceX96,
+      currentTick: state.tick,
+      hookConfigurationHash: plan.hookConfigurationHash,
       humanUsdcPerNara: state.humanUsdcPerNaraRational,
     },
     safeBalances: state.safeBalances,
@@ -383,7 +404,7 @@ async function main(): Promise<void> {
     blockHash: state.blockHash,
     hookConfiguration: plan.hookConfiguration,
     hookConfigurationHash: plan.hookConfigurationHash,
-    nominalUsdcBudget: (5_000n * USDC_UNIT).toString(),
+    nominalUsdcBudget: TREASURY_RANGE_NOMINAL_USDC_BUDGET.toString(),
     custody: {
       safe: state.safeBalances,
       treasury: state.treasuryBalances,

@@ -2,6 +2,9 @@ import { expect } from "chai";
 import {
   BPS,
   NARA_UNIT,
+  TREASURY_RANGE_CANARY_NARA_BUDGET,
+  TREASURY_RANGE_MINIMUM_PROTECTED_USDC_BPS,
+  TREASURY_RANGE_NOMINAL_USDC_BUDGET,
   USDC_UNIT,
   buildDeterministicStrategyProfiles,
   oneSidedAcrossHumanPriceBand,
@@ -78,14 +81,22 @@ describe("v4 treasury range planner", function () {
     const band = priceBand(sqrtPriceX96ToHumanUsdcPerNara(currentSqrtPriceX96), 2_000n);
     for (const profile of profiles) {
       expect(profile.incompatibilities).to.deep.equal([]);
-      expect(profile.protectedUsdc * BPS >= 5_000n * USDC_UNIT * 6_000n).to.equal(true);
+      expect(profile.exposedUsdcInput + profile.protectedUsdc).to.equal(TREASURY_RANGE_NOMINAL_USDC_BUDGET);
+      expect(profile.protectedUsdc * BPS
+        >= TREASURY_RANGE_NOMINAL_USDC_BUDGET * TREASURY_RANGE_MINIMUM_PROTECTED_USDC_BPS).to.equal(true);
       expect(profile.twentyPercentBandCompatible).to.equal(true);
       expect(profile.orders.every((order) => order.toleranceBps === 0n)).to.equal(true);
+      expect(profile.orders.every((order) => order.inputAmount > 0n
+        && order.expectedLiquidity > 0n
+        && order.expectedPrincipalOutput > 0n
+        && order.minimumOutputAmount > 0n)).to.equal(true);
       expect(new Set(profile.orders.map((order) => order.strategyHash))).to.deep.equal(new Set([profile.strategyHash]));
       expect(profile.strategyHash).to.equal(`0x${"00".repeat(32)}`);
       expect(profile.orders.every((order) => oneSidedAcrossHumanPriceBand(order, band.minimum, band.maximum)))
         .to.equal(true);
     }
+    expect(profiles.map((profile) => profile.exposedUsdcInput / USDC_UNIT)).to.deep.equal([200n, 180n, 130n]);
+    expect(profiles.map((profile) => profile.protectedUsdc / USDC_UNIT)).to.deep.equal([300n, 320n, 370n]);
   });
 
   it("returns an unhashed placeholder when the NARA budget changes", function () {
@@ -98,6 +109,43 @@ describe("v4 treasury range planner", function () {
     expect(resized.totalNaraInput).to.equal(75_000n * NARA_UNIT);
     expect(resized.strategyHash).to.equal(`0x${"00".repeat(32)}`);
     expect(new Set(resized.orders.map((order) => order.strategyHash)).size).to.equal(1);
+  });
+
+  it("locks the exact conservative 100,000 NARA / 500 USDC canary vector", function () {
+    const profile = buildDeterministicStrategyProfiles({
+      currentSqrtPriceX96,
+      creationDeadline: 2_000_000_000n,
+      hookConfigurationHash: `0x${"44".repeat(32)}`,
+    })[0];
+    const canary = rescaleStrategyProfile(profile, TREASURY_RANGE_CANARY_NARA_BUDGET);
+    expect(canary.orders.map((order) => order.inputAmount.toString())).to.deep.equal([
+      "6666666666666666666666",
+      "8888888888888888888888",
+      "11111111111111111111111",
+      "13333333333333333333333",
+      "15555555555555555555555",
+      "15555555555555555555555",
+      "15555555555555555555555",
+      "13333333333333333333337",
+      "40000000",
+      "50000000",
+      "50000000",
+      "60000000",
+    ]);
+    expect(canary.orders.every((order) => order.expectedInputUsed + order.expectedRoundingDust === order.inputAmount))
+      .to.equal(true);
+    expect(canary.orders.slice(8).map((order) => order.expectedPrincipalOutput.toString())).to.deep.equal([
+      "617290654153653387856",
+      "901874830189427700888",
+      "1167316544777594638943",
+      "1977852917162002707552",
+    ]);
+    expect(canary.orders.slice(8).map((order) => order.expectedLiquidity.toString())).to.deep.equal([
+      "4029066476948576",
+      "1912202844003854",
+      "1712072930329689",
+      "1737080829107937",
+    ]);
   });
 
   it("stamps one finalized whole-manifest hash into every order", function () {

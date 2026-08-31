@@ -23,6 +23,12 @@ export const USDC_DECIMALS = 6n;
 export const NARA_UNIT = 10n ** NARA_DECIMALS;
 export const USDC_UNIT = 10n ** USDC_DECIMALS;
 export const BPS = 10_000n;
+export const TREASURY_RANGE_NOMINAL_USDC_BUDGET = 500n * USDC_UNIT;
+export const TREASURY_RANGE_MINIMUM_PROTECTED_USDC_BPS = 6_000n;
+export const TREASURY_RANGE_CANARY_NARA_BUDGET = 100_000n * NARA_UNIT;
+export const TREASURY_RANGE_CANARY_EXPOSED_USDC = 200n * USDC_UNIT;
+export const TREASURY_RANGE_CANARY_PROTECTED_USDC = 300n * USDC_UNIT;
+export const TREASURY_RANGE_CANARY_CANDIDATE_ID = "CONSERVATIVE-100000-NARA" as const;
 
 export type TreasuryOrderSide = "SELL_NARA" | "BUY_NARA";
 export type BoundaryPolicy = "inward" | "outward";
@@ -219,12 +225,12 @@ export const DETERMINISTIC_STRATEGY_TEMPLATES: readonly StrategyTemplate[] = [
       { lower: "0.90", upper: "1.30", input: "6000" },
     ],
     buy: [
-      { lower: "0.075", upper: "0.082", input: "400" },
-      { lower: "0.06", upper: "0.075", input: "500" },
-      { lower: "0.045", upper: "0.06", input: "500" },
-      { lower: "0.03", upper: "0.045", input: "600" },
+      { lower: "0.075", upper: "0.082", input: "40" },
+      { lower: "0.06", upper: "0.075", input: "50" },
+      { lower: "0.045", upper: "0.06", input: "50" },
+      { lower: "0.03", upper: "0.045", input: "60" },
     ],
-    protectedUsdc: "3000",
+    protectedUsdc: "300",
     designNote: "Highest near-market continuity while retaining the minimum 60% protected USDC reserve.",
   },
   {
@@ -240,12 +246,12 @@ export const DETERMINISTIC_STRATEGY_TEMPLATES: readonly StrategyTemplate[] = [
       { lower: "0.90", upper: "1.30", input: "12000" },
     ],
     buy: [
-      { lower: "0.075", upper: "0.082", input: "300" },
-      { lower: "0.06", upper: "0.075", input: "400" },
-      { lower: "0.045", upper: "0.06", input: "500" },
-      { lower: "0.03", upper: "0.045", input: "600" },
+      { lower: "0.075", upper: "0.082", input: "30" },
+      { lower: "0.06", upper: "0.075", input: "40" },
+      { lower: "0.045", upper: "0.06", input: "50" },
+      { lower: "0.03", upper: "0.045", input: "60" },
     ],
-    protectedUsdc: "3200",
+    protectedUsdc: "320",
     designNote: "Seed hypothesis with progressively larger asks and a majority protected USDC reserve.",
   },
   {
@@ -261,12 +267,12 @@ export const DETERMINISTIC_STRATEGY_TEMPLATES: readonly StrategyTemplate[] = [
       { lower: "0.90", upper: "1.30", input: "13250" },
     ],
     buy: [
-      { lower: "0.075", upper: "0.082", input: "150" },
-      { lower: "0.06", upper: "0.075", input: "250" },
-      { lower: "0.045", upper: "0.06", input: "400" },
-      { lower: "0.03", upper: "0.045", input: "500" },
+      { lower: "0.075", upper: "0.082", input: "15" },
+      { lower: "0.06", upper: "0.075", input: "25" },
+      { lower: "0.045", upper: "0.06", input: "40" },
+      { lower: "0.03", upper: "0.045", input: "50" },
     ],
-    protectedUsdc: "3700",
+    protectedUsdc: "370",
     designNote: "Sparse near-market inventory; explicitly accepts the highest quote and empty-cliff risk.",
   },
 ] as const;
@@ -328,10 +334,10 @@ export function buildDeterministicStrategyProfiles(params: {
       .filter((order) => order.side === "BUY_NARA")
       .reduce((sum, order) => sum + order.inputAmount, 0n);
     const protectedUsdc = parseTokenAmount(template.protectedUsdc, USDC_DECIMALS);
-    if (exposedUsdcInput + protectedUsdc !== 5_000n * USDC_UNIT) {
-      throw new Error(`${template.name} does not preserve the fixed 5,000 USDC budget`);
+    if (exposedUsdcInput + protectedUsdc !== TREASURY_RANGE_NOMINAL_USDC_BUDGET) {
+      throw new Error(`${template.name} does not preserve the fixed 500 USDC budget`);
     }
-    if (protectedUsdc * BPS < 5_000n * USDC_UNIT * 6_000n) {
+    if (protectedUsdc * BPS < TREASURY_RANGE_NOMINAL_USDC_BUDGET * TREASURY_RANGE_MINIMUM_PROTECTED_USDC_BPS) {
       incompatibilities.push("protected USDC is below the 60% hard gate");
     }
     const twentyPercentBandCompatible = planned.every((order) =>

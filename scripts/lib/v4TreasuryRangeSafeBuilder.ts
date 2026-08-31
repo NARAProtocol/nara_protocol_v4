@@ -356,6 +356,34 @@ export function jitDeadline(blockTimestamp: number): number {
   return blockTimestamp + lifetime;
 }
 
+type TreasuryRangeBlockIdentity = Readonly<{
+  number: number;
+  hash: string | null;
+  timestamp: number;
+}>;
+
+export function assertTreasuryRangePinnedBlockFreshness(
+  manifestPinnedState: TreasuryRangeStrategyManifest["pinnedState"],
+  latest: TreasuryRangeBlockIdentity | null,
+  pinned: TreasuryRangeBlockIdentity | null,
+): asserts latest is TreasuryRangeBlockIdentity {
+  if (!latest?.hash || /^0x0{64}$/i.test(latest.hash)) {
+    throw new Error("RPC latest block is missing a canonical hash");
+  }
+  if (!pinned?.hash
+      || pinned.number !== manifestPinnedState.blockNumber
+      || pinned.hash.toLowerCase() !== manifestPinnedState.blockHash) {
+    throw new Error("Strategy block hash is no longer canonical");
+  }
+  if (pinned.timestamp !== manifestPinnedState.timestamp) {
+    throw new Error("Strategy block timestamp does not match the canonical pinned block");
+  }
+  if (pinned.timestamp > latest.timestamp
+      || latest.timestamp - pinned.timestamp > TREASURY_RANGE_MAX_SNAPSHOT_AGE_SECONDS) {
+    throw new Error("Strategy snapshot is stale; regenerate exact fork/state evidence before building a packet");
+  }
+}
+
 export async function readTreasuryRangeBuildContext(
   repositoryRoot: string,
   strategyPath: string,
@@ -370,14 +398,8 @@ export async function readTreasuryRangeBuildContext(
   const network = await provider.getNetwork();
   if (network.chainId !== TREASURY_RANGE_CHAIN_ID) throw new Error("RPC is not Base chain 8453");
   const latest = await provider.getBlock("latest");
-  if (!latest?.hash || /^0x0{64}$/i.test(latest.hash)) throw new Error("RPC latest block is missing a canonical hash");
-  if (strategy.pinnedState.timestamp > latest.timestamp || latest.timestamp - strategy.pinnedState.timestamp > TREASURY_RANGE_MAX_SNAPSHOT_AGE_SECONDS) {
-    throw new Error("Strategy snapshot is stale; regenerate exact fork/state evidence before building a packet");
-  }
   const pinned = await provider.getBlock(strategy.pinnedState.blockNumber);
-  if (!pinned?.hash || pinned.hash.toLowerCase() !== strategy.pinnedState.blockHash) {
-    throw new Error("Strategy block hash is no longer canonical");
-  }
+  assertTreasuryRangePinnedBlockFreshness(strategy.pinnedState, latest, pinned);
 
   const production = canonicalProductionV4Deployment();
   const coreManifest = JSON.parse(readFileSync(production.manifestPath, "utf8")) as {

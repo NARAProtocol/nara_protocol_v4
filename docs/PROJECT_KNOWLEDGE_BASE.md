@@ -298,6 +298,18 @@ NARA and 5,000 USDC budget, so no deployment/order packet was authorized. A
 fully traversed range becomes Safe-held inventory only in a later settlement
 transaction; an actor's same-transaction buy/reverse cannot be intercepted.
 
+The 5,000-USDC plan is preserved only as historical evidence. The
+`NARA-20260831-v4-treasury-range-500-usdc-canary` policy permits only
+`CONSERVATIVE-100000-NARA`, with 200 USDC exposed and 300 USDC protected. The
+optimizer must still validate the complete 21-candidate matrix, but every other
+profile/budget is launch-blocked. This is a capital envelope, not a $500-total
+position: the market value of 100,000 NARA is additional and changes with spot.
+Matrix-row v3 binds each result to the repository/block plus pinned sqrt price,
+tick, Hook-configuration hash, and exact human-price rational; ingestion also
+reconstructs the exact raw canonical order vector.
+Fresh protected-source and block-pinned evidence are required before even an
+unsigned packet may be built. The manager remains unfunded and undeployed.
+
 Authority and operating documents:
 
 - [`architecture/NARA_TREASURY_RANGE_MANAGER_V1.md`](architecture/NARA_TREASURY_RANGE_MANAGER_V1.md)
@@ -305,6 +317,7 @@ Authority and operating documents:
 - [`security/NARA_TREASURY_RANGE_MANAGER_REMEDIATION_2026-08-30.md`](security/NARA_TREASURY_RANGE_MANAGER_REMEDIATION_2026-08-30.md)
 - [`runbooks/NARA_V4_TREASURY_RANGE_SETTLER_RUNBOOK.md`](runbooks/NARA_V4_TREASURY_RANGE_SETTLER_RUNBOOK.md)
 - [`releases/NARA-20260828-v4-treasury-range-manager.md`](releases/NARA-20260828-v4-treasury-range-manager.md)
+- [`releases/NARA-20260831-v4-treasury-range-500-usdc-canary.md`](releases/NARA-20260831-v4-treasury-range-500-usdc-canary.md)
 
 ---
 

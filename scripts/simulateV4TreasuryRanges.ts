@@ -23,6 +23,7 @@ import {
 import {
   BPS,
   NARA_UNIT,
+  TREASURY_RANGE_NOMINAL_USDC_BUDGET,
   USDC_UNIT,
   buildDeterministicStrategyProfiles,
   serializePlannedRange,
@@ -46,6 +47,7 @@ import {
   parseV4SwapReceipt,
 } from "./lib/v4TreasuryRangeSwap.js";
 import {
+  TREASURY_RANGE_CANARY_CHANGE_ID_PREFIX,
   treasuryRangeStrategyHash as opsTreasuryRangeStrategyHash,
   type TreasuryRangeStrategyManifest as OpsTreasuryRangeStrategyManifest,
 } from "./lib/v4TreasuryRangeManifest.js";
@@ -255,6 +257,14 @@ function shortfall(required: bigint, available: bigint): bigint {
   return required > available ? required - available : 0n;
 }
 
+function canaryUsdcBudget(profile: PlannedStrategyProfile): bigint {
+  const total = profile.exposedUsdcInput + profile.protectedUsdc;
+  if (total !== TREASURY_RANGE_NOMINAL_USDC_BUDGET) {
+    throw new Error("Strategy profile does not preserve the exact 500 USDC canary budget");
+  }
+  return total;
+}
+
 function exactJsonNumber(value: bigint, label: string): number {
   if (value < BigInt(Number.MIN_SAFE_INTEGER) || value > BigInt(Number.MAX_SAFE_INTEGER)) {
     throw new Error(`${label} cannot be represented as an exact JSON number`);
@@ -263,7 +273,7 @@ function exactJsonNumber(value: bigint, label: string): number {
 }
 
 function strategyChangeId(profile: PlannedStrategyProfile): string {
-  return `NARA-20260828-v4-treasury-ranges-${profile.name.toLowerCase()}-${profile.totalNaraInput / NARA_UNIT}-nara`;
+  return `${TREASURY_RANGE_CANARY_CHANGE_ID_PREFIX}-${profile.name.toLowerCase()}-${profile.totalNaraInput / NARA_UNIT}-nara`;
 }
 
 function proposedOrders(profile: PlannedStrategyProfile): readonly Readonly<Record<string, unknown>>[] {
@@ -304,6 +314,7 @@ function manifestBody(params: {
     throw new Error("Cannot build a strategy manifest from inexact position state");
   }
   const deployment = params.deployment ?? canonicalProductionV4Deployment();
+  const totalUsdcBudget = canaryUsdcBudget(params.profile);
   const activePositions = params.state.positionReconciliation.activePositions.map((position) => ({
     owner: position.owner,
     tickLower: position.tickLower.toString(),
@@ -405,7 +416,7 @@ function manifestBody(params: {
     proposedOrders: proposedOrders(params.profile),
     budget: {
       totalNaraAllocatedRaw: params.profile.totalNaraInput.toString(),
-      totalUsdcBudgetRaw: (5_000n * USDC_UNIT).toString(),
+      totalUsdcBudgetRaw: totalUsdcBudget.toString(),
       exposedUsdcRaw: params.profile.exposedUsdcInput.toString(),
       protectedUsdcReserveRaw: params.profile.protectedUsdc.toString(),
     },
@@ -486,7 +497,10 @@ export function buildTreasuryRangeScenarioPlan(
     repositoryHead,
     managerDeployment,
   }));
-  const nominalUsdcBudget = 5_000n * USDC_UNIT;
+  const nominalUsdcBudget = canaryUsdcBudget(finalized[0].profile);
+  if (!finalized.every((value) => canaryUsdcBudget(value.profile) === nominalUsdcBudget)) {
+    throw new Error("Strategy profiles disagree on the exact canary USDC budget");
+  }
   return {
     pinnedBlock: state.blockNumber,
     blockHash: state.blockHash,

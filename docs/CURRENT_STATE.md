@@ -72,6 +72,18 @@ and status `SELECTED_EXECUTION_BLOCKED`. The Safe was effectively unfunded for
 the required 100,000 NARA and 5,000 USDC candidate budget; the separate
 Treasury must never be substituted for Safe custody.
 
+That 5,000-USDC strategy is historical and retired. Change
+`NARA-20260831-v4-treasury-range-500-usdc-canary` narrows the only permitted
+launch candidate to `CONSERVATIVE-100000-NARA`: 100,000 NARA plus 500 USDC,
+with exactly 200 USDC exposed across four bid ranges and 300 USDC protected in
+the Safe. It preserves all 21 candidates and the full external adversarial
+matrix as comparative evidence, but only the approved canary can pass optimizer
+and packet-builder launch gates. Matrix-row v3 binds every result to the
+repository/block plus pinned `sqrtPriceX96`, tick, Hook-configuration hash, and
+exact human-price rational; ingestion reconstructs the raw canonical order
+vector. Fresh commit-bound Base-fork evidence is still required. No funding,
+deployment, order, signature, or broadcast is authorized by this source policy.
+
 The manager can crystallize a fully traversed range only through a later
 settlement transaction that sends both currencies to the Safe. It cannot
 intercept a same-transaction buy/reverse, does not guarantee profit, and never
@@ -100,7 +112,9 @@ Before any production use: explicitly approved Safe funding, fresh schema-v2
 live-state regeneration, receipt-pinned deployment verification, two
 independent settler instances, a separately approved canary, and at least 48
 hours of monitored canary behavior are still required. See
-[`NARA-20260828-v4-treasury-range-manager.md`](releases/NARA-20260828-v4-treasury-range-manager.md).
+[`NARA-20260828-v4-treasury-range-manager.md`](releases/NARA-20260828-v4-treasury-range-manager.md)
+and
+[`NARA-20260831-v4-treasury-range-500-usdc-canary.md`](releases/NARA-20260831-v4-treasury-range-500-usdc-canary.md).
 
 ## DEPLOYED AND FINALIZED — Position NFT Phase 2
 

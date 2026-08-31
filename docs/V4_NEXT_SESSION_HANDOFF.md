@@ -62,6 +62,17 @@ no transaction was signed or broadcast. Read
 [`releases/NARA-20260828-v4-treasury-range-manager.md`](releases/NARA-20260828-v4-treasury-range-manager.md)
 before any range-manager work.
 
+The 5,000-USDC strategy is now historical and must not be imported. The active
+source policy is `NARA-20260831-v4-treasury-range-500-usdc-canary`: only
+`CONSERVATIVE-100000-NARA` may reach a launch builder, with 200 USDC exposed
+and 300 USDC protected. All 21 candidates and full external attack sizes remain
+mandatory evidence. Matrix-row v3 binds repository/block, pinned sqrt price,
+tick, Hook configuration, exact human price, and the reconstructed raw canonical
+order vector. The canary still requires a protected immutable source commit,
+fresh pinned-fork results, and separate human approvals; it is not funded,
+deployed, signed, broadcast, or activated. Read
+[`releases/NARA-20260831-v4-treasury-range-500-usdc-canary.md`](releases/NARA-20260831-v4-treasury-range-500-usdc-canary.md).
+
 ## Exact activation boundary
 
 - The production Safe accepted Hook and Vault ownership in transaction
