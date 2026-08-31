@@ -1,8 +1,11 @@
 # NARA Treasury Range Manager V1 Architecture
 
-Status: dedicated-custody source merged in protected PR #62 at `a20ce9c40c174d032cacdf602efa6afe8c6585f9`; not deployed, funded, activated, or approved for production execution.
+Status: prefunded-route and strict matrix-evidence hardening merged in protected
+PR #64 at `162c24be080398b65c76e542a48ccb608cd1fb43`; not deployed,
+funded, signed, broadcast, activated, or approved for production execution.
 
-Change IDs: `NARA-20260828-v4-treasury-range-manager` and
+Change IDs: `NARA-20260828-v4-treasury-range-manager`,
+`NARA-20260831-v4-treasury-range-500-usdc-canary`, and
 `NARA-20260831-v4-treasury-range-dedicated-safe`.
 
 ## Purpose
@@ -63,6 +66,21 @@ Base USDC is treated as an administratively upgradeable external dependency, not
 State generation records that evidence at the pinned block. Deployment and order builders re-read it at the JIT packet block, add the predicted or deployed manager to the exact actor set, and require full equality before serialization. The settler performs the same observation independently through all three providers and rejects disagreement, drift, pause, or any monitored blacklist state before nonce selection, signing, or exact rebroadcast. Proxy bytecode equality alone is never accepted as implementation identity.
 
 This is detection and fail-closed containment, not control over Circle. A privileged incompatible USDC upgrade after a snapshot but before transaction inclusion can still make token movement fail. Tactical exposure must remain bounded. Emergency Safe cancellation deliberately bypasses the JIT USDC equality/health gate so exit construction remains available after drift; its human review labels the attached evidence as the old strategy snapshot. The bypass is cancellation-only and cannot make an incompatible token transfer succeed.
+
+## Matrix route and quote evidence
+
+Matrix-row schema `nara.v4.treasury-range-matrix-row.v4` binds route kind
+`universal-router-prefunded-settle-v1` and quote policy
+`per-swap-explicit-quote-status-v1`. Every quotable swap must record either a
+positive official v4 Quoter result or exact structured proof that the ordinary
+route would fail because the PoolManager lacks the NARA needed by the Hook. The
+simulator may then use the proved prefunded `SETTLE -> SWAP -> TAKE` route.
+
+Explicit supported unquoted reasons are limited to B
+`same_block_transactions`, C `same_transaction_actions`, and F
+`atomic_buy_reverse`; every normal and cross-block path rejects an unquoted
+label. This is fork evidence for the strategy, not a universal public-router
+repair: an ordinary wallet route can still fail after severe pool depletion.
 
 ## Authority
 
@@ -169,11 +187,12 @@ The repository may contain implementation, fork simulations, optimizer output, a
 8. two independently operated settlers and monitoring;
 9. at least 48 hours of canary evidence before considering expansion.
 
-Protected PR #52 established the original source candidate, and PR #59 established
-the bounded 100,000 NARA plus 500 USDC canary policy. Neither commit separated
-the deployment and custody Safe roles. Protected PR #62 established that role
-separation and completed item 1. The internal and automated review record for
-item 2 is present without any external-audit claim; items 3 through 9 remain
-separate staged actions.
+Protected PR #52 established the original source candidate, and PR #59
+established the bounded 100,000 NARA plus 500 USDC canary policy. Neither commit
+separated the deployment and custody Safe roles. Protected PR #62 established
+that role separation. Protected PR #64 established the prefunded route and
+strict matrix-row-v4 quote evidence. Together they complete item 1. The internal
+and automated review record for item 2 is present without any external-audit
+claim; items 3 through 9 remain separate staged actions.
 
 No source artifact or candidate manifest authorizes signing or broadcast.
