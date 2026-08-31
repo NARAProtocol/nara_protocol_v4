@@ -21,11 +21,17 @@ import {
   parseDecimalRational,
 } from "../scripts/lib/v4TreasuryRangeMath.js";
 import {
+  assertTreasuryRangeQuoteEvidence,
   bindTreasuryRangeMatrixRows,
   REQUIRED_TREASURY_ACQUIRED_SELL_FRACTIONS_BPS,
   REQUIRED_TREASURY_BUY_SIZES_USDC,
   REQUIRED_TREASURY_INDEPENDENT_SELL_SIZES_NARA,
+  TREASURY_RANGE_MATRIX_QUOTE_POLICY,
+  TREASURY_RANGE_MATRIX_ROUTE_KIND,
+  TREASURY_RANGE_MATRIX_ROW_SCHEMA,
   type TreasuryRangeEvidenceBinding,
+  type TreasuryRangeQuoteEvidence,
+  type TreasuryRangeUnquotedAdversarialReason,
 } from "../scripts/lib/v4TreasuryRangeEvidence.js";
 import {
   REQUIRED_NARA_BUDGETS,
@@ -358,6 +364,24 @@ describe("v4 treasury range optimizer", function () {
     humanUsdcPerNara: { numerator: 1n, denominator: 1n },
   };
   const transactionHash = (seed: number) => `0x${seed.toString(16).padStart(64, "0")}`;
+  const availableQuoteEvidence = (quotedOutputRaw = "1"): TreasuryRangeQuoteEvidence => ({
+    status: "available",
+    quotedOutputRaw,
+  });
+  const prefundQuoteEvidence = (): TreasuryRangeQuoteEvidence => ({
+    status: "pool_manager_prefund_required",
+    quotedOutputRaw: "0",
+    errorFingerprint: `0x${"77".repeat(32)}`,
+    poolManagerBalanceRaw: "9",
+    requiredHookFeeRaw: "10",
+  });
+  const unquotedQuoteEvidence = (
+    reason: TreasuryRangeUnquotedAdversarialReason,
+  ): TreasuryRangeQuoteEvidence => ({
+    status: "unquoted_adversarial_execution",
+    quotedOutputRaw: "0",
+    reason,
+  });
   const finalizeProfile = (profile: Parameters<typeof stampStrategyHash>[0]) => ({
     profile: stampStrategyHash(profile, `0x${"88".repeat(32)}`),
     manifest: { fixture: true },
@@ -375,6 +399,9 @@ describe("v4 treasury range optimizer", function () {
       grossInputRaw: (size * unit).toString(),
       outputRaw: (size * unit * (unit === 10n ** 6n ? 10n ** 12n : 1n)).toString(),
       hookVaultFeeRaw: "1", lpFeeRaw: "1", gasUsed: "100000", startTick: "0", endTick: "1",
+      quoteEvidence: kind === "independent_sell" && size === 50_000n
+        ? prefundQuoteEvidence()
+        : availableQuoteEvidence(),
     });
     const rows: Array<Record<string, unknown>> = [
       { scenario: "SENSITIVITY", kind: "one_sided_price_band", movementBps: "-2000", spotNumerator: "4", spotDenominator: "5", orders: [{ oneSidedAcrossFullBand: true }] },
@@ -386,17 +413,26 @@ describe("v4 treasury range optimizer", function () {
         sizeEachUsdc: "10000", transactionStatuses: ["executed", "executed"],
         transactionHashes: [transactionHash(seed++), transactionHash(seed++)],
         transactionBlockNumbers: ["200", "200"], hookFeesRaw: ["1", "2"], gasUsed: ["100000", "100001"],
+        executionQuoteEvidence: [
+          unquotedQuoteEvidence("same_block_transactions"),
+          unquotedQuoteEvidence("same_block_transactions"),
+        ],
       },
       {
         scenario: "C", kind: "same_transaction_actions", sizeEachUsdc: "10000", status: "executed",
         transactionHash: transactionHash(seed++),
         transactionBlockNumber: "201", hookFeesRaw: ["1", "2"], gasUsed: "100000",
+        executionQuoteEvidence: [
+          unquotedQuoteEvidence("same_transaction_actions"),
+          unquotedQuoteEvidence("same_transaction_actions"),
+        ],
       },
       {
         scenario: "D", kind: "cross_block_pressure_reset",
         transactionStatuses: ["executed", "executed"],
         transactionHashes: [transactionHash(seed++), transactionHash(seed++)],
         transactionBlockNumbers: ["202", "203"], hookFeesRaw: ["1", "1"], blocks: ["202", "203"],
+        quoteEvidence: [availableQuoteEvidence(), availableQuoteEvidence()],
       },
       {
         scenario: "E", kind: "buy_settle_sell", settledOrderIds: ["1"],
@@ -413,11 +449,17 @@ describe("v4 treasury range optimizer", function () {
         fullSafeUsdcDeltaRaw: (1_000n * 10n ** 6n).toString(), vaultNaraDeltaRaw: "0",
         vaultUsdcDeltaRaw: "0", unsettledInventory: [], buyGasUsed: "100000",
         settleGasUsed: "100000", sellGasUsed: "100000",
+        buyQuoteEvidence: availableQuoteEvidence(), sellQuoteEvidence: prefundQuoteEvidence(),
       },
       {
         scenario: "F", kind: "atomic_buy_reverse_no_settlement_window", status: "executed",
         transactionHash: transactionHash(seed++),
         transactionBlockNumber: "207", swapCount: 2, limitationObserved: true, gasUsed: "200000",
+        sizingQuoteEvidence: availableQuoteEvidence(),
+        executionQuoteEvidence: [
+          unquotedQuoteEvidence("atomic_buy_reverse"),
+          unquotedQuoteEvidence("atomic_buy_reverse"),
+        ],
       },
       {
         scenario: "G", kind: "buy_reverse_without_settlement",
@@ -428,6 +470,7 @@ describe("v4 treasury range optimizer", function () {
         buyHookFeeRaw: "1", buyLpFeeRaw: "1", sellHookFeeRaw: "1", sellLpFeeRaw: "1",
         safeNaraDeltaRaw: "0", safeUsdcDeltaRaw: "0", vaultNaraDeltaRaw: "0",
         vaultUsdcDeltaRaw: "0", unsettledInventory: [],
+        buyQuoteEvidence: availableQuoteEvidence(), sellQuoteEvidence: prefundQuoteEvidence(),
       },
       {
         scenario: "H", kind: "buy_settle_reverse", settledOrderIds: ["1"],
@@ -439,6 +482,7 @@ describe("v4 treasury range optimizer", function () {
         buyHookFeeRaw: "1", buyLpFeeRaw: "1", sellHookFeeRaw: "1", sellLpFeeRaw: "1",
         safeNaraDeltaRaw: "0", safeUsdcDeltaRaw: "0", vaultNaraDeltaRaw: "0",
         vaultUsdcDeltaRaw: "0", unsettledInventory: [],
+        buyQuoteEvidence: availableQuoteEvidence(), sellQuoteEvidence: prefundQuoteEvidence(),
       },
       ...REQUIRED_TREASURY_ACQUIRED_SELL_FRACTIONS_BPS.map((fraction) => ({
         scenario: "G", kind: "acquired_inventory_sell_fraction", fractionBps: fraction.toString(),
@@ -447,6 +491,7 @@ describe("v4 treasury range optimizer", function () {
         sellTransactionHash: transactionHash(seed++), sellBlockNumber: String(230 + seed),
         acquiredNaraRaw: (10_000n * NARA_UNIT).toString(),
         soldNaraRaw: (10_000n * NARA_UNIT * fraction / 10_000n).toString(), usdcOutputRaw: "1",
+        buyQuoteEvidence: availableQuoteEvidence(), sellQuoteEvidence: prefundQuoteEvidence(),
       })),
       {
         scenario: "H", kind: "bid_settlement_after_independent_sell", settledOrderIds: ["2"],
@@ -454,6 +499,7 @@ describe("v4 treasury range optimizer", function () {
         sellTransactionHash: transactionHash(seed++), sellBlockNumber: "240",
         settlementTransactionHash: transactionHash(seed++), settlementBlockNumber: "241",
         treasuryNaraAccumulatedRaw: (5_000n * NARA_UNIT).toString(),
+        sellQuoteEvidence: prefundQuoteEvidence(),
       },
     ];
     return rows;
@@ -501,6 +547,45 @@ describe("v4 treasury range optimizer", function () {
     treasuryRangeSafeBalances: { nara: 2_070_480n, usdc: 0n },
     treasuryBalances: { nara: 231_654n * NARA_UNIT, usdc: 4_398_903_041n },
     finalizeProfile,
+  });
+
+  it("validates exact available, PoolManager-prefund, and unquoted-adversarial evidence", function () {
+    expect(assertTreasuryRangeQuoteEvidence(availableQuoteEvidence("123"))).to.deep.equal({
+      status: "available",
+      quotedOutputRaw: "123",
+    });
+    expect(assertTreasuryRangeQuoteEvidence(prefundQuoteEvidence())).to.deep.equal(prefundQuoteEvidence());
+    expect(assertTreasuryRangeQuoteEvidence(unquotedQuoteEvidence("atomic_buy_reverse")))
+      .to.deep.equal(unquotedQuoteEvidence("atomic_buy_reverse"));
+
+    for (const invalid of [
+      { status: "available", quotedOutputRaw: "0" },
+      { status: "available", quotedOutputRaw: "1", ignored: true },
+      { ...prefundQuoteEvidence(), quotedOutputRaw: "1" },
+      { ...prefundQuoteEvidence(), errorFingerprint: "0x1234" },
+      { ...prefundQuoteEvidence(), poolManagerBalanceRaw: "10" },
+      { ...prefundQuoteEvidence(), requiredHookFeeRaw: "0" },
+      { ...prefundQuoteEvidence(), status: "rpc_error" },
+      { ...unquotedQuoteEvidence("same_block_transactions"), quotedOutputRaw: "1" },
+      { ...unquotedQuoteEvidence("same_block_transactions"), reason: "generic_unquoted" },
+      { ...unquotedQuoteEvidence("same_block_transactions"), ignored: true },
+    ]) {
+      expect(() => assertTreasuryRangeQuoteEvidence(invalid)).to.throw();
+    }
+  });
+
+  it("hash-binds the v4 prefunded route and per-swap quote policy into every matrix row", function () {
+    const bound = bindTreasuryRangeMatrixRows({
+      ...evidenceBinding,
+      candidateId: TREASURY_RANGE_CANARY_CANDIDATE_ID,
+    }, rawMatrixRows());
+    expect(bound.rows.every((row) => row.schemaVersion === TREASURY_RANGE_MATRIX_ROW_SCHEMA
+      && row.routeKind === TREASURY_RANGE_MATRIX_ROUTE_KIND
+      && row.quotePolicy === TREASURY_RANGE_MATRIX_QUOTE_POLICY)).to.equal(true);
+    expect(() => bindTreasuryRangeMatrixRows({
+      ...evidenceBinding,
+      candidateId: TREASURY_RANGE_CANARY_CANDIDATE_ID,
+    }, [{ ...rawMatrixRows()[0], routeKind: TREASURY_RANGE_MATRIX_ROUTE_KIND }])).to.throw("reserved routeKind");
   });
 
   it("refuses to choose without complete exact-fork metrics", function () {
@@ -599,8 +684,75 @@ describe("v4 treasury range optimizer", function () {
         return rest;
       },
     ));
+    const missingSwapQuoteEvidence = metricFixture(candidate, mutateRow(
+      (row) => row.kind === "single_buy" && row.sizeUsdc === "500",
+      (row) => {
+        const { quoteEvidence: _removed, ...rest } = row;
+        return rest;
+      },
+    ));
+    const zeroAvailableQuote = metricFixture(candidate, mutateRow(
+      (row) => row.kind === "single_buy" && row.sizeUsdc === "500",
+      (row) => ({ ...row, quoteEvidence: { status: "available", quotedOutputRaw: "0" } }),
+    ));
+    const unprovenPrefundQuote = metricFixture(candidate, mutateRow(
+      (row) => row.kind === "independent_sell" && row.sizeNara === "50000",
+      (row) => ({
+        ...row,
+        quoteEvidence: { ...prefundQuoteEvidence(), poolManagerBalanceRaw: "10" },
+      }),
+    ));
+    const incompleteCrossBlockQuotes = metricFixture(candidate, mutateRow(
+      (row) => row.scenario === "D",
+      (row) => ({ ...row, quoteEvidence: [availableQuoteEvidence()] }),
+    ));
+    const unquotedNormalSwap = metricFixture(candidate, mutateRow(
+      (row) => row.kind === "single_buy" && row.sizeUsdc === "500",
+      (row) => ({ ...row, quoteEvidence: unquotedQuoteEvidence("same_block_transactions") }),
+    ));
+    const unquotedCrossBlockSwap = metricFixture(candidate, mutateRow(
+      (row) => row.scenario === "D",
+      (row) => ({
+        ...row,
+        quoteEvidence: [unquotedQuoteEvidence("same_block_transactions"), availableQuoteEvidence()],
+      }),
+    ));
+    const incompleteSameBlockExecutionQuotes = metricFixture(candidate, mutateRow(
+      (row) => row.scenario === "B",
+      (row) => ({ ...row, executionQuoteEvidence: [unquotedQuoteEvidence("same_block_transactions")] }),
+    ));
+    const wrongSameBlockExecutionReason = metricFixture(candidate, mutateRow(
+      (row) => row.scenario === "B",
+      (row) => ({
+        ...row,
+        executionQuoteEvidence: [
+          unquotedQuoteEvidence("same_transaction_actions"),
+          unquotedQuoteEvidence("same_transaction_actions"),
+        ],
+      }),
+    ));
+    const quotedSameTransactionExecution = metricFixture(candidate, mutateRow(
+      (row) => row.scenario === "C",
+      (row) => ({ ...row, executionQuoteEvidence: [availableQuoteEvidence(), availableQuoteEvidence()] }),
+    ));
+    const wrongAtomicExecutionReason = metricFixture(candidate, mutateRow(
+      (row) => row.scenario === "F",
+      (row) => ({
+        ...row,
+        executionQuoteEvidence: [
+          unquotedQuoteEvidence("same_transaction_actions"),
+          unquotedQuoteEvidence("same_transaction_actions"),
+        ],
+      }),
+    ));
     const wrongCandidateRows = valid.matrix.map((row, index) => index === 0
       ? { ...row, candidateId: "AGGRESSIVE-15000-NARA" }
+      : row);
+    const wrongRouteRows = valid.matrix.map((row, index) => index === 0
+      ? { ...row, routeKind: "stock-post-settled-route" }
+      : row);
+    const wrongQuotePolicyRows = valid.matrix.map((row, index) => index === 0
+      ? { ...row, quotePolicy: "any-quoter-error-falls-back" }
       : row);
     const invalidVariants: ExactForkCandidateMetrics[] = [
       { ...valid, matrix: [], matrixHash: `0x${"00".repeat(32)}` },
@@ -615,7 +767,19 @@ describe("v4 treasury range optimizer", function () {
       revertedSameBlockComponent,
       ignoredExtraStatusForbidden,
       missingSuccessEvidence,
+      missingSwapQuoteEvidence,
+      zeroAvailableQuote,
+      unprovenPrefundQuote,
+      incompleteCrossBlockQuotes,
+      unquotedNormalSwap,
+      unquotedCrossBlockSwap,
+      incompleteSameBlockExecutionQuotes,
+      wrongSameBlockExecutionReason,
+      quotedSameTransactionExecution,
+      wrongAtomicExecutionReason,
       { ...valid, matrix: wrongCandidateRows },
+      { ...valid, matrix: wrongRouteRows },
+      { ...valid, matrix: wrongQuotePolicyRows },
       metricFixture(candidate, rawMatrixRows(), { ...evidenceBinding, repositoryHead: "33".repeat(20) }),
       metricFixture(candidate, rawMatrixRows(), { ...evidenceBinding, blockNumber: evidenceBinding.blockNumber + 1n }),
       metricFixture(candidate, rawMatrixRows(), { ...evidenceBinding, blockHash: `0x${"44".repeat(32)}` }),

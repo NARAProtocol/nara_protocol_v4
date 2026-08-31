@@ -4,8 +4,11 @@ import type { FeeCurveState } from "./v4TreasuryRangeState.js";
 
 export const V4_SWAP_COMMAND = 0x10;
 export const SWAP_EXACT_IN_SINGLE_ACTION = 0x06;
+export const SETTLE_ACTION = 0x0b;
 export const SETTLE_ALL_ACTION = 0x0c;
 export const TAKE_ALL_ACTION = 0x0f;
+export const V4_BEFORE_SWAP_SELECTOR = "0x575e24b4";
+export const ERC20_TRANSFER_SELECTOR = "0xa9059cbb";
 export const BPS = 10_000n;
 export const PIPS_DENOMINATOR = 1_000_000n;
 export const UINT128_MAX = (1n << 128n) - 1n;
@@ -20,6 +23,16 @@ export const POOL_AND_HOOK_EVENT_ABI = [
 ] as const;
 
 const EVENT_INTERFACE = new ethers.Interface(POOL_AND_HOOK_EVENT_ABI);
+const TRANSIENT_BALANCE_ERROR_INTERFACE = new ethers.Interface([
+  "error UnexpectedRevertBytes(bytes revertData)",
+  "error WrappedError(address target,bytes4 selector,bytes reason,bytes details)",
+  "error HookCallFailed()",
+  "error ERC20TransferFailed()",
+  "error ERC20InsufficientBalance(address sender,uint256 balance,uint256 needed)",
+]);
+
+const HOOK_CALL_FAILED_DATA = TRANSIENT_BALANCE_ERROR_INTERFACE.encodeErrorResult("HookCallFailed");
+const ERC20_TRANSFER_FAILED_DATA = TRANSIENT_BALANCE_ERROR_INTERFACE.encodeErrorResult("ERC20TransferFailed");
 
 export type V4ExactInputLeg = Readonly<{
   amountIn: bigint;
@@ -65,6 +78,111 @@ export type ParsedSwapReceipt = Readonly<{
   aggregateAmount0: bigint;
   aggregateAmount1: bigint;
 }>;
+
+export type ExactV4QuoterPoolManagerBalanceFailure = Readonly<{
+  observedBalance: bigint;
+  needed: bigint;
+  errorFingerprint: string;
+}>;
+
+export type ExactV4QuoterPoolManagerBalanceFailureConfig = Readonly<{
+  hook: string;
+  nara: string;
+  poolManager: string;
+}>;
+
+function parseCanonicalCustomError(
+  data: unknown,
+  expectedName: string,
+): ethers.ErrorDescription | undefined {
+  if (typeof data !== "string" || data.length % 2 !== 0 || !ethers.isHexString(data)) return undefined;
+  try {
+    const parsed = TRANSIENT_BALANCE_ERROR_INTERFACE.parseError(data);
+    if (!parsed || parsed.name !== expectedName) return undefined;
+    const canonical = TRANSIENT_BALANCE_ERROR_INTERFACE.encodeErrorResult(
+      parsed.fragment,
+      Array.from(parsed.args),
+    );
+    return canonical.toLowerCase() === data.toLowerCase() ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function structuredRevertDataCandidates(error: unknown): readonly string[] {
+  if (typeof error !== "object" || error === null) return [];
+  const candidates: string[] = [];
+  const queue: object[] = [error];
+  const seen = new Set<object>();
+  const nestedErrorKeys = ["data", "error", "info", "cause"] as const;
+  while (queue.length > 0 && seen.size < 64) {
+    const current = queue.shift()!;
+    if (seen.has(current)) continue;
+    seen.add(current);
+    for (const key of nestedErrorKeys) {
+      let value: unknown;
+      try {
+        value = (current as Record<string, unknown>)[key];
+      } catch {
+        continue;
+      }
+      if (key === "data" && typeof value === "string" && value.length % 2 === 0 && ethers.isHexString(value)) {
+        candidates.push(value);
+      } else if (typeof value === "object" && value !== null) {
+        queue.push(value);
+      }
+    }
+  }
+  return candidates;
+}
+
+/**
+ * Recognizes only the exact V4Quoter -> Hook -> NARA transfer failure caused
+ * by PoolManager's physical NARA balance being below the Hook fee requested
+ * during beforeSwap. Message text and unstructured hex strings are ignored.
+ */
+export function decodeExactV4QuoterPoolManagerBalanceFailure(
+  error: unknown,
+  config: ExactV4QuoterPoolManagerBalanceFailureConfig,
+): ExactV4QuoterPoolManagerBalanceFailure | undefined {
+  const expectedHook = ethers.getAddress(config.hook);
+  const expectedNara = ethers.getAddress(config.nara);
+  const expectedPoolManager = ethers.getAddress(config.poolManager);
+  for (const candidate of structuredRevertDataCandidates(error)) {
+    const unexpected = parseCanonicalCustomError(candidate, "UnexpectedRevertBytes");
+    if (!unexpected) continue;
+    const hookWrapper = parseCanonicalCustomError(unexpected.args[0], "WrappedError");
+    if (
+      !hookWrapper
+      || ethers.getAddress(hookWrapper.args[0]) !== expectedHook
+      || (hookWrapper.args[1] as string).toLowerCase() !== V4_BEFORE_SWAP_SELECTOR
+      || (hookWrapper.args[3] as string).toLowerCase() !== HOOK_CALL_FAILED_DATA
+    ) continue;
+    const tokenWrapper = parseCanonicalCustomError(hookWrapper.args[2], "WrappedError");
+    if (
+      !tokenWrapper
+      || ethers.getAddress(tokenWrapper.args[0]) !== expectedNara
+      || (tokenWrapper.args[1] as string).toLowerCase() !== ERC20_TRANSFER_SELECTOR
+      || (tokenWrapper.args[3] as string).toLowerCase() !== ERC20_TRANSFER_FAILED_DATA
+    ) continue;
+    const insufficientBalance = parseCanonicalCustomError(
+      tokenWrapper.args[2],
+      "ERC20InsufficientBalance",
+    );
+    if (!insufficientBalance || ethers.getAddress(insufficientBalance.args[0]) !== expectedPoolManager) {
+      continue;
+    }
+    const observedBalance = insufficientBalance.args[1] as bigint;
+    const needed = insufficientBalance.args[2] as bigint;
+    if (needed <= observedBalance) continue;
+    return {
+      observedBalance,
+      needed,
+      errorFingerprint: ethers.keccak256(candidate).toLowerCase(),
+    };
+  }
+  return undefined;
+}
 
 export function cumulativeHookFee(curve: FeeCurveState, amountIn: bigint, depth: bigint): bigint {
   if (amountIn < 0n || depth < 0n) throw new Error("Hook fee inputs must be non-negative");
@@ -171,14 +289,23 @@ export function buildV4ExactInputCall(params: {
   if (params.aggregateAmountOutMinimum < individualMinimums) {
     throw new Error("Aggregate minimum cannot be below the sum of leg minimums");
   }
-  const settle = abi.encode(["address", "uint256"], [inputCurrency, totalAmountIn]);
+  // Pre-settle exact input before the swap. The active Hook takes its
+  // input-currency fee during beforeSwap, while the ordinary Universal Router
+  // ordering transfers the trader's input only afterward. Pre-settlement is a
+  // supported V4Router action and funds the Hook fee before that callback.
+  // This does not restore continuity for the ordinary SWAP -> SETTLE_ALL route;
+  // the separate fork-control builder below retains evidence for that route.
+  const settle = abi.encode(
+    ["address", "uint256", "bool"],
+    [inputCurrency, totalAmountIn, true],
+  );
   const take = abi.encode(["address", "uint256"], [outputCurrency, params.aggregateAmountOutMinimum]);
   const actions = ethers.hexlify(new Uint8Array([
+    SETTLE_ACTION,
     ...params.legs.map(() => SWAP_EXACT_IN_SINGLE_ACTION),
-    SETTLE_ALL_ACTION,
     TAKE_ALL_ACTION,
   ]));
-  const v4Input = abi.encode(["bytes", "bytes[]"], [actions, [...swapParams, settle, take]]);
+  const v4Input = abi.encode(["bytes", "bytes[]"], [actions, [settle, ...swapParams, take]]);
   return {
     commands: ethers.hexlify(new Uint8Array([V4_SWAP_COMMAND])),
     inputs: [v4Input],
@@ -189,6 +316,40 @@ export function buildV4ExactInputCall(params: {
     inputCurrency,
     outputCurrency,
   };
+}
+
+/**
+ * Builds the ordinary Universal Router SWAP(s) -> SETTLE_ALL -> TAKE_ALL order.
+ * This is a fork-test continuity control, not the supported prefunded route.
+ */
+export function buildV4PostSwapSettleAllForkControlCall(params: {
+  poolKey: Pick<CanonicalV4PoolKey, "currency0" | "currency1" | "fee" | "tickSpacing" | "hook">;
+  inputCurrency: string;
+  legs: readonly V4ExactInputLeg[];
+  aggregateAmountOutMinimum: bigint;
+  deadline: bigint;
+  hookData?: string;
+}): V4ExactInputCall {
+  const prefundedCall = buildV4ExactInputCall(params);
+  const abi = ethers.AbiCoder.defaultAbiCoder();
+  const [, encodedParameters] = abi.decode(["bytes", "bytes[]"], prefundedCall.inputs[0]);
+  const prefundedParameters = Array.from(encodedParameters) as string[];
+  const swapParameters = prefundedParameters.slice(1, -1);
+  const settleAll = abi.encode(
+    ["address", "uint256"],
+    [prefundedCall.inputCurrency, prefundedCall.totalAmountIn],
+  );
+  const takeAll = prefundedParameters[prefundedParameters.length - 1];
+  const actions = ethers.hexlify(new Uint8Array([
+    ...params.legs.map(() => SWAP_EXACT_IN_SINGLE_ACTION),
+    SETTLE_ALL_ACTION,
+    TAKE_ALL_ACTION,
+  ]));
+  const v4Input = abi.encode(
+    ["bytes", "bytes[]"],
+    [actions, [...swapParameters, settleAll, takeAll]],
+  );
+  return { ...prefundedCall, inputs: [v4Input] };
 }
 
 export function parseV4SwapReceipt(

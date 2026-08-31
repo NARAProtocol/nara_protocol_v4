@@ -46,6 +46,7 @@ import {
 import {
   UNIVERSAL_ROUTER_ABI,
   buildV4ExactInputCall,
+  decodeExactV4QuoterPoolManagerBalanceFailure,
   exactEffectiveBps,
   exactLpFeeAmount,
   parseV4SwapReceipt,
@@ -59,6 +60,7 @@ import {
   REQUIRED_TREASURY_ACQUIRED_SELL_FRACTIONS_BPS,
   REQUIRED_TREASURY_BUY_SIZES_USDC,
   REQUIRED_TREASURY_INDEPENDENT_SELL_SIZES_NARA,
+  type TreasuryRangeQuoteEvidence,
 } from "./lib/v4TreasuryRangeEvidence.js";
 
 const ERC20_ABI = [
@@ -74,6 +76,9 @@ const STATE_VIEW_ABI = [
 ] as const;
 const QUOTER_ABI = [
   "function quoteExactInputSingle(((address currency0,address currency1,uint24 fee,int24 tickSpacing,address hooks) poolKey,bool zeroForOne,uint128 exactAmount,bytes hookData) params) returns (uint256 amountOut,uint256 gasEstimate)",
+] as const;
+const HOOK_QUOTE_ABI = [
+  "function quotePoolFeeDetailed(bool isBuy,uint256 amountIn) view returns (uint16 marginalFeeBps,uint16 effectiveFeeBps,uint256 feeAmount)",
 ] as const;
 
 export const PINNED_USDC_ADVERSARY = Object.freeze({
@@ -102,9 +107,15 @@ export const SCENARIO_MATRIX = [
   { id: "H", description: "buy, settle fully crossed ranges, then reverse", settlementWindow: true, atomic: false },
 ] as const;
 
+export type ExactForkQuoteEvidence = Exclude<
+  TreasuryRangeQuoteEvidence,
+  { status: "unquoted_adversarial_execution" }
+>;
+
 export type ExactForkSwapResult = Readonly<{
   status: "executed" | "reverted";
   revertReason?: string;
+  quoteEvidence: ExactForkQuoteEvidence;
   transactionHash?: string;
   blockNumber?: bigint;
   grossInput: bigint;
@@ -597,17 +608,56 @@ export async function executeExactForkSwap(params: {
   const router = new ethers.Contract(params.deployment.universalRouter, UNIVERSAL_ROUTER_ABI, params.signer);
   const stateView = new ethers.Contract(params.stateViewAddress ?? BASE_STATE_VIEW, STATE_VIEW_ABI, params.provider);
   const quoter = new ethers.Contract(BASE_V4_QUOTER, QUOTER_ABI, params.provider);
+  const hook = new ethers.Contract(params.deployment.hook, HOOK_QUOTE_ABI, params.provider);
   const latest = await params.provider.getBlock("latest");
   if (!latest) throw new Error("Fork latest block is unavailable");
   const deadline = BigInt(latest.timestamp) + 600n;
 
-  const [quote] = await quoter.quoteExactInputSingle.staticCall([
-    [poolKey.currency0, poolKey.currency1, poolKey.fee, poolKey.tickSpacing, poolKey.hook],
-    zeroForOne,
-    params.amountIn,
-    "0x",
-  ], { blockTag: latest.number }) as readonly [bigint, bigint];
-  if (quote <= 0n) throw new Error("Real V4Quoter returned zero output");
+  let quote = 0n;
+  let quoteEvidence: ExactForkQuoteEvidence;
+  try {
+    const quoted = await quoter.quoteExactInputSingle.staticCall([
+      [poolKey.currency0, poolKey.currency1, poolKey.fee, poolKey.tickSpacing, poolKey.hook],
+      zeroForOne,
+      params.amountIn,
+      "0x",
+    ], { blockTag: latest.number }) as readonly [bigint, bigint];
+    quote = quoted[0];
+    if (quote <= 0n) throw new Error("Real V4Quoter returned zero output");
+    quoteEvidence = { status: "available", quotedOutputRaw: quote.toString() };
+  } catch (error) {
+    // A zero-minimum fallback is allowed only on this already-asserted local
+    // fork and only for the exact canonical NARA transfer shortfall. Generic
+    // Quoter, RPC, configuration, or decoding failures remain fatal.
+    if (inputCurrency !== ethers.getAddress(params.deployment.token)) throw error;
+    const decoded = decodeExactV4QuoterPoolManagerBalanceFailure(error, {
+      hook: params.deployment.hook,
+      nara: params.deployment.token,
+      poolManager: params.deployment.poolManager,
+    });
+    if (!decoded) throw error;
+    const [feeQuote, observedBalance] = await Promise.all([
+      hook.quotePoolFeeDetailed.staticCall(false, params.amountIn, { blockTag: latest.number }) as Promise<readonly bigint[]>,
+      nara.balanceOf.staticCall(params.deployment.poolManager, { blockTag: latest.number }) as Promise<bigint>,
+    ]);
+    const requiredHookFee = feeQuote[2];
+    if (
+      requiredHookFee !== decoded.needed
+      || observedBalance !== decoded.observedBalance
+      || requiredHookFee <= observedBalance
+    ) {
+      throw new Error("Decoded Quoter prefund failure does not match pinned Hook fee and PoolManager balance", {
+        cause: error,
+      });
+    }
+    quoteEvidence = {
+      status: "pool_manager_prefund_required",
+      quotedOutputRaw: "0",
+      errorFingerprint: decoded.errorFingerprint,
+      poolManagerBalanceRaw: observedBalance.toString(),
+      requiredHookFeeRaw: requiredHookFee.toString(),
+    };
+  }
   const call = buildV4ExactInputCall({
     poolKey,
     inputCurrency,
@@ -618,12 +668,22 @@ export async function executeExactForkSwap(params: {
 
   await (await input.approve(params.deployment.permit2, params.amountIn)).wait();
   await (await permit2.approve(inputCurrency, params.deployment.universalRouter, params.amountIn, deadline)).wait();
-  const [slotBefore, traderNaraBefore, traderUsdcBefore, vaultNaraBefore, vaultUsdcBefore] = await Promise.all([
+  const [
+    slotBefore,
+    traderNaraBefore,
+    traderUsdcBefore,
+    vaultNaraBefore,
+    vaultUsdcBefore,
+    routerNaraBefore,
+    routerUsdcBefore,
+  ] = await Promise.all([
     stateView.getSlot0(params.deployment.poolId) as Promise<readonly bigint[]>,
     nara.balanceOf(signerAddress) as Promise<bigint>,
     usdc.balanceOf(signerAddress) as Promise<bigint>,
     nara.balanceOf(params.deployment.vault) as Promise<bigint>,
     usdc.balanceOf(params.deployment.vault) as Promise<bigint>,
+    nara.balanceOf(params.deployment.universalRouter) as Promise<bigint>,
+    usdc.balanceOf(params.deployment.universalRouter) as Promise<bigint>,
   ]);
 
   try {
@@ -634,18 +694,55 @@ export async function executeExactForkSwap(params: {
       poolManager: params.deployment.poolManager,
       hook: params.deployment.hook,
     }, params.deployment.poolId);
-    const [slotAfter, traderNaraAfter, traderUsdcAfter, vaultNaraAfter, vaultUsdcAfter] = await Promise.all([
+    const [
+      slotAfter,
+      traderNaraAfter,
+      traderUsdcAfter,
+      vaultNaraAfter,
+      vaultUsdcAfter,
+      routerNaraAfter,
+      routerUsdcAfter,
+    ] = await Promise.all([
       stateView.getSlot0(params.deployment.poolId) as Promise<readonly bigint[]>,
       nara.balanceOf(signerAddress) as Promise<bigint>,
       usdc.balanceOf(signerAddress) as Promise<bigint>,
       nara.balanceOf(params.deployment.vault) as Promise<bigint>,
       usdc.balanceOf(params.deployment.vault) as Promise<bigint>,
+      nara.balanceOf(params.deployment.universalRouter) as Promise<bigint>,
+      usdc.balanceOf(params.deployment.universalRouter) as Promise<bigint>,
     ]);
     const traderNaraDelta = traderNaraAfter - traderNaraBefore;
     const traderUsdcDelta = traderUsdcAfter - traderUsdcBefore;
     const vaultNaraDelta = vaultNaraAfter - vaultNaraBefore;
     const vaultUsdcDelta = vaultUsdcAfter - vaultUsdcBefore;
     const hookFee = parsed.hookFeeByCurrency.get(inputCurrency) ?? 0n;
+    if (parsed.swaps.length !== 1 || parsed.hookFees.length !== 1) {
+      throw new Error("Real route must emit exactly one canonical Swap and Hook fee event");
+    }
+    const hookEvent = parsed.hookFees[0];
+    if (
+      hookEvent.currency !== inputCurrency
+      || hookEvent.amountIn !== params.amountIn
+      || hookEvent.feeAmount !== hookFee
+      || hookEvent.isBuy !== (inputCurrency === ethers.getAddress(params.deployment.base))
+    ) throw new Error("Hook event does not match the exact-input route");
+    const traderInputDelta = inputCurrency === ethers.getAddress(params.deployment.token)
+      ? traderNaraDelta
+      : traderUsdcDelta;
+    const vaultInputDelta = inputCurrency === ethers.getAddress(params.deployment.token)
+      ? vaultNaraDelta
+      : vaultUsdcDelta;
+    const vaultOppositeDelta = inputCurrency === ethers.getAddress(params.deployment.token)
+      ? vaultUsdcDelta
+      : vaultNaraDelta;
+    if (traderInputDelta !== -params.amountIn) throw new Error("Trader gross-input debit is not exact");
+    if (vaultInputDelta !== hookFee || vaultOppositeDelta !== 0n) {
+      throw new Error("Vault token deltas do not reconcile exactly to the Hook fee");
+    }
+    if (routerNaraAfter !== routerNaraBefore || routerUsdcAfter !== routerUsdcBefore) {
+      throw new Error("Universal Router retained token balance after the prefunded route");
+    }
+    if (hookFee <= 0n || hookFee >= params.amountIn) throw new Error("Hook fee is outside exact-input bounds");
     const netAmmInput = params.amountIn - hookFee;
     const lpFee = parsed.swaps.reduce((sum, swap) => sum + exactLpFeeAmount(netAmmInput, swap.lpFeePips), 0n);
     const actualOutput = outputCurrency === ethers.getAddress(params.deployment.token)
@@ -657,6 +754,7 @@ export async function executeExactForkSwap(params: {
       : rational(actualOutput * NARA_UNIT, params.amountIn * USDC_UNIT);
     return {
       status: "executed",
+      quoteEvidence,
       transactionHash: receipt.hash,
       blockNumber: BigInt(receipt.blockNumber),
       grossInput: params.amountIn,
@@ -685,6 +783,7 @@ export async function executeExactForkSwap(params: {
     return {
       status: "reverted",
       revertReason: (error as Error).message,
+      quoteEvidence,
       grossInput: params.amountIn,
       quotedOutput: quote,
       actualOutput: 0n,
