@@ -81,8 +81,13 @@ matrix as comparative evidence, but only the approved canary can pass optimizer
 and packet-builder launch gates. Matrix-row v3 binds every result to the
 repository/block plus pinned `sqrtPriceX96`, tick, Hook-configuration hash, and
 exact human-price rational; ingestion reconstructs the raw canonical order
-vector. Fresh commit-bound Base-fork evidence is still required. No funding,
-deployment, order, signature, or broadcast is authorized by this source policy.
+vector. Protected PR #59 merged this policy as GitHub-verified commit
+`5a6b449df7d50b25d71715b3bbedc720ef6960ee`; all PR and post-merge build,
+test, size, Slither, Aderyn, Echidna, and CodeQL gates passed. Exact historical
+block `50537172` and fresh block `50684125` matrix-v3 fork runs both passed 4/4,
+covered all 21 candidates, and selected only `CONSERVATIVE-100000-NARA` with
+`SELECTED_EXECUTION_BLOCKED`. No funding, deployment, order, signature, or
+broadcast is authorized by this evidence.
 
 The manager can crystallize a fully traversed range only through a later
 settlement transaction that sends both currencies to the Safe. It cannot

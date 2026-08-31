@@ -1,12 +1,15 @@
 # NARA v4 Treasury Range 500-USDC Canary
 
-Evidence state: **SOURCE POLICY CANDIDATE / NOT FUNDED / NOT DEPLOYED / NOT SIGNED / NOT BROADCAST / NOT ACTIVATED**
+Evidence state: **PROTECTED SOURCE + HISTORICAL/FRESH EXACT FORK PASS / NOT FUNDED / NOT DEPLOYED / NOT SIGNED / NOT BROADCAST / NOT ACTIVATED**
 
 Change ID: `NARA-20260831-v4-treasury-range-500-usdc-canary`
 
 Origin remote: `https://github.com/NARAProtocol/nara_protocol_v4`
 
-Protected source commit: pending protected merge and post-merge verification.
+Protected PR #59 merged the source policy as GitHub-verified commit
+`5a6b449df7d50b25d71715b3bbedc720ef6960ee`. All PR and post-merge NARA CI and
+CodeQL gates passed. This is immutable source/evidence authority, not deployment
+or transaction authority.
 
 This release changes only planner, optimizer, evidence, manifest-ingestion,
 packet-builder gates, regressions, and documentation for a smaller first
@@ -64,15 +67,15 @@ profit guarantee, managed-investment promise, or claim of maximum return.
 | Treasury Range settler Node suite | 32 passing locally |
 | Strict TypeScript | Changed-source/test target set and settler project passed; repository-wide target remains unsuitable because of pre-existing unrelated errors |
 | Repository non-fork suite | 770 passing locally |
-| Historical pinned fork | pending immutable source commit |
-| Fresh pinned fork and 21-candidate matrix | pending immutable source commit |
+| Historical pinned fork | 4/4 passed at Base block `50537172`; all 21 candidates and exact 30-row matrices completed |
+| Fresh pinned fork and 21-candidate matrix | 4/4 passed at Base block `50684125`; all 21 candidates and exact 30-row matrices completed |
 | Build and bytecode | passed; manager runtime 23,620 bytes and initcode 28,095 bytes, within EVM limits |
 | Slither | completed on all v4 targets; manager retained 17 previously triaged raw signals, exit zero |
-| Aderyn / Echidna local | unavailable: Aderyn binary absent; configured WSL Echidna distro could not start; protected CI remains required |
+| Aderyn / Echidna | unavailable locally; both passed on PR and post-merge protected CI |
 | Dependency audit | production graph 0 vulnerabilities; development graph 8 low-severity `elliptic` advisories with no available fix |
 | Independent review | adversarial PASS and architecture PASS after matrix-context hardening |
 | Secret scan | focused changed-content patterns found 0; Gitleaks unavailable and not claimed |
-| Protected PR and post-merge CI | pending |
+| Protected PR and post-merge CI | PR #59 merged; build/test/size, Slither, Aderyn, Echidna, and CodeQL passed before and after merge |
 | Production writes | none |
 
 Counts above must be refreshed from final command output before this record is
@@ -82,16 +85,34 @@ The JSON matrix is commit- and state-bound release evidence, not a cryptographic
 attestation by an external auditor. Protected immutable generation, CI, and
 human review remain mandatory.
 
+## Immutable fork evidence
+
+Both fork runs bind repository head
+`5a6b449df7d50b25d71715b3bbedc720ef6960ee`, contain 21 candidate metrics and
+30 rows in the selected manifest, select only `CONSERVATIVE-100000-NARA`, and
+report `SELECTED_EXECUTION_BLOCKED` with `noBroadcast=true`.
+
+| Evidence | Historical | Fresh |
+|---|---|---|
+| Base block | `50537172` | `50684125` |
+| Block hash | `0x6e896c222c2b8313fc232d174136d58212835c39a06378f2dbf2b73c0101b7d9` | `0x28f44a3133b35ecca81ca21ed3fdd98af739a5a904e407a775fa1d8602d1354b` |
+| Matrix artifact SHA-256 | `3871738b18513a362c9528cc4542a30c555fae0952a8b36ff035e7ff4f63252b` | `8b79d8019883d219968871fc32a61946725e5a6fcde839cae6742d0cf94e21d3` |
+| Strategy artifact SHA-256 | `8c1e8476c0251e44a6bcbfa6507927e3792e39e2ff84ac168108f6c259b1629d` | `feaa6bded5ecbc5cba8e072d95381523fc3b7cc019c20953317daf48ef69d4af` |
+| Strategy hash | `0x6d0030906ec762965fd8fda5a8e3add9f723b1ae83cec8a0ec931ea0e108950d` | `0x721ae0b76a8653667b9dfa868de44bcc12527889e819aa3e921d7b8dc8d2e7f5` |
+
+The ignored local JSON artifacts are reproducible from the exact protected
+commit, pinned block, and test command. They contain no signing material and are
+not Safe-import files.
+
 ## Required sequence
 
-1. Merge the source policy through the protected branch with green canonical
-   CI and record the immutable verified commit.
-2. From that exact clean commit, regenerate historical and fresh block-pinned
-   A-H evidence for all 21 candidates. Record block/hash, matrix hash, strategy
-   hash, selected ID, and funding status.
-3. Stop if the exact evidence cannot validate the approved candidate or any
-   bid-side settlement becomes a no-op.
-4. Only after evidence is merged may a fresh unsigned deployment proposal be
+1. Completed: source policy merged through protected PR #59 with green
+   canonical CI at the verified commit above.
+2. Completed: historical and fresh block-pinned A-H evidence for all 21
+   candidates was regenerated from that exact clean commit and recorded above.
+3. Confirmed: exact evidence validates only the approved candidate and every
+   candidate includes successful bid-side settlement evidence.
+4. Only after this evidence record is merged may a fresh unsigned deployment proposal be
    built. Treasury-to-Safe funding, Safe signing, deployment, order creation,
    settler activation, or broadcast each remain separate human approvals.
 5. Keep the canary under monitored observation for at least 48 hours before

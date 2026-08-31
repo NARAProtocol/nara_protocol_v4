@@ -69,7 +69,10 @@ and 300 USDC protected. All 21 candidates and full external attack sizes remain
 mandatory evidence. Matrix-row v3 binds repository/block, pinned sqrt price,
 tick, Hook configuration, exact human price, and the reconstructed raw canonical
 order vector. The canary still requires a protected immutable source commit,
-fresh pinned-fork results, and separate human approvals; it is not funded,
+fresh pinned-fork results, and separate human approvals. Protected PR #59
+merged GitHub-verified commit `5a6b449df7d50b25d71715b3bbedc720ef6960ee`;
+historical block `50537172` and fresh block `50684125` complete matrix-v3 runs
+both passed 4/4 and remained `SELECTED_EXECUTION_BLOCKED`. It is not funded,
 deployed, signed, broadcast, or activated. Read
 [`releases/NARA-20260831-v4-treasury-range-500-usdc-canary.md`](releases/NARA-20260831-v4-treasury-range-500-usdc-canary.md).
 
@@ -146,10 +149,11 @@ The current epoch-automation authority is
 6. Reconcile public documentation last. Do not turn the activation evidence
    into an overall production-ready, audited, safe, or complete claim.
 7. For the Treasury Range Manager candidate, preserve the completed internal
-   audit/remediation and protected-source evidence, then complete separately
-   approved Safe funding, fresh schema-v2 state regeneration, receipt-pinned
-   deployment, two-host settler rehearsal, and a monitored canary before any
-   activation claim. No independent external audit is claimed.
+   audit/remediation, protected source, and historical/fresh matrix-v3 evidence,
+   then complete separately approved Safe funding, fresh JIT schema-v2 state
+   regeneration, receipt-pinned deployment, two-host settler rehearsal, and a
+   monitored canary before any activation claim. No independent external audit
+   is claimed.
 
 ## Verification commands
 

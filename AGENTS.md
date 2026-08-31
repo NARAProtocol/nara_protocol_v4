@@ -90,8 +90,9 @@ block when applicable, test results, and unresolved risks.
   `docs/releases/NARA-20260831-v4-treasury-range-500-usdc-canary.md`,
   `docs/architecture/NARA_TREASURY_RANGE_MANAGER_V1.md`, and
   `docs/runbooks/NARA_V4_TREASURY_RANGE_SETTLER_RUNBOOK.md`. The manager is an
-  implemented/tested and internal-audit-remediated candidate merged at source
-  commit `35091010de09802f39ccda7e726ff8c4b240e165`: it is not funded, deployed,
+  implemented/tested and internal-audit-remediated candidate. The exact
+  500-USDC source policy and historical/fresh matrix-v3 evidence bind protected
+  commit `5a6b449df7d50b25d71715b3bbedc720ef6960ee`: it is not funded, deployed,
   activated, independently externally audited, or part of permanent POL. Never
   describe optimizer output as a profit guarantee or reuse an existing keeper
   for the settler.
