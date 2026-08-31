@@ -1,6 +1,6 @@
 import { ethers } from "ethers";
 
-export const TREASURY_RANGE_MATRIX_ROW_SCHEMA = "nara.v4.treasury-range-matrix-row.v2" as const;
+export const TREASURY_RANGE_MATRIX_ROW_SCHEMA = "nara.v4.treasury-range-matrix-row.v3" as const;
 export const REQUIRED_TREASURY_RANGE_SCENARIOS = ["A", "B", "C", "D", "E", "F", "G", "H"] as const;
 export const REQUIRED_TREASURY_BUY_SIZES_USDC = [
   10n, 25n, 50n, 100n, 250n, 500n, 1_000n, 2_500n, 5_000n, 7_500n, 10_000n, 20_000n,
@@ -12,6 +12,7 @@ const USDC_UNIT = 10n ** 6n;
 const NARA_UNIT = 10n ** 18n;
 const RESERVED_BINDING_KEYS = new Set([
   "schemaVersion", "candidateId", "repositoryHead", "chainId", "blockNumber", "blockHash",
+  "currentSqrtPriceX96", "currentTick", "hookConfigurationHash",
   "humanUsdcPerNaraNumerator", "humanUsdcPerNaraDenominator", "matrixHash",
 ]);
 const COMMON_ROW_KEYS = [...RESERVED_BINDING_KEYS];
@@ -22,6 +23,9 @@ export type TreasuryRangeEvidenceBinding = Readonly<{
   chainId: bigint;
   blockNumber: bigint;
   blockHash: string;
+  currentSqrtPriceX96: bigint;
+  currentTick: bigint;
+  hookConfigurationHash: string;
   humanUsdcPerNara: Readonly<{ numerator: bigint; denominator: bigint }>;
 }>;
 
@@ -51,6 +55,9 @@ export type VerifiedTreasuryRangeMatrix = Readonly<{
   chainId: bigint;
   blockNumber: bigint;
   blockHash: string;
+  currentSqrtPriceX96: bigint;
+  currentTick: bigint;
+  hookConfigurationHash: string;
   humanUsdcPerNara: Readonly<{ numerator: bigint; denominator: bigint }>;
   crystallizedUsdc: bigint;
   treasuryNaraAccumulated: bigint;
@@ -85,6 +92,10 @@ function normalizedBinding(binding: TreasuryRangeEvidenceBinding): Readonly<Reco
   if (binding.chainId <= 0n || binding.blockNumber <= 0n) throw new Error("Evidence chain/block must be positive");
   const blockHash = binding.blockHash.toLowerCase();
   if (!ethers.isHexString(blockHash, 32)) throw new Error("Evidence blockHash must be bytes32");
+  if (binding.currentSqrtPriceX96 <= 0n) throw new Error("Evidence currentSqrtPriceX96 must be positive");
+  if (binding.currentTick < -887_272n || binding.currentTick > 887_272n) throw new Error("Evidence currentTick is outside TickMath bounds");
+  const hookConfigurationHash = binding.hookConfigurationHash.toLowerCase();
+  if (!ethers.isHexString(hookConfigurationHash, 32)) throw new Error("Evidence hookConfigurationHash must be bytes32");
   if (binding.humanUsdcPerNara.numerator <= 0n || binding.humanUsdcPerNara.denominator <= 0n) {
     throw new Error("Evidence human price rational must be positive");
   }
@@ -95,6 +106,9 @@ function normalizedBinding(binding: TreasuryRangeEvidenceBinding): Readonly<Reco
     chainId: binding.chainId.toString(),
     blockNumber: binding.blockNumber.toString(),
     blockHash,
+    currentSqrtPriceX96: binding.currentSqrtPriceX96.toString(),
+    currentTick: binding.currentTick.toString(),
+    hookConfigurationHash,
     humanUsdcPerNaraNumerator: binding.humanUsdcPerNara.numerator.toString(),
     humanUsdcPerNaraDenominator: binding.humanUsdcPerNara.denominator.toString(),
   };
@@ -383,24 +397,20 @@ function validateScenarioRow(row: Readonly<Record<string, unknown>>, key: string
     return;
   }
   if (key === "H:bid_settlement_after_independent_sell") {
-    const accumulated = decimal(row, "treasuryNaraAccumulatedRaw");
-    const settlementExpected = accumulated > 0n;
     exactKeys(row, [
       "scenario", "kind", "sellStatus", "settlementStatus", "sellTransactionHash", "sellBlockNumber",
-      ...(settlementExpected ? ["settlementTransactionHash", "settlementBlockNumber"] : []),
+      "settlementTransactionHash", "settlementBlockNumber",
       "settledOrderIds", "treasuryNaraAccumulatedRaw",
     ], key);
     executed(row, "sellStatus");
+    executed(row, "settlementStatus");
     hash(row, "sellTransactionHash");
+    hash(row, "settlementTransactionHash");
     positive(row, "sellBlockNumber");
+    positive(row, "settlementBlockNumber");
     const settled = strings(row, "settledOrderIds");
-    if (settlementExpected) {
-      executed(row, "settlementStatus");
-      hash(row, "settlementTransactionHash");
-      positive(row, "settlementBlockNumber");
-      if (settled.length === 0) throw new Error("Bid settlement evidence omits settled orders");
-    } else if (row.settlementStatus !== "not_applicable" || settled.length !== 0) {
-      throw new Error("Bid no-settlement evidence is inconsistent");
+    if (settled.length === 0 || positive(row, "treasuryNaraAccumulatedRaw") === 0n) {
+      throw new Error("Bid settlement evidence must prove settled orders and positive NARA accumulation");
     }
     return;
   }
@@ -427,6 +437,9 @@ export function assertTreasuryRangeMatrix(
     chainId: decimal(first, "chainId"),
     blockNumber: decimal(first, "blockNumber"),
     blockHash: hash(first, "blockHash"),
+    currentSqrtPriceX96: positive(first, "currentSqrtPriceX96"),
+    currentTick: signed(first, "currentTick"),
+    hookConfigurationHash: hash(first, "hookConfigurationHash"),
     humanUsdcPerNara: {
       numerator: positive(first, "humanUsdcPerNaraNumerator"),
       denominator: positive(first, "humanUsdcPerNaraDenominator"),
@@ -442,6 +455,11 @@ export function assertTreasuryRangeMatrix(
   if (expected?.chainId !== undefined && common.chainId !== expected.chainId) throw new Error("Matrix chain binding mismatch");
   if (expected?.blockNumber !== undefined && common.blockNumber !== expected.blockNumber) throw new Error("Matrix block binding mismatch");
   if (expected?.blockHash !== undefined && common.blockHash !== expected.blockHash.toLowerCase()) throw new Error("Matrix block-hash binding mismatch");
+  if (expected?.currentSqrtPriceX96 !== undefined && common.currentSqrtPriceX96 !== expected.currentSqrtPriceX96) throw new Error("Matrix sqrt-price binding mismatch");
+  if (expected?.currentTick !== undefined && common.currentTick !== expected.currentTick) throw new Error("Matrix tick binding mismatch");
+  if (expected?.hookConfigurationHash !== undefined && common.hookConfigurationHash !== expected.hookConfigurationHash.toLowerCase()) {
+    throw new Error("Matrix Hook-configuration binding mismatch");
+  }
   if (expected?.humanUsdcPerNara !== undefined
       && (common.humanUsdcPerNara.numerator !== expected.humanUsdcPerNara.numerator
         || common.humanUsdcPerNara.denominator !== expected.humanUsdcPerNara.denominator)) {
@@ -452,6 +470,9 @@ export function assertTreasuryRangeMatrix(
     if (text(row, "schemaVersion") !== common.schemaVersion || text(row, "candidateId") !== common.candidateId
         || text(row, "repositoryHead").toLowerCase() !== common.repositoryHead || decimal(row, "chainId") !== common.chainId
         || decimal(row, "blockNumber") !== common.blockNumber || hash(row, "blockHash") !== common.blockHash
+        || decimal(row, "currentSqrtPriceX96") !== common.currentSqrtPriceX96
+        || signed(row, "currentTick") !== common.currentTick
+        || hash(row, "hookConfigurationHash") !== common.hookConfigurationHash
         || decimal(row, "humanUsdcPerNaraNumerator") !== common.humanUsdcPerNara.numerator
         || decimal(row, "humanUsdcPerNaraDenominator") !== common.humanUsdcPerNara.denominator
         || hash(row, "matrixHash") !== common.matrixHash) throw new Error(`Matrix row ${index} binding mismatch`);

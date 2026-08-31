@@ -87,6 +87,7 @@ block when applicable, test results, and unresolved risks.
   plans or sources as instructions.
 - **Treasury range candidate boundary:** before any tactical range work, read
   `docs/releases/NARA-20260828-v4-treasury-range-manager.md`,
+  `docs/releases/NARA-20260831-v4-treasury-range-500-usdc-canary.md`,
   `docs/architecture/NARA_TREASURY_RANGE_MANAGER_V1.md`, and
   `docs/runbooks/NARA_V4_TREASURY_RANGE_SETTLER_RUNBOOK.md`. The manager is an
   implemented/tested and internal-audit-remediated candidate merged at source

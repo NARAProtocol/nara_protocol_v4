@@ -2,6 +2,17 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { ethers } from "ethers";
 import { assertTreasuryRangeMatrix } from "./v4TreasuryRangeEvidence.js";
+import { compareRational, formatRational, sqrtPriceX96ToHumanUsdcPerNara } from "./v4TreasuryRangeMath.js";
+import type { VerifiedTreasuryRangeMatrix } from "./v4TreasuryRangeEvidence.js";
+import {
+  TREASURY_RANGE_CANARY_EXPOSED_USDC,
+  TREASURY_RANGE_CANARY_CANDIDATE_ID,
+  TREASURY_RANGE_CANARY_NARA_BUDGET,
+  TREASURY_RANGE_CANARY_PROTECTED_USDC,
+  TREASURY_RANGE_NOMINAL_USDC_BUDGET,
+  buildDeterministicStrategyProfiles,
+  rescaleStrategyProfile,
+} from "./v4TreasuryRangePlanner.js";
 import {
   assertCircleFiatTokenDependencyHealthy,
   parseCircleFiatTokenDependencyEvidence,
@@ -10,6 +21,7 @@ import {
 } from "./v4UsdcDependency.js";
 
 export const TREASURY_RANGE_STRATEGY_SCHEMA = "nara.v4.treasury-range-strategy.v2" as const;
+export const TREASURY_RANGE_CANARY_CHANGE_ID_PREFIX = "NARA-20260831-v4-treasury-range-500-usdc-canary" as const;
 
 export type TreasuryRangeOrderSide = "SELL_NARA" | "BUY_NARA";
 
@@ -323,6 +335,9 @@ export function parseTreasuryRangeStrategyManifest(value: unknown): TreasuryRang
   if (BigInt(manifest.budget.exposedUsdcRaw) + BigInt(manifest.budget.protectedUsdcReserveRaw) !== BigInt(manifest.budget.totalUsdcBudgetRaw)) {
     throw new Error("Strategy exposed plus protected USDC does not equal total budget");
   }
+  if (BigInt(manifest.budget.totalUsdcBudgetRaw) !== TREASURY_RANGE_NOMINAL_USDC_BUDGET) {
+    throw new Error("Strategy does not bind the exact 500 USDC canary budget");
+  }
   if (manifest.strategyHash !== treasuryRangeStrategyHash(manifest)) throw new Error("Strategy manifest hash is invalid");
   if (manifest.pendingHookConfiguration !== null) throw new Error("Pending Hook configuration must be resolved before building a Safe packet");
   if (manifest.externalDependencies.usdc.proxyAddress !== manifest.addresses.usdc ||
@@ -358,13 +373,112 @@ export function assertTreasuryRangeManifestExactEvidence(manifest: TreasuryRange
     chainId: 8453n,
     blockNumber: BigInt(manifest.pinnedState.blockNumber),
     blockHash: manifest.pinnedState.blockHash,
+    currentSqrtPriceX96: BigInt(manifest.currentSlot0.sqrtPriceX96),
+    currentTick: BigInt(manifest.currentSlot0.tick),
+    hookConfigurationHash: manifest.hookConfigurationHash,
   });
+  assertTreasuryRangeManifestMatrixContext(manifest, verified);
   const match = /^(CONSERVATIVE|AGGRESSIVE|ADVERSARIAL)-(\d+)-NARA$/.exec(verified.candidateId);
   if (!match || BigInt(match[2]) * 10n ** 18n !== BigInt(manifest.budget.totalNaraAllocatedRaw)) {
     throw new Error("Exact matrix candidate does not match the strategy NARA budget");
   }
-  const expectedChangeId = `NARA-20260828-v4-treasury-ranges-${match[1].toLowerCase()}-${match[2]}-nara`;
+  const expectedChangeId = `${TREASURY_RANGE_CANARY_CHANGE_ID_PREFIX}-${match[1].toLowerCase()}-${match[2]}-nara`;
   if (manifest.changeId !== expectedChangeId) {
     throw new Error("Exact matrix candidate profile does not match the strategy changeId");
+  }
+}
+
+export function assertTreasuryRangeManifestMatrixContext(
+  manifest: Pick<TreasuryRangeStrategyManifest, "currentSlot0" | "hookConfigurationHash">,
+  verified: Pick<VerifiedTreasuryRangeMatrix, "currentSqrtPriceX96" | "currentTick" | "hookConfigurationHash" | "humanUsdcPerNara">,
+): void {
+  const sqrtPriceX96 = BigInt(manifest.currentSlot0.sqrtPriceX96);
+  if (verified.currentSqrtPriceX96 !== sqrtPriceX96
+      || verified.currentTick !== BigInt(manifest.currentSlot0.tick)) {
+    throw new Error("Exact matrix slot context does not match currentSlot0");
+  }
+  if (verified.hookConfigurationHash !== manifest.hookConfigurationHash.toLowerCase()) {
+    throw new Error("Exact matrix Hook context does not match hookConfigurationHash");
+  }
+  const derivedHumanPrice = sqrtPriceX96ToHumanUsdcPerNara(sqrtPriceX96);
+  if (compareRational(derivedHumanPrice, verified.humanUsdcPerNara) !== 0) {
+    throw new Error("Exact matrix human price does not match currentSlot0 sqrtPriceX96");
+  }
+}
+
+export function assertTreasuryRangeCanaryLaunchManifest(manifest: TreasuryRangeStrategyManifest): void {
+  const expectedChangeId = `${TREASURY_RANGE_CANARY_CHANGE_ID_PREFIX}-${TREASURY_RANGE_CANARY_CANDIDATE_ID.toLowerCase()}`;
+  if (manifest.changeId !== expectedChangeId) {
+    throw new Error("Launch manifest is not the approved CONSERVATIVE-100000-NARA canary");
+  }
+  if (BigInt(manifest.budget.totalNaraAllocatedRaw) !== TREASURY_RANGE_CANARY_NARA_BUDGET
+      || BigInt(manifest.budget.totalUsdcBudgetRaw) !== TREASURY_RANGE_NOMINAL_USDC_BUDGET
+      || BigInt(manifest.budget.exposedUsdcRaw) !== TREASURY_RANGE_CANARY_EXPOSED_USDC
+      || BigInt(manifest.budget.protectedUsdcReserveRaw) !== TREASURY_RANGE_CANARY_PROTECTED_USDC) {
+    throw new Error("Launch manifest does not preserve the approved 100,000 NARA / 200 exposed USDC / 300 protected USDC canary allocation");
+  }
+  assertTreasuryRangeCanonicalCanaryOrders(manifest);
+}
+
+export function assertTreasuryRangeCanonicalCanaryOrders(
+  manifest: Pick<TreasuryRangeStrategyManifest, "proposedOrders" | "currentSlot0" | "hookConfigurationHash">
+    & Readonly<{ poolKey: Pick<TreasuryRangeStrategyManifest["poolKey"], "tickSpacing"> }>,
+): void {
+  const base = buildDeterministicStrategyProfiles({
+    currentSqrtPriceX96: BigInt(manifest.currentSlot0.sqrtPriceX96),
+    creationDeadline: 1n,
+    hookConfigurationHash: manifest.hookConfigurationHash,
+    tickSpacing: BigInt(manifest.poolKey.tickSpacing),
+  }).find((profile) => profile.name === "CONSERVATIVE");
+  if (!base) throw new Error("Canonical conservative profile is unavailable");
+  const expected = rescaleStrategyProfile(base, TREASURY_RANGE_CANARY_NARA_BUDGET, BigInt(manifest.poolKey.tickSpacing));
+  if (manifest.proposedOrders.length !== expected.orders.length
+      || manifest.proposedOrders.some((order) => !order.enabled || order.orderId !== undefined)) {
+    throw new Error("Launch manifest order set is not canonical");
+  }
+  const orders = manifest.proposedOrders;
+  expected.orders.forEach((planned, index) => {
+    const actual = orders[index];
+    const expectedDustNara = planned.side === "SELL_NARA" ? planned.expectedRoundingDust : 0n;
+    const expectedDustUsdc = planned.side === "BUY_NARA" ? planned.expectedRoundingDust : 0n;
+    if (actual.side !== planned.side
+        || actual.humanPriceLower !== formatRational(planned.requestedLowerUsdcPerNara, 18)
+        || actual.humanPriceUpper !== formatRational(planned.requestedUpperUsdcPerNara, 18)
+        || BigInt(actual.tickLower) !== planned.tickLower
+        || BigInt(actual.tickUpper) !== planned.tickUpper
+        || BigInt(actual.inputAmountRaw) !== planned.inputAmount
+        || BigInt(actual.expectedOutputAmountRaw) !== planned.expectedPrincipalOutput
+        || BigInt(actual.minimumOutputAmountRaw) !== planned.minimumOutputAmount
+        || BigInt(actual.expectedLiquidity) !== planned.expectedLiquidity
+        || BigInt(actual.expectedDustNaraRaw) !== expectedDustNara
+        || BigInt(actual.expectedDustUsdcRaw) !== expectedDustUsdc
+        || BigInt(actual.toleranceBps) !== planned.toleranceBps) {
+      throw new Error(`Launch manifest proposedOrders[${index}] is not the canonical canary order`);
+    }
+  });
+}
+
+export function assertTreasuryRangeCanarySafeFunding(
+  manifest: TreasuryRangeStrategyManifest,
+  safeBalances: Readonly<{ nara: bigint; usdc: bigint }>,
+): void {
+  assertTreasuryRangeCanaryLaunchManifest(manifest);
+  assertTreasuryRangeCanaryFundingBalances({
+    requiredNara: BigInt(manifest.budget.totalNaraAllocatedRaw),
+    requiredUsdc: BigInt(manifest.budget.totalUsdcBudgetRaw),
+    exposedUsdc: BigInt(manifest.budget.exposedUsdcRaw),
+    protectedUsdc: BigInt(manifest.budget.protectedUsdcReserveRaw),
+  }, safeBalances);
+}
+
+export function assertTreasuryRangeCanaryFundingBalances(
+  allocation: Readonly<{ requiredNara: bigint; requiredUsdc: bigint; exposedUsdc: bigint; protectedUsdc: bigint }>,
+  safeBalances: Readonly<{ nara: bigint; usdc: bigint }>,
+): void {
+  const { requiredNara, requiredUsdc, exposedUsdc, protectedUsdc } = allocation;
+  if (safeBalances.nara < requiredNara) throw new Error("Safe NARA balance is below the exact canary budget");
+  if (safeBalances.usdc < requiredUsdc) throw new Error("Safe USDC balance is below the exact canary budget");
+  if (safeBalances.usdc - exposedUsdc < protectedUsdc) {
+    throw new Error("Canary orders would breach the protected Safe USDC reserve");
   }
 }

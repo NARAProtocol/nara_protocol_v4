@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { ethers } from "ethers";
 import { canonicalProductionV4Deployment } from "./lib/v4LiveConfig.js";
 import {
+  assertTreasuryRangeCanarySafeFunding,
   assertTreasuryRangeManifestExactEvidence,
   loadTreasuryRangeStrategyManifest,
 } from "./lib/v4TreasuryRangeManifest.js";
@@ -95,10 +96,8 @@ async function main(): Promise<void> {
     usdc.allowance(production.safe, managerAddress, { blockTag: context.block.number }) as Promise<bigint>,
   ]);
   if (BigInt(naraAllowance) !== 0n || BigInt(usdcAllowance) !== 0n) throw new Error("Safe already has a non-zero token allowance to the manager");
+  assertTreasuryRangeCanarySafeFunding(strategy, { nara: BigInt(naraBalance), usdc: BigInt(usdcBalance) });
   if (BigInt(naraBalance) < naraInput || BigInt(usdcBalance) < usdcInput) throw new Error("Safe balance is below the exact proposed input");
-  if (BigInt(usdcBalance) - usdcInput < BigInt(strategy.budget.protectedUsdcReserveRaw)) {
-    throw new Error("Order batch would breach the strategy's protected Safe USDC reserve");
-  }
   const calls: Array<{ to: string; value: string; data: string }> = [];
   if (naraInput > 0n) calls.push({ to: production.token, value: "0", data: nara.interface.encodeFunctionData("approve", [managerAddress, naraInput]) });
   if (usdcInput > 0n) calls.push({ to: production.base, value: "0", data: usdc.interface.encodeFunctionData("approve", [managerAddress, usdcInput]) });

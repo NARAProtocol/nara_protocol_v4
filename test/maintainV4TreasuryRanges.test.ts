@@ -2,6 +2,24 @@ import { expect } from "chai";
 import { ethers } from "ethers";
 import { treasuryRangeHookConfigurationHash } from "../scripts/lib/v4TreasuryRangeManifest.js";
 import {
+  assertTreasuryRangeCanonicalCanaryOrders,
+  assertTreasuryRangeCanaryFundingBalances,
+  assertTreasuryRangeManifestMatrixContext,
+  type TreasuryRangeStrategyOrder,
+} from "../scripts/lib/v4TreasuryRangeManifest.js";
+import {
+  buildDeterministicStrategyProfiles,
+  rescaleStrategyProfile,
+  TREASURY_RANGE_CANARY_NARA_BUDGET,
+} from "../scripts/lib/v4TreasuryRangePlanner.js";
+import {
+  formatRational,
+  humanUsdcPerNaraToSqrtPriceX96,
+  parseDecimalRational,
+  sqrtPriceX96ToHumanUsdcPerNara,
+} from "../scripts/lib/v4TreasuryRangeMath.js";
+import {
+  assertTreasuryRangePinnedBlockFreshness,
   createTreasuryRangeProvider,
   isTreasuryRangeOneSided,
   sqrtPriceX96AtTick,
@@ -44,6 +62,36 @@ function settlerEnvironment(overrides: NodeJS.ProcessEnv = {}): NodeJS.ProcessEn
 }
 
 describe("v4 treasury range operations", function () {
+  const hookConfigurationHash = `0x${"44".repeat(32)}`;
+  const currentSqrtPriceX96 = humanUsdcPerNaraToSqrtPriceX96(parseDecimalRational("0.0847"));
+  const canonicalProfile = rescaleStrategyProfile(buildDeterministicStrategyProfiles({
+    currentSqrtPriceX96,
+    creationDeadline: 1n,
+    hookConfigurationHash,
+    tickSpacing: 60n,
+  }).find((profile) => profile.name === "CONSERVATIVE")!, TREASURY_RANGE_CANARY_NARA_BUDGET, 60n);
+  const canonicalOrders: TreasuryRangeStrategyOrder[] = canonicalProfile.orders.map((order) => ({
+    side: order.side,
+    humanPriceLower: formatRational(order.requestedLowerUsdcPerNara, 18),
+    humanPriceUpper: formatRational(order.requestedUpperUsdcPerNara, 18),
+    tickLower: Number(order.tickLower),
+    tickUpper: Number(order.tickUpper),
+    inputAmountRaw: order.inputAmount.toString(),
+    expectedOutputAmountRaw: order.expectedPrincipalOutput.toString(),
+    minimumOutputAmountRaw: order.minimumOutputAmount.toString(),
+    expectedLiquidity: order.expectedLiquidity.toString(),
+    expectedDustNaraRaw: (order.side === "SELL_NARA" ? order.expectedRoundingDust : 0n).toString(),
+    expectedDustUsdcRaw: (order.side === "BUY_NARA" ? order.expectedRoundingDust : 0n).toString(),
+    toleranceBps: Number(order.toleranceBps),
+    enabled: true,
+  }));
+  const canonicalOrderContext = (proposedOrders: readonly TreasuryRangeStrategyOrder[]) => ({
+    proposedOrders,
+    currentSlot0: { sqrtPriceX96: currentSqrtPriceX96.toString(), tick: 0 },
+    hookConfigurationHash,
+    poolKey: { tickSpacing: 60 },
+  });
+
   it("disables JSON-RPC batching for packet construction", function () {
     const provider = createTreasuryRangeProvider("https://rpc.example");
     try {
@@ -51,6 +99,121 @@ describe("v4 treasury range operations", function () {
     } finally {
       provider.destroy();
     }
+  });
+
+  it("rejects a stale pinned block even when a manifest forges a fresh timestamp", function () {
+    const pinnedTimestamp = 1_000_000;
+    const latestTimestamp = pinnedTimestamp + 15 * 60 + 1;
+    expect(() => assertTreasuryRangePinnedBlockFreshness({
+      chainId: "8453",
+      blockNumber: 123,
+      blockHash: HASH,
+      timestamp: latestTimestamp,
+    }, {
+      number: 456,
+      hash: `0x${"33".repeat(32)}`,
+      timestamp: latestTimestamp,
+    }, {
+      number: 123,
+      hash: HASH,
+      timestamp: pinnedTimestamp,
+    })).to.throw(/timestamp does not match/);
+    expect(() => assertTreasuryRangePinnedBlockFreshness({
+      chainId: "8453",
+      blockNumber: 123,
+      blockHash: HASH,
+      timestamp: pinnedTimestamp,
+    }, {
+      number: 456,
+      hash: `0x${"33".repeat(32)}`,
+      timestamp: latestTimestamp,
+    }, {
+      number: 123,
+      hash: HASH,
+      timestamp: pinnedTimestamp,
+    })).to.throw(/snapshot is stale/);
+    expect(() => assertTreasuryRangePinnedBlockFreshness({
+      chainId: "8453",
+      blockNumber: 123,
+      blockHash: `0x${"99".repeat(32)}`,
+      timestamp: latestTimestamp,
+    }, {
+      number: 456,
+      hash: `0x${"33".repeat(32)}`,
+      timestamp: latestTimestamp,
+    }, {
+      number: 123,
+      hash: HASH,
+      timestamp: latestTimestamp,
+    })).to.throw(/no longer canonical/);
+  });
+
+  it("requires the full 500 USDC and 100,000 NARA Safe funding boundary", function () {
+    const allocation = {
+      requiredNara: TREASURY_RANGE_CANARY_NARA_BUDGET,
+      requiredUsdc: 500_000_000n,
+      exposedUsdc: 200_000_000n,
+      protectedUsdc: 300_000_000n,
+    };
+    expect(() => assertTreasuryRangeCanaryFundingBalances(allocation, {
+      nara: TREASURY_RANGE_CANARY_NARA_BUDGET,
+      usdc: 499_999_999n,
+    })).to.throw(/Safe USDC balance is below/);
+    expect(() => assertTreasuryRangeCanaryFundingBalances(allocation, {
+      nara: TREASURY_RANGE_CANARY_NARA_BUDGET,
+      usdc: 500_000_000n,
+    })).not.to.throw();
+    expect(() => assertTreasuryRangeCanaryFundingBalances(allocation, {
+      nara: TREASURY_RANGE_CANARY_NARA_BUDGET - 1n,
+      usdc: 500_000_000n,
+    })).to.throw(/Safe NARA balance is below/);
+  });
+
+  it("rejects noncanonical launch-order lineage before fork or packet construction", function () {
+    expect(() => assertTreasuryRangeCanonicalCanaryOrders(canonicalOrderContext(canonicalOrders))).not.to.throw();
+    expect(() => assertTreasuryRangeCanonicalCanaryOrders(canonicalOrderContext([
+      ...canonicalOrders,
+      { ...canonicalOrders[0], enabled: false },
+    ]))).to.throw(/order set is not canonical/);
+    expect(() => assertTreasuryRangeCanonicalCanaryOrders(canonicalOrderContext(canonicalOrders.map((order, index) => index === 0
+      ? { ...order, orderId: "1" }
+      : order)))).to.throw(/order set is not canonical/);
+    expect(() => assertTreasuryRangeCanonicalCanaryOrders(canonicalOrderContext(canonicalOrders.map((order, index) => index === 0
+      ? { ...order, humanPriceLower: "0.000000000000000001" }
+      : order)))).to.throw(/not the canonical canary order/);
+    expect(() => assertTreasuryRangeCanonicalCanaryOrders(canonicalOrderContext([
+      canonicalOrders[1], canonicalOrders[0], ...canonicalOrders.slice(2),
+    ]))).to.throw(/not the canonical canary order/);
+  });
+
+  it("binds matrix price, tick, and Hook context to the manifest slot", function () {
+    const manifestContext = {
+      currentSlot0: { sqrtPriceX96: currentSqrtPriceX96.toString(), tick: 301_000 },
+      hookConfigurationHash,
+    };
+    const verifiedContext = {
+      currentSqrtPriceX96,
+      currentTick: 301_000n,
+      hookConfigurationHash,
+      humanUsdcPerNara: sqrtPriceX96ToHumanUsdcPerNara(currentSqrtPriceX96),
+    };
+    expect(() => assertTreasuryRangeManifestMatrixContext(manifestContext, verifiedContext)).not.to.throw();
+    expect(() => assertTreasuryRangeManifestMatrixContext(manifestContext, {
+      ...verifiedContext,
+      currentSqrtPriceX96: currentSqrtPriceX96 + 1n,
+    })).to.throw(/slot context/);
+    expect(() => assertTreasuryRangeManifestMatrixContext(manifestContext, {
+      ...verifiedContext,
+      currentTick: 301_001n,
+    })).to.throw(/slot context/);
+    expect(() => assertTreasuryRangeManifestMatrixContext(manifestContext, {
+      ...verifiedContext,
+      hookConfigurationHash: `0x${"55".repeat(32)}`,
+    })).to.throw(/Hook context/);
+    expect(() => assertTreasuryRangeManifestMatrixContext(manifestContext, {
+      ...verifiedContext,
+      humanUsdcPerNara: { numerator: 1n, denominator: 1n },
+    })).to.throw(/human price/);
   });
 
   it("uses the inverse NARA-price/tick orientation at exact boundaries", function () {

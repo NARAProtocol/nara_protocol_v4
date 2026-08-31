@@ -1,6 +1,8 @@
 import { expect } from "chai";
 import {
   NARA_UNIT,
+  TREASURY_RANGE_CANARY_CANDIDATE_ID,
+  TREASURY_RANGE_NOMINAL_USDC_BUDGET,
   buildDeterministicStrategyProfiles,
   stampStrategyHash,
 } from "../scripts/lib/v4TreasuryRangePlanner.js";
@@ -29,6 +31,9 @@ describe("v4 treasury range optimizer", function () {
     chainId: 8453n,
     blockNumber: 50_537_172n,
     blockHash: `0x${"22".repeat(32)}`,
+    currentSqrtPriceX96: humanUsdcPerNaraToSqrtPriceX96(parseDecimalRational("1")),
+    currentTick: 0n,
+    hookConfigurationHash: `0x${"44".repeat(32)}`,
     humanUsdcPerNara: { numerator: 1n, denominator: 1n },
   };
   const transactionHash = (seed: number) => `0x${seed.toString(16).padStart(64, "0")}`;
@@ -246,6 +251,18 @@ describe("v4 treasury range optimizer", function () {
       (row) => row.scenario === "E",
       (row) => ({ ...row, settlementStatus: "reverted" }),
     ));
+    const missingBidSettlement = metricFixture(candidate, mutateRow(
+      (row) => row.scenario === "H" && row.kind === "bid_settlement_after_independent_sell",
+      (row) => {
+        const { settlementTransactionHash: _hash, settlementBlockNumber: _block, ...rest } = row;
+        return {
+          ...rest,
+          settlementStatus: "not_applicable",
+          settledOrderIds: [],
+          treasuryNaraAccumulatedRaw: "0",
+        };
+      },
+    ));
     const revertedSameBlockComponent = metricFixture(candidate, mutateRow(
       (row) => row.scenario === "B",
       (row) => ({ ...row, transactionStatuses: ["executed", "reverted"] }),
@@ -273,6 +290,7 @@ describe("v4 treasury range optimizer", function () {
       revertedSell,
       revertedScenarioC,
       revertedScenarioESettlement,
+      missingBidSettlement,
       revertedSameBlockComponent,
       ignoredExtraStatusForbidden,
       missingSuccessEvidence,
@@ -280,6 +298,9 @@ describe("v4 treasury range optimizer", function () {
       metricFixture(candidate, rawMatrixRows(), { ...evidenceBinding, repositoryHead: "33".repeat(20) }),
       metricFixture(candidate, rawMatrixRows(), { ...evidenceBinding, blockNumber: evidenceBinding.blockNumber + 1n }),
       metricFixture(candidate, rawMatrixRows(), { ...evidenceBinding, blockHash: `0x${"44".repeat(32)}` }),
+      metricFixture(candidate, rawMatrixRows(), { ...evidenceBinding, currentSqrtPriceX96: evidenceBinding.currentSqrtPriceX96 + 1n }),
+      metricFixture(candidate, rawMatrixRows(), { ...evidenceBinding, currentTick: evidenceBinding.currentTick + 1n }),
+      metricFixture(candidate, rawMatrixRows(), { ...evidenceBinding, hookConfigurationHash: `0x${"55".repeat(32)}` }),
       { ...valid, scenarioCoverage: ["A", "B", "C", "D", "E", "F", "G", "H", "H"] },
       { ...valid, quoteFailures: 1n },
       { ...valid, crystallizedUsdc: valid.crystallizedUsdc + 1n },
@@ -307,9 +328,77 @@ describe("v4 treasury range optimizer", function () {
   it("selects only after all 21 canonical candidate IDs are present", function () {
     const result = optimize(completeMetrics());
     expect(result.selectedCandidateId).not.to.equal(null);
+    expect(result.selectedCandidateId).to.equal(TREASURY_RANGE_CANARY_CANDIDATE_ID);
     expect(result.selectionStatus).to.equal("SELECTED_EXECUTION_BLOCKED");
     expect(result.pareto).not.to.be.empty;
-    expect(result.pareto[0].safeFunding.safeUsdcShortfall).to.equal(5_000n * 10n ** 6n);
+    expect(result.pareto[0].safeFunding.safeUsdcShortfall).to.equal(TREASURY_RANGE_NOMINAL_USDC_BUDGET);
     expect(result.pareto[0].safeFunding.safeNaraShortfall > 0n).to.equal(true);
+  });
+
+  it("is buildable with full Safe custody of exactly 500 USDC and 100,000 NARA", function () {
+    const result = optimizeTreasuryRanges({
+      baseProfiles: profiles,
+      metrics: completeMetrics(),
+      evidenceBinding,
+      safeBalances: { nara: 100_000n * NARA_UNIT, usdc: TREASURY_RANGE_NOMINAL_USDC_BUDGET },
+      treasuryBalances: { nara: 0n, usdc: 0n },
+      finalizeProfile,
+    });
+    expect(result.selectionStatus).to.equal("SELECTED_BUILDABLE");
+    expect(result.selectedCandidateId).to.equal(TREASURY_RANGE_CANARY_CANDIDATE_ID);
+    expect(result.pareto[0].safeFunding.safeUsdcShortfall).to.equal(0n);
+    expect(result.pareto[0].safeFunding.safeNaraShortfall).to.equal(0n);
+  });
+
+  it("hard-blocks a stale 5,000 USDC profile even when its matrix evidence is complete", function () {
+    const staleProfiles = [
+      { ...profiles[0], protectedUsdc: 4_800n * 10n ** 6n },
+      profiles[1],
+      profiles[2],
+    ];
+    const result = optimizeTreasuryRanges({
+      baseProfiles: staleProfiles,
+      metrics: completeMetrics(),
+      evidenceBinding,
+      safeBalances: { nara: 100_000n * NARA_UNIT, usdc: 5_000n * 10n ** 6n },
+      treasuryBalances: { nara: 0n, usdc: 0n },
+      finalizeProfile,
+    });
+    const staleCandidates = result.candidates.filter((candidate) => candidate.profile.name === "CONSERVATIVE");
+    expect(staleCandidates).to.have.length(REQUIRED_NARA_BUDGETS.length);
+    expect(staleCandidates.every((candidate) => !candidate.hardGates.exactCanaryUsdcBudget
+      && !candidate.hardGatePass)).to.equal(true);
+  });
+
+  it("hard-blocks a noncanonical 201/299 USDC split", function () {
+    const wrongSplitProfiles = [
+      {
+        ...profiles[0],
+        exposedUsdcInput: 201n * 10n ** 6n,
+        protectedUsdc: 299n * 10n ** 6n,
+      },
+      profiles[1],
+      profiles[2],
+    ];
+    const result = optimizeTreasuryRanges({
+      baseProfiles: wrongSplitProfiles,
+      metrics: completeMetrics(),
+      evidenceBinding,
+      safeBalances: { nara: 100_000n * NARA_UNIT, usdc: TREASURY_RANGE_NOMINAL_USDC_BUDGET },
+      treasuryBalances: { nara: 0n, usdc: 0n },
+      finalizeProfile,
+    });
+    const approved = result.candidates.find((candidate) => candidate.candidateId === TREASURY_RANGE_CANARY_CANDIDATE_ID);
+    expect(approved?.hardGates.exactCanaryUsdcBudget).to.equal(true);
+    expect(approved?.hardGates.exactApprovedCanaryAllocation).to.equal(false);
+    expect(result.selectedCandidateId).to.equal(null);
+  });
+
+  it("never selects a non-approved profile or NARA budget", function () {
+    const result = optimize(completeMetrics());
+    const rejected = result.candidates.filter((candidate) => candidate.candidateId !== TREASURY_RANGE_CANARY_CANDIDATE_ID);
+    expect(rejected).to.have.length(REQUIRED_TREASURY_RANGE_CANDIDATE_COUNT - 1);
+    expect(rejected.every((candidate) => !candidate.hardGates.approvedCanaryCandidate
+      && !candidate.hardGatePass)).to.equal(true);
   });
 });

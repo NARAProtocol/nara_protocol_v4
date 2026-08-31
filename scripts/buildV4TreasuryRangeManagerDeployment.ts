@@ -5,6 +5,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { ethers } from "ethers";
 import { canonicalProductionV4Deployment } from "./lib/v4LiveConfig.js";
 import {
+  assertTreasuryRangeCanaryLaunchManifest,
   assertTreasuryRangeManifestExactEvidence,
   loadTreasuryRangeStrategyManifest,
 } from "./lib/v4TreasuryRangeManifest.js";
@@ -29,6 +30,7 @@ export async function buildV4TreasuryRangeManagerDeployment(): Promise<void> {
   const strategyPath = resolve(process.env.V4_TREASURY_RANGE_STRATEGY_MANIFEST?.trim() || DEFAULT_STRATEGY);
   const strategy = loadTreasuryRangeStrategyManifest(strategyPath);
   assertTreasuryRangeManifestExactEvidence(strategy);
+  assertTreasuryRangeCanaryLaunchManifest(strategy);
   // Never trust ignored/cacheable artifact bytes. Rebuild before taking the
   // JIT block/nonce/deadline snapshot used by the proposal.
   await forceRebuildTreasuryRangeManagerArtifact(hre.tasks);

@@ -4,6 +4,14 @@ Evidence state: **PROTECTED SOURCE MERGED + INTERNAL AUDIT REMEDIATED CANDIDATE 
 
 Change ID: `NARA-20260828-v4-treasury-range-manager`
 
+Strategy retirement note: the 100,000 NARA / 5,000 USDC strategy and every
+hash or generated artifact in this record are historical and must not be
+imported. The smaller 2026-08-31 canary is a separate source/evidence change;
+see
+[`NARA-20260831-v4-treasury-range-500-usdc-canary.md`](NARA-20260831-v4-treasury-range-500-usdc-canary.md).
+The amounts later in this document are intentionally preserved as historical
+facts, not current launch parameters.
+
 Origin remote: `https://github.com/NARAProtocol/nara_protocol_v4`
 
 Historical pre-remediation implementation commit: `b34b78330f2f40b514d2bf6a0e5cff96c92ff928`

@@ -16,6 +16,7 @@ import {
 } from "../../scripts/lib/v4TreasuryRangeMath.js";
 import {
   NARA_UNIT,
+  TREASURY_RANGE_NOMINAL_USDC_BUDGET,
   USDC_UNIT,
   oneSidedAcrossHumanPriceBand,
   priceBand,
@@ -24,7 +25,10 @@ import {
 } from "../../scripts/lib/v4TreasuryRangePlanner.js";
 import { readV4TreasuryRangeState } from "../../scripts/lib/v4TreasuryRangeState.js";
 import {
+  TREASURY_RANGE_CANARY_CHANGE_ID_PREFIX,
   TREASURY_RANGE_STRATEGY_SCHEMA,
+  assertTreasuryRangeCanaryLaunchManifest,
+  assertTreasuryRangeCanarySafeFunding,
   assertTreasuryRangeManifestExactEvidence,
   parseTreasuryRangeStrategyManifest,
 } from "../../scripts/lib/v4TreasuryRangeManifest.js";
@@ -730,6 +734,7 @@ const hasPinnedArchiveRpc = Boolean(
     });
     expect(bidTraversal.status).to.equal("executed");
     const bidIds = await settleable(deployed.manager, deployed.ids, 1n);
+    expect(bidIds.length, `${candidateId} must cross at least one BUY_NARA range`).to.be.greaterThan(0);
     let treasuryNaraAccumulated = 0n;
     let bidSettlementReceipt: ethersUtils.TransactionReceipt | null = null;
     if (bidIds.length > 0) {
@@ -738,6 +743,8 @@ const hasPinnedArchiveRpc = Boolean(
       bidSettlementReceipt = await (await deployed.manager.settleMany(bidIds)).wait();
       treasuryNaraAccumulated = (await safeNara.balanceOf(deployment.safe) as bigint) - before;
     }
+    expect(bidSettlementReceipt?.status, `${candidateId} bid settlement must execute`).to.equal(1);
+    expect(treasuryNaraAccumulated > 0n, `${candidateId} bid settlement must return NARA`).to.equal(true);
     rows.push({
       scenario: "H", kind: "bid_settlement_after_independent_sell",
       sellStatus: bidTraversal.status,
@@ -774,6 +781,9 @@ const hasPinnedArchiveRpc = Boolean(
       chainId: pinnedState.chainId,
       blockNumber: pinnedState.blockNumber,
       blockHash: pinnedState.blockHash,
+      currentSqrtPriceX96: pinnedState.sqrtPriceX96,
+      currentTick: pinnedState.tick,
+      hookConfigurationHash: profile.hookConfigurationHash,
       humanUsdcPerNara: pinnedState.humanUsdcPerNaraRational,
     }, rows);
     return {
@@ -807,7 +817,7 @@ const hasPinnedArchiveRpc = Boolean(
     if (requiresHistoricalPinnedUsdcAdversaryBalance(pinnedState.blockNumber)) {
       expect(adversaryBalance).to.equal(PINNED_USDC_ADVERSARY.balanceRaw);
     } else {
-      expect(adversaryBalance).to.be.at.least(10n * USDC_UNIT);
+      expect(adversaryBalance >= 10n * USDC_UNIT).to.equal(true);
     }
     const before = await pinnedPermanentState();
     const [attacker] = await connection.ethers.getSigners();
@@ -863,6 +873,9 @@ const hasPinnedArchiveRpc = Boolean(
         chainId: pinnedState.chainId,
         blockNumber: pinnedState.blockNumber,
         blockHash: pinnedState.blockHash,
+        currentSqrtPriceX96: pinnedState.sqrtPriceX96,
+        currentTick: pinnedState.tick,
+        hookConfigurationHash: scenarioPlan.hookConfigurationHash,
         humanUsdcPerNara: pinnedState.humanUsdcPerNaraRational,
       },
       safeBalances: pinnedState.safeBalances,
@@ -883,17 +896,84 @@ const hasPinnedArchiveRpc = Boolean(
       (candidate) => candidate.candidateId === optimized.selectedCandidateId,
     );
     if (!selected) throw new Error("Selected optimizer candidate is missing from exact evidence");
-    const expectedSelectionStatus = pinnedState.safeBalances.usdc < 5_000n * USDC_UNIT
+    expect(optimized.selectedCandidateId).to.equal("CONSERVATIVE-100000-NARA");
+    const expectedSelectionStatus = pinnedState.safeBalances.usdc < TREASURY_RANGE_NOMINAL_USDC_BUDGET
       || pinnedState.safeBalances.nara < selected.naraBudget
       ? "SELECTED_EXECUTION_BLOCKED"
       : "SELECTED_BUILDABLE";
     expect(optimized.selectionStatus).to.equal(expectedSelectionStatus);
     const parsedSelected = parseTreasuryRangeStrategyManifest(selected.manifest);
     expect(() => assertTreasuryRangeManifestExactEvidence(parsedSelected)).not.to.throw();
+    expect(() => assertTreasuryRangeCanaryLaunchManifest(parsedSelected)).not.to.throw();
+    expect(() => assertTreasuryRangeCanarySafeFunding(parsedSelected, {
+      nara: 100_000n * NARA_UNIT - 1n,
+      usdc: TREASURY_RANGE_NOMINAL_USDC_BUDGET,
+    })).to.throw(/Safe NARA balance is below/);
+    expect(() => assertTreasuryRangeCanarySafeFunding(parsedSelected, {
+      nara: 100_000n * NARA_UNIT,
+      usdc: TREASURY_RANGE_NOMINAL_USDC_BUDGET - 1n,
+    })).to.throw(/Safe USDC balance is below/);
+    expect(() => assertTreasuryRangeCanarySafeFunding(parsedSelected, {
+      nara: 100_000n * NARA_UNIT,
+      usdc: TREASURY_RANGE_NOMINAL_USDC_BUDGET,
+    })).not.to.throw();
+    expect(() => assertTreasuryRangeCanaryLaunchManifest({
+      ...parsedSelected,
+      budget: {
+        ...parsedSelected.budget,
+        exposedUsdcRaw: (201n * USDC_UNIT).toString(),
+        protectedUsdcReserveRaw: (299n * USDC_UNIT).toString(),
+      },
+    })).to.throw(/approved 100,000 NARA/);
+    expect(() => assertTreasuryRangeCanaryLaunchManifest({
+      ...parsedSelected,
+      proposedOrders: parsedSelected.proposedOrders.map((order, index) => index === 8
+        ? { ...order, inputAmountRaw: (BigInt(order.inputAmountRaw) + 1n).toString() }
+        : order),
+    })).to.throw(/not the canonical canary order/);
+    expect(() => assertTreasuryRangeCanaryLaunchManifest({
+      ...parsedSelected,
+      proposedOrders: [...parsedSelected.proposedOrders, {
+        ...parsedSelected.proposedOrders[0],
+        enabled: false,
+      }],
+    })).to.throw(/order set is not canonical/);
+    expect(() => assertTreasuryRangeCanaryLaunchManifest({
+      ...parsedSelected,
+      proposedOrders: parsedSelected.proposedOrders.map((order, index) => index === 0
+        ? { ...order, orderId: "1" }
+        : order),
+    })).to.throw(/order set is not canonical/);
+    expect(() => assertTreasuryRangeCanaryLaunchManifest({
+      ...parsedSelected,
+      proposedOrders: parsedSelected.proposedOrders.map((order, index) => index === 0
+        ? { ...order, humanPriceLower: "0.000000000000000001" }
+        : order),
+    })).to.throw(/not the canonical canary order/);
+    expect(() => assertTreasuryRangeCanaryLaunchManifest({
+      ...parsedSelected,
+      changeId: parsedSelected.changeId.replace(TREASURY_RANGE_CANARY_CHANGE_ID_PREFIX, "NARA-20260828-v4-treasury-ranges"),
+    })).to.throw(/approved CONSERVATIVE-100000-NARA/);
     expect(() => assertTreasuryRangeManifestExactEvidence({
       ...parsedSelected,
       simulationMatrix: [],
     })).to.throw(/exactly 30 rows/);
+    expect(() => parseTreasuryRangeStrategyManifest({
+      ...parsedSelected,
+      budget: {
+        ...parsedSelected.budget,
+        totalUsdcBudgetRaw: (501n * USDC_UNIT).toString(),
+        protectedUsdcReserveRaw: (301n * USDC_UNIT).toString(),
+      },
+    })).to.throw(/exact 500 USDC canary budget/);
+    expect(() => parseTreasuryRangeStrategyManifest({
+      ...parsedSelected,
+      budget: {
+        ...parsedSelected.budget,
+        totalUsdcBudgetRaw: (5_000n * USDC_UNIT).toString(),
+        protectedUsdcReserveRaw: (5_000n * USDC_UNIT - BigInt(parsedSelected.budget.exposedUsdcRaw)).toString(),
+      },
+    })).to.throw(/exact 500 USDC canary budget/);
     const wrongProfile = parsedSelected.changeId.includes("-conservative-") ? "aggressive" : "conservative";
     expect(() => assertTreasuryRangeManifestExactEvidence({
       ...parsedSelected,
