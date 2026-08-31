@@ -3,7 +3,8 @@ import { ethers } from "ethers";
 import { treasuryRangeHookConfigurationHash } from "../scripts/lib/v4TreasuryRangeManifest.js";
 import {
   assertTreasuryRangeCanonicalCanaryOrders,
-  assertTreasuryRangeCanaryFundingBalances,
+  assertTreasuryRangeCanaryCustodyBalances,
+  assertTreasuryRangeInitialCanaryOrderState,
   assertTreasuryRangeManifestMatrixContext,
   assertTreasuryRangePredeploymentManifest,
   type TreasuryRangeStrategyOrder,
@@ -147,6 +148,26 @@ describe("v4 treasury range operations", function () {
       hash: HASH,
       timestamp: latestTimestamp,
     })).to.throw(/no longer canonical/);
+    expect(() => assertTreasuryRangePinnedBlockFreshness({
+      chainId: "8453",
+      blockNumber: 123,
+      blockHash: HASH,
+      timestamp: pinnedTimestamp,
+    }, {
+      number: 456,
+      hash: `0x${"33".repeat(32)}`,
+      timestamp: latestTimestamp,
+    }, null, { emergencyExit: true })).not.to.throw();
+    expect(() => assertTreasuryRangePinnedBlockFreshness({
+      chainId: "8453",
+      blockNumber: 123,
+      blockHash: HASH,
+      timestamp: pinnedTimestamp,
+    }, {
+      number: 456,
+      hash: null,
+      timestamp: latestTimestamp,
+    }, null, { emergencyExit: true })).to.throw(/latest block/);
   });
 
   it("requires the full 500 USDC and 100,000 NARA Safe funding boundary", function () {
@@ -156,18 +177,41 @@ describe("v4 treasury range operations", function () {
       exposedUsdc: 200_000_000n,
       protectedUsdc: 300_000_000n,
     };
-    expect(() => assertTreasuryRangeCanaryFundingBalances(allocation, {
+    expect(() => assertTreasuryRangeCanaryCustodyBalances(allocation, {
       nara: TREASURY_RANGE_CANARY_NARA_BUDGET,
       usdc: 499_999_999n,
     })).to.throw(/Safe USDC balance is below/);
-    expect(() => assertTreasuryRangeCanaryFundingBalances(allocation, {
+    expect(() => assertTreasuryRangeCanaryCustodyBalances(allocation, {
       nara: TREASURY_RANGE_CANARY_NARA_BUDGET,
       usdc: 500_000_000n,
     })).not.to.throw();
-    expect(() => assertTreasuryRangeCanaryFundingBalances(allocation, {
+    expect(() => assertTreasuryRangeCanaryCustodyBalances(allocation, {
       nara: TREASURY_RANGE_CANARY_NARA_BUDGET - 1n,
       usdc: 500_000_000n,
     })).to.throw(/Safe NARA balance is below/);
+    expect(() => assertTreasuryRangeCanaryCustodyBalances(allocation, {
+      nara: TREASURY_RANGE_CANARY_NARA_BUDGET + 1n,
+      usdc: 500_000_000n,
+    })).to.throw(/Safe NARA balance exceeds/);
+    expect(() => assertTreasuryRangeCanaryCustodyBalances(allocation, {
+      nara: TREASURY_RANGE_CANARY_NARA_BUDGET,
+      usdc: 500_000_001n,
+    })).to.throw(/Safe USDC balance exceeds/);
+  });
+
+  it("requires a virgin manager before the one-time canary order packet", function () {
+    expect(() => assertTreasuryRangeInitialCanaryOrderState({
+      orderCount: 0n,
+      activeOrderCount: 0n,
+    })).not.to.throw();
+    expect(() => assertTreasuryRangeInitialCanaryOrderState({
+      orderCount: 12n,
+      activeOrderCount: 0n,
+    })).to.throw(/zero historical and zero active orders/);
+    expect(() => assertTreasuryRangeInitialCanaryOrderState({
+      orderCount: 12n,
+      activeOrderCount: 12n,
+    })).to.throw(/zero historical and zero active orders/);
   });
 
   it("requires deployment input to be genuinely predeployment evidence", function () {

@@ -4,7 +4,16 @@ Status: candidate operations procedure. No manager deployment, Safe signature, o
 
 ## Safety model
 
-The manager separates tactical one-sided ranges from permanent full-range POL. The Safe alone creates/cancels orders; any address may settle a terminal order; all outputs are hard-bound to the Safe. Settlers use gas-only wallets and have no manager role or token custody.
+The manager separates tactical one-sided ranges from permanent full-range POL. Two Safes have deliberately different roles: the protocol 2-of-3 Safe executes the CREATE2 deployment only, while the dedicated Treasury Range Safe is the immutable order authority, holds tactical inventory, creates/cancels orders, and receives every terminal output. Any address may settle a terminal order. Settlers use gas-only wallets and have no manager role or token custody.
+
+The currently pinned Treasury Range Safe is 1-of-1. That is a material custody
+and availability risk: loss or compromise of its sole signer can freeze or lose
+the canary inventory and order-administration path. Deployment and order-packet
+builders require an exact explicit acknowledgement of this topology. Funding
+still requires a separate human decision to accept that bounded risk or to
+upgrade and re-pin an approved multisig first. Cancellation deliberately remains
+buildable without this environment acknowledgement so the emergency exit path
+is not disabled during an incident; Safe review/signing is still mandatory.
 
 Two instances are required for production resilience. They must use independently contracted and operated RPC vendors, hosts, accounts/control planes, instance IDs, and gas-only keys. Distinct URL hostnames are a necessary configuration check, not proof of provider-vendor independence. Record the human-verified infrastructure separation. Never duplicate one private key across instances. Never reuse the epoch or liquidity maintainer keys.
 
@@ -18,10 +27,11 @@ Stop if any item is absent or inconsistent:
 
 1. The implementation commit is merged into the authoritative protected branch. Configure the exact credential-free expected upstream URL, origin remote-tracking protected ref, and release commit. The builder requires both local ancestry and a live `git ls-remote` equality check between that protected ref and the expected upstream branch. Every tracked file must be clean; the only permitted untracked file is the exact resolved, self-hashed generated strategy manifest, with no other untracked source or artifact.
 2. Unit, fork, invariant, size, and applicable security gates have current recorded results.
-3. The exact simulator-generated strategy-v2 manifest has a valid hash, a recent Base block/hash/timestamp, exact PoolKey/slot0, current and pending Hook curve/depth reads, reconciled positions, exact amounts/minimums, and `candidate_no_broadcast` status. It must bind Circle's Zeppelinos proxy mechanism, exact implementation/admin slots, proxy and implementation address/runtime hashes, Base Multicall3 address/runtime hash, admin/owner/pauser/blacklister, `paused=false`, and `isBlacklisted=false` for the exact Safe, PoolManager, PositionManager, Permit2, Vault, Compounder, and manager actor set when known. The order builder imports the simulator's shared exact integer planner and independently recomputes price-to-tick alignment, one-sidedness at the JIT square-root price, liquidity, input used/dust, output, tolerance, and minimum for every enabled order. Any mismatch is blocking.
+3. The exact simulator-generated strategy-v3 manifest has a valid hash, binds the tracked dedicated-custody policy and both distinct Safe roles/runtime hashes, and has a recent Base block/hash/timestamp, exact PoolKey/slot0, current and pending Hook curve/depth reads, reconciled positions, exact amounts/minimums, and `candidate_no_broadcast` status. It must bind Circle's Zeppelinos proxy mechanism, exact implementation/admin slots, proxy and implementation address/runtime hashes, Base Multicall3 address/runtime hash, admin/owner/pauser/blacklister, `paused=false`, and `isBlacklisted=false` for the Treasury Range Safe, PoolManager, PositionManager, Permit2, Vault, Compounder, and manager actor set when known. The deployment executor is not a USDC actor. The order builder imports the simulator's shared exact integer planner and independently recomputes price-to-tick alignment, one-sidedness at the JIT square-root price, liquidity, input used/dust, output, tolerance, and minimum for every enabled order. Any mismatch is blocking.
 4. Before reading the deployment artifact, the deployment builder forces Hardhat `clean` and `build` with `force: true` and `noTests: true`, then independently validates every runtime/binding and completes `Safe.simulateAndRevert` for the whole CREATE2 call.
-5. Human reviewers reproduce the predicted address, initcode/runtime hashes, constructor bindings, strategy hash, Safe nonce, and short deadline.
-6. The internal senior analysis, independent adversarial review, strongest-model architecture review, automated gates, and explicit human approval are recorded. No independent external audit is claimed; passing automated tests alone is not a security clearance.
+5. Human reviewers reproduce the predicted address, initcode/runtime hashes, constructor binding to the dedicated Treasury Range Safe, strategy hash, protocol deployment Safe nonce, and short deadline.
+6. Both Safe topologies are freshly verified: canonical 2-of-3 executor and exact hash-pinned dedicated custody policy, including runtime, singleton, version, threshold, owner-set hash/count, fallback handler, zero guard, and zero modules. Raw dedicated-owner addresses are not persisted in public evidence.
+7. The internal senior analysis, independent adversarial review, strongest-model architecture review, automated gates, and explicit human approval are recorded. No independent external audit is claimed; passing automated tests alone is not a security clearance.
 
 Generate immediately before review (never from a secondary checkout):
 
@@ -30,6 +40,7 @@ $env:V4_TREASURY_RANGE_STRATEGY_MANIFEST = "deployments/v4-treasury-range-strate
 $env:V4_TREASURY_RANGE_EXPECTED_UPSTREAM_URL = "<approved-authoritative-origin>"
 $env:V4_TREASURY_RANGE_PROTECTED_REF = "origin/<protected-branch>"
 $env:V4_TREASURY_RANGE_RELEASE_COMMIT = "<exact-40-hex-merged-HEAD>"
+$env:V4_TREASURY_RANGE_ACCEPT_SINGLE_SIGNER_SAFE = "<exact-dedicated-Treasury-Safe-from-policy>"
 npx tsx scripts/deployV4TreasuryRangeManagerProposal.ts
 ```
 
@@ -39,29 +50,31 @@ The builder produces uniquely named `UNEXECUTED-...-<block>-nonce-<nonce>.json/.
 
 After a separately approved human Safe execution, preserve the Safe transaction hash and receipt block/hash. At that exact block verify:
 
-- exact successful outer Safe `execTransaction`, nonce/Safe transaction hash, zero-reimbursement `ExecutionSuccess`, canonical MultiSendCallOnly payload, and exact inner CREATE2 call;
+- exact successful outer protocol 2-of-3 Safe `execTransaction`, nonce/Safe transaction hash, zero-reimbursement `ExecutionSuccess`, canonical MultiSendCallOnly payload, and exact inner CREATE2 call;
 - exact Create2HookDeployer `Deployed(deployed,salt,initCodeHash)` event/log index, predicted/deployed address, receipt status/block/hash, and runtime evidence;
-- manager runtime hash and every immutable getter: Safe, NARA, USDC, Vault, PoolManager, PositionManager, Permit2, Hook, fee, tick spacing, PoolId, deployment deadline, and batch cap 16;
+- manager runtime hash and every immutable getter: dedicated Treasury Range Safe, NARA, USDC, Vault, PoolManager, PositionManager, Permit2, Hook, fee, tick spacing, PoolId, deployment deadline, and batch cap 16;
 - PositionManager reciprocal `poolManager()`/`permit2()` bindings and Hook reciprocal token/base/Vault/PoolManager/PoolId bindings;
-- Safe 1.4.1 threshold/owner/module/guard/fallback state remains canonical;
-- all Safe-to-manager, manager-to-Permit2, and Permit2-to-PositionManager allowance amounts are zero;
+- the protocol deployment Safe remains the canonical 1.4.1 2-of-3 owner of the CREATE2 deployer;
+- the dedicated Treasury Range Safe remains the exact tracked 1.4.1 custody topology, recorded only as owner count/hash plus its pinned singleton/fallback/guard/module evidence;
+- all Treasury-Range-Safe-to-manager, manager-to-Permit2, and Permit2-to-PositionManager allowance amounts are zero;
 - manager NARA/USDC balances are recorded as alert-only evidence because direct donations are permissionless;
 - no position or existing permanent POL changed.
 - the exact USDC proxy slots, proxy/implementation/reader runtime hashes, admin and token control roles, pause state, and blacklist state for every monitored actor are receipt-block pinned and match the strategy evidence.
 
-Do not start settlers from only an address pasted into an environment file. Pin `RANGE_MANAGER_ADDRESS`, `RANGE_MANAGER_RUNTIME_CODE_HASH`, `RANGE_MANAGER_DEPLOYMENT_BLOCK`, `HOOK_CONFIGURATION_HASH`, USDC proxy and reader runtime hashes, USDC implementation address/runtime hash, proxy admin, owner, pauser, blacklister, and the PoolManager/PositionManager/Permit2 runtime hashes from final receipt/strategy evidence. The exact environment names are in the service README. The service additionally obtains canonical NARA/Hook/Vault/Compounder/Safe hashes from the hash-pinned production core manifest and checks all evidence on all three providers.
+Do not start settlers from only an address pasted into an environment file. Produce the deployment evidence through the deterministic finalizer from the exact unsigned packet and canonical execution receipt. Pin `RANGE_MANAGER_ADDRESS`, `RANGE_MANAGER_RUNTIME_CODE_HASH`, `RANGE_MANAGER_DEPLOYMENT_BLOCK`, `HOOK_CONFIGURATION_HASH`, USDC proxy and reader runtime hashes, USDC implementation address/runtime hash, proxy admin, owner, pauser, blacklister, and the PoolManager/PositionManager/Permit2 runtime hashes from final receipt/strategy evidence. The exact environment names are in the service README. The service obtains the protocol Safe/core hashes from the production manifest and the dedicated Treasury Range Safe policy from the hash-pinned custody manifest, then checks both roles on all three providers.
 
-Before building orders/cancellations, the strategy must hash-pin a `nara.v4.treasury-range-manager-deployment.v2` manifest with `deployed_verified` status, protected origin commit ancestry, exact Safe execution/nonce/inner call and `ExecutionSuccess` log, exact CREATE2 `Deployed` event, receipt block/hash, predicted/deployed address, runtime hash, and every constructor binding/deadline. The builder verifies the file hash, canonical receipt/block, Safe target, runtime at receipt and current blocks, and all bindings. An address plus matching bytecode alone is insufficient authority.
+Before building orders/cancellations, the strategy must hash-pin a `nara.v4.treasury-range-manager-deployment.v3` manifest with `deployed_verified` status, protected origin commit ancestry, exact protocol-Safe execution/nonce/inner call and `ExecutionSuccess` log, exact CREATE2 `Deployed` event, dedicated-custody policy, receipt block/hash, predicted/deployed address, runtime hash, and every constructor binding/deadline. The builder verifies the file hash, canonical receipt/block, both Safe roles, runtime at receipt and current blocks, and all bindings. Legacy v2 evidence and an address plus matching bytecode are insufficient authority.
 
 ## Safe funding and order creation
 
-The Treasury delegated account and the production Safe are separate custody addresses. A preflight observation found treasury inventory at the Treasury while the Safe was effectively unfunded; that observation is not execution authority and must be re-pinned to a current block/hash before use.
+The Treasury delegated account, protocol deployment Safe, and dedicated Treasury Range Safe are three separate addresses. A preflight observation found canary-capable inventory at the Treasury while both Safes held no NARA/USDC. That observation is not execution authority and must be re-pinned to a current block/hash before use.
 
-Order creation pulls only the Safe's own balances and allowance. It must never treat Treasury inventory as a Safe balance/allowance. If strategy capital is still at Treasury, a separate explicitly approved Treasury-to-Safe funding action, with its own simulation and receipt evidence, must complete first. The supplied order builder does not include or imply that transfer. After funding, regenerate/re-hash the strategy, re-pin live state and Safe balances, and rebuild the JIT order packet. Never transfer inventory to a settler.
+Order creation pulls only the dedicated Treasury Range Safe's balances and allowance. It must never treat Treasury or protocol deployment Safe inventory as custody balance/allowance. If strategy capital is still at Treasury, a separate explicitly approved Treasury-to-Treasury-Range-Safe funding action, limited to exactly 100,000 NARA plus 500 USDC for this canary, with its own simulation and receipt evidence, must complete first. The supplied order builder does not include or imply that transfer. After funding, regenerate/re-hash the strategy, re-pin live state and dedicated Safe balances, and rebuild the JIT order packet. Never transfer inventory to the deployment Safe or a settler.
 
 ```powershell
 $env:RANGE_MANAGER_ADDRESS = "<receipt-verified-manager>"
 $env:V4_TREASURY_RANGE_STRATEGY_MANIFEST = "deployments/v4-treasury-range-strategy-candidate.json"
+$env:V4_TREASURY_RANGE_ACCEPT_SINGLE_SIGNER_SAFE = "<exact-dedicated-Treasury-Safe-from-policy>"
 npx tsx scripts/buildV4TreasuryRangeOrders.ts
 ```
 

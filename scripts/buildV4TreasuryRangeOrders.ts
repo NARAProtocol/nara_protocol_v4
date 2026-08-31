@@ -4,7 +4,12 @@ import { fileURLToPath } from "node:url";
 import { ethers } from "ethers";
 import { canonicalProductionV4Deployment } from "./lib/v4LiveConfig.js";
 import {
-  assertTreasuryRangeCanarySafeFunding,
+  assertTreasuryRangeSingleSignerRiskAccepted,
+  canonicalTreasuryRangeAuthorities,
+} from "./lib/v4TreasuryRangeConfig.js";
+import {
+  assertTreasuryRangeCanaryCustodyFunding,
+  assertTreasuryRangeInitialCanaryOrderState,
   assertTreasuryRangeManifestExactEvidence,
   loadTreasuryRangeStrategyManifest,
 } from "./lib/v4TreasuryRangeManifest.js";
@@ -36,10 +41,11 @@ function requiredManagerAddress(): string {
 async function assertManagerBindings(
   manager: ethers.Contract,
   expected: ReturnType<typeof canonicalProductionV4Deployment>,
+  treasuryRangeSafe: string,
   blockTag: number,
 ): Promise<void> {
   const checks: ReadonlyArray<[string, string | number | bigint]> = [
-    ["NARA", expected.token], ["USDC", expected.base], ["TREASURY_SAFE", expected.safe],
+    ["NARA", expected.token], ["USDC", expected.base], ["TREASURY_SAFE", treasuryRangeSafe],
     ["LIQUIDITY_VAULT", expected.vault], ["POOL_MANAGER", expected.poolManager],
     ["POSITION_MANAGER", expected.positionManager], ["PERMIT2", expected.permit2], ["HOOK", expected.hook],
     ["POOL_FEE", expected.poolFee], ["TICK_SPACING", expected.tickSpacing], ["POOL_ID", expected.poolId],
@@ -59,18 +65,32 @@ async function main(): Promise<void> {
   const strategyPath = resolve(process.env.V4_TREASURY_RANGE_STRATEGY_MANIFEST?.trim() || DEFAULT_STRATEGY);
   const strategy = loadTreasuryRangeStrategyManifest(strategyPath);
   assertTreasuryRangeManifestExactEvidence(strategy);
-  let context = await readTreasuryRangeBuildContext(REPOSITORY_ROOT, strategyPath, strategy);
   const production = canonicalProductionV4Deployment();
+  const authorities = canonicalTreasuryRangeAuthorities(production);
+  assertTreasuryRangeSingleSignerRiskAccepted(process.env, authorities);
+  let context = await readTreasuryRangeBuildContext(REPOSITORY_ROOT, strategyPath, strategy);
   const managerAddress = requiredManagerAddress();
   const usdcDependency = await assertTreasuryRangeUsdcDependency(context, { rangeManager: managerAddress });
   context = { ...context, usdcDependency };
   const deploymentEvidence = await readVerifiedTreasuryRangeManagerDeployment(REPOSITORY_ROOT, context, managerAddress);
   const expectedRuntimeHash = deploymentEvidence.runtimeCodeHash;
   await assertTreasuryRangeViewChecks(context, strategy.hookConfiguration.readChecks, "hookConfiguration.readChecks");
-  const manager = new ethers.Contract(managerAddress, TREASURY_RANGE_MANAGER_ABI, context.provider);
-  await assertManagerBindings(manager, production, context.block.number);
+  const manager = new ethers.Contract(managerAddress, [
+    ...TREASURY_RANGE_MANAGER_ABI,
+    "function orderCount() view returns(uint256)",
+  ], context.provider);
+  await assertManagerBindings(manager, production, authorities.treasuryRangeSafe, context.block.number);
   const managerSafetyState = await readTreasuryRangeManagerSafetyState(context, managerAddress);
-  if (BigInt(await manager.MAX_SETTLE_BATCH({ blockTag: context.block.number })) !== 16n) throw new Error("Range Manager batch cap differs from 16");
+  const [maxSettleBatch, orderCount, activeOrderCount] = await Promise.all([
+    manager.MAX_SETTLE_BATCH({ blockTag: context.block.number }) as Promise<bigint>,
+    manager.orderCount({ blockTag: context.block.number }) as Promise<bigint>,
+    manager.activeOrderCount({ blockTag: context.block.number }) as Promise<bigint>,
+  ]);
+  if (BigInt(maxSettleBatch) !== 16n) throw new Error("Range Manager batch cap differs from 16");
+  assertTreasuryRangeInitialCanaryOrderState({
+    orderCount: BigInt(orderCount),
+    activeOrderCount: BigInt(activeOrderCount),
+  });
   const deadline = BigInt(jitDeadline(context.block.timestamp));
   const orders = strategy.proposedOrders.filter((order) => order.enabled);
   if (orders.length === 0 || orders.length > 16) throw new Error("Order batch must contain between 1 and 16 enabled orders");
@@ -90,13 +110,13 @@ async function main(): Promise<void> {
   const nara = new ethers.Contract(production.token, ERC20_APPROVAL_ABI, context.provider);
   const usdc = new ethers.Contract(production.base, ERC20_APPROVAL_ABI, context.provider);
   const [naraBalance, usdcBalance, naraAllowance, usdcAllowance] = await Promise.all([
-    nara.balanceOf(production.safe, { blockTag: context.block.number }) as Promise<bigint>,
-    usdc.balanceOf(production.safe, { blockTag: context.block.number }) as Promise<bigint>,
-    nara.allowance(production.safe, managerAddress, { blockTag: context.block.number }) as Promise<bigint>,
-    usdc.allowance(production.safe, managerAddress, { blockTag: context.block.number }) as Promise<bigint>,
+    nara.balanceOf(authorities.treasuryRangeSafe, { blockTag: context.block.number }) as Promise<bigint>,
+    usdc.balanceOf(authorities.treasuryRangeSafe, { blockTag: context.block.number }) as Promise<bigint>,
+    nara.allowance(authorities.treasuryRangeSafe, managerAddress, { blockTag: context.block.number }) as Promise<bigint>,
+    usdc.allowance(authorities.treasuryRangeSafe, managerAddress, { blockTag: context.block.number }) as Promise<bigint>,
   ]);
   if (BigInt(naraAllowance) !== 0n || BigInt(usdcAllowance) !== 0n) throw new Error("Safe already has a non-zero token allowance to the manager");
-  assertTreasuryRangeCanarySafeFunding(strategy, { nara: BigInt(naraBalance), usdc: BigInt(usdcBalance) });
+  assertTreasuryRangeCanaryCustodyFunding(strategy, { nara: BigInt(naraBalance), usdc: BigInt(usdcBalance) });
   if (BigInt(naraBalance) < naraInput || BigInt(usdcBalance) < usdcInput) throw new Error("Safe balance is below the exact proposed input");
   const calls: Array<{ to: string; value: string; data: string }> = [];
   if (naraInput > 0n) calls.push({ to: production.token, value: "0", data: nara.interface.encodeFunctionData("approve", [managerAddress, naraInput]) });
@@ -136,12 +156,17 @@ async function main(): Promise<void> {
       protectedUsdcReserveRaw: strategy.budget.protectedUsdcReserveRaw,
       orders,
       finalAssertion: "assertOperationalClean()",
+      safeRoles: {
+        deploymentExecutorSafe: authorities.deploymentExecutorSafe,
+        treasuryRangeSafe: authorities.treasuryRangeSafe,
+      },
     },
     checks: [
       "Verify every human price range, aligned tick, exact raw input, deterministic output, and non-zero minimum.",
       "Verify every range is still strictly one-sided at the recorded current pool state.",
       "Verify current and pending Hook curve/depth evidence; stop if any pending change is ignored.",
       "Verify exact approvals, zero resets, protected USDC reserve, and final assertOperationalClean call.",
+      "Confirm the dedicated Treasury Safe, not the deployment-executor Safe, signs and funds this packet.",
       "Recheck Safe nonce and deadline immediately before signing; never reuse this packet.",
     ],
     validUntil: Number(deadline),

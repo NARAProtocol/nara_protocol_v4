@@ -11,6 +11,7 @@ import {
   canonicalProductionV4Deployment,
   deriveV4PoolKey,
 } from "../../scripts/lib/v4LiveConfig.js";
+import { canonicalTreasuryRangeAuthorities } from "../../scripts/lib/v4TreasuryRangeConfig.js";
 import {
   getSqrtPriceAtTick,
 } from "../../scripts/lib/v4TreasuryRangeMath.js";
@@ -28,9 +29,10 @@ import {
   TREASURY_RANGE_CANARY_CHANGE_ID_PREFIX,
   TREASURY_RANGE_STRATEGY_SCHEMA,
   assertTreasuryRangeCanaryLaunchManifest,
-  assertTreasuryRangeCanarySafeFunding,
+  assertTreasuryRangeCanaryCustodyFunding,
   assertTreasuryRangeManifestExactEvidence,
   parseTreasuryRangeStrategyManifest,
+  treasuryRangeStrategyHash,
 } from "../../scripts/lib/v4TreasuryRangeManifest.js";
 import { bindTreasuryRangeMatrixRows } from "../../scripts/lib/v4TreasuryRangeEvidence.js";
 import {
@@ -106,6 +108,7 @@ const hasPinnedArchiveRpc = Boolean(
 (hasPinnedArchiveRpc ? describe : describe.skip)("NARA treasury range attack matrix - pinned Base fork", function () {
   this.timeout(1_800_000);
   const deployment = canonicalProductionV4Deployment();
+  const authorities = canonicalTreasuryRangeAuthorities(deployment);
   let connection: Connection;
   let pinnedState: Awaited<ReturnType<typeof readV4TreasuryRangeState>>;
   let scenarioPlan: ReturnType<typeof buildTreasuryRangeScenarioPlan>;
@@ -162,7 +165,7 @@ const hasPinnedArchiveRpc = Boolean(
     const latest = await connection.ethers.provider.getBlock("latest");
     const deadline = BigInt(latest!.timestamp) + 86_400n;
     const manager = await connection.ethers.deployContract("NARATreasuryRangeManagerV1", [
-      deployment.safe,
+      authorities.treasuryRangeSafe,
       deployment.token,
       deployment.base,
       deployment.vault,
@@ -180,23 +183,23 @@ const hasPinnedArchiveRpc = Boolean(
     await fundForkAccountFromTreasury({
       provider: connection.ethers.provider,
       deployment,
-      recipient: deployment.safe,
+      recipient: authorities.treasuryRangeSafe,
       token: deployment.token,
       amount: profile.totalNaraInput,
     });
     await fundForkAccountFromTreasury({
       provider: connection.ethers.provider,
       deployment,
-      recipient: deployment.safe,
+      recipient: authorities.treasuryRangeSafe,
       token: deployment.base,
       amount: profile.exposedUsdcInput,
     });
-    await connection.ethers.provider.send("hardhat_impersonateAccount", [deployment.safe]);
+    await connection.ethers.provider.send("hardhat_impersonateAccount", [authorities.treasuryRangeSafe]);
     await connection.ethers.provider.send(
       "hardhat_setBalance",
-      [deployment.safe, ethersUtils.toQuantity(ethersUtils.parseEther("25"))],
+      [authorities.treasuryRangeSafe, ethersUtils.toQuantity(ethersUtils.parseEther("25"))],
     );
-    const safe = await connection.ethers.getSigner(deployment.safe);
+    const safe = await connection.ethers.getSigner(authorities.treasuryRangeSafe);
     const nara = new ethersUtils.Contract(deployment.token, ERC20_ABI, safe);
     const usdc = new ethersUtils.Contract(deployment.base, ERC20_ABI, safe);
     await (await nara.approve(managerAddress, profile.totalNaraInput)).wait();
@@ -213,7 +216,7 @@ const hasPinnedArchiveRpc = Boolean(
         deadline,
       )).wait();
     }
-    await connection.ethers.provider.send("hardhat_stopImpersonatingAccount", [deployment.safe]);
+    await connection.ethers.provider.send("hardhat_stopImpersonatingAccount", [authorities.treasuryRangeSafe]);
     const reader = new ethersUtils.Contract(managerAddress, MANAGER_ABI, deployer);
     const [ids] = await reader.getActiveOrderIds(0n, 100n) as readonly [readonly bigint[], bigint];
     expect(ids).to.have.length(profile.orders.length);
@@ -510,7 +513,8 @@ const hasPinnedArchiveRpc = Boolean(
 
     profileSnapshot = await revertTo(profileSnapshot);
     const traversalInput = 20_000n * USDC_UNIT;
-    const eSafeStart = await poolTokenBalances(deployment.safe);
+    const eSafeStart = await poolTokenBalances(authorities.treasuryRangeSafe);
+    const eDeploymentExecutorStart = await poolTokenBalances(authorities.deploymentExecutorSafe);
     const eVaultStart = await poolTokenBalances(deployment.vault);
     await fundUsdc(attackerAddress, traversalInput);
     const eBuy = await executeExactForkSwap({
@@ -521,13 +525,13 @@ const hasPinnedArchiveRpc = Boolean(
     const eSettleable = await settleable(deployed.manager, deployed.ids, 0n);
     expect(eSettleable.length).to.be.greaterThan(0);
     const safeUsdc = new ethersUtils.Contract(deployment.base, ERC20_ABI, connection.ethers.provider);
-    const safeUsdcBefore = await safeUsdc.balanceOf(deployment.safe) as bigint;
+    const safeUsdcBefore = await safeUsdc.balanceOf(authorities.treasuryRangeSafe) as bigint;
     const ePrincipal = (await Promise.all(eSettleable.map(async (id) => {
       const preview = await deployed.manager.previewSettlement(id);
       return preview.principalUsdc as bigint;
     }))).reduce((sum, value) => sum + value, 0n);
     const eReceipt = await (await deployed.manager.settleMany(eSettleable)).wait();
-    const safeUsdcAfter = await safeUsdc.balanceOf(deployment.safe) as bigint;
+    const safeUsdcAfter = await safeUsdc.balanceOf(authorities.treasuryRangeSafe) as bigint;
     const crystallizedUsdc = safeUsdcAfter - safeUsdcBefore;
     expect(crystallizedUsdc >= ePrincipal).to.equal(true);
     const attackerNara = new ethersUtils.Contract(deployment.token, ERC20_ABI, connection.ethers.provider);
@@ -541,7 +545,9 @@ const hasPinnedArchiveRpc = Boolean(
       const order = await deployed.manager.getOrder(id);
       return order.inputAmount as bigint;
     }))).reduce((sum, value) => sum + value, 0n);
-    const eSafeEnd = await poolTokenBalances(deployment.safe);
+    const eSafeEnd = await poolTokenBalances(authorities.treasuryRangeSafe);
+    const eDeploymentExecutorEnd = await poolTokenBalances(authorities.deploymentExecutorSafe);
+    expect(eDeploymentExecutorEnd).to.deep.equal(eDeploymentExecutorStart);
     const eVaultEnd = await poolTokenBalances(deployment.vault);
     rows.push({
       scenario: "E", kind: "buy_settle_sell", settledOrderIds: eSettleable.map(String),
@@ -565,7 +571,7 @@ const hasPinnedArchiveRpc = Boolean(
     });
 
     profileSnapshot = await revertTo(profileSnapshot);
-    const gSafeStart = await poolTokenBalances(deployment.safe);
+    const gSafeStart = await poolTokenBalances(authorities.treasuryRangeSafe);
     const gVaultStart = await poolTokenBalances(deployment.vault);
     await fundUsdc(attackerAddress, traversalInput);
     const previewAtomicBuy = await executeExactForkSwap({
@@ -637,7 +643,7 @@ const hasPinnedArchiveRpc = Boolean(
     });
     expect(gSell.status).to.equal("executed");
     const unsettledLoss = traversalInput - gSell.actualOutput;
-    const gSafeEnd = await poolTokenBalances(deployment.safe);
+    const gSafeEnd = await poolTokenBalances(authorities.treasuryRangeSafe);
     const gVaultEnd = await poolTokenBalances(deployment.vault);
     rows.push({
       scenario: "G", kind: "buy_reverse_without_settlement",
@@ -656,7 +662,7 @@ const hasPinnedArchiveRpc = Boolean(
     });
 
     profileSnapshot = await revertTo(profileSnapshot);
-    const hSafeStart = await poolTokenBalances(deployment.safe);
+    const hSafeStart = await poolTokenBalances(authorities.treasuryRangeSafe);
     const hVaultStart = await poolTokenBalances(deployment.vault);
     await fundUsdc(attackerAddress, traversalInput);
     const hBuy = await executeExactForkSwap({
@@ -675,7 +681,7 @@ const hasPinnedArchiveRpc = Boolean(
     expect(hSell.status).to.equal("executed");
     const settledLoss = traversalInput - hSell.actualOutput;
     expect(settledLoss > unsettledLoss).to.equal(true);
-    const hSafeEnd = await poolTokenBalances(deployment.safe);
+    const hSafeEnd = await poolTokenBalances(authorities.treasuryRangeSafe);
     const hVaultEnd = await poolTokenBalances(deployment.vault);
     rows.push({
       scenario: "H", kind: "buy_settle_reverse", settledOrderIds: hIds.map(String),
@@ -739,9 +745,9 @@ const hasPinnedArchiveRpc = Boolean(
     let bidSettlementReceipt: ethersUtils.TransactionReceipt | null = null;
     if (bidIds.length > 0) {
       const safeNara = new ethersUtils.Contract(deployment.token, ERC20_ABI, connection.ethers.provider);
-      const before = await safeNara.balanceOf(deployment.safe) as bigint;
+      const before = await safeNara.balanceOf(authorities.treasuryRangeSafe) as bigint;
       bidSettlementReceipt = await (await deployed.manager.settleMany(bidIds)).wait();
-      treasuryNaraAccumulated = (await safeNara.balanceOf(deployment.safe) as bigint) - before;
+      treasuryNaraAccumulated = (await safeNara.balanceOf(authorities.treasuryRangeSafe) as bigint) - before;
     }
     expect(bidSettlementReceipt?.status, `${candidateId} bid settlement must execute`).to.equal(1);
     expect(treasuryNaraAccumulated > 0n, `${candidateId} bid settlement must return NARA`).to.equal(true);
@@ -809,7 +815,7 @@ const hasPinnedArchiveRpc = Boolean(
   it("pins exact custody/runtime state and executes the $10 canary without changing permanent POL", async function () {
     expect(pinnedState.positionReconciliation.exact).to.equal(true);
     if (requiresHistoricalPinnedUsdcAdversaryBalance(pinnedState.blockNumber)) {
-      expect(pinnedState.safeBalances).to.deep.equal({ nara: 2_070_480n, usdc: 0n });
+      expect(pinnedState.treasuryRangeSafeBalances).to.deep.equal({ nara: 0n, usdc: 0n });
     }
     expect(await connection.ethers.provider.getCode(PINNED_USDC_ADVERSARY.address)).to.equal("0x");
     const usdc = new ethersUtils.Contract(deployment.base, ERC20_ABI, connection.ethers.provider);
@@ -878,7 +884,7 @@ const hasPinnedArchiveRpc = Boolean(
         hookConfigurationHash: scenarioPlan.hookConfigurationHash,
         humanUsdcPerNara: pinnedState.humanUsdcPerNaraRational,
       },
-      safeBalances: pinnedState.safeBalances,
+      treasuryRangeSafeBalances: pinnedState.treasuryRangeSafeBalances,
       treasuryBalances: pinnedState.treasuryBalances,
       finalizeProfile: (profile, evidence) => finalizeTreasuryRangeProfile({
         state: pinnedState,
@@ -897,23 +903,23 @@ const hasPinnedArchiveRpc = Boolean(
     );
     if (!selected) throw new Error("Selected optimizer candidate is missing from exact evidence");
     expect(optimized.selectedCandidateId).to.equal("CONSERVATIVE-100000-NARA");
-    const expectedSelectionStatus = pinnedState.safeBalances.usdc < TREASURY_RANGE_NOMINAL_USDC_BUDGET
-      || pinnedState.safeBalances.nara < selected.naraBudget
+    const expectedSelectionStatus = pinnedState.treasuryRangeSafeBalances.usdc < TREASURY_RANGE_NOMINAL_USDC_BUDGET
+      || pinnedState.treasuryRangeSafeBalances.nara < selected.naraBudget
       ? "SELECTED_EXECUTION_BLOCKED"
       : "SELECTED_BUILDABLE";
     expect(optimized.selectionStatus).to.equal(expectedSelectionStatus);
     const parsedSelected = parseTreasuryRangeStrategyManifest(selected.manifest);
     expect(() => assertTreasuryRangeManifestExactEvidence(parsedSelected)).not.to.throw();
     expect(() => assertTreasuryRangeCanaryLaunchManifest(parsedSelected)).not.to.throw();
-    expect(() => assertTreasuryRangeCanarySafeFunding(parsedSelected, {
+    expect(() => assertTreasuryRangeCanaryCustodyFunding(parsedSelected, {
       nara: 100_000n * NARA_UNIT - 1n,
       usdc: TREASURY_RANGE_NOMINAL_USDC_BUDGET,
     })).to.throw(/Safe NARA balance is below/);
-    expect(() => assertTreasuryRangeCanarySafeFunding(parsedSelected, {
+    expect(() => assertTreasuryRangeCanaryCustodyFunding(parsedSelected, {
       nara: 100_000n * NARA_UNIT,
       usdc: TREASURY_RANGE_NOMINAL_USDC_BUDGET - 1n,
     })).to.throw(/Safe USDC balance is below/);
-    expect(() => assertTreasuryRangeCanarySafeFunding(parsedSelected, {
+    expect(() => assertTreasuryRangeCanaryCustodyFunding(parsedSelected, {
       nara: 100_000n * NARA_UNIT,
       usdc: TREASURY_RANGE_NOMINAL_USDC_BUDGET,
     })).not.to.throw();
@@ -966,6 +972,16 @@ const hasPinnedArchiveRpc = Boolean(
         protectedUsdcReserveRaw: (301n * USDC_UNIT).toString(),
       },
     })).to.throw(/exact 500 USDC canary budget/);
+    const pendingHookBody = {
+      ...parsedSelected,
+      pendingHookConfiguration: { buyCurve: [1, 2, 3], eta: "1" },
+    };
+    const pendingHookManifest = {
+      ...pendingHookBody,
+      strategyHash: treasuryRangeStrategyHash(pendingHookBody),
+    };
+    expect(() => parseTreasuryRangeStrategyManifest(pendingHookManifest)).to.throw(/before deployment or order creation/);
+    expect(() => parseTreasuryRangeStrategyManifest(pendingHookManifest, { emergencyExit: true })).not.to.throw();
     expect(() => parseTreasuryRangeStrategyManifest({
       ...parsedSelected,
       budget: {

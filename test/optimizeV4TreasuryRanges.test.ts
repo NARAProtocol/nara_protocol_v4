@@ -1,9 +1,19 @@
 import { expect } from "chai";
+import { execFileSync } from "node:child_process";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { ethers } from "ethers";
 import {
   NARA_UNIT,
   TREASURY_RANGE_CANARY_CANDIDATE_ID,
+  TREASURY_RANGE_CANARY_EXPOSED_USDC,
+  TREASURY_RANGE_CANARY_NARA_BUDGET,
+  TREASURY_RANGE_CANARY_PROTECTED_USDC,
   TREASURY_RANGE_NOMINAL_USDC_BUDGET,
   buildDeterministicStrategyProfiles,
+  rescaleStrategyProfile,
+  serializePlannedRange,
   stampStrategyHash,
 } from "../scripts/lib/v4TreasuryRangePlanner.js";
 import {
@@ -20,10 +30,321 @@ import {
 import {
   REQUIRED_NARA_BUDGETS,
   REQUIRED_TREASURY_RANGE_CANDIDATE_COUNT,
+  loadTrackedPostDeploymentManagerEvidence,
   optimizeTreasuryRanges,
   parseExactForkCandidateMetrics,
+  postDeploymentStateOptions,
+  writeSelectedPostDeploymentStrategy,
   type ExactForkCandidateMetrics,
+  type OptimizerResult,
+  type PostDeploymentManagerBinding,
 } from "../scripts/optimizeV4TreasuryRanges.js";
+import {
+  sha256Hex,
+  treasuryRangeHookConfigurationHash,
+  treasuryRangeStrategyHash,
+} from "../scripts/lib/v4TreasuryRangeManifest.js";
+import { canonicalProductionV4Deployment } from "../scripts/lib/v4LiveConfig.js";
+import { canonicalTreasuryRangeAuthorities } from "../scripts/lib/v4TreasuryRangeConfig.js";
+import {
+  BASE_MULTICALL3,
+  CIRCLE_FIAT_TOKEN_ADMIN_SLOT,
+  CIRCLE_FIAT_TOKEN_DEPENDENCY_SCHEMA,
+  CIRCLE_FIAT_TOKEN_IMPLEMENTATION_SLOT,
+  CIRCLE_FIAT_TOKEN_PROXY_MECHANISM,
+  treasuryRangeUsdcMonitoredAccounts,
+} from "../scripts/lib/v4UsdcDependency.js";
+
+const POST_DEPLOYMENT_MANAGER = "0x1000000000000000000000000000000000000001";
+const POST_DEPLOYMENT_EXECUTOR_SAFE = "0x2000000000000000000000000000000000000002";
+const POST_DEPLOYMENT_TREASURY_SAFE = "0x3000000000000000000000000000000000000003";
+const POST_DEPLOYMENT_CREATE2_DEPLOYER = "0x4000000000000000000000000000000000000004";
+const POST_DEPLOYMENT_RUNTIME_HASH = `0x${"41".repeat(32)}`;
+const POST_DEPLOYMENT_BLOCK_HASH = `0x${"42".repeat(32)}`;
+
+function deploymentEvidenceFixture(originCommit: string): Record<string, unknown> {
+  return {
+    schemaVersion: "nara.v4.treasury-range-manager-deployment.v3",
+    status: "deployed_verified",
+    originCommit,
+    deploymentTransactionHash: `0x${"43".repeat(32)}`,
+    deploymentBlock: 123,
+    deploymentBlockHash: POST_DEPLOYMENT_BLOCK_HASH,
+    predictedAddress: POST_DEPLOYMENT_MANAGER,
+    deployedAddress: POST_DEPLOYMENT_MANAGER,
+    runtimeCodeHash: POST_DEPLOYMENT_RUNTIME_HASH,
+    deploymentExecutorSafeExecution: {
+      safe: POST_DEPLOYMENT_EXECUTOR_SAFE,
+      transactionHash: `0x${"43".repeat(32)}`,
+      safeTransactionHash: `0x${"44".repeat(32)}`,
+      nonce: "7",
+      executionSuccessLogIndex: 1,
+      safeTransaction: {
+        to: POST_DEPLOYMENT_CREATE2_DEPLOYER,
+        value: "0",
+        data: "0x1234",
+        operation: 1,
+        safeTxGas: "0",
+        baseGas: "0",
+        gasPrice: "0",
+        gasToken: ethers.ZeroAddress,
+        refundReceiver: ethers.ZeroAddress,
+        nonce: "7",
+      },
+      packedTransactionsHash: `0x${"45".repeat(32)}`,
+      multiSendCallOnly: "0x5000000000000000000000000000000000000005",
+      multiSendCallOnlyCodeHash: `0x${"46".repeat(32)}`,
+      innerCalls: [{
+        to: POST_DEPLOYMENT_CREATE2_DEPLOYER,
+        value: "0",
+        data: "0x1234",
+      }],
+    },
+    treasuryRangeSafePolicy: {
+      address: POST_DEPLOYMENT_TREASURY_SAFE,
+      runtimeCodeHash: `0x${"47".repeat(32)}`,
+      version: "1.4.1",
+      threshold: "1",
+      ownerCount: 1,
+      ownerSetHash: `0x${"48".repeat(32)}`,
+    },
+    create2Deployment: {
+      deployer: POST_DEPLOYMENT_CREATE2_DEPLOYER,
+      deployedAddress: POST_DEPLOYMENT_MANAGER,
+      salt: `0x${"49".repeat(32)}`,
+      initCodeHash: `0x${"4a".repeat(32)}`,
+      deployedLogIndex: 0,
+    },
+    constructorBindings: {
+      treasurySafe: POST_DEPLOYMENT_TREASURY_SAFE,
+      nara: "0x6000000000000000000000000000000000000006",
+      usdc: "0x7000000000000000000000000000000000000007",
+      liquidityVault: "0x8000000000000000000000000000000000000008",
+      poolManager: "0x9000000000000000000000000000000000000009",
+      positionManager: "0xA00000000000000000000000000000000000000A",
+      permit2: "0xB00000000000000000000000000000000000000B",
+      hook: "0xC00000000000000000000000000000000000000C",
+      poolFee: 3_000,
+      tickSpacing: 60,
+      poolId: `0x${"4b".repeat(32)}`,
+      deploymentDeadline: "2000000000",
+    },
+  };
+}
+
+function gitAt(repositoryRoot: string, args: readonly string[]): string {
+  return execFileSync("git", [...args], { cwd: repositoryRoot, encoding: "utf8" }).trim();
+}
+
+function trackedEvidenceRepository(): Readonly<{
+  repositoryRoot: string;
+  evidencePath: string;
+  raw: string;
+}> {
+  const repositoryRoot = mkdtempSync(join(tmpdir(), "nara-range-post-deployment-"));
+  gitAt(repositoryRoot, ["init", "--quiet"]);
+  gitAt(repositoryRoot, ["config", "core.autocrlf", "false"]);
+  writeFileSync(join(repositoryRoot, "seed.txt"), "seed\n", "utf8");
+  gitAt(repositoryRoot, ["add", "seed.txt"]);
+  gitAt(repositoryRoot, [
+    "-c", "user.name=NARA Test", "-c", "user.email=nara-test@example.invalid",
+    "-c", "commit.gpgsign=false", "commit", "--quiet", "-m", "seed",
+  ]);
+  const originCommit = gitAt(repositoryRoot, ["rev-parse", "HEAD"]);
+  const evidencePath = "deployments/manager-deployment.json";
+  mkdirSync(join(repositoryRoot, "deployments"));
+  const raw = `${JSON.stringify(deploymentEvidenceFixture(originCommit), null, 2)}\n`.replace(/\n/g, "\r\n");
+  writeFileSync(join(repositoryRoot, evidencePath), raw, "utf8");
+  gitAt(repositoryRoot, ["add", evidencePath]);
+  gitAt(repositoryRoot, [
+    "-c", "user.name=NARA Test", "-c", "user.email=nara-test@example.invalid",
+    "-c", "commit.gpgsign=false", "commit", "--quiet", "-m", "deployment evidence",
+  ]);
+  return { repositoryRoot, evidencePath, raw };
+}
+
+function buildablePostDeploymentResult(binding: PostDeploymentManagerBinding): OptimizerResult {
+  const deployment = canonicalProductionV4Deployment();
+  const authorities = canonicalTreasuryRangeAuthorities(deployment);
+  const hookConfiguration = {
+    readChecks: [{ label: "hook.fixture", expected: ["1", "2", false] }],
+  };
+  const hookConfigurationHash = treasuryRangeHookConfigurationHash(hookConfiguration.readChecks);
+  const sqrtPriceX96 = humanUsdcPerNaraToSqrtPriceX96(parseDecimalRational("0.0847"));
+  const base = buildDeterministicStrategyProfiles({
+    currentSqrtPriceX96: sqrtPriceX96,
+    creationDeadline: 2_000_000_000n,
+    hookConfigurationHash,
+    tickSpacing: BigInt(deployment.tickSpacing),
+  }).find((profile) => profile.name === "CONSERVATIVE")!;
+  const canary = rescaleStrategyProfile(
+    base,
+    TREASURY_RANGE_CANARY_NARA_BUDGET,
+    BigInt(deployment.tickSpacing),
+  );
+  const proposedOrders = canary.orders.map((order) => {
+    const serialized = serializePlannedRange(order);
+    return {
+      side: order.side,
+      humanPriceLower: serialized.requestedLowerUsdcPerNara,
+      humanPriceUpper: serialized.requestedUpperUsdcPerNara,
+      tickLower: Number(order.tickLower),
+      tickUpper: Number(order.tickUpper),
+      inputAmountRaw: order.inputAmount.toString(),
+      expectedOutputAmountRaw: order.expectedPrincipalOutput.toString(),
+      minimumOutputAmountRaw: order.minimumOutputAmount.toString(),
+      expectedLiquidity: order.expectedLiquidity.toString(),
+      expectedDustNaraRaw: (order.side === "SELL_NARA" ? order.expectedRoundingDust : 0n).toString(),
+      expectedDustUsdcRaw: (order.side === "BUY_NARA" ? order.expectedRoundingDust : 0n).toString(),
+      toleranceBps: Number(order.toleranceBps),
+      enabled: true,
+    };
+  });
+  const monitoredAccounts = treasuryRangeUsdcMonitoredAccounts({
+    treasuryRangeSafe: authorities.treasuryRangeSafe,
+    poolManager: deployment.poolManager,
+    positionManager: deployment.positionManager,
+    permit2: deployment.permit2,
+    liquidityVault: deployment.vault,
+    liquidityCompounder: deployment.compounder,
+    rangeManager: binding.evidence.deployedAddress,
+  });
+  const usdcRuntimeHash = `0x${"51".repeat(32)}`;
+  const body = {
+    schemaVersion: "nara.v4.treasury-range-strategy.v3",
+    status: "candidate_no_broadcast",
+    changeId: "NARA-20260831-v4-treasury-range-500-usdc-canary-conservative-100000-nara",
+    repositoryHead: "52".repeat(20),
+    custodyPolicy: {
+      changeId: authorities.custodyPolicyChangeId,
+      manifestPath: "deployments/v4-treasury-range-custody-policy-2026-08-31.json",
+      manifestSha256: `0x${authorities.custodyPolicySha256}`,
+    },
+    pinnedState: {
+      chainId: "8453",
+      blockNumber: 500,
+      blockHash: `0x${"53".repeat(32)}`,
+      timestamp: 2_000_000_000,
+    },
+    addresses: {
+      deploymentExecutorSafe: authorities.deploymentExecutorSafe,
+      treasuryRangeSafe: authorities.treasuryRangeSafe,
+      nara: deployment.token,
+      usdc: deployment.base,
+      hook: deployment.hook,
+      poolManager: deployment.poolManager,
+      positionManager: deployment.positionManager,
+      permit2: deployment.permit2,
+      liquidityVault: deployment.vault,
+      liquidityCompounder: deployment.compounder,
+      universalRouter: deployment.universalRouter,
+      officialV4Quoter: "0x1230000000000000000000000000000000000123",
+      create2HookDeployer: deployment.create2HookDeployer,
+      stateView: "0x1240000000000000000000000000000000000124",
+      treasury: deployment.treasury,
+      treasuryRangeManager: binding.evidence.deployedAddress,
+    },
+    runtimeCodeHashes: {
+      deploymentExecutorSafe: authorities.deploymentExecutorSafeRuntimeCodeHash,
+      treasuryRangeSafe: authorities.treasuryRangeSafeRuntimeCodeHash,
+      nara: `0x${"54".repeat(32)}`,
+      usdc: usdcRuntimeHash,
+      hook: `0x${"55".repeat(32)}`,
+      poolManager: `0x${"56".repeat(32)}`,
+      positionManager: `0x${"57".repeat(32)}`,
+      permit2: `0x${"58".repeat(32)}`,
+      liquidityVault: `0x${"59".repeat(32)}`,
+      liquidityCompounder: `0x${"5a".repeat(32)}`,
+      universalRouter: `0x${"5b".repeat(32)}`,
+      officialV4Quoter: `0x${"5c".repeat(32)}`,
+      create2HookDeployer: `0x${"5d".repeat(32)}`,
+      stateView: `0x${"5e".repeat(32)}`,
+      rangeManager: binding.evidence.runtimeCodeHash,
+    },
+    externalDependencies: {
+      usdc: {
+        schemaVersion: CIRCLE_FIAT_TOKEN_DEPENDENCY_SCHEMA,
+        mechanism: CIRCLE_FIAT_TOKEN_PROXY_MECHANISM,
+        proxyAddress: deployment.base,
+        implementationSlot: CIRCLE_FIAT_TOKEN_IMPLEMENTATION_SLOT,
+        adminSlot: CIRCLE_FIAT_TOKEN_ADMIN_SLOT,
+        readerAddress: BASE_MULTICALL3,
+        readerRuntimeCodeHash: `0x${"61".repeat(32)}`,
+        proxyRuntimeCodeHash: usdcRuntimeHash,
+        implementationAddress: "0x1250000000000000000000000000000000000125",
+        implementationRuntimeCodeHash: `0x${"62".repeat(32)}`,
+        admin: "0x1260000000000000000000000000000000000126",
+        owner: "0x1270000000000000000000000000000000000127",
+        pauser: "0x1280000000000000000000000000000000000128",
+        blacklister: "0x1290000000000000000000000000000000000129",
+        paused: false,
+        monitoredAccounts: Object.fromEntries(Object.entries(monitoredAccounts).map(([label, address]) => [
+          label,
+          { address, isBlacklisted: false },
+        ])),
+      },
+    },
+    poolId: deployment.poolId,
+    poolKey: {
+      currency0: deployment.base,
+      currency1: deployment.token,
+      fee: deployment.poolFee,
+      tickSpacing: deployment.tickSpacing,
+      hooks: deployment.hook,
+    },
+    currentSlot0: { sqrtPriceX96: sqrtPriceX96.toString(), tick: 0, protocolFee: 0, lpFee: 0 },
+    hookConfiguration,
+    hookConfigurationHash,
+    pendingHookConfiguration: null,
+    existingPositions: [],
+    proposedOrders,
+    budget: {
+      totalNaraAllocatedRaw: TREASURY_RANGE_CANARY_NARA_BUDGET.toString(),
+      totalUsdcBudgetRaw: TREASURY_RANGE_NOMINAL_USDC_BUDGET.toString(),
+      exposedUsdcRaw: TREASURY_RANGE_CANARY_EXPOSED_USDC.toString(),
+      protectedUsdcReserveRaw: TREASURY_RANGE_CANARY_PROTECTED_USDC.toString(),
+    },
+    simulationMatrix: [],
+    managerDeployment: binding.reference,
+    noBroadcast: true,
+  } as const;
+  const strategyHash = treasuryRangeStrategyHash(body as any);
+  const manifest = { ...body, strategyHash };
+  const profile = stampStrategyHash(canary, strategyHash);
+  const candidate = {
+    candidateId: TREASURY_RANGE_CANARY_CANDIDATE_ID,
+    profile,
+    manifest,
+    naraBudget: TREASURY_RANGE_CANARY_NARA_BUDGET,
+    hardGates: {
+      approvedCanaryCandidate: true,
+      exactApprovedCanaryAllocation: true,
+      exactCanaryUsdcBudget: true,
+      majorityUsdcProtected: true,
+      routeContinuity: true,
+      oneSidedTwentyPercent: true,
+      exactInputOnly: true,
+      exactForkScenarioCoverage: true,
+    },
+    hardGatePass: true,
+    treasuryRangeSafeFunding: {
+      treasuryRangeSafeExposedUsdcShortfall: 0n,
+      treasuryRangeSafeUsdcShortfall: 0n,
+      treasuryRangeSafeNaraShortfall: 0n,
+      treasuryUsdcShortfall: 0n,
+      treasuryNaraShortfall: 0n,
+      buildRefusedUntilTreasuryRangeSafeFunded: false,
+    },
+    paretoOptimal: true,
+  };
+  return {
+    candidates: [candidate],
+    pareto: [candidate],
+    selectedCandidateId: TREASURY_RANGE_CANARY_CANDIDATE_ID,
+    selectionStatus: "SELECTED_BUILDABLE",
+    selectionRule: "fixture",
+  };
+}
 
 describe("v4 treasury range optimizer", function () {
   const evidenceBinding: Omit<TreasuryRangeEvidenceBinding, "candidateId"> = {
@@ -177,7 +498,7 @@ describe("v4 treasury range optimizer", function () {
     baseProfiles: profiles,
     metrics,
     evidenceBinding,
-    safeBalances: { nara: 2_070_480n, usdc: 0n },
+    treasuryRangeSafeBalances: { nara: 2_070_480n, usdc: 0n },
     treasuryBalances: { nara: 231_654n * NARA_UNIT, usdc: 4_398_903_041n },
     finalizeProfile,
   });
@@ -187,7 +508,7 @@ describe("v4 treasury range optimizer", function () {
       baseProfiles: profiles,
       metrics: new Map(),
       evidenceBinding,
-      safeBalances: { nara: 0n, usdc: 0n },
+      treasuryRangeSafeBalances: { nara: 0n, usdc: 0n },
       treasuryBalances: { nara: 231_000n * NARA_UNIT, usdc: 4_398_903_041n },
       finalizeProfile,
     });
@@ -331,8 +652,9 @@ describe("v4 treasury range optimizer", function () {
     expect(result.selectedCandidateId).to.equal(TREASURY_RANGE_CANARY_CANDIDATE_ID);
     expect(result.selectionStatus).to.equal("SELECTED_EXECUTION_BLOCKED");
     expect(result.pareto).not.to.be.empty;
-    expect(result.pareto[0].safeFunding.safeUsdcShortfall).to.equal(TREASURY_RANGE_NOMINAL_USDC_BUDGET);
-    expect(result.pareto[0].safeFunding.safeNaraShortfall > 0n).to.equal(true);
+    expect(result.pareto[0].treasuryRangeSafeFunding.treasuryRangeSafeUsdcShortfall)
+      .to.equal(TREASURY_RANGE_NOMINAL_USDC_BUDGET);
+    expect(result.pareto[0].treasuryRangeSafeFunding.treasuryRangeSafeNaraShortfall > 0n).to.equal(true);
   });
 
   it("is buildable with full Safe custody of exactly 500 USDC and 100,000 NARA", function () {
@@ -340,14 +662,14 @@ describe("v4 treasury range optimizer", function () {
       baseProfiles: profiles,
       metrics: completeMetrics(),
       evidenceBinding,
-      safeBalances: { nara: 100_000n * NARA_UNIT, usdc: TREASURY_RANGE_NOMINAL_USDC_BUDGET },
+      treasuryRangeSafeBalances: { nara: 100_000n * NARA_UNIT, usdc: TREASURY_RANGE_NOMINAL_USDC_BUDGET },
       treasuryBalances: { nara: 0n, usdc: 0n },
       finalizeProfile,
     });
     expect(result.selectionStatus).to.equal("SELECTED_BUILDABLE");
     expect(result.selectedCandidateId).to.equal(TREASURY_RANGE_CANARY_CANDIDATE_ID);
-    expect(result.pareto[0].safeFunding.safeUsdcShortfall).to.equal(0n);
-    expect(result.pareto[0].safeFunding.safeNaraShortfall).to.equal(0n);
+    expect(result.pareto[0].treasuryRangeSafeFunding.treasuryRangeSafeUsdcShortfall).to.equal(0n);
+    expect(result.pareto[0].treasuryRangeSafeFunding.treasuryRangeSafeNaraShortfall).to.equal(0n);
   });
 
   it("hard-blocks a stale 5,000 USDC profile even when its matrix evidence is complete", function () {
@@ -360,7 +682,7 @@ describe("v4 treasury range optimizer", function () {
       baseProfiles: staleProfiles,
       metrics: completeMetrics(),
       evidenceBinding,
-      safeBalances: { nara: 100_000n * NARA_UNIT, usdc: 5_000n * 10n ** 6n },
+      treasuryRangeSafeBalances: { nara: 100_000n * NARA_UNIT, usdc: 5_000n * 10n ** 6n },
       treasuryBalances: { nara: 0n, usdc: 0n },
       finalizeProfile,
     });
@@ -384,7 +706,7 @@ describe("v4 treasury range optimizer", function () {
       baseProfiles: wrongSplitProfiles,
       metrics: completeMetrics(),
       evidenceBinding,
-      safeBalances: { nara: 100_000n * NARA_UNIT, usdc: TREASURY_RANGE_NOMINAL_USDC_BUDGET },
+      treasuryRangeSafeBalances: { nara: 100_000n * NARA_UNIT, usdc: TREASURY_RANGE_NOMINAL_USDC_BUDGET },
       treasuryBalances: { nara: 0n, usdc: 0n },
       finalizeProfile,
     });
@@ -400,5 +722,96 @@ describe("v4 treasury range optimizer", function () {
     expect(rejected).to.have.length(REQUIRED_TREASURY_RANGE_CANDIDATE_COUNT - 1);
     expect(rejected.every((candidate) => !candidate.hardGates.approvedCanaryCandidate
       && !candidate.hardGatePass)).to.equal(true);
+  });
+
+  it("loads only clean tracked v3 deployment evidence and hashes normalized raw bytes", function () {
+    const fixture = trackedEvidenceRepository();
+    try {
+      const binding = loadTrackedPostDeploymentManagerEvidence(fixture.repositoryRoot, fixture.evidencePath);
+      expect(binding.evidence.schemaVersion).to.equal("nara.v4.treasury-range-manager-deployment.v3");
+      expect(binding.evidence.status).to.equal("deployed_verified");
+      expect(binding.evidence.deployedAddress).to.equal(POST_DEPLOYMENT_MANAGER);
+      expect(binding.evidence.runtimeCodeHash).to.equal(POST_DEPLOYMENT_RUNTIME_HASH);
+      expect(binding.reference).to.deep.equal({
+        manifestPath: "deployments/manager-deployment.json",
+        manifestSha256: sha256Hex(fixture.raw.replace(/\r\n/g, "\n")),
+      });
+      expect(postDeploymentStateOptions(500n, binding)).to.deep.equal({
+        blockNumber: 500n,
+        managerAddress: POST_DEPLOYMENT_MANAGER,
+        managerRuntimeCodeHash: POST_DEPLOYMENT_RUNTIME_HASH,
+      });
+
+      const untrackedPath = join(fixture.repositoryRoot, "deployments", "untracked.json");
+      writeFileSync(untrackedPath, JSON.stringify(deploymentEvidenceFixture("11".repeat(20))), "utf8");
+      expect(() => loadTrackedPostDeploymentManagerEvidence(fixture.repositoryRoot, untrackedPath))
+        .to.throw("must be tracked by Git");
+
+      const invalidPath = "deployments/invalid-schema.json";
+      const invalid = { ...deploymentEvidenceFixture("11".repeat(20)), schemaVersion: "nara.v4.treasury-range-manager-deployment.v2" };
+      writeFileSync(join(fixture.repositoryRoot, invalidPath), JSON.stringify(invalid), "utf8");
+      gitAt(fixture.repositoryRoot, ["add", invalidPath]);
+      gitAt(fixture.repositoryRoot, [
+        "-c", "user.name=NARA Test", "-c", "user.email=nara-test@example.invalid",
+        "-c", "commit.gpgsign=false", "commit", "--quiet", "-m", "invalid evidence fixture",
+      ]);
+      expect(() => loadTrackedPostDeploymentManagerEvidence(fixture.repositoryRoot, invalidPath))
+        .to.throw("exact deployed_verified v3 schema");
+
+      writeFileSync(join(fixture.repositoryRoot, fixture.evidencePath), `${fixture.raw} `, "utf8");
+      expect(() => loadTrackedPostDeploymentManagerEvidence(fixture.repositoryRoot, fixture.evidencePath))
+        .to.throw("must exactly match repository HEAD");
+    } finally {
+      rmSync(fixture.repositoryRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("writes exactly one receipt-bound approved buildable canary without overwrite", function () {
+    const fixture = trackedEvidenceRepository();
+    try {
+      const binding = loadTrackedPostDeploymentManagerEvidence(fixture.repositoryRoot, fixture.evidencePath);
+      const result = buildablePostDeploymentResult(binding);
+      mkdirSync(join(fixture.repositoryRoot, "generated"));
+      const outputPath = "generated/selected-canary.json";
+      const written = writeSelectedPostDeploymentStrategy({
+        repositoryRoot: fixture.repositoryRoot,
+        outputPath,
+        result,
+        managerBinding: binding,
+      });
+      expect(written.outputPath).to.equal(outputPath);
+      const manifest = JSON.parse(readFileSync(join(fixture.repositoryRoot, outputPath), "utf8"));
+      expect(manifest.changeId).to.equal(
+        "NARA-20260831-v4-treasury-range-500-usdc-canary-conservative-100000-nara",
+      );
+      expect(manifest.managerDeployment).to.deep.equal(binding.reference);
+      expect(manifest.addresses.treasuryRangeManager).to.equal(binding.evidence.deployedAddress);
+      expect(manifest.runtimeCodeHashes.rangeManager).to.equal(binding.evidence.runtimeCodeHash);
+
+      expect(() => writeSelectedPostDeploymentStrategy({
+        repositoryRoot: fixture.repositoryRoot,
+        outputPath,
+        result,
+        managerBinding: binding,
+      })).to.throw("refusing to overwrite");
+
+      const blocked = { ...result, selectionStatus: "SELECTED_EXECUTION_BLOCKED" as const };
+      expect(() => writeSelectedPostDeploymentStrategy({
+        repositoryRoot: fixture.repositoryRoot,
+        outputPath: "generated/blocked.json",
+        result: blocked,
+        managerBinding: binding,
+      })).to.throw("requires selectionStatus SELECTED_BUILDABLE");
+      expect(existsSync(join(fixture.repositoryRoot, "generated", "blocked.json"))).to.equal(false);
+
+      expect(() => writeSelectedPostDeploymentStrategy({
+        repositoryRoot: fixture.repositoryRoot,
+        outputPath: "../outside.json",
+        result,
+        managerBinding: binding,
+      })).to.throw("must remain inside the authoritative repository");
+    } finally {
+      rmSync(fixture.repositoryRoot, { recursive: true, force: true });
+    }
   });
 });

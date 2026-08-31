@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-08-30.
+Last updated: 2026-08-31.
 > **Technical live testing on Base mainnet — not public product availability.**
 > The canonical v4 contracts and NARA/USDC pool use real assets. This document
 > records observed technical state only; it does not mean every NARA product or
@@ -49,7 +49,7 @@ local operator tooling and is not a protocol repository component.
 The documentation state and downstream handoff boundary are recorded in
 [`NARA-20260830-documentation-convergence.md`](releases/NARA-20260830-documentation-convergence.md).
 
-## PROTECTED SOURCE CANDIDATE - Treasury Range Manager V1 (not deployed)
+## DEDICATED-SAFE REMEDIATION CANDIDATE - Treasury Range Manager V1 (not merged or deployed)
 
 Change ID `NARA-20260828-v4-treasury-range-manager` adds an undeployed
 Safe-bound periphery manager for tactical one-sided NARA/USDC ranges, an exact
@@ -62,8 +62,31 @@ The pre-remediation implementation commit was
 `b34b78330f2f40b514d2bf6a0e5cff96c92ff928`. Protected PR #52 merged the
 2026-08-30 internal-audit remediation as GitHub-verified source commit
 `35091010de09802f39ccda7e726ff8c4b240e165`. That immutable source evidence is
-not deployment authority. No manager address, deployment receipt, activation,
+not deployment authority. PR #59 later merged the bounded 500-USDC canary policy
+at commit `5a6b449df7d50b25d71715b3bbedc720ef6960ee`. Neither protected commit
+separated deployment authority from tactical custody, so neither is current
+launch authority. No manager address, deployment receipt, funding, activation,
 or production transaction exists.
+
+Change `NARA-20260831-v4-treasury-range-dedicated-safe` is an unmerged
+remediation candidate with two explicit, non-interchangeable roles:
+
+- protocol 2-of-3 Safe `0xd65c0e390Dc187A22c52c03816591CC736C0D755`
+  owns the canonical CREATE2 deployer and may execute only the manager
+  deployment packet;
+- dedicated Treasury Range Safe
+  `0x5050BC6dc3E07313D52D05cecD53f727D6CDa245` is the proposed immutable
+  `TREASURY_SAFE`, order/cancellation signer, inventory custodian, and terminal
+  settlement recipient.
+
+The dedicated Safe is currently 1-of-1. Its exact runtime, singleton, version,
+threshold, owner count/hash, fallback handler, zero guard, and zero modules are
+bound by
+`deployments/v4-treasury-range-custody-policy-2026-08-31.json`; raw owner data
+is not persisted in the policy or generated evidence. This topology has a
+material single-key loss/availability risk. Production funding requires an
+explicit human decision to accept that bounded risk or a verified approved
+multisig upgrade and re-pinned policy first.
 
 The final candidate checkpoint pinned Base fork block `50537172`, block hash
 `0x6e896c222c2b8313fc232d174136d58212835c39a06378f2dbf2b73c0101b7d9`.
@@ -76,7 +99,7 @@ That 5,000-USDC strategy is historical and retired. Change
 `NARA-20260831-v4-treasury-range-500-usdc-canary` narrows the only permitted
 launch candidate to `CONSERVATIVE-100000-NARA`: 100,000 NARA plus 500 USDC,
 with exactly 200 USDC exposed across four bid ranges and 300 USDC protected in
-the Safe. It preserves all 21 candidates and the full external adversarial
+the dedicated Treasury Range Safe. It preserves all 21 candidates and the full external adversarial
 matrix as comparative evidence, but only the approved canary can pass optimizer
 and packet-builder launch gates. Matrix-row v3 binds every result to the
 repository/block plus pinned `sqrtPriceX96`, tick, Hook-configuration hash, and
@@ -87,36 +110,41 @@ test, size, Slither, Aderyn, Echidna, and CodeQL gates passed. Exact historical
 block `50537172` and fresh block `50684125` matrix-v3 fork runs both passed 4/4,
 covered all 21 candidates, and selected only `CONSERVATIVE-100000-NARA` with
 `SELECTED_EXECUTION_BLOCKED`. No funding, deployment, order, signature, or
-broadcast is authorized by this evidence.
+broadcast is authorized by this evidence. Those recorded strategy hashes
+predate the dedicated-Safe schema and are now historical only.
 
 The manager can crystallize a fully traversed range only through a later
-settlement transaction that sends both currencies to the Safe. It cannot
+settlement transaction that sends both currencies to the dedicated Treasury Range Safe. It cannot
 intercept a same-transaction buy/reverse, does not guarantee profit, and never
 automatically replans or reinvests proceeds. Any refreshed plan requires a new
 state pin and a new human-reviewed Safe proposal.
 
 The comprehensive internal audit retained five items (`ARI-001`, `ARI-002`,
 `SIG-001`, `EXT-001`, and `UPG-001`); all five are remediated in the protected
-source candidate and covered by focused regressions. Strategy schema v2 now
-requires exact Circle USDC proxy/implementation/admin/role/pause/blacklist and
-code-hash-bound reader evidence. Deployment, order creation, settlement, and
-exact rebroadcast fail closed on drift before signing. Safe cancellation alone
-uses a visibly labelled emergency bypass so exit can still be attempted. This
+source candidate and covered by focused regressions. The dedicated-Safe
+remediation advances strategy evidence to schema v3 and deployment evidence to
+v3, binds both Safe roles plus the tracked custody-policy hash, rejects legacy
+ambiguous `safe` fields, and requires exact Circle USDC
+proxy/implementation/admin/role/pause/blacklist and code-hash-bound reader
+evidence for actual token actors. Deployment, order creation, settlement, and
+exact rebroadcast fail closed on drift before signing. Dedicated-Safe
+cancellation alone uses visibly labelled emergency exceptions so exit
+construction remains available. This
 internal remediation is not an independent external audit or security
 clearance.
 
-Final remediation and protected-release evidence is recorded in
-[`NARA_TREASURY_RANGE_MANAGER_REMEDIATION_2026-08-30.md`](security/NARA_TREASURY_RANGE_MANAGER_REMEDIATION_2026-08-30.md):
-93/93 focused tests, 759/759 repository non-fork tests, 4/4 pinned-fork cases,
-strict TypeScript, build, bytecode, Slither, and production dependency gates
-passed locally. Protected PR and post-merge `main` runs also passed
-build/test/size, Slither, Aderyn, Echidna, and CodeQL. Gitleaks remained
-unavailable locally and is not claimed as a pass.
+The original remediation and protected-release evidence is recorded in
+[`NARA_TREASURY_RANGE_MANAGER_REMEDIATION_2026-08-30.md`](security/NARA_TREASURY_RANGE_MANAGER_REMEDIATION_2026-08-30.md). The later, still-unmerged dedicated-Safe remediation currently passes 86 focused Hardhat tests, 35 settler tests, 784 repository non-fork tests, 4/4 pinned-fork cases at Base block `50537172`, strict settler TypeScript, and the build gate. Prior protected releases passed build/test/size, Slither, Aderyn, Echidna, and CodeQL; the dedicated-Safe remediation must earn its own protected CI result. Gitleaks remains unavailable locally and is not claimed as a pass.
 
-Before any production use: explicitly approved Safe funding, fresh schema-v2
-live-state regeneration, receipt-pinned deployment verification, two
-independent settler instances, a separately approved canary, and at least 48
-hours of monitored canary behavior are still required. See
+Before any production use: the dedicated-Safe remediation must pass protected
+review and merge; the 1-of-1 risk must be explicitly accepted or the Safe must
+be upgraded and re-pinned; fresh schema-v3 live-state/matrix evidence and a new
+unsigned deployment proposal must be generated; the protocol Safe must execute
+the approved deployment; deterministic receipt evidence must verify it; exactly
+100,000 NARA plus 500 USDC funding to the dedicated Safe must be separately
+approved; fresh order packets must be approved; two independent settler
+instances must be activated; and at least 48 hours of monitored canary behavior
+must complete before expansion. No valid current packet exists. See
 [`NARA-20260828-v4-treasury-range-manager.md`](releases/NARA-20260828-v4-treasury-range-manager.md)
 and
 [`NARA-20260831-v4-treasury-range-500-usdc-canary.md`](releases/NARA-20260831-v4-treasury-range-500-usdc-canary.md).

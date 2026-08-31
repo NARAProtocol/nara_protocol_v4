@@ -49,7 +49,7 @@ async function settledOrThrow<T>(promises: readonly Promise<T>[]): Promise<T[]> 
 }
 
 export function treasuryRangeUsdcMonitoredAccounts(addresses: Readonly<{
-  safe: string;
+  treasuryRangeSafe: string;
   poolManager: string;
   positionManager: string;
   permit2: string;
@@ -58,7 +58,7 @@ export function treasuryRangeUsdcMonitoredAccounts(addresses: Readonly<{
   rangeManager?: string;
 }>): Readonly<Record<string, string>> {
   return {
-    safe: addresses.safe,
+    treasuryRangeSafe: addresses.treasuryRangeSafe,
     poolManager: addresses.poolManager,
     positionManager: addresses.positionManager,
     permit2: addresses.permit2,

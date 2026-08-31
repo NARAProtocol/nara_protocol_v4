@@ -7,7 +7,10 @@
  * a strategy is analytically selected.
  */
 import "dotenv/config";
-import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { readFileSync, writeFileSync } from "node:fs";
+import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 import { ethers } from "ethers";
 import hre from "hardhat";
 import {
@@ -25,10 +28,12 @@ import {
   type PlannedStrategyProfile,
   type StrategyProfileName,
 } from "./lib/v4TreasuryRangePlanner.js";
-import { readV4TreasuryRangeState } from "./lib/v4TreasuryRangeState.js";
+import {
+  readV4TreasuryRangeState,
+  type V4TreasuryRangeStateOptions,
+} from "./lib/v4TreasuryRangeState.js";
 import {
   buildTreasuryRangeScenarioPlan,
-  currentRepositoryHead,
   finalizeTreasuryRangeProfile,
 } from "./simulateV4TreasuryRanges.js";
 import {
@@ -36,6 +41,18 @@ import {
   REQUIRED_TREASURY_BUY_SIZES_USDC,
   type TreasuryRangeEvidenceBinding,
 } from "./lib/v4TreasuryRangeEvidence.js";
+import {
+  assertTreasuryRangeCanaryLaunchManifest,
+  parseTreasuryRangeStrategyManifest,
+  prettyTreasuryRangeJson,
+  sha256Hex,
+} from "./lib/v4TreasuryRangeManifest.js";
+import {
+  parseTreasuryRangeManagerDeploymentEvidence,
+  type TreasuryRangeManagerDeploymentEvidence,
+} from "./lib/v4TreasuryRangeSafeBuilder.js";
+
+const REPOSITORY_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 export const REQUIRED_NARA_BUDGETS = [15_000n, 25_000n, 35_000n, 45_000n, 60_000n, 75_000n, 100_000n] as const;
 export const REQUIRED_STRATEGY_PROFILE_NAMES = ["CONSERVATIVE", "AGGRESSIVE", "ADVERSARIAL"] as const satisfies readonly StrategyProfileName[];
@@ -78,13 +95,13 @@ export type OptimizerCandidate = Readonly<{
     exactForkScenarioCoverage: boolean;
   }>;
   hardGatePass: boolean;
-  safeFunding: Readonly<{
-    safeExposedUsdcShortfall: bigint;
-    safeUsdcShortfall: bigint;
-    safeNaraShortfall: bigint;
+  treasuryRangeSafeFunding: Readonly<{
+    treasuryRangeSafeExposedUsdcShortfall: bigint;
+    treasuryRangeSafeUsdcShortfall: bigint;
+    treasuryRangeSafeNaraShortfall: bigint;
     treasuryUsdcShortfall: bigint;
     treasuryNaraShortfall: bigint;
-    buildRefusedUntilSafeFunded: boolean;
+    buildRefusedUntilTreasuryRangeSafeFunded: boolean;
   }>;
   paretoOptimal: boolean;
 }>;
@@ -96,6 +113,156 @@ export type OptimizerResult = Readonly<{
   selectionStatus: "SELECTED_EXECUTION_BLOCKED" | "SELECTED_BUILDABLE" | "BLOCKED_EXACT_FORK_RESULTS_REQUIRED";
   selectionRule: string;
 }>;
+
+export type PostDeploymentManagerBinding = Readonly<{
+  evidence: TreasuryRangeManagerDeploymentEvidence;
+  reference: Readonly<{
+    manifestPath: string;
+    manifestSha256: string;
+  }>;
+}>;
+
+function repositoryPath(
+  repositoryRoot: string,
+  requestedPath: string,
+  label: string,
+): Readonly<{ absolute: string; relative: string }> {
+  if (requestedPath.trim() === "") throw new Error(`${label} path must be explicit`);
+  const absolute = isAbsolute(requestedPath)
+    ? resolve(requestedPath)
+    : resolve(repositoryRoot, requestedPath);
+  const local = relative(repositoryRoot, absolute);
+  if (local === "" || local === ".." || local.startsWith(`..${sep}`) || isAbsolute(local)) {
+    throw new Error(`${label} must remain inside the authoritative repository`);
+  }
+  return { absolute, relative: local.split(sep).join("/") };
+}
+
+function git(repositoryRoot: string, args: readonly string[]): string {
+  return execFileSync("git", [...args], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "ignore"],
+  }).trim();
+}
+
+function readRepositoryHead(repositoryRoot: string): string {
+  const head = git(repositoryRoot, ["rev-parse", "HEAD"]).toLowerCase();
+  if (!/^[0-9a-f]{40}$/.test(head)) throw new Error("Repository HEAD is not a full 40-character Git commit");
+  return head;
+}
+
+export function loadTrackedPostDeploymentManagerEvidence(
+  repositoryRoot: string,
+  requestedPath: string,
+): PostDeploymentManagerBinding {
+  const path = repositoryPath(repositoryRoot, requestedPath, "Manager deployment evidence");
+  try {
+    git(repositoryRoot, ["ls-files", "--error-unmatch", "--", path.relative]);
+  } catch {
+    throw new Error("Manager deployment evidence must be tracked by Git");
+  }
+  try {
+    execFileSync("git", ["diff", "--quiet", "--", path.relative], { cwd: repositoryRoot, stdio: "ignore" });
+    execFileSync("git", ["diff", "--cached", "--quiet", "--", path.relative], { cwd: repositoryRoot, stdio: "ignore" });
+  } catch {
+    throw new Error("Tracked manager deployment evidence must exactly match repository HEAD");
+  }
+  const raw = readFileSync(path.absolute, "utf8");
+  let decoded: unknown;
+  try {
+    decoded = JSON.parse(raw);
+  } catch {
+    throw new Error("Manager deployment evidence is not valid JSON");
+  }
+  const evidence = parseTreasuryRangeManagerDeploymentEvidence(decoded);
+  if (evidence.predictedAddress !== evidence.deployedAddress
+      || evidence.create2Deployment.deployedAddress !== evidence.deployedAddress
+      || evidence.deploymentExecutorSafeExecution.transactionHash !== evidence.deploymentTransactionHash) {
+    throw new Error("Manager deployment evidence is not internally receipt-bound to one deployed address/transaction");
+  }
+  try {
+    execFileSync("git", ["merge-base", "--is-ancestor", evidence.originCommit, readRepositoryHead(repositoryRoot)], {
+      cwd: repositoryRoot,
+      stdio: "ignore",
+    });
+  } catch {
+    throw new Error("Manager deployment origin commit is not an ancestor of repository HEAD");
+  }
+  return {
+    evidence,
+    reference: {
+      manifestPath: path.relative,
+      manifestSha256: sha256Hex(raw.replace(/\r\n/g, "\n")),
+    },
+  };
+}
+
+export function postDeploymentStateOptions(
+  blockNumber: bigint,
+  managerBinding?: PostDeploymentManagerBinding,
+): V4TreasuryRangeStateOptions {
+  return {
+    blockNumber,
+    ...(managerBinding === undefined ? {} : {
+      managerAddress: managerBinding.evidence.deployedAddress,
+      managerRuntimeCodeHash: managerBinding.evidence.runtimeCodeHash,
+    }),
+  };
+}
+
+export function writeSelectedPostDeploymentStrategy(params: {
+  repositoryRoot: string;
+  outputPath: string;
+  result: OptimizerResult;
+  managerBinding: PostDeploymentManagerBinding;
+}): Readonly<{ outputPath: string; strategyHash: string }> {
+  if (params.result.selectionStatus !== "SELECTED_BUILDABLE") {
+    throw new Error("Post-deployment strategy output requires selectionStatus SELECTED_BUILDABLE");
+  }
+  if (params.result.selectedCandidateId !== TREASURY_RANGE_CANARY_CANDIDATE_ID) {
+    throw new Error(`Post-deployment strategy output is restricted to ${TREASURY_RANGE_CANARY_CANDIDATE_ID}`);
+  }
+  const matches = params.result.candidates.filter(
+    (candidate) => candidate.candidateId === TREASURY_RANGE_CANARY_CANDIDATE_ID,
+  );
+  if (matches.length !== 1 || !matches[0].hardGatePass
+      || !Object.values(matches[0].hardGates).every(Boolean)) {
+    throw new Error("Optimizer result must contain exactly one hard-gate-passing approved canary");
+  }
+  const selected = matches[0];
+  if (selected.profile.name !== "CONSERVATIVE"
+      || selected.naraBudget !== TREASURY_RANGE_CANARY_NARA_BUDGET
+      || selected.profile.totalNaraInput !== TREASURY_RANGE_CANARY_NARA_BUDGET
+      || selected.profile.exposedUsdcInput !== TREASURY_RANGE_CANARY_EXPOSED_USDC
+      || selected.profile.protectedUsdc !== TREASURY_RANGE_CANARY_PROTECTED_USDC) {
+    throw new Error("Selected optimizer candidate does not preserve the canonical approved canary allocation");
+  }
+  const manifest = parseTreasuryRangeStrategyManifest(selected.manifest);
+  assertTreasuryRangeCanaryLaunchManifest(manifest);
+  if (selected.profile.strategyHash !== manifest.strategyHash
+      || selected.profile.orders.some((order) => order.strategyHash !== manifest.strategyHash)) {
+    throw new Error("Selected optimizer profile is not stamped with the emitted strategy manifest hash");
+  }
+  if (manifest.managerDeployment?.manifestPath !== params.managerBinding.reference.manifestPath
+      || manifest.managerDeployment.manifestSha256 !== params.managerBinding.reference.manifestSha256) {
+    throw new Error("Selected strategy does not hash-pin the consumed manager deployment evidence");
+  }
+  if (manifest.addresses.treasuryRangeManager !== params.managerBinding.evidence.deployedAddress
+      || manifest.runtimeCodeHashes.rangeManager !== params.managerBinding.evidence.runtimeCodeHash) {
+    throw new Error("Selected strategy manager address/runtime does not match deployment evidence");
+  }
+  const output = repositoryPath(params.repositoryRoot, params.outputPath, "Post-deployment strategy output");
+  try {
+    writeFileSync(output.absolute, prettyTreasuryRangeJson(manifest), { encoding: "utf8", flag: "wx" });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "EEXIST") {
+      throw new Error("Post-deployment strategy output already exists; refusing to overwrite it");
+    }
+    throw error;
+  }
+  return { outputPath: output.relative, strategyHash: manifest.strategyHash };
+}
 
 function shortfall(required: bigint, available: bigint): bigint {
   return required > available ? required - available : 0n;
@@ -189,7 +356,7 @@ export function optimizeTreasuryRanges(params: {
   baseProfiles: readonly PlannedStrategyProfile[];
   metrics: ReadonlyMap<string, ExactForkCandidateMetrics>;
   evidenceBinding: Omit<TreasuryRangeEvidenceBinding, "candidateId">;
-  safeBalances: Readonly<{ nara: bigint; usdc: bigint }>;
+  treasuryRangeSafeBalances: Readonly<{ nara: bigint; usdc: bigint }>;
   treasuryBalances: Readonly<{ nara: bigint; usdc: bigint }>;
   finalizeProfile: (
     profile: PlannedStrategyProfile,
@@ -232,9 +399,15 @@ export function optimizeTreasuryRanges(params: {
         exactInputOnly: metrics?.exactInputOnly === true,
         exactForkScenarioCoverage: metrics !== undefined,
       };
-      const safeExposedUsdcShortfall = shortfall(profile.exposedUsdcInput, params.safeBalances.usdc);
-      const safeUsdcShortfall = shortfall(candidateTotalUsdc, params.safeBalances.usdc);
-      const safeNaraShortfall = shortfall(naraBudget, params.safeBalances.nara);
+      const treasuryRangeSafeExposedUsdcShortfall = shortfall(
+        profile.exposedUsdcInput,
+        params.treasuryRangeSafeBalances.usdc,
+      );
+      const treasuryRangeSafeUsdcShortfall = shortfall(
+        candidateTotalUsdc,
+        params.treasuryRangeSafeBalances.usdc,
+      );
+      const treasuryRangeSafeNaraShortfall = shortfall(naraBudget, params.treasuryRangeSafeBalances.nara);
       draft.push({
         candidateId: id,
         profile,
@@ -243,13 +416,14 @@ export function optimizeTreasuryRanges(params: {
         metrics,
         hardGates,
         hardGatePass: Object.values(hardGates).every(Boolean),
-        safeFunding: {
-          safeExposedUsdcShortfall,
-          safeUsdcShortfall,
-          safeNaraShortfall,
+        treasuryRangeSafeFunding: {
+          treasuryRangeSafeExposedUsdcShortfall,
+          treasuryRangeSafeUsdcShortfall,
+          treasuryRangeSafeNaraShortfall,
           treasuryUsdcShortfall: shortfall(candidateTotalUsdc, params.treasuryBalances.usdc),
           treasuryNaraShortfall: shortfall(naraBudget, params.treasuryBalances.nara),
-          buildRefusedUntilSafeFunded: safeUsdcShortfall > 0n || safeNaraShortfall > 0n,
+          buildRefusedUntilTreasuryRangeSafeFunded:
+            treasuryRangeSafeUsdcShortfall > 0n || treasuryRangeSafeNaraShortfall > 0n,
         },
         paretoOptimal: false,
       });
@@ -275,7 +449,7 @@ export function optimizeTreasuryRanges(params: {
     candidates,
     pareto,
     selectedCandidateId: selected.candidateId,
-    selectionStatus: selected.safeFunding.buildRefusedUntilSafeFunded
+    selectionStatus: selected.treasuryRangeSafeFunding.buildRefusedUntilTreasuryRangeSafeFunded
       ? "SELECTED_EXECUTION_BLOCKED"
       : "SELECTED_BUILDABLE",
     selectionRule: `Human-approved ${TREASURY_RANGE_CANARY_CANDIDATE_ID} only, after complete 21-candidate evidence and every hard gate.`,
@@ -351,8 +525,12 @@ export function parseExactForkCandidateMetrics(raw: unknown): ReadonlyMap<string
 }
 
 function argument(name: string): string | undefined {
-  const index = process.argv.indexOf(name);
-  return index === -1 ? undefined : process.argv[index + 1];
+  const indexes = process.argv.flatMap((value, index) => value === name ? [index] : []);
+  if (indexes.length > 1) throw new Error(`${name} may be supplied only once`);
+  if (indexes.length === 0) return undefined;
+  const value = process.argv[indexes[0] + 1];
+  if (!value || value.startsWith("--")) throw new Error(`${name} requires an explicit value`);
+  return value;
 }
 
 function jsonSafe(value: unknown): unknown {
@@ -360,9 +538,25 @@ function jsonSafe(value: unknown): unknown {
 }
 
 async function main(): Promise<void> {
+  const postDeployment = process.argv.includes("--post-deployment");
+  const metricsPath = argument("--metrics");
+  const deploymentEvidencePath = argument("--deployment-evidence");
+  const outputPath = argument("--output");
+  if (postDeployment && (!metricsPath || !deploymentEvidencePath || !outputPath)) {
+    throw new Error("Post-deployment mode requires explicit --metrics, --deployment-evidence, and --output paths");
+  }
+  if (!postDeployment && (deploymentEvidencePath || outputPath)) {
+    throw new Error("--deployment-evidence and --output require --post-deployment mode");
+  }
+  const managerBinding = postDeployment
+    ? loadTrackedPostDeploymentManagerEvidence(REPOSITORY_ROOT, deploymentEvidencePath!)
+    : undefined;
   const pinnedRaw = process.env.V4_TREASURY_FORK_BLOCK?.trim();
   if (!pinnedRaw || !/^\d+$/.test(pinnedRaw)) throw new Error("V4_TREASURY_FORK_BLOCK is required");
   const pinnedBlock = BigInt(pinnedRaw);
+  if (managerBinding && BigInt(managerBinding.evidence.deploymentBlock) > pinnedBlock) {
+    throw new Error("Pinned optimizer block predates the receipt-bound manager deployment");
+  }
   const connection = await hre.network.connect("baseFork") as unknown as {
     ethers: { provider: ethers.JsonRpcApiProvider };
     networkName: string;
@@ -370,10 +564,17 @@ async function main(): Promise<void> {
   if (connection.networkName !== "baseFork") throw new Error("Optimizer state must come from baseFork");
   const latest = await connection.ethers.provider.getBlock("latest");
   if (!latest || BigInt(latest.number) !== pinnedBlock) throw new Error("baseFork does not match the required pin");
-  const state = await readV4TreasuryRangeState(connection.ethers.provider, { blockNumber: pinnedBlock });
-  const repositoryHead = currentRepositoryHead();
-  const plan = buildTreasuryRangeScenarioPlan(state, BigInt(latest.timestamp) + 3_600n, repositoryHead);
-  const metricsPath = argument("--metrics");
+  const state = await readV4TreasuryRangeState(
+    connection.ethers.provider,
+    postDeploymentStateOptions(pinnedBlock, managerBinding),
+  );
+  const repositoryHead = readRepositoryHead(REPOSITORY_ROOT);
+  const plan = buildTreasuryRangeScenarioPlan(
+    state,
+    BigInt(latest.timestamp) + 3_600n,
+    repositoryHead,
+    managerBinding?.reference,
+  );
   const metrics = metricsPath ? parseExactForkCandidateMetrics(JSON.parse(readFileSync(metricsPath, "utf8"))) : new Map();
   const result = optimizeTreasuryRanges({
     baseProfiles: plan.profiles,
@@ -388,7 +589,7 @@ async function main(): Promise<void> {
       hookConfigurationHash: plan.hookConfigurationHash,
       humanUsdcPerNara: state.humanUsdcPerNaraRational,
     },
-    safeBalances: state.safeBalances,
+    treasuryRangeSafeBalances: state.treasuryRangeSafeBalances,
     treasuryBalances: state.treasuryBalances,
     finalizeProfile: (profile, evidence) => finalizeTreasuryRangeProfile({
       state,
@@ -396,9 +597,27 @@ async function main(): Promise<void> {
       hookConfiguration: plan.hookConfiguration,
       hookConfigurationHash: plan.hookConfigurationHash,
       repositoryHead,
+      managerDeployment: managerBinding?.reference,
       simulationEvidence: evidence,
     }),
   });
+  if (postDeployment) {
+    const written = writeSelectedPostDeploymentStrategy({
+      repositoryRoot: REPOSITORY_ROOT,
+      outputPath: outputPath!,
+      result,
+      managerBinding: managerBinding!,
+    });
+    console.log(JSON.stringify({
+      selectionStatus: result.selectionStatus,
+      selectedCandidateId: result.selectedCandidateId,
+      deploymentEvidence: managerBinding!.reference,
+      outputPath: written.outputPath,
+      strategyHash: written.strategyHash,
+      noBroadcast: true,
+    }, null, 2));
+    return;
+  }
   console.log(JSON.stringify(jsonSafe({
     pinnedBlock: state.blockNumber,
     blockHash: state.blockHash,
@@ -406,7 +625,7 @@ async function main(): Promise<void> {
     hookConfigurationHash: plan.hookConfigurationHash,
     nominalUsdcBudget: TREASURY_RANGE_NOMINAL_USDC_BUDGET.toString(),
     custody: {
-      safe: state.safeBalances,
+      treasuryRangeSafe: state.treasuryRangeSafeBalances,
       treasury: state.treasuryBalances,
       neverSubstituteTreasuryForSafe: true,
     },
@@ -420,7 +639,7 @@ async function main(): Promise<void> {
       protectedUsdc: candidate.profile.protectedUsdc,
       exposedUsdc: candidate.profile.exposedUsdcInput,
       metrics: candidate.metrics,
-      safeFunding: candidate.safeFunding,
+      treasuryRangeSafeFunding: candidate.treasuryRangeSafeFunding,
     })),
     candidates: result.candidates.map((candidate) => ({
       candidateId: candidate.candidateId,
@@ -432,7 +651,7 @@ async function main(): Promise<void> {
       hardGates: candidate.hardGates,
       hardGatePass: candidate.hardGatePass,
       paretoOptimal: candidate.paretoOptimal,
-      safeFunding: candidate.safeFunding,
+      treasuryRangeSafeFunding: candidate.treasuryRangeSafeFunding,
       metrics: candidate.metrics,
       manifest: candidate.manifest,
       orders: candidate.profile.orders.map(serializePlannedRange),

@@ -5,6 +5,10 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { ethers } from "ethers";
 import { canonicalProductionV4Deployment } from "./lib/v4LiveConfig.js";
 import {
+  assertTreasuryRangeSingleSignerRiskAccepted,
+  canonicalTreasuryRangeAuthorities,
+} from "./lib/v4TreasuryRangeConfig.js";
+import {
   assertTreasuryRangeCanaryLaunchManifest,
   assertTreasuryRangeManifestExactEvidence,
   assertTreasuryRangePredeploymentManifest,
@@ -12,6 +16,7 @@ import {
 } from "./lib/v4TreasuryRangeManifest.js";
 import {
   CREATE2_DEPLOYER_ABI,
+  TREASURY_RANGE_DEPLOYMENT_REVIEW_CHECKS,
   assertTreasuryRangeViewChecks,
   assertTreasuryRangeUsdcDependency,
   buildAndWriteTreasuryRangePacket,
@@ -33,11 +38,13 @@ export async function buildV4TreasuryRangeManagerDeployment(): Promise<void> {
   assertTreasuryRangeManifestExactEvidence(strategy);
   assertTreasuryRangeCanaryLaunchManifest(strategy);
   assertTreasuryRangePredeploymentManifest(strategy);
+  const production = canonicalProductionV4Deployment();
+  const authorities = canonicalTreasuryRangeAuthorities(production);
+  assertTreasuryRangeSingleSignerRiskAccepted(process.env, authorities);
   // Never trust ignored/cacheable artifact bytes. Rebuild before taking the
   // JIT block/nonce/deadline snapshot used by the proposal.
   await forceRebuildTreasuryRangeManagerArtifact(hre.tasks);
   let context = await readTreasuryRangeBuildContext(REPOSITORY_ROOT, strategyPath, strategy);
-  const production = canonicalProductionV4Deployment();
   if (strategy.addresses.liquidityVault === undefined || ethers.getAddress(strategy.addresses.liquidityVault) !== production.vault) {
     throw new Error("Strategy liquidityVault differs from the canonical production manifest");
   }
@@ -47,7 +54,7 @@ export async function buildV4TreasuryRangeManagerDeployment(): Promise<void> {
   const artifact = await hre.artifacts.readArtifact(MANAGER_FQN);
   const factory = new ethers.ContractFactory(artifact.abi, artifact.bytecode);
   const deployment = await factory.getDeployTransaction(
-    production.safe,
+    authorities.treasuryRangeSafe,
     production.token,
     production.base,
     production.vault,
@@ -74,12 +81,14 @@ export async function buildV4TreasuryRangeManagerDeployment(): Promise<void> {
     create2.owner({ blockTag: context.block.number }),
     create2.computeAddress(salt, initCodeHash, { blockTag: context.block.number }),
   ]);
-  if (ethers.getAddress(owner) !== production.safe) throw new Error("CREATE2 deployer owner is not the production Safe");
+  if (ethers.getAddress(owner) !== authorities.deploymentExecutorSafe) {
+    throw new Error("CREATE2 deployer owner is not the deployment-executor Safe");
+  }
   if (await context.provider.getCode(predicted, context.block.number) !== "0x") throw new Error("Predicted manager address is already occupied");
   const usdcDependency = await assertTreasuryRangeUsdcDependency(context, { rangeManager: predicted });
   context = { ...context, usdcDependency };
   const simulatedRuntime = await context.provider.send("eth_call", [
-    { from: production.safe, data: initCode },
+    { from: authorities.deploymentExecutorSafe, data: initCode },
     ethers.toQuantity(context.block.number),
   ]);
   if (typeof simulatedRuntime !== "string" || simulatedRuntime === "0x") throw new Error("Manager constructor simulation returned no runtime code");
@@ -113,7 +122,7 @@ export async function buildV4TreasuryRangeManagerDeployment(): Promise<void> {
       runtimeBytes,
       deploymentDeadline: deploymentDeadline.toString(),
       constructorArguments: {
-        treasurySafe: production.safe,
+        treasurySafe: authorities.treasuryRangeSafe,
         nara: production.token,
         usdc: production.base,
         liquidityVault: production.vault,
@@ -125,14 +134,12 @@ export async function buildV4TreasuryRangeManagerDeployment(): Promise<void> {
         tickSpacing: production.tickSpacing,
         poolId: production.poolId,
       },
+      safeRoles: {
+        deploymentExecutorSafe: authorities.deploymentExecutorSafe,
+        treasuryRangeSafe: authorities.treasuryRangeSafe,
+      },
     },
-    checks: [
-      "Verify predicted manager, CREATE2 salt, initcode hash, and constructor-simulated runtime hash.",
-      "Verify every immutable binding and the deployment deadline.",
-      "Recheck Safe nonce, current Base block, Hook configuration, and strategy hash immediately before signing.",
-      "Obtain independent contract/security review; this candidate is not audited or production-approved.",
-      "Do not import, sign, or execute after the recorded deadline.",
-    ],
+    checks: TREASURY_RANGE_DEPLOYMENT_REVIEW_CHECKS,
     validUntil: Number(deploymentDeadline),
   });
   process.stdout.write(`Unsigned deployment packet: ${result.jsonPath}\nReview: ${result.markdownPath}\n`);

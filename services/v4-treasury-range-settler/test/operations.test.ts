@@ -5,6 +5,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { ethers } from "ethers";
+import { canonicalProductionV4Deployment } from "../../../scripts/lib/v4LiveConfig.js";
+import { canonicalTreasuryRangeAuthorities } from "../../../scripts/lib/v4TreasuryRangeConfig.js";
 import { humanUsdcPerNaraToSqrtPriceX96, parseDecimalRational } from "../../../scripts/lib/v4TreasuryRangeMath.js";
 import { treasuryRangeHookConfigurationHash } from "../../../scripts/lib/v4TreasuryRangeManifest.js";
 import {
@@ -17,11 +19,18 @@ import {
   assertCircleFiatTokenDependencyHealthy,
   parseCircleFiatTokenDependencyEvidence,
   readCircleFiatTokenDependency,
+  treasuryRangeUsdcMonitoredAccounts,
 } from "../../../scripts/lib/v4UsdcDependency.js";
 import {
+  CREATE2_DEPLOYER_ABI,
+  ERC20_APPROVAL_ABI,
+  TREASURY_RANGE_MANAGER_ABI,
+  assertTreasuryRangePacketCallShape,
   assertTreasuryRangeManagerAllowanceSafety,
   assertTreasuryRangeRepositoryEvidence,
+  assertTreasuryRangeStrategyRelease,
   assertTreasuryRangeUsdcDependency,
+  assertTreasuryRangeViewChecks,
   forceRebuildTreasuryRangeManagerArtifact,
   isTreasuryRangeOneSided,
   parseTreasuryRangeManagerDeploymentEvidence,
@@ -57,6 +66,8 @@ import { SweepCoordinator } from "../src/sweepCoordinator.js";
 
 const TEST_KEY = `0x${"11".repeat(32)}`;
 const MANAGER = "0x1111111111111111111111111111111111111111";
+const DEPLOYMENT_EXECUTOR_SAFE = "0x7000000000000000000000000000000000000007";
+const TREASURY_RANGE_SAFE = "0x8000000000000000000000000000000000000008";
 const HASH = `0x${"22".repeat(32)}`;
 
 const MOCK_CIRCLE_INTERFACE = new ethers.Interface([
@@ -69,6 +80,49 @@ const MOCK_CIRCLE_INTERFACE = new ethers.Interface([
 const MOCK_MULTICALL_INTERFACE = new ethers.Interface([
   "function aggregate3(tuple(address target,bool allowFailure,bytes callData)[] calls) payable returns(tuple(bool success,bytes returnData)[] returnData)",
 ]);
+
+const MOCK_HOOK_INTERFACE = new ethers.Interface([
+  "function buyCurve() view returns(uint32,uint32,uint32,uint16,uint16,uint16,uint16,uint16)",
+  "function sellCurve() view returns(uint32,uint32,uint32,uint16,uint16,uint16,uint16,uint16)",
+  "function protocolDepth(address) view returns(uint256)",
+  "function pendingBuyCurve() view returns(tuple(uint32 mediumPressureBps,uint32 highPressureBps,uint32 extremePressureBps,uint16 baseFeeBps,uint16 mediumFeeBps,uint16 highFeeBps,uint16 extremeFeeBps,uint16 maxFeeBps) curve,uint48 eta,bool exists)",
+  "function pendingSellCurve() view returns(tuple(uint32 mediumPressureBps,uint32 highPressureBps,uint32 extremePressureBps,uint16 baseFeeBps,uint16 mediumFeeBps,uint16 highFeeBps,uint16 extremeFeeBps,uint16 maxFeeBps) curve,uint48 eta,bool exists)",
+  "function pendingProtocolDepth(address) view returns(uint256,uint48,bool)",
+  "function registeredPoolId() view returns(bytes32)",
+  "function poolRegistered() view returns(bool)",
+]);
+
+class MockHookProvider extends ethers.AbstractProvider {
+  constructor(readonly hook: string, readonly pendingExists: boolean) {
+    super(ethers.Network.from(8453));
+  }
+
+  async _detectNetwork(): Promise<ethers.Network> {
+    return ethers.Network.from(8453);
+  }
+
+  async _perform(request: any): Promise<any> {
+    if (request.method !== "call") throw new Error(`UNSUPPORTED_HOOK_PROVIDER_${String(request.method)}`);
+    const transaction = request.transaction as { to: string; data: string };
+    if (ethers.getAddress(transaction.to) !== ethers.getAddress(this.hook)) throw new Error("UNEXPECTED_HOOK_TARGET");
+    const parsed = MOCK_HOOK_INTERFACE.parseTransaction({ data: transaction.data });
+    if (!parsed) throw new Error("UNEXPECTED_HOOK_CALL");
+    const curve = [100n, 200n, 300n, 10n, 20n, 30n, 40n, 50n];
+    if (parsed.name === "buyCurve" || parsed.name === "sellCurve") {
+      return MOCK_HOOK_INTERFACE.encodeFunctionResult(parsed.name, curve);
+    }
+    if (parsed.name === "protocolDepth") return MOCK_HOOK_INTERFACE.encodeFunctionResult(parsed.name, [1_000n]);
+    if (parsed.name === "pendingBuyCurve" || parsed.name === "pendingSellCurve") {
+      return MOCK_HOOK_INTERFACE.encodeFunctionResult(parsed.name, [curve, 999n, this.pendingExists]);
+    }
+    if (parsed.name === "pendingProtocolDepth") {
+      return MOCK_HOOK_INTERFACE.encodeFunctionResult(parsed.name, [2_000n, 999n, this.pendingExists]);
+    }
+    if (parsed.name === "registeredPoolId") return MOCK_HOOK_INTERFACE.encodeFunctionResult(parsed.name, [HASH]);
+    if (parsed.name === "poolRegistered") return MOCK_HOOK_INTERFACE.encodeFunctionResult(parsed.name, [true]);
+    throw new Error("UNEXPECTED_HOOK_METHOD");
+  }
+}
 
 interface MockCircleState {
   proxy: string;
@@ -182,8 +236,8 @@ function usdcDependencyEvidence() {
     blacklister: "0x6000000000000000000000000000000000000006",
     paused: false,
     monitoredAccounts: {
-      safe: { address: "0x7000000000000000000000000000000000000007", isBlacklisted: false },
-      rangeManager: { address: "0x8000000000000000000000000000000000000008", isBlacklisted: false },
+      treasuryRangeSafe: { address: TREASURY_RANGE_SAFE, isBlacklisted: false },
+      rangeManager: { address: MANAGER, isBlacklisted: false },
     },
   });
 }
@@ -205,8 +259,8 @@ test("proxy-compatible implementation upgrade is read through Multicall3 and blo
   const initialImplementation = "0x2000000000000000000000000000000000000002";
   const upgradedImplementation = "0x9000000000000000000000000000000000000009";
   const monitoredAccounts = {
-    safe: "0x7000000000000000000000000000000000000007",
-    rangeManager: "0x8000000000000000000000000000000000000008",
+    treasuryRangeSafe: TREASURY_RANGE_SAFE,
+    rangeManager: MANAGER,
   };
   const state: MockCircleState = {
     proxy,
@@ -297,7 +351,12 @@ test("manager-augmented dependency evidence is serialized and cancellation revie
     strategyHash: HASH,
     blockNumber: 100,
     blockHash: HASH,
-    safe: { nonce: "1" },
+    signingSafeRole: "treasury_custody",
+    signingSafe: { address: TREASURY_RANGE_SAFE, nonce: "1" },
+    safeRoles: {
+      deploymentExecutorSafe: DEPLOYMENT_EXECUTOR_SAFE,
+      treasuryRangeSafe: TREASURY_RANGE_SAFE,
+    },
     validUntil: 200,
     simulation: { safeTxHash: HASH, simulation: "success" },
     calls: [],
@@ -312,6 +371,197 @@ test("manager-augmented dependency evidence is serialized and cancellation revie
   assert.match(markdown, /USDC enforcement: `emergency_exit_bypass`/);
   assert.match(markdown, /strategy snapshot only, not a current health assertion/);
   assert.match(markdown, /Acknowledge emergency_exit_bypass/);
+  assert.match(markdown, /Signing Safe role: `treasury_custody`/);
+  assert.equal(markdown.includes(`Deployment executor Safe: \`${DEPLOYMENT_EXECUTOR_SAFE}\``), true);
+  assert.equal(markdown.includes(`Treasury custody Safe: \`${TREASURY_RANGE_SAFE}\``), true);
+});
+
+test("USDC monitoring targets treasury custody and excludes the non-token deployment executor", () => {
+  const monitored = treasuryRangeUsdcMonitoredAccounts({
+    treasuryRangeSafe: TREASURY_RANGE_SAFE,
+    poolManager: "0x3000000000000000000000000000000000000003",
+    positionManager: "0x4000000000000000000000000000000000000004",
+    permit2: "0x5000000000000000000000000000000000000005",
+    liquidityVault: "0x6000000000000000000000000000000000000006",
+    liquidityCompounder: "0x9000000000000000000000000000000000000009",
+    rangeManager: MANAGER,
+  });
+  assert.equal(monitored.treasuryRangeSafe, TREASURY_RANGE_SAFE);
+  assert.equal(Object.hasOwn(monitored, "deploymentExecutorSafe"), false);
+  assert.equal(Object.hasOwn(monitored, "safe"), false);
+});
+
+test("packet helper binds every call argument, call order, and Safe role to reviewed intent", () => {
+  const production = canonicalProductionV4Deployment();
+  const authorities = canonicalTreasuryRangeAuthorities(production);
+  const deadline = 123;
+  const strategyOrder = {
+    side: "SELL_NARA",
+    humanPriceLower: "0.14",
+    humanPriceUpper: "0.21",
+    tickLower: 60,
+    tickUpper: 120,
+    inputAmountRaw: "10",
+    expectedOutputAmountRaw: "2",
+    minimumOutputAmountRaw: "1",
+    expectedLiquidity: "1",
+    expectedDustNaraRaw: "0",
+    expectedDustUsdcRaw: "0",
+    toleranceBps: 100,
+    enabled: true,
+  } as const;
+  const context = {
+    strategy: {
+      addresses: { treasuryRangeManager: MANAGER, nara: production.token, usdc: production.base },
+      proposedOrders: [strategyOrder],
+      strategyHash: HASH,
+    },
+    deploymentExecutorSafeEvidence: { address: authorities.deploymentExecutorSafe },
+    treasuryRangeSafeEvidence: { address: authorities.treasuryRangeSafe },
+  } as unknown as TreasuryRangeBuildContext;
+  const safeRoles = {
+    deploymentExecutorSafe: authorities.deploymentExecutorSafe,
+    treasuryRangeSafe: authorities.treasuryRangeSafe,
+  };
+  const create2 = new ethers.Interface(CREATE2_DEPLOYER_ABI);
+  const manager = new ethers.Interface(TREASURY_RANGE_MANAGER_ABI);
+  const token = new ethers.Interface(ERC20_APPROVAL_ABI);
+  const initCode = "0x1234";
+  const initCodeHash = ethers.keccak256(initCode);
+  const predictedManager = ethers.getCreate2Address(production.create2HookDeployer, HASH, initCodeHash);
+  const deploymentCall = {
+    to: production.create2HookDeployer,
+    value: "0",
+    data: create2.encodeFunctionData("deploy", [HASH, initCode]),
+  };
+  const deploymentDetails = {
+    deployer: production.create2HookDeployer,
+    predictedManager,
+    salt: HASH,
+    initCodeHash,
+    deploymentDeadline: String(deadline),
+    safeRoles,
+  };
+  assert.doesNotThrow(() => assertTreasuryRangePacketCallShape(
+    "deployment", context, [deploymentCall], deploymentDetails, deadline,
+  ));
+  assert.throws(() => assertTreasuryRangePacketCallShape("deployment", context, [{
+    ...deploymentCall,
+    to: MANAGER,
+  }], deploymentDetails, deadline), /canonical CREATE2 deployer/);
+  assert.throws(() => assertTreasuryRangePacketCallShape(
+    "deployment", context, [deploymentCall], { ...deploymentDetails, predictedManager: MANAGER }, deadline,
+  ), /reviewed CREATE2 intent/);
+
+  const cancelCall = {
+    to: MANAGER,
+    value: "0",
+    data: manager.encodeFunctionData("cancel", [1n, 1n, 1n, BigInt(deadline)]),
+  };
+  const cancellationDetails = {
+    managerAddress: MANAGER,
+    deadline: String(deadline),
+    cancellations: [{ orderId: "1", minNaraOut: "1", minUsdcOut: "1", strategyHash: HASH }],
+    safeRoles,
+  };
+  assert.doesNotThrow(() => assertTreasuryRangePacketCallShape(
+    "cancellation", context, [cancelCall], cancellationDetails, deadline,
+  ));
+  assert.throws(() => assertTreasuryRangePacketCallShape("cancellation", context, [{
+    ...cancelCall,
+    to: production.create2HookDeployer,
+  }], cancellationDetails, deadline), /exact approved intent/);
+  assert.throws(() => assertTreasuryRangePacketCallShape(
+    "cancellation", context, [cancelCall], {
+      ...cancellationDetails,
+      cancellations: [{ orderId: "1", minNaraOut: "2", minUsdcOut: "1", strategyHash: HASH }],
+    }, deadline,
+  ), /exact approved intent/);
+
+  const orderCalls = [
+    { to: production.token, value: "0", data: token.encodeFunctionData("approve", [MANAGER, 10n]) },
+    {
+      to: MANAGER,
+      value: "0",
+      data: manager.encodeFunctionData("createSellNaraOrder", [60, 120, 10n, 1n, HASH, 123n]),
+    },
+    { to: production.token, value: "0", data: token.encodeFunctionData("approve", [MANAGER, 0n]) },
+    { to: MANAGER, value: "0", data: manager.encodeFunctionData("assertOperationalClean") },
+  ];
+  const orderDetails = {
+    managerAddress: MANAGER,
+    deadline: String(deadline),
+    orders: [strategyOrder],
+    exactNaraApprovalRaw: "10",
+    exactUsdcApprovalRaw: "0",
+    finalAssertion: "assertOperationalClean()",
+    safeRoles,
+  };
+  assert.doesNotThrow(() => assertTreasuryRangePacketCallShape("orders", context, orderCalls, orderDetails, deadline));
+  assert.throws(() => assertTreasuryRangePacketCallShape(
+    "orders", context, orderCalls.slice(0, -1), orderDetails, deadline,
+  ), /call count/);
+  const wrongTickCalls = [...orderCalls];
+  wrongTickCalls[1] = {
+    ...wrongTickCalls[1],
+    data: manager.encodeFunctionData("createSellNaraOrder", [61, 120, 10n, 1n, HASH, 123n]),
+  };
+  assert.throws(() => assertTreasuryRangePacketCallShape(
+    "orders", context, wrongTickCalls, orderDetails, deadline,
+  ), /call 1 differs/);
+  const wrongApprovalCalls = [...orderCalls];
+  wrongApprovalCalls[0] = {
+    ...wrongApprovalCalls[0],
+    data: token.encodeFunctionData("approve", [MANAGER, 11n]),
+  };
+  assert.throws(() => assertTreasuryRangePacketCallShape(
+    "orders", context, wrongApprovalCalls, orderDetails, deadline,
+  ), /call 0 differs/);
+  assert.throws(() => assertTreasuryRangePacketCallShape(
+    "orders", { ...context, treasuryRangeSafeEvidence: { address: authorities.deploymentExecutorSafe } } as TreasuryRangeBuildContext,
+    orderCalls, orderDetails, deadline,
+  ), /role-swapped/);
+});
+
+test("pending Hook governance blocks creation but remains review-visible for emergency cancellation", async () => {
+  const production = canonicalProductionV4Deployment();
+  const curve = ["100", "200", "300", "10", "20", "30", "40", "50"];
+  const checks = [
+    { label: "hook.buyCurve", target: production.hook, method: "buyCurve", args: [], expected: curve },
+    { label: "hook.sellCurve", target: production.hook, method: "sellCurve", args: [], expected: curve },
+    { label: "hook.protocolDepth.usdc", target: production.hook, method: "protocolDepth", args: [production.base], expected: "1000" },
+    { label: "hook.protocolDepth.nara", target: production.hook, method: "protocolDepth", args: [production.token], expected: "1000" },
+    { label: "hook.pendingBuyCurve", target: production.hook, method: "pendingBuyCurve", args: [], expected: [curve, "999", false] },
+    { label: "hook.pendingSellCurve", target: production.hook, method: "pendingSellCurve", args: [], expected: [curve, "999", false] },
+    { label: "hook.pendingProtocolDepth.usdc", target: production.hook, method: "pendingProtocolDepth", args: [production.base], expected: ["2000", "999", false] },
+    { label: "hook.pendingProtocolDepth.nara", target: production.hook, method: "pendingProtocolDepth", args: [production.token], expected: ["2000", "999", false] },
+    { label: "hook.registeredPoolId", target: production.hook, method: "registeredPoolId", args: [], expected: HASH },
+    { label: "hook.poolRegistered", target: production.hook, method: "poolRegistered", args: [], expected: true },
+  ];
+  const provider = new MockHookProvider(production.hook, true);
+  const context = {
+    provider,
+    block: { number: 123 },
+    strategy: {
+      addresses: { hook: production.hook, usdc: production.base, nara: production.token },
+      hookConfigurationHash: treasuryRangeHookConfigurationHash(checks),
+    },
+  } as unknown as TreasuryRangeBuildContext;
+  try {
+    await assert.rejects(
+      assertTreasuryRangeViewChecks(context, checks, "hookConfiguration.readChecks"),
+      /differs from the strategy manifest|pending Hook change/,
+    );
+    const snapshot = await assertTreasuryRangeViewChecks(
+      context, checks, "hookConfiguration.readChecks", { emergencyExit: true },
+    );
+    assert.equal((snapshot["hook.pendingBuyCurve"] as unknown[]).at(-1), true);
+    assert.equal((snapshot["hook.pendingProtocolDepth.usdc"] as unknown[]).at(-1), true);
+    assert.equal(snapshot["hook.registeredPoolId"], HASH);
+    assert.equal(snapshot["hook.poolRegistered"], true);
+  } finally {
+    provider.destroy();
+  }
 });
 
 test("USDC health evidence rejects pause and monitored-account blacklist state", () => {
@@ -321,9 +571,9 @@ test("USDC health evidence rejects pause and monitored-account blacklist state",
     ...expected,
     monitoredAccounts: {
       ...expected.monitoredAccounts,
-      safe: { ...expected.monitoredAccounts.safe, isBlacklisted: true },
+      treasuryRangeSafe: { ...expected.monitoredAccounts.treasuryRangeSafe, isBlacklisted: true },
     },
-  }), /USDC_MONITORED_ACCOUNT_BLACKLISTED_SAFE/);
+  }), /USDC_MONITORED_ACCOUNT_BLACKLISTED_TREASURYRANGESAFE/);
 });
 
 test("configuration rejects batches above the contract's 16-order cap", () => {
@@ -434,8 +684,8 @@ test("order builder cross-checks every manifested economic field with shared exa
 
 test("forced manager token dust is report-only while allowances remain blocking", () => {
   const cleanAllowances = {
-    safeNaraAllowance: "0",
-    safeUsdcAllowance: "0",
+    treasuryRangeSafeNaraAllowance: "0",
+    treasuryRangeSafeUsdcAllowance: "0",
     managerNaraPermit2Allowance: "0",
     managerUsdcPermit2Allowance: "0",
     permit2NaraPositionManagerAllowance: "0",
@@ -655,8 +905,8 @@ test("a hung broadcast poisons the runtime while preserving the exact signed int
       point: { number: 100, hash: HASH, timestamp: 123 },
       activeOrders: [],
       settleableOrderIds: [1n],
-      safeNaraBalance: 0n,
-      safeUsdcBalance: 0n,
+      treasuryRangeSafeNaraBalance: 0n,
+      treasuryRangeSafeUsdcBalance: 0n,
       unknownPositionCount: 0n,
       allowanceClean: true as const,
       managerNaraBalance: 0n,
@@ -957,7 +1207,7 @@ test("deployment artifact rebuild cleans tampered ignored bytes before a forced 
   }
 });
 
-test("protected release evidence requires live remote ancestry and rejects mutable local origin refs", () => {
+test("protected release evidence requires the exact pinned upstream protected-ref tip", () => {
   const directory = mkdtempSync(join(tmpdir(), "nara-range-release-"));
   const remoteDirectory = join(directory, "remote.git");
   const runGit = (args: string[]): string => execFileSync("git", args, { cwd: directory, encoding: "utf8" }).trim();
@@ -973,37 +1223,46 @@ test("protected release evidence requires live remote ancestry and rejects mutab
     runGit(["remote", "add", "origin", remoteDirectory]);
     runGit(["push", "--quiet", "origin", `${head}:refs/heads/main`]);
     runGit(["update-ref", "refs/remotes/origin/main", head]);
+    const testPolicy = { expectedUpstreamUrl: remoteDirectory, protectedRef: "refs/remotes/origin/main" };
     const evidence = readTreasuryRangeProtectedReleaseEvidence(directory, head, {
-      V4_TREASURY_RANGE_EXPECTED_UPSTREAM_URL: remoteDirectory,
-      V4_TREASURY_RANGE_PROTECTED_REF: "origin/main",
       V4_TREASURY_RANGE_RELEASE_COMMIT: head,
-    });
+      V4_TREASURY_RANGE_EXPECTED_UPSTREAM_URL: "https://attacker.invalid/fork.git",
+      V4_TREASURY_RANGE_PROTECTED_REF: "origin/attacker",
+    }, testPolicy);
+    assert.equal(evidence.expectedUpstreamUrl, remoteDirectory);
     assert.equal(evidence.protectedRef, "refs/remotes/origin/main");
     assert.throws(() => readTreasuryRangeProtectedReleaseEvidence(directory, head, {
-      V4_TREASURY_RANGE_EXPECTED_UPSTREAM_URL: remoteDirectory,
-      V4_TREASURY_RANGE_PROTECTED_REF: "HEAD",
       V4_TREASURY_RANGE_RELEASE_COMMIT: head,
-    }), /origin remote-tracking/);
+    }, { ...testPolicy, protectedRef: "HEAD" }), /origin remote-tracking/);
     writeFileSync(join(directory, "tracked.txt"), "new remote commit\n");
     runGit(["add", "tracked.txt"]);
     runGit(["commit", "--quiet", "-m", "test: remote advanced"]);
     const advanced = runGit(["rev-parse", "HEAD"]);
+    assert.doesNotThrow(() => assertTreasuryRangeStrategyRelease(directory, head, advanced, {
+      emergencyExit: true,
+    }));
+    assert.throws(() => assertTreasuryRangeStrategyRelease(directory, head, advanced), /current committed HEAD/);
+    assert.throws(() => assertTreasuryRangeStrategyRelease(directory, advanced, head, {
+      emergencyExit: true,
+    }), /not an ancestor/);
     runGit(["push", "--quiet", "origin", `${advanced}:refs/heads/main`]);
     runGit(["update-ref", "refs/remotes/origin/main", head]);
     assert.throws(() => readTreasuryRangeProtectedReleaseEvidence(directory, head, {
-      V4_TREASURY_RANGE_EXPECTED_UPSTREAM_URL: remoteDirectory,
-      V4_TREASURY_RANGE_PROTECTED_REF: "origin/main",
       V4_TREASURY_RANGE_RELEASE_COMMIT: head,
-    }), /live remote protected-ref attestation/);
+    }, testPolicy), /live remote protected-ref attestation/);
+    runGit(["update-ref", "refs/remotes/origin/main", advanced]);
+    assert.throws(() => readTreasuryRangeProtectedReleaseEvidence(directory, head, {
+      V4_TREASURY_RANGE_RELEASE_COMMIT: head,
+    }, testPolicy), /live remote protected-ref attestation/);
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
 });
 
-test("manager deployment evidence requires the exact provenance v2 schema", () => {
-  const address = "0x2222222222222222222222222222222222222222";
+test("manager deployment evidence v3 keeps deployment execution and treasury custody distinct", () => {
+  const infrastructureAddress = "0x2222222222222222222222222222222222222222";
   const evidence = {
-    schemaVersion: "nara.v4.treasury-range-manager-deployment.v2",
+    schemaVersion: "nara.v4.treasury-range-manager-deployment.v3",
     status: "deployed_verified",
     originCommit: "ab".repeat(20),
     deploymentTransactionHash: HASH,
@@ -1012,41 +1271,75 @@ test("manager deployment evidence requires the exact provenance v2 schema", () =
     predictedAddress: MANAGER,
     deployedAddress: MANAGER,
     runtimeCodeHash: `0x${"44".repeat(32)}`,
-    safeExecution: {
-      safe: address,
+    deploymentExecutorSafeExecution: {
+      safe: DEPLOYMENT_EXECUTOR_SAFE,
       transactionHash: HASH,
       safeTransactionHash: `0x${"55".repeat(32)}`,
       nonce: "7",
       executionSuccessLogIndex: 2,
       safeTransaction: {
-        to: address, value: "0", data: "0x1234", operation: 1,
+        to: infrastructureAddress, value: "0", data: "0x1234", operation: 1,
         safeTxGas: "0", baseGas: "0", gasPrice: "0",
         gasToken: ethers.ZeroAddress, refundReceiver: ethers.ZeroAddress, nonce: "7",
       },
       packedTransactionsHash: `0x${"66".repeat(32)}`,
-      multiSendCallOnly: address,
+      multiSendCallOnly: infrastructureAddress,
       multiSendCallOnlyCodeHash: `0x${"77".repeat(32)}`,
-      innerCalls: [{ to: address, value: "0", data: "0x5678" }],
+      innerCalls: [{ to: infrastructureAddress, value: "0", data: "0x5678" }],
+    },
+    treasuryRangeSafePolicy: {
+      address: TREASURY_RANGE_SAFE,
+      runtimeCodeHash: `0x${"ab".repeat(32)}`,
+      version: "1.4.1",
+      threshold: "1",
+      ownerCount: 1,
+      ownerSetHash: `0x${"bc".repeat(32)}`,
     },
     create2Deployment: {
-      deployer: address,
+      deployer: infrastructureAddress,
       deployedAddress: MANAGER,
       salt: `0x${"88".repeat(32)}`,
       initCodeHash: `0x${"99".repeat(32)}`,
       deployedLogIndex: 4,
     },
     constructorBindings: {
-      treasurySafe: address, nara: address, usdc: address, liquidityVault: address,
-      poolManager: address, positionManager: address, permit2: address, hook: address,
+      treasurySafe: TREASURY_RANGE_SAFE,
+      nara: infrastructureAddress,
+      usdc: infrastructureAddress,
+      liquidityVault: infrastructureAddress,
+      poolManager: infrastructureAddress,
+      positionManager: infrastructureAddress,
+      permit2: infrastructureAddress,
+      hook: infrastructureAddress,
       poolFee: 3000, tickSpacing: 60, poolId: `0x${"aa".repeat(32)}`, deploymentDeadline: "123456",
     },
   };
-  assert.equal(parseTreasuryRangeManagerDeploymentEvidence(evidence).safeExecution.nonce, "7");
-  assert.throws(() => parseTreasuryRangeManagerDeploymentEvidence({ ...evidence, schemaVersion: "nara.v4.treasury-range-manager-deployment.v1" }), /exact deployed_verified v2 schema/);
+  const parsed = parseTreasuryRangeManagerDeploymentEvidence(evidence);
+  assert.equal(parsed.deploymentExecutorSafeExecution.nonce, "7");
+  assert.equal(parsed.deploymentExecutorSafeExecution.safe, DEPLOYMENT_EXECUTOR_SAFE);
+  assert.equal(parsed.treasuryRangeSafePolicy.address, TREASURY_RANGE_SAFE);
+  assert.equal(parsed.constructorBindings.treasurySafe, TREASURY_RANGE_SAFE);
+  assert.notEqual(parsed.deploymentExecutorSafeExecution.safe, parsed.treasuryRangeSafePolicy.address);
   assert.throws(() => parseTreasuryRangeManagerDeploymentEvidence({
     ...evidence,
-    safeExecution: { ...evidence.safeExecution, nonce: "8" },
+    schemaVersion: "nara.v4.treasury-range-manager-deployment.v2",
+  }), /exact deployed_verified v3 schema/);
+  assert.throws(() => parseTreasuryRangeManagerDeploymentEvidence({
+    ...evidence,
+    deploymentExecutorSafeExecution: { ...evidence.deploymentExecutorSafeExecution, nonce: "8" },
   }), /exactly match/);
+  assert.throws(() => parseTreasuryRangeManagerDeploymentEvidence({
+    ...evidence,
+    treasuryRangeSafePolicy: { ...evidence.treasuryRangeSafePolicy, threshold: "2" },
+  }), /exact approved 1-of-1 topology/);
+  assert.throws(() => parseTreasuryRangeManagerDeploymentEvidence({
+    ...evidence,
+    treasuryRangeSafePolicy: { ...evidence.treasuryRangeSafePolicy, address: DEPLOYMENT_EXECUTOR_SAFE },
+  }), /deployment executor and Treasury custody Safe must be distinct/);
+  assert.throws(() => parseTreasuryRangeManagerDeploymentEvidence({
+    ...evidence,
+    constructorBindings: { ...evidence.constructorBindings, treasurySafe: DEPLOYMENT_EXECUTOR_SAFE },
+  }), /constructor Treasury Safe must match the receipt-bound custody policy/);
 });
 
 test("staged crash leftovers are rejected before JIT packet construction", () => {

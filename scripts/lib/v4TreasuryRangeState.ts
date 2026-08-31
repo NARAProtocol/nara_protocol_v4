@@ -5,6 +5,10 @@ import {
   type ProductionV4Deployment,
 } from "./v4LiveConfig.js";
 import {
+  canonicalTreasuryRangeAuthorities,
+  type TreasuryRangeAuthorities,
+} from "./v4TreasuryRangeConfig.js";
+import {
   floorDiv,
   formatRational,
   sqrtPriceX96ToHumanUsdcPerNara,
@@ -233,7 +237,7 @@ export type V4TreasuryRangeState = Readonly<{
     poolKeyMatches: boolean;
   }>[];
   positionReconciliation: PositionReconciliation;
-  safeBalances: Readonly<{ nara: bigint; usdc: bigint }>;
+  treasuryRangeSafeBalances: Readonly<{ nara: bigint; usdc: bigint }>;
   treasuryBalances: Readonly<{ nara: bigint; usdc: bigint }>;
   manager: Readonly<{ address?: string; activeOrders: readonly ManagerOrderState[] }>;
   runtimeCodeHashes: Readonly<Record<string, string>>;
@@ -306,6 +310,7 @@ function poolKeyMatches(
 async function assertRuntimeAndBindings(params: {
   provider: ethers.Provider;
   deployment: ProductionV4Deployment;
+  authorities: TreasuryRangeAuthorities;
   stateViewAddress: string;
   managerAddress?: string;
   managerRuntimeCodeHash?: string;
@@ -317,7 +322,14 @@ async function assertRuntimeAndBindings(params: {
     hook: [params.deployment.hook, params.deployment.runtimeCodeHashes.hook],
     vault: [params.deployment.vault, params.deployment.runtimeCodeHashes.vault],
     compounder: [params.deployment.compounder, params.deployment.runtimeCodeHashes.compounder],
-    safe: [params.deployment.safe, params.deployment.safeCodeHash],
+    deploymentExecutorSafe: [
+      params.authorities.deploymentExecutorSafe,
+      params.authorities.deploymentExecutorSafeRuntimeCodeHash,
+    ],
+    treasuryRangeSafe: [
+      params.authorities.treasuryRangeSafe,
+      params.authorities.treasuryRangeSafeRuntimeCodeHash,
+    ],
     create2HookDeployer: [
       params.deployment.create2HookDeployer,
       BASE_EXTERNAL_RUNTIME_CODE_HASHES.create2HookDeployer,
@@ -414,7 +426,7 @@ async function assertRuntimeAndBindings(params: {
       manager.PERMIT2(overrides), manager.HOOK(overrides), manager.POOL_FEE(overrides), manager.TICK_SPACING(overrides),
       manager.POOL_ID(overrides), manager.canonicalPoolKey(overrides),
     ]);
-    assertAddressBinding("Manager.TREASURY_SAFE", safe as string, params.deployment.safe);
+    assertAddressBinding("Manager.TREASURY_SAFE", safe as string, params.authorities.treasuryRangeSafe);
     assertAddressBinding("Manager.NARA", nara as string, params.deployment.token);
     assertAddressBinding("Manager.USDC", usdc as string, params.deployment.base);
     assertAddressBinding("Manager.LIQUIDITY_VAULT", managerVault as string, params.deployment.vault);
@@ -638,6 +650,7 @@ export async function readV4TreasuryRangeState(
   options: V4TreasuryRangeStateOptions,
 ): Promise<V4TreasuryRangeState> {
   const deployment = options.deployment ?? canonicalProductionV4Deployment();
+  const authorities = canonicalTreasuryRangeAuthorities(deployment);
   const stateViewAddress = ethers.getAddress(options.stateView ?? BASE_STATE_VIEW);
   const scanFromBlock = options.scanFromBlock ?? PRODUCTION_POOL_ACTIVATION_BLOCK;
   const logChunkSize = options.logChunkSize ?? DEFAULT_LOG_CHUNK_SIZE;
@@ -661,6 +674,7 @@ export async function readV4TreasuryRangeState(
   const runtimeCodeHashes = await assertRuntimeAndBindings({
     provider,
     deployment,
+    authorities,
     stateViewAddress,
     managerAddress: options.managerAddress,
     managerRuntimeCodeHash: options.managerRuntimeCodeHash,
@@ -670,7 +684,7 @@ export async function readV4TreasuryRangeState(
     provider,
     deployment.base,
     treasuryRangeUsdcMonitoredAccounts({
-      safe: deployment.safe,
+      treasuryRangeSafe: authorities.treasuryRangeSafe,
       poolManager: deployment.poolManager,
       positionManager: deployment.positionManager,
       permit2: deployment.permit2,
@@ -700,7 +714,8 @@ export async function readV4TreasuryRangeState(
   });
   const [slot0, activeLiquidity, poolRegistered, buyCurveRaw, sellCurveRaw, pendingBuyRaw, pendingSellRaw,
     protocolDepthNara, protocolDepthUsdc, pendingDepthNaraRaw, pendingDepthUsdcRaw,
-    vaultRaw, bankedRaw, compounderPositionTokenId, safeNara, safeUsdc, treasuryNara, treasuryUsdc,
+    vaultRaw, bankedRaw, compounderPositionTokenId, treasuryRangeSafeNara, treasuryRangeSafeUsdc,
+    treasuryNara, treasuryUsdc,
     logs, managerOrders] = await Promise.all([
     stateView.getSlot0(deployment.poolId, overrides) as Promise<readonly bigint[]>,
     stateView.getLiquidity(deployment.poolId, overrides) as Promise<bigint>,
@@ -716,8 +731,8 @@ export async function readV4TreasuryRangeState(
     vault.balances(overrides) as Promise<readonly [bigint, bigint]>,
     compounder.bankedBalances(overrides) as Promise<readonly [bigint, bigint]>,
     compounder.positionTokenId(overrides) as Promise<bigint>,
-    nara.balanceOf(deployment.safe, overrides) as Promise<bigint>,
-    usdc.balanceOf(deployment.safe, overrides) as Promise<bigint>,
+    nara.balanceOf(authorities.treasuryRangeSafe, overrides) as Promise<bigint>,
+    usdc.balanceOf(authorities.treasuryRangeSafe, overrides) as Promise<bigint>,
     nara.balanceOf(deployment.treasury, overrides) as Promise<bigint>,
     usdc.balanceOf(deployment.treasury, overrides) as Promise<bigint>,
     logsPromise,
@@ -860,7 +875,7 @@ export async function readV4TreasuryRangeState(
     compounderBankedBalances: { nara: bankedRaw[0], usdc: bankedRaw[1] },
     permanentPositions,
     positionReconciliation,
-    safeBalances: { nara: safeNara, usdc: safeUsdc },
+    treasuryRangeSafeBalances: { nara: treasuryRangeSafeNara, usdc: treasuryRangeSafeUsdc },
     treasuryBalances: { nara: treasuryNara, usdc: treasuryUsdc },
     manager: { address: options.managerAddress, activeOrders: managerOrders },
     runtimeCodeHashes,

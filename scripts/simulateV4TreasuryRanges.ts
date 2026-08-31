@@ -15,6 +15,10 @@ import {
   type ProductionV4Deployment,
 } from "./lib/v4LiveConfig.js";
 import {
+  TREASURY_RANGE_CUSTODY_POLICY_REPOSITORY_PATH,
+  canonicalTreasuryRangeAuthorities,
+} from "./lib/v4TreasuryRangeConfig.js";
+import {
   formatRational,
   parseDecimalRational,
   rational,
@@ -136,13 +140,13 @@ export type TreasuryRangeScenarioPlan = Readonly<{
   hardFundingGate: Readonly<{
     immutableOrderCreator: string;
     nominalUsdcBudget: bigint;
-    safeUsdcBalance: bigint;
+    treasuryRangeSafeUsdcBalance: bigint;
     treasuryUsdcBalance: bigint;
-    safeNominalUsdcShortfall: bigint;
+    treasuryRangeSafeNominalUsdcShortfall: bigint;
     treasuryNominalUsdcShortfall: bigint;
-    safeNaraBalance: bigint;
+    treasuryRangeSafeNaraBalance: bigint;
     treasuryNaraBalance: bigint;
-    executionBlockedUntilSafeFunded: boolean;
+    executionBlockedUntilTreasuryRangeSafeFunded: boolean;
   }>;
 }>;
 
@@ -151,6 +155,7 @@ export type TreasuryRangeStrategyManifestBody = Readonly<{
   status: string;
   changeId: string;
   repositoryHead: string;
+  custodyPolicy: Readonly<Record<string, unknown>>;
   pinnedState: Readonly<Record<string, unknown>>;
   addresses: Readonly<Record<string, unknown>>;
   runtimeCodeHashes: Readonly<Record<string, string>>;
@@ -314,6 +319,7 @@ function manifestBody(params: {
     throw new Error("Cannot build a strategy manifest from inexact position state");
   }
   const deployment = params.deployment ?? canonicalProductionV4Deployment();
+  const authorities = canonicalTreasuryRangeAuthorities(deployment);
   const totalUsdcBudget = canaryUsdcBudget(params.profile);
   const activePositions = params.state.positionReconciliation.activePositions.map((position) => ({
     owner: position.owner,
@@ -328,10 +334,15 @@ function manifestBody(params: {
     ...(position.nftOwner === undefined ? {} : { nftOwner: position.nftOwner }),
   }));
   const body: TreasuryRangeStrategyManifestBody = {
-    schemaVersion: "nara.v4.treasury-range-strategy.v2",
+    schemaVersion: "nara.v4.treasury-range-strategy.v3",
     status: "candidate_no_broadcast",
     changeId: strategyChangeId(params.profile),
     repositoryHead: params.repositoryHead.toLowerCase(),
+    custodyPolicy: {
+      changeId: authorities.custodyPolicyChangeId,
+      manifestPath: TREASURY_RANGE_CUSTODY_POLICY_REPOSITORY_PATH,
+      manifestSha256: `0x${authorities.custodyPolicySha256}`,
+    },
     pinnedState: {
       chainId: params.state.chainId.toString(),
       blockNumber: exactJsonNumber(params.state.blockNumber, "pinnedState.blockNumber"),
@@ -339,7 +350,8 @@ function manifestBody(params: {
       timestamp: exactJsonNumber(params.state.timestamp, "pinnedState.timestamp"),
     },
     addresses: {
-      safe: deployment.safe,
+      deploymentExecutorSafe: authorities.deploymentExecutorSafe,
+      treasuryRangeSafe: authorities.treasuryRangeSafe,
       nara: deployment.token,
       usdc: deployment.base,
       liquidityVault: deployment.vault,
@@ -359,7 +371,8 @@ function manifestBody(params: {
       nara: params.state.runtimeCodeHashes.token,
       usdc: params.state.runtimeCodeHashes.usdc,
       hook: params.state.runtimeCodeHashes.hook,
-      safe: params.state.runtimeCodeHashes.safe,
+      deploymentExecutorSafe: params.state.runtimeCodeHashes.deploymentExecutorSafe,
+      treasuryRangeSafe: params.state.runtimeCodeHashes.treasuryRangeSafe,
       liquidityVault: params.state.runtimeCodeHashes.vault,
       liquidityCompounder: params.state.runtimeCodeHashes.compounder,
       poolManager: params.state.runtimeCodeHashes.poolManager,
@@ -481,6 +494,7 @@ export function buildTreasuryRangeScenarioPlan(
   repositoryHead: string,
   managerDeployment?: Readonly<Record<string, unknown>>,
 ): TreasuryRangeScenarioPlan {
+  const authorities = canonicalTreasuryRangeAuthorities();
   const hookConfiguration = pinnedHookConfiguration(state);
   const pinnedHookConfigurationHash = hookConfigurationHash(hookConfiguration);
   const draftProfiles = buildDeterministicStrategyProfiles({
@@ -509,15 +523,19 @@ export function buildTreasuryRangeScenarioPlan(
     hookConfiguration,
     hookConfigurationHash: pinnedHookConfigurationHash,
     hardFundingGate: {
-      immutableOrderCreator: canonicalProductionV4Deployment().safe,
+      immutableOrderCreator: authorities.treasuryRangeSafe,
       nominalUsdcBudget,
-      safeUsdcBalance: state.safeBalances.usdc,
+      treasuryRangeSafeUsdcBalance: state.treasuryRangeSafeBalances.usdc,
       treasuryUsdcBalance: state.treasuryBalances.usdc,
-      safeNominalUsdcShortfall: shortfall(nominalUsdcBudget, state.safeBalances.usdc),
+      treasuryRangeSafeNominalUsdcShortfall: shortfall(
+        nominalUsdcBudget,
+        state.treasuryRangeSafeBalances.usdc,
+      ),
       treasuryNominalUsdcShortfall: shortfall(nominalUsdcBudget, state.treasuryBalances.usdc),
-      safeNaraBalance: state.safeBalances.nara,
+      treasuryRangeSafeNaraBalance: state.treasuryRangeSafeBalances.nara,
       treasuryNaraBalance: state.treasuryBalances.nara,
-      executionBlockedUntilSafeFunded: state.safeBalances.usdc < nominalUsdcBudget,
+      executionBlockedUntilTreasuryRangeSafeFunded:
+        state.treasuryRangeSafeBalances.usdc < nominalUsdcBudget,
     },
   };
 }
