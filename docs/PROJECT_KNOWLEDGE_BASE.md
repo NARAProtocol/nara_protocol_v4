@@ -307,8 +307,12 @@ position: the market value of 100,000 NARA is additional and changes with spot.
 Matrix-row v3 binds each result to the repository/block plus pinned sqrt price,
 tick, Hook-configuration hash, and exact human-price rational; ingestion also
 reconstructs the exact raw canonical order vector.
-Fresh protected-source and block-pinned evidence are required before even an
-unsigned packet may be built. The manager remains unfunded and undeployed.
+Protected PR #59 merged GitHub-verified commit
+`5a6b449df7d50b25d71715b3bbedc720ef6960ee`; protected PR/post-merge gates and
+exact historical block `50537172` plus fresh block `50684125` 21-candidate
+matrix-v3 fork runs passed. Both selected only the approved canary and remained
+`SELECTED_EXECUTION_BLOCKED`. The manager remains unfunded and undeployed; a
+fresh JIT state check is still required before any unsigned packet review.
 
 Authority and operating documents:
 
