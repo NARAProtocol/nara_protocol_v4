@@ -267,10 +267,12 @@ timelock.
 Safe-bound periphery candidate for tactical one-sided NARA/USDC ranges. It is
 strictly separate from permanent POL: it owns only manager-registered tactical
 PositionManager NFTs, never changes the Hook/Vault/Compounder, and sends every
-settlement or cancellation output directly to the immutable production Safe.
-Protected PR #52 merged the reviewed/remediated source as GitHub-verified
-commit `35091010de09802f39ccda7e726ff8c4b240e165`; no deployment, funding,
-activation, or production transaction followed from that source merge.
+settlement or cancellation output directly to the immutable dedicated Treasury
+Range Safe. Protected PR #62 separated that 1-of-1 canary-custody Safe from the
+protocol 2-of-3 deployment Safe. Protected PR #64 merged the prefunded-route and
+strict matrix-evidence hardening as GitHub-verified commit
+`162c24be080398b65c76e542a48ccb608cd1fb43`. No deployment, funding, signature,
+broadcast, activation, or production transaction followed from those merges.
 
 The companion planner reads a pinned PoolManager spot, pool liquidity, active
 positions, Hook configuration and pending updates, runtime bindings, and
@@ -283,36 +285,46 @@ human-reviewed Safe proposal. The settler never replans or reinvests proceeds.
 The 2026-08-30 internal-audit remediation closes all five retained findings:
 exact 21-candidate/strict-row evidence, durable signed-nonce lineage, bounded
 fatal RPC/sweep deadlines, and Circle USDC implementation/control-state
-binding. Strategy schema v2 pins the USDC proxy and implementation hashes,
-implementation/admin slots, admin/owner/pauser/blacklister, pause and monitored
-blacklist state, plus the code-hash-bound Base Multicall3 reader. Deployment,
-order, settlement, and exact rebroadcast paths fail closed before signing on
-drift. Cancellation has a clearly labelled exit-only bypass and cannot promise
-success under incompatible token behavior. The internal review is not an
-independent external audit or security clearance.
+binding. Strategy schema v3 pins both Safe roles, the dedicated-custody policy,
+USDC proxy and implementation hashes, implementation/admin slots,
+admin/owner/pauser/blacklister, pause and monitored blacklist state, plus the
+code-hash-bound Base Multicall3 reader. Deployment, order, settlement, and exact
+rebroadcast paths fail closed before signing on drift. Cancellation has a
+clearly labelled exit-only bypass and cannot promise success under incompatible
+token behavior. The internal review is not an independent external audit or
+security clearance.
 
-At the 2026-08-28 candidate checkpoint, the pinned Base fork was block
+At the historical 2026-08-28 candidate checkpoint, the pinned Base fork was block
 `50537172` and the selected candidate was `CONSERVATIVE-100000-NARA` with 12
 orders and status `SELECTED_EXECUTION_BLOCKED`. The Safe lacked the required
-NARA and 5,000 USDC budget, so no deployment/order packet was authorized. A
+NARA and 5,000 USDC budget. That capital plan and its matrix-v3 artifacts are
+retired for packet construction. A
 fully traversed range becomes Safe-held inventory only in a later settlement
 transaction; an actor's same-transaction buy/reverse cannot be intercepted.
 
 The 5,000-USDC plan is preserved only as historical evidence. The
 `NARA-20260831-v4-treasury-range-500-usdc-canary` policy permits only
-`CONSERVATIVE-100000-NARA`, with 200 USDC exposed and 300 USDC protected. The
+`CONSERVATIVE-100000-NARA`, with 100,000 NARA, 200 USDC exposed across four buy
+ranges, and 300 USDC unallocated in the dedicated Treasury Range Safe. Funding
+the Safe creates material 1-of-1 loss and availability risk and requires the
+recorded explicit human acceptance or an approved multisig upgrade first. The
 optimizer must still validate the complete 21-candidate matrix, but every other
 profile/budget is launch-blocked. This is a capital envelope, not a $500-total
 position: the market value of 100,000 NARA is additional and changes with spot.
-Matrix-row v3 binds each result to the repository/block plus pinned sqrt price,
-tick, Hook-configuration hash, and exact human-price rational; ingestion also
-reconstructs the exact raw canonical order vector.
-Protected PR #59 merged GitHub-verified commit
-`5a6b449df7d50b25d71715b3bbedc720ef6960ee`; protected PR/post-merge gates and
-exact historical block `50537172` plus fresh block `50684125` 21-candidate
-matrix-v3 fork runs passed. Both selected only the approved canary and remained
-`SELECTED_EXECUTION_BLOCKED`. The manager remains unfunded and undeployed; a
-fresh JIT state check is still required before any unsigned packet review.
+Matrix-row schema `nara.v4.treasury-range-matrix-row.v4` binds each result to the
+repository/block, pinned sqrt price, tick, Hook-configuration hash, exact
+human-price rational, prefunded route, and per-swap quote status. Every quotable
+swap needs a positive official v4 Quoter result or exact decoded
+PoolManager-prefund proof. Explicit supported unquoted reasons are limited to B
+`same_block_transactions`, C `same_transaction_actions`, and F
+`atomic_buy_reverse`; every other path rejects an unquoted label. The prefunded
+route is fork evidence, not a universal public-router repair.
+
+The manager remains unfunded and undeployed. A fresh 21-candidate matrix-v4
+snapshot and unsigned deployment packet must be built from the exact final
+protected commit. Deployment requires the protocol 2-of-3 Safe. Funding,
+12-order creation, every cancellation or rebalance, and any new range creation
+remain separately human-authorized; only terminal settlement may be automated.
 
 Authority and operating documents:
 

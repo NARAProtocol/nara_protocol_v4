@@ -13,9 +13,13 @@ or transaction authority.
 
 Protected PR #62 merged the dedicated-Safe role correction as GitHub-verified
 commit `a20ce9c40c174d032cacdf602efa6afe8c6585f9`. Build/test/size, Slither,
-Aderyn, Echidna, and CodeQL passed before the signed protected merge. This is
-the current source authority; it still does not move funds or authorize a
-transaction by itself.
+Aderyn, Echidna, and CodeQL passed before the signed protected merge.
+
+Protected PR #64 merged the exact prefunded-swap route and strict
+quote-evidence hardening as GitHub-verified commit
+`162c24be080398b65c76e542a48ccb608cd1fb43`. All required protected checks were
+green. This is the current source authority; it still does not move funds or
+authorize a transaction by itself.
 
 This release changes only planner, optimizer, evidence, manifest-ingestion,
 packet-builder gates, regressions, and documentation for a smaller first
@@ -62,16 +66,24 @@ profit guarantee, managed-investment promise, or claim of maximum return.
   the Treasury USDC budget.
 - Only `CONSERVATIVE-100000-NARA` may pass optimizer selection or launch packet
   ingestion. Other candidates remain comparative evidence only.
-- `nara.v4.treasury-range-matrix-row.v3` binds every row to the exact
+- `nara.v4.treasury-range-matrix-row.v4` binds every row to the exact
   repository commit, block/hash, pinned `sqrtPriceX96`, tick, Hook-configuration
-  hash, and exact human-price rational. Packet construction verifies the pinned
-  block's RPC timestamp and rejects stale or forged snapshot metadata.
+  hash, and exact human-price rational. It pins route kind
+  `universal-router-prefunded-settle-v1` and quote policy
+  `per-swap-explicit-quote-status-v1`. Each quotable swap must carry a positive
+  official v4 Quoter result or exact decoded PoolManager-prefund proof.
+  Explicit supported unquoted reasons are limited to B
+  `same_block_transactions`, C `same_transaction_actions`, and F
+  `atomic_buy_reverse`; every other path rejects an unquoted label. Packet
+  construction verifies the pinned block's RPC timestamp and rejects stale or
+  forged snapshot metadata.
 - Manifest ingestion reconstructs the canonical profile from pinned slot0 and
   requires exactly 12 raw orders, in canonical order, all enabled, with no
   predeployment order ID.
   It compares each human range, side, ticks, raw input, expected output,
   minimum, liquidity, dust, and tolerance.
-- Strategy schema v3 binds both distinct Safe roles/runtime hashes and the exact
+- Strategy schema v3 and deployment-evidence schema v3 remain current. Strategy
+  v3 binds both distinct Safe roles/runtime hashes and the exact
   tracked custody-policy file/hash. Legacy ambiguous `addresses.safe`, legacy
   strategy v2, role swaps, and deployment evidence v2 fail closed.
 - Retired 5,000-USDC change IDs, a non-500 total, a non-200/300 split, a
@@ -105,19 +117,22 @@ profit guarantee, managed-investment promise, or claim of maximum return.
 | Dependency audit | production graph 0 vulnerabilities; development graph 8 low-severity `elliptic` advisories with no available fix |
 | Independent review | adversarial PASS and architecture PASS after matrix-context hardening |
 | Secret scan | focused changed-content patterns found 0; Gitleaks unavailable and not claimed |
-| Protected PR and CI | PR #62 merged at signed commit `a20ce9c40c174d032cacdf602efa6afe8c6585f9`; build/test/size, Slither, Aderyn, Echidna, and CodeQL passed |
+| Dedicated-Safe protected PR | PR #62 merged at signed commit `a20ce9c40c174d032cacdf602efa6afe8c6585f9`; build/test/size, Slither, Aderyn, Echidna, and CodeQL passed |
+| Prefunded-route protected PR | PR #64 merged at verified commit `162c24be080398b65c76e542a48ccb608cd1fb43`; all required protected checks were green |
 | Production writes | none |
 | Dedicated-Safe remediation | Protected source merged through PR #62; still not deployment or transaction authority |
 
-The local counts are supporting evidence. The signed PR #62 merge commit and
-its protected CI remain the source authority.
+The local counts are supporting evidence. The verified PR #64 merge commit and
+its green protected checks are current source authority; PR #62 remains the
+dedicated-Safe remediation authority.
 
 The JSON matrix is commit- and state-bound historical release evidence, not a cryptographic
 attestation by an external auditor. Protected immutable generation, CI, and
 human review remain mandatory.
 
-The hashes below predate the dedicated-Safe schema/policy binding and are now
-retired for packet construction. They remain reproducibility evidence only.
+The hashes below predate the dedicated-Safe schema/policy binding and matrix-v4
+prefunded-route evidence and are now retired for packet construction. They
+remain reproducibility evidence only.
 
 ## Immutable fork evidence
 
@@ -148,13 +163,17 @@ not Safe-import files.
    candidate includes successful bid-side settlement evidence.
 4. Completed: dedicated-Safe remediation merged through protected PR #62 with
    fresh automated and independent review evidence.
-5. Required: explicitly accept the pinned 1-of-1 custody risk for this bounded
+5. Completed: exact prefunded-route and strict matrix-v4 quote-evidence
+   hardening merged through protected PR #64 with all required protected checks
+   green.
+6. Required: explicitly accept the pinned 1-of-1 custody risk for this bounded
    canary or upgrade/re-pin an approved multisig before funding.
-6. In progress: build a fresh unsigned deployment proposal only from the exact
-   protected dedicated-Safe source. Treasury-to-dedicated-Safe funding, protocol
+7. In progress: build a fresh unsigned deployment proposal only from the exact
+   current protected source and fresh matrix-row-v4 evidence.
+   Treasury-to-dedicated-Safe funding, protocol
    Safe deployment signing, deployment, dedicated-Safe order creation, settler
    activation, or broadcast each remain separate human approvals.
-7. Keep the canary under monitored observation for at least 48 hours before
+8. Keep the canary under monitored observation for at least 48 hours before
    considering any expansion.
 
 No source merge, CI result, simulation, or unsigned packet moves funds.

@@ -66,8 +66,12 @@ not deployment authority. PR #59 later merged the bounded 500-USDC canary policy
 at commit `5a6b449df7d50b25d71715b3bbedc720ef6960ee`. Protected PR #62 then merged the
 dedicated-Safe role correction as GitHub-verified commit
 `a20ce9c40c174d032cacdf602efa6afe8c6585f9`; all required PR checks passed.
-That commit is current source authority, but no manager address, deployment
-receipt, funding, activation, or production transaction exists.
+Protected PR #64 then merged the exact prefunded-swap route and strict
+quote-evidence hardening as GitHub-verified commit
+`162c24be080398b65c76e542a48ccb608cd1fb43`; all required protected checks were
+green. That commit is current source authority, but no manager address,
+deployment receipt, funding, signature, broadcast, activation, or production
+transaction exists.
 
 Change `NARA-20260831-v4-treasury-range-dedicated-safe` is protected source with
 two explicit, non-interchangeable roles:
@@ -102,10 +106,17 @@ launch candidate to `CONSERVATIVE-100000-NARA`: 100,000 NARA plus 500 USDC,
 with exactly 200 USDC exposed across four bid ranges and 300 USDC unallocated/unexposed in
 the dedicated Treasury Range Safe. It preserves all 21 candidates and the full external adversarial
 matrix as comparative evidence, but only the approved canary can pass optimizer
-and packet-builder launch gates. Matrix-row v3 binds every result to the
-repository/block plus pinned `sqrtPriceX96`, tick, Hook-configuration hash, and
-exact human-price rational; ingestion reconstructs the raw canonical order
-vector. Protected PR #59 merged this policy as GitHub-verified commit
+and packet-builder launch gates. Matrix-row schema
+`nara.v4.treasury-range-matrix-row.v4` binds every result to the repository/block
+plus pinned `sqrtPriceX96`, tick, Hook-configuration hash, and exact human-price
+rational. It pins route kind
+`universal-router-prefunded-settle-v1` and quote policy
+`per-swap-explicit-quote-status-v1`: each quotable swap must carry a positive
+official v4 Quoter result or exact decoded PoolManager-prefund proof. Explicit
+supported unquoted reasons are limited to B `same_block_transactions`, C
+`same_transaction_actions`, and F `atomic_buy_reverse`; every other path rejects
+an unquoted label. Ingestion reconstructs the raw canonical order vector.
+Protected PR #59 merged the bounded canary policy as GitHub-verified commit
 `5a6b449df7d50b25d71715b3bbedc720ef6960ee`; all PR and post-merge build,
 test, size, Slither, Aderyn, Echidna, and CodeQL gates passed. Exact historical
 block `50537172` and fresh block `50684125` matrix-v3 fork runs both passed 4/4,
@@ -135,11 +146,11 @@ internal remediation is not an independent external audit or security
 clearance.
 
 The original remediation and protected-release evidence is recorded in
-[`NARA_TREASURY_RANGE_MANAGER_REMEDIATION_2026-08-30.md`](security/NARA_TREASURY_RANGE_MANAGER_REMEDIATION_2026-08-30.md). The dedicated-Safe release passed 86 focused Hardhat tests, 35 settler tests, 784 repository non-fork tests, 4/4 pinned-fork cases at Base block `50537172`, strict settler TypeScript, and the build gate locally. PR #62 then passed build/test/size, Slither, Aderyn, Echidna, and CodeQL before its signed protected merge. Gitleaks remains unavailable locally and is not claimed as a pass.
+[`NARA_TREASURY_RANGE_MANAGER_REMEDIATION_2026-08-30.md`](security/NARA_TREASURY_RANGE_MANAGER_REMEDIATION_2026-08-30.md). The dedicated-Safe release passed 86 focused Hardhat tests, 35 settler tests, 784 repository non-fork tests, 4/4 pinned-fork cases at Base block `50537172`, strict settler TypeScript, and the build gate locally. PR #62 then passed build/test/size, Slither, Aderyn, Echidna, and CodeQL before its signed protected merge. PR #64 later passed all required protected checks before its verified merge; no new local aggregate count is claimed here. Gitleaks remains unavailable locally and is not claimed as a pass.
 
 Before any production use: the 1-of-1 risk must be explicitly accepted for the
-bounded canary or the Safe must be upgraded and re-pinned; fresh schema-v3
-live-state/matrix evidence and a new
+bounded canary or the Safe must be upgraded and re-pinned; fresh strategy-v3
+live-state evidence, fresh matrix-row-v4 evidence, and a new
 unsigned deployment proposal must be generated; the protocol Safe must execute
 the approved deployment; deterministic receipt evidence must verify it; exactly
 100,000 NARA plus 500 USDC funding to the dedicated Safe must be separately
