@@ -41,6 +41,14 @@ The non-upgradeable contract is permanently bound to:
 
 Construction fails unless deployed runtime and reciprocal bindings match the supplied canonical configuration. Hook liquidity callbacks must remain disabled. The constructor does not make a production-state claim on its own: an immutable, receipt-pinned deployment manifest and runtime verification remain mandatory after any future deployment.
 
+The predeployment builder requires the strategy to omit any manager address,
+manager runtime hash, or deployment-receipt reference. `DEPLOYMENT_DEADLINE` is a
+JIT constructor immutable, so the builder derives the exact runtime from freshly
+rebuilt initcode and constructor simulation, then records its runtime hash,
+initcode hash, salt, predicted address, and deadline in the nonce-bound unsigned
+proposal. Postdeployment order and cancellation builders still require the
+receipt-pinned runtime hash and immutable getter checks.
+
 ## Circle USDC dependency boundary
 
 Base USDC is treated as an administratively upgradeable external dependency, not as a fixed implementation merely because its proxy address and proxy runtime remain unchanged. Strategy schema v2 records Circle's Zeppelinos proxy mechanism, exact implementation/admin storage slots, proxy and implementation address/runtime hashes, proxy admin, token owner, pauser, blacklister, paused state, and blacklist state for the Safe, PoolManager, PositionManager, Permit2, Vault, Compounder, and Range Manager when known. The Base Multicall3 reader address/runtime hash used to batch caller-independent token views is also pinned.

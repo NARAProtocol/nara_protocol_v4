@@ -5,6 +5,7 @@ import {
   assertTreasuryRangeCanonicalCanaryOrders,
   assertTreasuryRangeCanaryFundingBalances,
   assertTreasuryRangeManifestMatrixContext,
+  assertTreasuryRangePredeploymentManifest,
   type TreasuryRangeStrategyOrder,
 } from "../scripts/lib/v4TreasuryRangeManifest.js";
 import {
@@ -167,6 +168,26 @@ describe("v4 treasury range operations", function () {
       nara: TREASURY_RANGE_CANARY_NARA_BUDGET - 1n,
       usdc: 500_000_000n,
     })).to.throw(/Safe NARA balance is below/);
+  });
+
+  it("requires deployment input to be genuinely predeployment evidence", function () {
+    const predeployment = {
+      addresses: {},
+      runtimeCodeHashes: {},
+    };
+    expect(() => assertTreasuryRangePredeploymentManifest(predeployment)).not.to.throw();
+    expect(() => assertTreasuryRangePredeploymentManifest({
+      ...predeployment,
+      addresses: { treasuryRangeManager: "0x1111111111111111111111111111111111111111" },
+    })).to.throw(/must not claim pre-existing/);
+    expect(() => assertTreasuryRangePredeploymentManifest({
+      ...predeployment,
+      runtimeCodeHashes: { rangeManager: HASH },
+    })).to.throw(/must not claim pre-existing/);
+    expect(() => assertTreasuryRangePredeploymentManifest({
+      ...predeployment,
+      managerDeployment: { manifestPath: "deployments/existing.json", manifestSha256: HASH },
+    })).to.throw(/must not claim pre-existing/);
   });
 
   it("rejects noncanonical launch-order lineage before fork or packet construction", function () {

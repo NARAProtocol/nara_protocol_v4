@@ -56,6 +56,11 @@ profit guarantee, managed-investment promise, or claim of maximum return.
 - Bid-side fork evidence must prove at least one crossed bid, an executed
   settlement, and positive NARA returned to the Safe for every candidate. A
   no-op `not_applicable` row is invalid.
+- The predeployment builder rejects strategy manifests that claim an existing
+  manager address, runtime hash, or deployment receipt. Because the deployment
+  deadline is a JIT immutable, the exact runtime hash is derived from freshly
+  rebuilt initcode and constructor simulation and recorded in the unsigned
+  proposal; receipt-pinned postdeployment checks remain mandatory.
 
 ## Evidence status
 
