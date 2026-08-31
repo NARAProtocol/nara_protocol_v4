@@ -18,8 +18,10 @@ Aderyn, Echidna, and CodeQL passed before the signed protected merge.
 Protected PR #64 merged the exact prefunded-swap route and strict
 quote-evidence hardening as GitHub-verified commit
 `162c24be080398b65c76e542a48ccb608cd1fb43`. All required protected checks were
-green. This is the current source authority; it still does not move funds or
-authorize a transaction by itself.
+green. This is the latest protected commit that changed functional
+implementation before later launch-evidence-only corrections; every deployment
+proposal must still bind the exact then-current protected `origin/main` tip. It
+does not move funds or authorize a transaction by itself.
 
 This release changes only planner, optimizer, evidence, manifest-ingestion,
 packet-builder gates, regressions, and documentation for a smaller first
@@ -42,6 +44,17 @@ single-signer loss and availability risk. Deployment and order builders require
 an exact explicit acknowledgement, but no code gate replaces the required human
 choice to accept that risk for this bounded canary or upgrade to an approved
 multisig first. Nothing in this record moves funds.
+
+On 2026-08-31, the human operator explicitly accepted the current 1-of-1
+custody, signer-loss, and availability risk only for the bounded canary whose
+required pre-order balance is exactly 100,000 NARA plus 500 USDC. The approved
+strategy allocates exactly 200 USDC across four prospective buy ranges and
+requires exactly 300 USDC to remain unallocated/unexposed after any separately
+approved funding and order-creation actions. That acceptance authorizes only
+correction of conflicting evidence and preparation of a fresh unsigned
+deployment packet. It is not a Safe signature and does not authorize funding,
+order creation, settler activation, signing, or broadcast. The builder's exact
+environment acknowledgement remains required for each applicable packet build.
 
 This launch keeps every create, cancel, or rebalance sequence (settle/cancel followed by a fresh create) behind manual human review and dedicated Treasury Range Safe approval. Permissionless terminal settlement may be automated by the gas-only settlers. A future release could add hands-off range creation through a separately reviewed, tightly permissioned Safe module or controller, but it is not included here and must leave the non-upgradeable manager's immutable custody authority and settlement recipient unchanged.
 
@@ -88,10 +101,10 @@ profit guarantee, managed-investment promise, or claim of maximum return.
   strategy v2, role swaps, and deployment evidence v2 fail closed.
 - Retired 5,000-USDC change IDs, a non-500 total, a non-200/300 split, a
   different NARA budget, or a changed per-order allocation fail closed.
-- Order construction requires the dedicated Treasury Range Safe itself to hold at least
-  100,000 NARA and the full 500 USDC. Funding only the exposed 200 USDC is not
-  sufficient because the 300-USDC unallocated/unexposed reserve must remain in dedicated-Safe
-  custody.
+- Order construction requires the dedicated Treasury Range Safe itself to hold
+  exactly 100,000 NARA and exactly 500 USDC. Both a shortfall and a surplus fail
+  closed. Funding only the exposed 200 USDC is not sufficient because the
+  300-USDC unallocated/unexposed reserve must remain in dedicated-Safe custody.
 - Bid-side fork evidence must prove at least one crossed bid, an executed
   settlement, and positive NARA returned to the dedicated Safe for every candidate. A
   no-op `not_applicable` row is invalid.
@@ -123,8 +136,10 @@ profit guarantee, managed-investment promise, or claim of maximum return.
 | Dedicated-Safe remediation | Protected source merged through PR #62; still not deployment or transaction authority |
 
 The local counts are supporting evidence. The verified PR #64 merge commit and
-its green protected checks are current source authority; PR #62 remains the
-dedicated-Safe remediation authority.
+its green protected checks cover the latest protected functional-code change
+before later evidence-only corrections; the exact then-current protected
+`origin/main` tip is always packet authority. PR #62 remains the dedicated-Safe
+remediation authority.
 
 The JSON matrix is commit- and state-bound historical release evidence, not a cryptographic
 attestation by an external auditor. Protected immutable generation, CI, and
@@ -166,10 +181,13 @@ not Safe-import files.
 5. Completed: exact prefunded-route and strict matrix-v4 quote-evidence
    hardening merged through protected PR #64 with all required protected checks
    green.
-6. Required: explicitly accept the pinned 1-of-1 custody risk for this bounded
-   canary or upgrade/re-pin an approved multisig before funding.
+6. Completed on 2026-08-31: the human operator explicitly accepted the pinned
+   1-of-1 custody, signer-loss, and availability risk only for this exact
+   bounded canary and authorized evidence correction plus preparation of a
+   fresh unsigned deployment packet. Funding, order creation, settler
+   activation, signing, and broadcast remain separately unauthorized.
 7. In progress: build a fresh unsigned deployment proposal only from the exact
-   current protected source and fresh matrix-row-v4 evidence.
+   then-current protected `origin/main` tip and fresh matrix-row-v4 evidence.
    Treasury-to-dedicated-Safe funding, protocol
    Safe deployment signing, deployment, dedicated-Safe order creation, settler
    activation, or broadcast each remain separate human approvals.

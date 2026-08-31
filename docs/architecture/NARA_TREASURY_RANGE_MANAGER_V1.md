@@ -193,6 +193,10 @@ separated the deployment and custody Safe roles. Protected PR #62 established
 that role separation. Protected PR #64 established the prefunded route and
 strict matrix-row-v4 quote evidence. Together they complete item 1. The internal
 and automated review record for item 2 is present without any external-audit
-claim; items 3 through 9 remain separate staged actions.
+claim. On 2026-08-31, the human operator completed item 6 only for the exact
+100,000-NARA plus 500-USDC bounded canary and authorized evidence correction
+plus fresh unsigned deployment-packet preparation. Items 3 through 5 and 7
+through 9 remain separate staged actions; the item-6 acceptance is not a Safe
+signature and does not authorize funding, orders, settlers, or broadcast.
 
 No source artifact or candidate manifest authorizes signing or broadcast.

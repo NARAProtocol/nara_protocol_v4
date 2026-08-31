@@ -62,7 +62,12 @@ relabelled as local runs. Gitleaks remained unavailable locally.
 ## Production boundary
 
 No manager is deployed or funded, no transaction was signed or broadcast, and
-no settler was activated. Before any production use, the candidate still needs
-fresh schema-v2 state and strategy regeneration, explicit Safe funding
-approval, receipt-pinned deployment verification, human approval of fresh
-nonce-bound packets, a two-host rehearsal, and a monitored canary.
+no settler was activated. Later protected releases added distinct Safe roles,
+strategy-v3, matrix-row-v4, and strict quote evidence. On 2026-08-31, the human
+operator accepted the bounded 1-of-1 canary risk only for evidence correction
+and fresh unsigned deployment-packet preparation. Before any production use,
+the candidate still needs fresh strategy-v3 and matrix-row-v4 evidence, human
+approval and protocol-Safe execution of the exact nonce-bound deployment
+packet, receipt-pinned deployment verification, separately approved exact
+dedicated-Safe funding and orders, a two-host rehearsal, and a monitored
+canary.

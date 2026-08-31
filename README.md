@@ -173,8 +173,10 @@ flowchart TD
     NFT --> ST --> SY
     NFT --> FR
     RT --> E
-    S[Production Safe] -->|create / cancel only| RM
-    RS -->|settle terminal ranges| RM -->|all proceeds| S
+    DS[Protocol deployment Safe 2-of-3] -->|owns| CD[Canonical CREATE2 deployer]
+    CD -->|deploy manager only| RM
+    TS[Treasury Range Safe 1-of-1 canary] -->|create / cancel| RM
+    RS -->|settle terminal ranges| RM -->|all proceeds| TS
     E -->|NARA · ETH| U[Committers]
 ```
 
@@ -183,7 +185,10 @@ This is the v4 dependency shape. Full v4 layer inventory:
 
 The Treasury Range Manager path in the diagram is an implemented, tested, and
 internal-audit-remediated candidate only. It is not funded, deployed,
-activated, independently externally audited, or part of permanent POL.
+activated, independently externally audited, or part of permanent POL. The
+protocol 2-of-3 Safe is deployment-only for this surface; the distinct Treasury
+Range Safe is the immutable custody, order/cancellation, and settlement
+authority.
 
 ---
 

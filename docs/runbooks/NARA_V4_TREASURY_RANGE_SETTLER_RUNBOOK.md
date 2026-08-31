@@ -9,9 +9,11 @@ The manager separates tactical one-sided ranges from permanent full-range POL. T
 The currently pinned Treasury Range Safe is 1-of-1. That is a material custody
 and availability risk: loss or compromise of its sole signer can freeze or lose
 the canary inventory and order-administration path. Deployment and order-packet
-builders require an exact explicit acknowledgement of this topology. Funding
-still requires a separate human decision to accept that bounded risk or to
-upgrade and re-pin an approved multisig first. Cancellation deliberately remains
+builders require an exact explicit acknowledgement of this topology. On
+2026-08-31, the human operator accepted the bounded canary risk only to correct
+launch evidence and prepare a fresh unsigned deployment packet. Funding remains
+separately unauthorized, and the exact per-packet builder acknowledgement is
+still required. Cancellation deliberately remains
 buildable without this environment acknowledgement so the emergency exit path
 is not disabled during an incident; Safe review/signing is still mandatory.
 
