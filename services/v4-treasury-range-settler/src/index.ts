@@ -20,24 +20,35 @@ async function main(): Promise<void> {
   let lastSuccessAt = 0;
   const lastAlertAt = new Map<string, number>();
 
+  const TRANSIENT_RPC_CODES = new Set([
+    "SERVER_ERROR",
+    "NETWORK_ERROR",
+    "TIMEOUT",
+    "UNKNOWN_ERROR",
+    "ECONNRESET",
+    "FETCH_ERROR",
+  ]);
+
   const alert = async (reasonCode: string, source: string): Promise<void> => {
     const alertKey = `${reasonCode}:${source}`;
     const now = Date.now();
     if (now - (lastAlertAt.get(alertKey) ?? 0) < 300_000) return;
     lastAlertAt.set(alertKey, now);
     structuredLog("error", "settler_alert", { instanceId: config.instanceId, manager: config.managerAddress, reasonCode, source });
-    void sendTelegramNotification(
-      config.telegramBotToken,
-      config.telegramChatId,
-      [
-        `🚨 NARA Settler Alert: ${reasonCode}`,
-        "━━━━━━━━━━━━━━━━━━━━",
-        `Instance: ${config.instanceId}`,
-        `Source: ${source}`,
-        `Manager: ${config.managerAddress}`,
-        `Time: ${new Date().toISOString()}`,
-      ].join("\n"),
-    );
+    if (!TRANSIENT_RPC_CODES.has(reasonCode)) {
+      void sendTelegramNotification(
+        config.telegramBotToken,
+        config.telegramChatId,
+        [
+          `🟡 ⚠️ [SETTLER ALERT: ${reasonCode}]`,
+          "━━━━━━━━━━━━━━━━━━━━",
+          `📊 Reason: ${reasonCode}`,
+          `🔍 Source: ${source}`,
+          `🛡️ Manager: ${config.managerAddress}`,
+          `⏱️ Time: ${new Date().toISOString().replace("T", " ").slice(0, 19)} UTC`,
+        ].join("\n"),
+      );
+    }
     await postStatus(config.alertWebhookUrl, {
       service: "nara-v4-treasury-range-settler",
       instanceId: config.instanceId,
