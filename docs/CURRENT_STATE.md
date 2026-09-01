@@ -60,15 +60,20 @@ All 12 tactical range orders (`CONSERVATIVE-100000-NARA` canary) were created at
 block `50738288` (tx `0xff1c88baab9b5e4f3f6b1950b5de3c87f19336f7be494555c306535875271823`).
 The manager holds Position NFTs `2994935` through `2994946`.
 
+The autonomous cloud settler daemon (`services/v4-treasury-range-settler`) is deployed and
+active on Railway (project `glistening-peace`, service `nara_protocol_v4`, instance `settler-railway-primary`,
+keeper wallet [`0xa4B4B00f067cB4f5607c9a7298827fa1C1315aB7`](https://basescan.org/address/0xa4B4B00f067cB4f5607c9a7298827fa1C1315aB7)).
+It executes 15-second polling sweeps and real-time WebSocket swap listening using Multicall3
+to trigger permissionless terminal settlement directly back to the dedicated Safe.
+
 Two explicit, non-interchangeable Safe roles govern the system:
 
 - protocol 2-of-3 Safe `0xd65c0e390Dc187A22c52c03816591CC736C0D755`
-  owns the canonical CREATE2 deployer and may execute only the manager
-  deployment packet;
+  owns the canonical CREATE2 deployer and executed the manager deployment packet;
 - dedicated Treasury Range Safe
-  `0x5050BC6dc3E07313D52D05cecD53f727D6CDa245` is the proposed immutable
+  `0x5050BC6dc3E07313D52D05cecD53f727D6CDa245` is the immutable
   `TREASURY_SAFE`, order/cancellation signer, inventory custodian, and terminal
-  settlement recipient.
+  settlement recipient (holding unallocated reserve of 10,000 NARA + 301.0 USDC).
 
 The dedicated Safe is currently 1-of-1. Its exact runtime, singleton, version,
 threshold, owner count/hash, fallback handler, zero guard, and zero modules are

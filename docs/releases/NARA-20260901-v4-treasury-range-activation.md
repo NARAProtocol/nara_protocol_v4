@@ -1,4 +1,4 @@
-﻿# NARA v4 Treasury Range Manager Canary Activation
+# NARA v4 Treasury Range Manager Canary Activation
 
 Evidence state: **DEPLOYED / FUNDED / ACTIVE ON BASE MAINNET / SETTLER READY**
 
@@ -41,13 +41,28 @@ Evidence state: **DEPLOYED / FUNDED / ACTIVE ON BASE MAINNET / SETTLER READY**
 
 ---
 
-## 3. Settler Execution
+---
 
-Settler operations are gas-only and permissionless. Any account or automated keeper can call:
-- `settle(orderId)`: settles one crossed terminal order.
-- `settleMany(orderIds)`: batch settles multiple crossed terminal orders.
+## 3. Autonomous Settler Service on Railway
 
-A local CLI sweep monitor is available via:
+The dedicated autonomous settlement daemon is deployed and active in the cloud on **Railway**:
+
+- **Railway Project:** `glistening-peace` (`2484834c-5485-4ff8-a58c-fe2a63b249d4`)
+- **Railway Service:** `nara_protocol_v4` (`fd67c996-f9b5-4089-9ee9-ce169cf2a1e5`)
+- **Settler Instance ID:** `settler-railway-primary`
+- **Settler Keeper Wallet:** [`0xa4B4B00f067cB4f5607c9a7298827fa1C1315aB7`](https://basescan.org/address/0xa4B4B00f067cB4f5607c9a7298827fa1C1315aB7)
+- **Persistent Storage:** Volume `/data` mounted (`pending-settler-railway-primary.json` state + reconciliation records)
+- **Multi-RPC Topology:**
+  - **Primary WS:** `wss://lb.drpc.live/base/...` (real-time pool swap subscription)
+  - **Secondary WS:** `wss://base-mainnet.g.alchemy.com/v2/...` (consensus & failover)
+  - **Fallback HTTP:** `https://base-rpc.publicnode.com` (redundant polling consensus)
+- **Architecture & Reliability:**
+  - Powered by **Multicall3** (`0xcA11bde05977b3631167028862bE2a173976CA11`) to execute all 170+ contract, order, position NFT, and allowance checks in 2 atomic sub-second queries.
+  - Periodic polling sweep every 15 seconds + real-time WebSocket swap-driven event evaluation.
+  - Automatic exponential backoff retry for RPC limits and network hiccups.
+
+### Local Sweeper Tool
+A manual/cron CLI sweeper remains available for ad-hoc inspection:
 ```powershell
 npx tsx scripts/sweepV4TreasuryRangeSettler.ts
 ```
