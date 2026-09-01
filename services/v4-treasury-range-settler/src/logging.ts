@@ -63,3 +63,25 @@ export async function postStatus(url: string, body: Record<string, unknown>): Pr
     clearTimeout(timeout);
   }
 }
+
+export async function sendTelegramNotification(botToken?: string, chatId?: string, text?: string): Promise<void> {
+  if (!botToken || !chatId || !text) return;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8_000);
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, text, disable_web_page_preview: true }),
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      structuredLog("warn", "telegram_send_failed", { message: `HTTP ${response.status}` });
+    }
+  } catch (error) {
+    structuredLog("warn", "telegram_send_failed", { message: error instanceof Error ? error.message : "unknown error" });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+

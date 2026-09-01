@@ -1,7 +1,7 @@
 import { ethers } from "ethers";
 import type { SettlerConfig } from "./config.js";
 import { RANGE_MANAGER_ABI } from "./contracts.js";
-import { safeErrorCode, structuredLog } from "./logging.js";
+import { safeErrorCode, sendTelegramNotification, structuredLog } from "./logging.js";
 import {
   PENDING_SETTLEMENT_SCHEMA,
   RECONCILED_SETTLEMENT_SCHEMA,
@@ -167,6 +167,18 @@ export class SettlementExecutor {
       orderIds: eligible.map(String),
       wallet: walletAddress,
     });
+    void sendTelegramNotification(
+      this.config.telegramBotToken,
+      this.config.telegramChatId,
+      [
+        "⚡ NARA Range Settlement Transaction Submitted",
+        "━━━━━━━━━━━━━━━━━━━━",
+        `📦 Settleable Orders: ${eligible.map((id) => `#${id}`).join(", ")}`,
+        `🔑 Settler Nonce: ${nonce}`,
+        `🔗 BaseScan Tx: https://basescan.org/tx/${transactionHash}`,
+        `🛡️ Custody Safe: ${this.config.usdcDependency.owner}`,
+      ].join("\n"),
+    );
     return { disposition: "submitted", transactionHash, orderIds: eligible };
   }
 
@@ -211,6 +223,20 @@ export class SettlementExecutor {
           blockHash: evidence.receiptBlock.hash,
           orderIds: orderIds.map(String),
         });
+        void sendTelegramNotification(
+          this.config.telegramBotToken,
+          this.config.telegramChatId,
+          [
+            "✅ NARA Range Settlement Confirmed & Reconciled",
+            "━━━━━━━━━━━━━━━━━━━━",
+            `📦 Settled Orders: ${orderIds.map((id) => `#${id}`).join(", ")}`,
+            `🧱 Block: #${evidence.receiptBlock.number}`,
+            `🪙 NARA Proceeds: ${ethers.formatUnits(evidence.naraOut, 18)} NARA`,
+            `💵 USDC Proceeds: ${ethers.formatUnits(evidence.usdcOut, 6)} USDC`,
+            `🔗 BaseScan Tx: https://basescan.org/tx/${evidence.transactionHash}`,
+            "💰 100% of proceeds returned directly to Dedicated Treasury Safe",
+          ].join("\n"),
+        );
         return { disposition: "settled", transactionHash: evidence.transactionHash, orderIds, terminalStatus: "settled" };
       }
       const terminal = await this.reconciler.terminalOutcome(orderIds, consensus.receipt.blockNumber);

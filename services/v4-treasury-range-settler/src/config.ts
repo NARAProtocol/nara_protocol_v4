@@ -46,6 +46,8 @@ export interface SettlerConfig {
   pendingAlertAfterMs: number;
   pendingDropAfterMs: number;
   instanceId: string;
+  telegramBotToken?: string;
+  telegramChatId?: string;
 }
 
 function required(environment: NodeJS.ProcessEnv, name: string): string {
@@ -167,6 +169,8 @@ export function readSettlerConfig(environment: NodeJS.ProcessEnv = process.env):
     pendingAlertAfterMs,
     pendingDropAfterMs,
     instanceId,
+    telegramBotToken: environment.TELEGRAM_BOT_TOKEN?.trim() || undefined,
+    telegramChatId: environment.TELEGRAM_CHAT_ID?.trim() || undefined,
   };
 }
 

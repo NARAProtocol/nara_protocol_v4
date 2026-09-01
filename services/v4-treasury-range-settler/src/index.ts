@@ -2,7 +2,7 @@ import { ethers } from "ethers";
 import { canonicalProductionV4Deployment } from "../../../scripts/lib/v4LiveConfig.js";
 import { publicSettlerConfig, readSettlerConfig } from "./config.js";
 import { SettlementExecutor } from "./executor.js";
-import { postStatus, safeErrorCode, structuredLog } from "./logging.js";
+import { postStatus, safeErrorCode, sendTelegramNotification, structuredLog } from "./logging.js";
 import { Reconciler } from "./reconciliation.js";
 import { FatalRuntimeGate, RpcDeadlineSet, allSettledOrThrow, type RuntimeFault } from "./runtime.js";
 import { SweepCoordinator } from "./sweepCoordinator.js";
@@ -26,6 +26,18 @@ async function main(): Promise<void> {
     if (now - (lastAlertAt.get(alertKey) ?? 0) < 300_000) return;
     lastAlertAt.set(alertKey, now);
     structuredLog("error", "settler_alert", { instanceId: config.instanceId, manager: config.managerAddress, reasonCode, source });
+    void sendTelegramNotification(
+      config.telegramBotToken,
+      config.telegramChatId,
+      [
+        `🚨 NARA Settler Alert: ${reasonCode}`,
+        "━━━━━━━━━━━━━━━━━━━━",
+        `Instance: ${config.instanceId}`,
+        `Source: ${source}`,
+        `Manager: ${config.managerAddress}`,
+        `Time: ${new Date().toISOString()}`,
+      ].join("\n"),
+    );
     await postStatus(config.alertWebhookUrl, {
       service: "nara-v4-treasury-range-settler",
       instanceId: config.instanceId,
