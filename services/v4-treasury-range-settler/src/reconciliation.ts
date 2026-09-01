@@ -127,30 +127,37 @@ async function readHookConfiguration(
   nara: string,
   blockTag: number,
 ): Promise<Array<{ label: string; expected: unknown }>> {
-  const hook = new ethers.Contract(hookAddress, HOOK_CONFIGURATION_ABI, provider);
-  const [buy, sell, usdcDepth, naraDepth, pendingBuy, pendingSell, pendingUsdc, pendingNara, poolId, registered] = await allSettledOrThrow([
-    rpc.one(source, "hook.buyCurve", () => hook.buyCurve({ blockTag })),
-    rpc.one(source, "hook.sellCurve", () => hook.sellCurve({ blockTag })),
-    rpc.one(source, "hook.protocolDepth.usdc", () => hook.protocolDepth(usdc, { blockTag })),
-    rpc.one(source, "hook.protocolDepth.nara", () => hook.protocolDepth(nara, { blockTag })),
-    rpc.one(source, "hook.pendingBuyCurve", () => hook.pendingBuyCurve({ blockTag })),
-    rpc.one(source, "hook.pendingSellCurve", () => hook.pendingSellCurve({ blockTag })),
-    rpc.one(source, "hook.pendingProtocolDepth.usdc", () => hook.pendingProtocolDepth(usdc, { blockTag })),
-    rpc.one(source, "hook.pendingProtocolDepth.nara", () => hook.pendingProtocolDepth(nara, { blockTag })),
-    rpc.one(source, "hook.registeredPoolId", () => hook.registeredPoolId({ blockTag })),
-    rpc.one(source, "hook.poolRegistered", () => hook.poolRegistered({ blockTag })),
-  ]);
+  const hookIface = new ethers.Interface(HOOK_CONFIGURATION_ABI);
+  const multicallAbi = [
+    "function aggregate3(tuple(address target, bool allowFailure, bytes callData)[] calls) payable returns (tuple(bool success, bytes returnData)[])",
+  ];
+  const multicall = new ethers.Contract("0xcA11bde05977b3631167028862bE2a173976CA11", multicallAbi, provider);
+  const calls = [
+    { target: hookAddress, allowFailure: false, callData: hookIface.encodeFunctionData("buyCurve") },
+    { target: hookAddress, allowFailure: false, callData: hookIface.encodeFunctionData("sellCurve") },
+    { target: hookAddress, allowFailure: false, callData: hookIface.encodeFunctionData("protocolDepth", [usdc]) },
+    { target: hookAddress, allowFailure: false, callData: hookIface.encodeFunctionData("protocolDepth", [nara]) },
+    { target: hookAddress, allowFailure: false, callData: hookIface.encodeFunctionData("pendingBuyCurve") },
+    { target: hookAddress, allowFailure: false, callData: hookIface.encodeFunctionData("pendingSellCurve") },
+    { target: hookAddress, allowFailure: false, callData: hookIface.encodeFunctionData("pendingProtocolDepth", [usdc]) },
+    { target: hookAddress, allowFailure: false, callData: hookIface.encodeFunctionData("pendingProtocolDepth", [nara]) },
+    { target: hookAddress, allowFailure: false, callData: hookIface.encodeFunctionData("registeredPoolId") },
+    { target: hookAddress, allowFailure: false, callData: hookIface.encodeFunctionData("poolRegistered") },
+  ];
+  const results = await rpc.one(source, "hook.configurationMulticall", () =>
+    multicall.aggregate3.staticCall(calls, { blockTag })
+  ) as Array<{ success: boolean; returnData: string }>;
   return [
-    { label: "hook.buyCurve", expected: normalize(buy) },
-    { label: "hook.sellCurve", expected: normalize(sell) },
-    { label: "hook.protocolDepth.usdc", expected: normalize(usdcDepth) },
-    { label: "hook.protocolDepth.nara", expected: normalize(naraDepth) },
-    { label: "hook.pendingBuyCurve", expected: normalize(pendingBuy) },
-    { label: "hook.pendingSellCurve", expected: normalize(pendingSell) },
-    { label: "hook.pendingProtocolDepth.usdc", expected: normalize(pendingUsdc) },
-    { label: "hook.pendingProtocolDepth.nara", expected: normalize(pendingNara) },
-    { label: "hook.registeredPoolId", expected: normalize(poolId) },
-    { label: "hook.poolRegistered", expected: normalize(registered) },
+    { label: "hook.buyCurve", expected: normalize(hookIface.decodeFunctionResult("buyCurve", results[0].returnData)) },
+    { label: "hook.sellCurve", expected: normalize(hookIface.decodeFunctionResult("sellCurve", results[1].returnData)) },
+    { label: "hook.protocolDepth.usdc", expected: normalize(hookIface.decodeFunctionResult("protocolDepth", results[2].returnData)[0]) },
+    { label: "hook.protocolDepth.nara", expected: normalize(hookIface.decodeFunctionResult("protocolDepth", results[3].returnData)[0]) },
+    { label: "hook.pendingBuyCurve", expected: normalize(hookIface.decodeFunctionResult("pendingBuyCurve", results[4].returnData)) },
+    { label: "hook.pendingSellCurve", expected: normalize(hookIface.decodeFunctionResult("pendingSellCurve", results[5].returnData)) },
+    { label: "hook.pendingProtocolDepth.usdc", expected: normalize(hookIface.decodeFunctionResult("pendingProtocolDepth", results[6].returnData)) },
+    { label: "hook.pendingProtocolDepth.nara", expected: normalize(hookIface.decodeFunctionResult("pendingProtocolDepth", results[7].returnData)) },
+    { label: "hook.registeredPoolId", expected: normalize(hookIface.decodeFunctionResult("registeredPoolId", results[8].returnData)[0]) },
+    { label: "hook.poolRegistered", expected: normalize(hookIface.decodeFunctionResult("poolRegistered", results[9].returnData)[0]) },
   ];
 }
 
@@ -320,9 +327,12 @@ export class Reconciler {
       ["position_manager", this.production.positionManager, this.config.infrastructureRuntimeCodeHashes.positionManager],
       ["permit2", this.production.permit2, this.config.infrastructureRuntimeCodeHashes.permit2],
     ];
-    await allSettledOrThrow(runtimes.flatMap(([label, target, expectedHash]) =>
-      providers.map(([source, provider]) => assertRuntime(provider, source, this.rpc, target, expectedHash, point.number, label))
-    ));
+    for (let i = 0; i < runtimes.length; i += 5) {
+      const chunk = runtimes.slice(i, i + 5);
+      await allSettledOrThrow(chunk.flatMap(([label, target, expectedHash]) =>
+        providers.map(([source, provider]) => assertRuntime(provider, source, this.rpc, target, expectedHash, point.number, label))
+      ));
+    }
     const deploymentExecutorSafeEvidence = await allSettledOrThrow(providers.map(([source, provider]) =>
       this.rpc.one(source, "deploymentExecutorSafe.policy", () => readCanonicalNaraSafeEvidence(
         provider,
@@ -376,7 +386,6 @@ export class Reconciler {
     if (treasuryRangeHookConfigurationHash(hookConfigurations[0]) !== this.config.hookConfigurationHash) {
       throw new Error("HOOK_CONFIGURATION_CHANGED");
     }
-    const managers = contracts(this.config.managerAddress, RANGE_MANAGER_ABI, this.providers);
     const expected: ReadonlyArray<[string, string | bigint | number]> = [
       ["NARA", this.production.token],
       ["USDC", this.production.base],
@@ -391,18 +400,34 @@ export class Reconciler {
       ["POOL_ID", this.production.poolId],
       ["MAX_SETTLE_BATCH", 16],
     ];
-    for (const [method, expectedValue] of expected) {
-      const actual = await compareCall(managers, method, [], point.number, this.rpc);
-      let matches: boolean;
-      if (typeof expectedValue === "string" && ethers.isAddress(String(expectedValue))) {
-        matches = ethers.getAddress(String(actual)) === ethers.getAddress(expectedValue);
-      } else if (typeof expectedValue === "string") {
-        matches = String(actual).toLowerCase() === String(expectedValue).toLowerCase();
-      } else {
-        matches = BigInt(actual as bigint) === BigInt(expectedValue);
-      }
-      if (!matches) {
-        throw new Error(`${method}_BINDING_MISMATCH`);
+    const managerIface = new ethers.Interface(RANGE_MANAGER_ABI);
+    const multicallAbi = [
+      "function aggregate3(tuple(address target, bool allowFailure, bytes callData)[] calls) payable returns (tuple(bool success, bytes returnData)[])",
+    ];
+    const calls = expected.map(([method]) => ({
+      target: this.config.managerAddress,
+      allowFailure: false,
+      callData: managerIface.encodeFunctionData(method),
+    }));
+    const multicallResults = await allSettledOrThrow(providers.map(([source, provider]) => {
+      const multicall = new ethers.Contract("0xcA11bde05977b3631167028862bE2a173976CA11", multicallAbi, provider);
+      return this.rpc.one(source, "manager.bindingsMulticall", () => multicall.aggregate3.staticCall(calls, { blockTag: point.number })) as Promise<Array<{ success: boolean; returnData: string }>>;
+    }));
+    for (let p = 0; p < providers.length; p++) {
+      for (let i = 0; i < expected.length; i++) {
+        const [method, expectedValue] = expected[i];
+        const decoded = managerIface.decodeFunctionResult(method, multicallResults[p][i].returnData)[0];
+        let matches: boolean;
+        if (typeof expectedValue === "string" && ethers.isAddress(String(expectedValue))) {
+          matches = ethers.getAddress(String(decoded)) === ethers.getAddress(expectedValue);
+        } else if (typeof expectedValue === "string") {
+          matches = String(decoded).toLowerCase() === String(expectedValue).toLowerCase();
+        } else {
+          matches = BigInt(decoded as bigint) === BigInt(expectedValue);
+        }
+        if (!matches) {
+          throw new Error(`${method}_BINDING_MISMATCH`);
+        }
       }
     }
     const positionManagers = contracts(this.production.positionManager, POSITION_MANAGER_ABI, this.providers);
@@ -440,85 +465,144 @@ export class Reconciler {
     // agree on; configured confirmations apply to the mined receipt, not detection.
     const canonical = point ?? await this.commonConfirmedPoint(1);
     await this.assertBindings(canonical);
-    const managers = contracts(this.config.managerAddress, RANGE_MANAGER_ABI, this.providers);
-    const total = BigInt(await compareCall(managers, "activeOrderCount", [], canonical.number, this.rpc) as bigint);
+
+    const multicallAbi = [
+      "function aggregate3(tuple(address target, bool allowFailure, bytes callData)[] calls) payable returns (tuple(bool success, bytes returnData)[])",
+    ];
+    const managerIface = new ethers.Interface(RANGE_MANAGER_ABI);
+    const positionIface = new ethers.Interface(POSITION_MANAGER_ABI);
+    const erc20Iface = new ethers.Interface(ERC20_ABI);
+    const permit2Iface = new ethers.Interface(PERMIT2_ABI);
+    const providers = providerEntries(this.providers);
+
+    // 1. Pagination & Active Order IDs
+    const initCalls = [
+      { target: this.config.managerAddress, allowFailure: false, callData: managerIface.encodeFunctionData("activeOrderCount") },
+      { target: this.config.managerAddress, allowFailure: false, callData: managerIface.encodeFunctionData("getActiveOrderIds", [0n, BigInt(this.config.maxPageSize)]) },
+    ];
+    const initResults = await allSettledOrThrow(providers.map(([source, provider]) => {
+      const multicall = new ethers.Contract("0xcA11bde05977b3631167028862bE2a173976CA11", multicallAbi, provider);
+      return this.rpc.one(source, "sweep.initMulticall", () => multicall.aggregate3.staticCall(initCalls, { blockTag: canonical.number })) as Promise<Array<{ success: boolean; returnData: string }>>;
+    }));
+    if (new Set(initResults.map(stable)).size !== 1) throw new Error("ACTIVE_ORDER_RPC_DISAGREEMENT");
+
+    const total = BigInt(managerIface.decodeFunctionResult("activeOrderCount", initResults[0][0].returnData)[0]);
     const maximum = BigInt(this.config.maxPageSize * this.config.maxPages);
     if (total > maximum) throw new Error("ACTIVE_ORDER_BOUND_EXCEEDED");
-    const ids: bigint[] = [];
-    let offset = 0n;
-    for (let page = 0; page < this.config.maxPages && offset < total; page += 1) {
-      const result = await compareCall(managers, "getActiveOrderIds", [offset, this.config.maxPageSize], canonical.number, this.rpc) as ethers.Result;
-      const pageIds = (result[0] as bigint[]).map(BigInt);
-      const nextOffset = BigInt(result[1]);
+
+    const firstPage = managerIface.decodeFunctionResult("getActiveOrderIds", initResults[0][1].returnData);
+    const ids: bigint[] = (firstPage[0] as bigint[]).map(BigInt);
+    let offset = BigInt(firstPage[1]);
+
+    while (ids.length < total && offset < total) {
+      const pageCalls = [
+        { target: this.config.managerAddress, allowFailure: false, callData: managerIface.encodeFunctionData("getActiveOrderIds", [offset, BigInt(this.config.maxPageSize)]) },
+      ];
+      const pageResults = await allSettledOrThrow(providers.map(([source, provider]) => {
+        const multicall = new ethers.Contract("0xcA11bde05977b3631167028862bE2a173976CA11", multicallAbi, provider);
+        return this.rpc.one(source, "sweep.pageMulticall", () => multicall.aggregate3.staticCall(pageCalls, { blockTag: canonical.number })) as Promise<Array<{ success: boolean; returnData: string }>>;
+      }));
+      if (new Set(pageResults.map(stable)).size !== 1) throw new Error("ACTIVE_ORDER_PAGE_RPC_DISAGREEMENT");
+      const decodedPage = managerIface.decodeFunctionResult("getActiveOrderIds", pageResults[0][0].returnData);
+      const pageIds = (decodedPage[0] as bigint[]).map(BigInt);
+      const nextOffset = BigInt(decodedPage[1]);
       if (pageIds.length === 0 || nextOffset <= offset) throw new Error("ACTIVE_ORDER_PAGINATION_STALLED");
       ids.push(...pageIds);
       offset = nextOffset;
     }
     if (BigInt(ids.length) !== total) throw new Error("ACTIVE_ORDER_PAGINATION_INCOMPLETE");
     if (new Set(ids.map(String)).size !== ids.length) throw new Error("DUPLICATE_ACTIVE_ORDER_ID");
+
+    // 2. Fetch all orders and state atomically in one Multicall
+    const batchCalls = [
+      ...ids.map((id) => ({ target: this.config.managerAddress, allowFailure: false, callData: managerIface.encodeFunctionData("getOrder", [id]) })),
+      ...ids.map((id) => ({ target: this.config.managerAddress, allowFailure: false, callData: managerIface.encodeFunctionData("isSettleable", [id]) })),
+      { target: this.production.positionManager, allowFailure: false, callData: positionIface.encodeFunctionData("balanceOf", [this.config.managerAddress]) },
+      { target: this.production.token, allowFailure: false, callData: erc20Iface.encodeFunctionData("balanceOf", [this.authorities.treasuryRangeSafe]) },
+      { target: this.production.base, allowFailure: false, callData: erc20Iface.encodeFunctionData("balanceOf", [this.authorities.treasuryRangeSafe]) },
+      { target: this.production.token, allowFailure: false, callData: erc20Iface.encodeFunctionData("balanceOf", [this.config.managerAddress]) },
+      { target: this.production.base, allowFailure: false, callData: erc20Iface.encodeFunctionData("balanceOf", [this.config.managerAddress]) },
+      { target: this.production.token, allowFailure: false, callData: erc20Iface.encodeFunctionData("allowance", [this.authorities.treasuryRangeSafe, this.config.managerAddress]) },
+      { target: this.production.base, allowFailure: false, callData: erc20Iface.encodeFunctionData("allowance", [this.authorities.treasuryRangeSafe, this.config.managerAddress]) },
+      { target: this.production.token, allowFailure: false, callData: erc20Iface.encodeFunctionData("allowance", [this.config.managerAddress, this.production.permit2]) },
+      { target: this.production.base, allowFailure: false, callData: erc20Iface.encodeFunctionData("allowance", [this.config.managerAddress, this.production.permit2]) },
+      { target: this.production.permit2, allowFailure: false, callData: permit2Iface.encodeFunctionData("allowance", [this.config.managerAddress, this.production.token, this.production.positionManager]) },
+      { target: this.production.permit2, allowFailure: false, callData: permit2Iface.encodeFunctionData("allowance", [this.config.managerAddress, this.production.base, this.production.positionManager]) },
+    ];
+
+    const batchResults = await allSettledOrThrow(providers.map(([source, provider]) => {
+      const multicall = new ethers.Contract("0xcA11bde05977b3631167028862bE2a173976CA11", multicallAbi, provider);
+      return this.rpc.one(source, "sweep.batchMulticall", () => multicall.aggregate3.staticCall(batchCalls, { blockTag: canonical.number })) as Promise<Array<{ success: boolean; returnData: string }>>;
+    }));
+    if (new Set(batchResults.map(stable)).size !== 1) throw new Error("SWEEP_BATCH_RPC_DISAGREEMENT");
+
     const orders: RangeOrderSnapshot[] = [];
     const settleableOrderIds: bigint[] = [];
-    const positionManagers = contracts(this.production.positionManager, POSITION_MANAGER_ABI, this.providers);
-    for (const orderId of ids) {
-      const raw = await compareCall(managers, "getOrder", [orderId], canonical.number, this.rpc) as ethers.Result;
+    const n = ids.length;
+
+    for (let i = 0; i < n; i++) {
+      const orderId = ids[i];
+      const raw = managerIface.decodeFunctionResult("getOrder", batchResults[0][i].returnData);
+      const isSettleable = managerIface.decodeFunctionResult("isSettleable", batchResults[0][n + i].returnData)[0];
       const order = decodeOrder(orderId, raw);
       if (order.status !== 1 || order.liquidity === 0n) throw new Error("ACTIVE_ORDER_STATE_MISMATCH");
-      const [owner, liquidity, settleable] = await allSettledOrThrow([
-        compareCall(positionManagers, "ownerOf", [order.tokenId], canonical.number, this.rpc),
-        compareCall(positionManagers, "getPositionLiquidity", [order.tokenId], canonical.number, this.rpc),
-        compareCall(managers, "isSettleable", [orderId], canonical.number, this.rpc),
-      ]);
-      sameAddress(String(owner), this.config.managerAddress, "active order NFT owner");
-      if (BigInt(liquidity as bigint) !== order.liquidity) throw new Error("ACTIVE_ORDER_LIQUIDITY_MISMATCH");
       orders.push(order);
-      if (settleable === true) settleableOrderIds.push(orderId);
+      if (isSettleable === true) settleableOrderIds.push(orderId);
     }
-    const naraContracts = contracts(this.production.token, ERC20_ABI, this.providers);
-    const usdcContracts = contracts(this.production.base, ERC20_ABI, this.providers);
-    const permit2Contracts = contracts(this.production.permit2, PERMIT2_ABI, this.providers);
-    const [
-      managerNftBalance,
-      treasuryRangeSafeNaraBalance,
-      treasuryRangeSafeUsdcBalance,
-      managerNaraBalance,
-      managerUsdcBalance,
-      treasuryRangeSafeNaraAllowance,
-      treasuryRangeSafeUsdcAllowance,
-      managerNaraPermit2Allowance,
-      managerUsdcPermit2Allowance,
-      permit2Nara,
-      permit2Usdc,
-    ] = await allSettledOrThrow([
-      compareCall(positionManagers, "balanceOf", [this.config.managerAddress], canonical.number, this.rpc),
-      compareCall(naraContracts, "balanceOf", [this.authorities.treasuryRangeSafe], canonical.number, this.rpc),
-      compareCall(usdcContracts, "balanceOf", [this.authorities.treasuryRangeSafe], canonical.number, this.rpc),
-      compareCall(naraContracts, "balanceOf", [this.config.managerAddress], canonical.number, this.rpc),
-      compareCall(usdcContracts, "balanceOf", [this.config.managerAddress], canonical.number, this.rpc),
-      compareCall(naraContracts, "allowance", [this.authorities.treasuryRangeSafe, this.config.managerAddress], canonical.number, this.rpc),
-      compareCall(usdcContracts, "allowance", [this.authorities.treasuryRangeSafe, this.config.managerAddress], canonical.number, this.rpc),
-      compareCall(naraContracts, "allowance", [this.config.managerAddress, this.production.permit2], canonical.number, this.rpc),
-      compareCall(usdcContracts, "allowance", [this.config.managerAddress, this.production.permit2], canonical.number, this.rpc),
-      compareCall(permit2Contracts, "allowance", [this.config.managerAddress, this.production.token, this.production.positionManager], canonical.number, this.rpc),
-      compareCall(permit2Contracts, "allowance", [this.config.managerAddress, this.production.base, this.production.positionManager], canonical.number, this.rpc),
-    ]);
+
+    // 3. Verify NFT positions ownership and liquidity in 1 Multicall
+    if (orders.length > 0) {
+      const positionCalls = [
+        ...orders.map((o) => ({ target: this.production.positionManager, allowFailure: false, callData: positionIface.encodeFunctionData("ownerOf", [o.tokenId]) })),
+        ...orders.map((o) => ({ target: this.production.positionManager, allowFailure: false, callData: positionIface.encodeFunctionData("getPositionLiquidity", [o.tokenId]) })),
+      ];
+      const positionResults = await allSettledOrThrow(providers.map(([source, provider]) => {
+        const multicall = new ethers.Contract("0xcA11bde05977b3631167028862bE2a173976CA11", multicallAbi, provider);
+        return this.rpc.one(source, "sweep.positionsMulticall", () => multicall.aggregate3.staticCall(positionCalls, { blockTag: canonical.number })) as Promise<Array<{ success: boolean; returnData: string }>>;
+      }));
+      if (new Set(positionResults.map(stable)).size !== 1) throw new Error("POSITION_MANAGER_RPC_DISAGREEMENT");
+
+      for (let i = 0; i < orders.length; i++) {
+        const order = orders[i];
+        const owner = positionIface.decodeFunctionResult("ownerOf", positionResults[0][i].returnData)[0];
+        const liquidity = BigInt(positionIface.decodeFunctionResult("getPositionLiquidity", positionResults[0][orders.length + i].returnData)[0]);
+        sameAddress(String(owner), this.config.managerAddress, "active order NFT owner");
+        if (liquidity !== order.liquidity) throw new Error("ACTIVE_ORDER_LIQUIDITY_MISMATCH");
+      }
+    }
+
+    const baseIdx = 2 * n;
+    const managerNftBalance = positionIface.decodeFunctionResult("balanceOf", batchResults[0][baseIdx].returnData)[0];
+    const treasuryRangeSafeNaraBalance = erc20Iface.decodeFunctionResult("balanceOf", batchResults[0][baseIdx + 1].returnData)[0];
+    const treasuryRangeSafeUsdcBalance = erc20Iface.decodeFunctionResult("balanceOf", batchResults[0][baseIdx + 2].returnData)[0];
+    const managerNaraBalance = erc20Iface.decodeFunctionResult("balanceOf", batchResults[0][baseIdx + 3].returnData)[0];
+    const managerUsdcBalance = erc20Iface.decodeFunctionResult("balanceOf", batchResults[0][baseIdx + 4].returnData)[0];
+    const treasuryRangeSafeNaraAllowance = erc20Iface.decodeFunctionResult("allowance", batchResults[0][baseIdx + 5].returnData)[0];
+    const treasuryRangeSafeUsdcAllowance = erc20Iface.decodeFunctionResult("allowance", batchResults[0][baseIdx + 6].returnData)[0];
+    const managerNaraPermit2Allowance = erc20Iface.decodeFunctionResult("allowance", batchResults[0][baseIdx + 7].returnData)[0];
+    const managerUsdcPermit2Allowance = erc20Iface.decodeFunctionResult("allowance", batchResults[0][baseIdx + 8].returnData)[0];
+    const permit2Nara = permit2Iface.decodeFunctionResult("allowance", batchResults[0][baseIdx + 9].returnData);
+    const permit2Usdc = permit2Iface.decodeFunctionResult("allowance", batchResults[0][baseIdx + 10].returnData);
+
     const allowances = [
-      BigInt(treasuryRangeSafeNaraAllowance as bigint), BigInt(treasuryRangeSafeUsdcAllowance as bigint),
-      BigInt(managerNaraPermit2Allowance as bigint), BigInt(managerUsdcPermit2Allowance as bigint),
-      BigInt((permit2Nara as ethers.Result)[0]), BigInt((permit2Usdc as ethers.Result)[0]),
+      BigInt(treasuryRangeSafeNaraAllowance), BigInt(treasuryRangeSafeUsdcAllowance),
+      BigInt(managerNaraPermit2Allowance), BigInt(managerUsdcPermit2Allowance),
+      BigInt(permit2Nara[0]), BigInt(permit2Usdc[0]),
     ];
     if (allowances.some((allowance) => allowance !== 0n)) throw new Error("MANAGER_RESIDUAL_ALLOWANCE");
-    const unknownPositionCount = BigInt(managerNftBalance as bigint) - BigInt(orders.length);
+    const unknownPositionCount = BigInt(managerNftBalance) - BigInt(orders.length);
     if (unknownPositionCount < 0n) throw new Error("MANAGER_NFT_ACCOUNTING_UNDERFLOW");
+
     return {
       point: canonical,
       activeOrders: orders,
       settleableOrderIds,
-      treasuryRangeSafeNaraBalance: BigInt(treasuryRangeSafeNaraBalance as bigint),
-      treasuryRangeSafeUsdcBalance: BigInt(treasuryRangeSafeUsdcBalance as bigint),
+      treasuryRangeSafeNaraBalance: BigInt(treasuryRangeSafeNaraBalance),
+      treasuryRangeSafeUsdcBalance: BigInt(treasuryRangeSafeUsdcBalance),
       unknownPositionCount,
       allowanceClean: true,
-      managerNaraBalance: BigInt(managerNaraBalance as bigint),
-      managerUsdcBalance: BigInt(managerUsdcBalance as bigint),
+      managerNaraBalance: BigInt(managerNaraBalance),
+      managerUsdcBalance: BigInt(managerUsdcBalance),
     };
   }
 
