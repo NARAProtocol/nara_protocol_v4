@@ -11,9 +11,9 @@ import { SwapWatcher, type SweepReason } from "./watcher.js";
 async function main(): Promise<void> {
   const config = readSettlerConfig();
   const production = canonicalProductionV4Deployment();
-  const primary = new ethers.WebSocketProvider(config.primaryWsRpc, 8453, { staticNetwork: true });
-  const secondary = new ethers.WebSocketProvider(config.secondaryWsRpc, 8453, { staticNetwork: true });
-  const fallback = new ethers.JsonRpcProvider(config.fallbackHttpRpc, 8453, { staticNetwork: true });
+  const primary = new ethers.WebSocketProvider(config.primaryWsRpc, 8453, { staticNetwork: true, batchMaxCount: 6 });
+  const secondary = new ethers.WebSocketProvider(config.secondaryWsRpc, 8453, { staticNetwork: true, batchMaxCount: 6 });
+  const fallback = new ethers.JsonRpcProvider(config.fallbackHttpRpc, 8453, { staticNetwork: true, batchMaxCount: 6 });
   let watcher: SwapWatcher | undefined;
   let heartbeat: NodeJS.Timeout | undefined;
   let fatalShutdownStarted = false;
@@ -149,6 +149,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((error) => {
-  structuredLog("error", "settler_fatal", { reasonCode: safeErrorCode(error) });
+  structuredLog("error", "settler_fatal", { reasonCode: safeErrorCode(error), message: (error as Error)?.message });
   process.exitCode = 1;
 });

@@ -22,6 +22,7 @@ const SAFE_FIELDS = new Set([
   "pendingAgeMs",
   "terminalStatus",
   "timestamp",
+  "message",
 ]);
 
 export type LogLevel = "info" | "warn" | "error";
