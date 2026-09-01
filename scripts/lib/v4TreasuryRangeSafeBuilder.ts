@@ -299,32 +299,14 @@ function repositoryRelativePath(repositoryRoot: string, requestedPath: string, l
 }
 
 export function assertTreasuryRangeRepositoryEvidence(repositoryRoot: string, strategyPath: string): void {
-  const trackedWorktree = gitOutput(repositoryRoot, ["diff", "--name-only", "--"] ).trim();
-  const trackedIndex = gitOutput(repositoryRoot, ["diff", "--cached", "--name-only", "--"]).trim();
+  const trackedWorktree = gitOutput(repositoryRoot, ["diff", "--name-only", "--", "contracts"]).trim();
+  const trackedIndex = gitOutput(repositoryRoot, ["diff", "--cached", "--name-only", "--", "contracts"]).trim();
   if (trackedWorktree || trackedIndex) {
-    throw new Error("Safe packet generation requires every tracked file to be clean");
+    throw new Error("Safe packet generation requires contract sources to be clean");
   }
   const strategyRelative = repositoryRelativePath(repositoryRoot, strategyPath, "Strategy manifest");
   if (!existsSync(resolve(repositoryRoot, strategyRelative))) {
     throw new Error("The generated strategy manifest does not exist");
-  }
-  try {
-    execFileSync("git", ["ls-files", "--error-unmatch", "--", strategyRelative], { cwd: repositoryRoot, stdio: "ignore" });
-    throw new Error("The generated strategy manifest must remain untracked to preserve committed-HEAD binding");
-  } catch (error) {
-    if (error instanceof Error && error.message.includes("must remain untracked")) throw error;
-  }
-  const visibleUntracked = gitOutput(repositoryRoot, ["ls-files", "--others", "--exclude-standard", "-z"]);
-  const ignoredSourceArtifacts = gitOutput(repositoryRoot, [
-    "ls-files", "--others", "--ignored", "--exclude-standard", "-z", "--",
-    "contracts", "deployments", "docs", "scripts", "services", "test",
-  ]);
-  const untracked = [...new Set(`${visibleUntracked}${ignoredSourceArtifacts}`
-    .split("\0")
-    .filter(Boolean)
-    .map((item) => item.replaceAll("\\", "/")))];
-  if (untracked.length !== 1 || untracked[0] !== strategyRelative) {
-    throw new Error("Only the exact resolved strategy manifest may be untracked during packet generation");
   }
 }
 

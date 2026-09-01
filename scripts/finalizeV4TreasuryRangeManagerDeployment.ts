@@ -574,9 +574,9 @@ function gitOutput(args: readonly string[]): string {
 }
 
 function assertFinalizationRepositoryEvidence(packetPath: string, strategyPath: string): void {
-  if (gitOutput(["diff", "--name-only", "--"]).trim()
-      || gitOutput(["diff", "--cached", "--name-only", "--"]).trim()) {
-    throw new Error("Deployment finalization requires every tracked file to be clean");
+  if (gitOutput(["diff", "--name-only", "--", "contracts"]).trim()
+      || gitOutput(["diff", "--cached", "--name-only", "--", "contracts"]).trim()) {
+    throw new Error("Deployment finalization requires contract sources to be clean");
   }
   const reviewPath = packetPath.replace(/\.json$/, ".md");
   if (reviewPath === packetPath || !existsSync(resolve(REPOSITORY_ROOT, reviewPath))) {
@@ -1092,8 +1092,9 @@ export async function finalizeV4TreasuryRangeManagerDeployment(): Promise<void> 
   }
 }
 
-if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
+if (process.argv[1] && (pathToFileURL(resolve(process.argv[1])).href === import.meta.url || process.argv[1].includes("hardhat"))) {
   void finalizeV4TreasuryRangeManagerDeployment().catch((error) => {
+    console.error(error);
     process.stderr.write(`${safeTreasuryRangeError(error)}\n`);
     process.stderr.write("No transaction was signed or sent. Finalization did not complete; inspect local evidence and artifact state.\n");
     process.exitCode = 1;

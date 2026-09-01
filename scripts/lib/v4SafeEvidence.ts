@@ -181,32 +181,36 @@ export async function readCanonicalNaraSafeEvidence(
     throw new Error("Safe verification block does not have a canonical non-zero block hash");
   }
   const callAtBlock = { blockTag: blockNumber };
-  const contract = new ethers.Contract(safe, NARA_SAFE_ABI, provider);
-  const [
-    safeCode,
-    singletonCode,
-    singleton,
-    version,
-    nonce,
-    threshold,
-    owners,
-    guardStorage,
-    fallbackHandlerStorage,
-    fallbackHandlerCode,
-    modulesPage,
-  ] = await Promise.all([
+  const safeIface = new ethers.Interface(NARA_SAFE_ABI);
+  const multicallAbi = [
+    "function aggregate3(tuple(address target, bool allowFailure, bytes callData)[] calls) payable returns (tuple(bool success, bytes returnData)[])",
+  ];
+  const multicall = new ethers.Contract("0xcA11bde05977b3631167028862bE2a173976CA11", multicallAbi, provider);
+  const calls = [
+    { target: safe, allowFailure: false, callData: safeIface.encodeFunctionData("masterCopy") },
+    { target: safe, allowFailure: false, callData: safeIface.encodeFunctionData("VERSION") },
+    { target: safe, allowFailure: false, callData: safeIface.encodeFunctionData("nonce") },
+    { target: safe, allowFailure: false, callData: safeIface.encodeFunctionData("getThreshold") },
+    { target: safe, allowFailure: false, callData: safeIface.encodeFunctionData("getOwners") },
+    { target: safe, allowFailure: false, callData: safeIface.encodeFunctionData("getStorageAt", [SAFE_GUARD_STORAGE_SLOT, 1]) },
+    { target: safe, allowFailure: false, callData: safeIface.encodeFunctionData("getStorageAt", [SAFE_FALLBACK_HANDLER_STORAGE_SLOT, 1]) },
+    { target: safe, allowFailure: false, callData: safeIface.encodeFunctionData("getModulesPaginated", [SAFE_MODULE_SENTINEL, 10]) },
+  ];
+  const [multicallResults, safeCode, singletonCode, fallbackHandlerCode] = await Promise.all([
+    multicall.aggregate3.staticCall(calls, callAtBlock),
     provider.getCode(safe, blockNumber),
     provider.getCode(BASE_SAFE_141_SINGLETON, blockNumber),
-    contract.masterCopy(callAtBlock),
-    contract.VERSION(callAtBlock),
-    contract.nonce(callAtBlock),
-    contract.getThreshold(callAtBlock),
-    contract.getOwners(callAtBlock),
-    contract.getStorageAt(SAFE_GUARD_STORAGE_SLOT, 1, callAtBlock),
-    contract.getStorageAt(SAFE_FALLBACK_HANDLER_STORAGE_SLOT, 1, callAtBlock),
     provider.getCode(NARA_SAFE_FALLBACK_HANDLER, blockNumber),
-    contract.getModulesPaginated(SAFE_MODULE_SENTINEL, 10, callAtBlock),
   ]);
+
+  const singleton = safeIface.decodeFunctionResult("masterCopy", multicallResults[0].returnData)[0];
+  const version = safeIface.decodeFunctionResult("VERSION", multicallResults[1].returnData)[0];
+  const nonce = safeIface.decodeFunctionResult("nonce", multicallResults[2].returnData)[0];
+  const threshold = safeIface.decodeFunctionResult("getThreshold", multicallResults[3].returnData)[0];
+  const owners = safeIface.decodeFunctionResult("getOwners", multicallResults[4].returnData)[0];
+  const guardStorage = safeIface.decodeFunctionResult("getStorageAt", multicallResults[5].returnData)[0];
+  const fallbackHandlerStorage = safeIface.decodeFunctionResult("getStorageAt", multicallResults[6].returnData)[0];
+  const modulesPage = safeIface.decodeFunctionResult("getModulesPaginated", multicallResults[7].returnData);
 
   const safeCodeHash = ethers.keccak256(safeCode).toLowerCase();
   const singletonCodeHash = ethers.keccak256(singletonCode).toLowerCase();
@@ -283,32 +287,36 @@ export async function readTreasuryRangeSafeEvidence(
     throw new Error("Treasury Range Safe verification block does not have a canonical non-zero block hash");
   }
   const callAtBlock = { blockTag: blockNumber };
-  const contract = new ethers.Contract(safe, NARA_SAFE_ABI, provider);
-  const [
-    safeCode,
-    singletonCode,
-    singleton,
-    version,
-    nonce,
-    threshold,
-    owners,
-    guardStorage,
-    fallbackHandlerStorage,
-    fallbackHandlerCode,
-    modulesPage,
-  ] = await Promise.all([
+  const safeIface = new ethers.Interface(NARA_SAFE_ABI);
+  const multicallAbi = [
+    "function aggregate3(tuple(address target, bool allowFailure, bytes callData)[] calls) payable returns (tuple(bool success, bytes returnData)[])",
+  ];
+  const multicall = new ethers.Contract("0xcA11bde05977b3631167028862bE2a173976CA11", multicallAbi, provider);
+  const calls = [
+    { target: safe, allowFailure: false, callData: safeIface.encodeFunctionData("masterCopy") },
+    { target: safe, allowFailure: false, callData: safeIface.encodeFunctionData("VERSION") },
+    { target: safe, allowFailure: false, callData: safeIface.encodeFunctionData("nonce") },
+    { target: safe, allowFailure: false, callData: safeIface.encodeFunctionData("getThreshold") },
+    { target: safe, allowFailure: false, callData: safeIface.encodeFunctionData("getOwners") },
+    { target: safe, allowFailure: false, callData: safeIface.encodeFunctionData("getStorageAt", [SAFE_GUARD_STORAGE_SLOT, 1]) },
+    { target: safe, allowFailure: false, callData: safeIface.encodeFunctionData("getStorageAt", [SAFE_FALLBACK_HANDLER_STORAGE_SLOT, 1]) },
+    { target: safe, allowFailure: false, callData: safeIface.encodeFunctionData("getModulesPaginated", [SAFE_MODULE_SENTINEL, 10]) },
+  ];
+  const [multicallResults, safeCode, singletonCode, fallbackHandlerCode] = await Promise.all([
+    multicall.aggregate3.staticCall(calls, callAtBlock),
     provider.getCode(safe, blockNumber),
     provider.getCode(BASE_SAFE_141_SINGLETON, blockNumber),
-    contract.masterCopy(callAtBlock),
-    contract.VERSION(callAtBlock),
-    contract.nonce(callAtBlock),
-    contract.getThreshold(callAtBlock),
-    contract.getOwners(callAtBlock),
-    contract.getStorageAt(SAFE_GUARD_STORAGE_SLOT, 1, callAtBlock),
-    contract.getStorageAt(SAFE_FALLBACK_HANDLER_STORAGE_SLOT, 1, callAtBlock),
     provider.getCode(NARA_SAFE_FALLBACK_HANDLER, blockNumber),
-    contract.getModulesPaginated(SAFE_MODULE_SENTINEL, 10, callAtBlock),
   ]);
+
+  const singleton = safeIface.decodeFunctionResult("masterCopy", multicallResults[0].returnData)[0];
+  const version = safeIface.decodeFunctionResult("VERSION", multicallResults[1].returnData)[0];
+  const nonce = safeIface.decodeFunctionResult("nonce", multicallResults[2].returnData)[0];
+  const threshold = safeIface.decodeFunctionResult("getThreshold", multicallResults[3].returnData)[0];
+  const owners = safeIface.decodeFunctionResult("getOwners", multicallResults[4].returnData)[0];
+  const guardStorage = safeIface.decodeFunctionResult("getStorageAt", multicallResults[5].returnData)[0];
+  const fallbackHandlerStorage = safeIface.decodeFunctionResult("getStorageAt", multicallResults[6].returnData)[0];
+  const modulesPage = safeIface.decodeFunctionResult("getModulesPaginated", multicallResults[7].returnData);
 
   return assertTreasuryRangeSafeSnapshot(policy, {
     address: safe,
@@ -320,7 +328,7 @@ export async function readTreasuryRangeSafeEvidence(
     nextModule: String(modulesPage[1]),
     guard: ethers.getAddress(ethers.dataSlice(guardStorage, 12)),
     fallbackHandler: ethers.getAddress(ethers.dataSlice(fallbackHandlerStorage, 12)),
-    singleton: String(singleton),
+    singleton: ethers.getAddress(singleton),
     safeRuntimeCodeHash: ethers.keccak256(safeCode).toLowerCase(),
     singletonRuntimeCodeHash: ethers.keccak256(singletonCode).toLowerCase(),
     fallbackHandlerRuntimeCodeHash: ethers.keccak256(fallbackHandlerCode).toLowerCase(),

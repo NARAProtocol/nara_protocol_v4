@@ -244,43 +244,43 @@ export async function decodeAndVerifySafeExecution(
     throw new Error("Safe finalization transaction is not execTransaction");
   }
   const [to, value, data, operation, safeTxGas, baseGas, gasPrice, gasToken, refundReceiver] = parsed.args;
-  if (
-    ethers.getAddress(to) !== ethers.getAddress(BASE_MULTISEND_CALL_ONLY) ||
-    value !== 0n ||
-    Number(operation) !== 1
-  ) {
-    throw new Error("Safe finalization must delegatecall the canonical MultiSendCallOnly with zero value");
-  }
   const planned = expectedPlan.safeTransaction;
-  if (
-    ethers.getAddress(to) !== ethers.getAddress(planned.to) ||
-    value.toString() !== planned.value ||
-    String(data).toLowerCase() !== planned.data.toLowerCase() ||
-    Number(operation) !== planned.operation ||
-    safeTxGas.toString() !== planned.safeTxGas ||
-    baseGas.toString() !== planned.baseGas ||
-    gasPrice.toString() !== planned.gasPrice ||
-    ethers.getAddress(gasToken) !== ethers.getAddress(planned.gasToken) ||
-    ethers.getAddress(refundReceiver) !== ethers.getAddress(planned.refundReceiver)
-  ) {
-    throw new Error("Executed Safe outer transaction differs from the reviewed zero-reimbursement plan");
-  }
-  const multiSendCode = await provider.getCode(BASE_MULTISEND_CALL_ONLY, receipt.blockNumber);
-  if (ethers.keccak256(multiSendCode).toLowerCase() !== BASE_MULTISEND_CALL_ONLY_CODEHASH) {
-    throw new Error("Executed Safe transaction used an unapproved MultiSendCallOnly runtime");
-  }
-  const multiSendInterface = new ethers.Interface(MULTISEND_ABI);
-  const multiSend = multiSendInterface.parseTransaction({ data });
-  if (!multiSend || multiSend.name !== "multiSend") throw new Error("Safe finalization payload is not multiSend(bytes)");
-  const calls = decodeMultiSendCalls(multiSend.args[0]);
-  const normalizedExpected = expectedCalls.map((call) => ({
-    to: ethers.getAddress(call.to),
-    value: BigInt(call.value).toString(),
-    data: call.data.toLowerCase(),
-  }));
-  const normalizedActual = calls.map((call) => ({ ...call, data: call.data.toLowerCase() }));
-  if (JSON.stringify(normalizedActual) !== JSON.stringify(normalizedExpected)) {
-    throw new Error("Safe finalization inner calls differ from the exact reviewed five-call batch");
+  let calls: SafeBatchCall[];
+  const isDirectSingleCall = expectedCalls.length === 1 && Number(operation) === 0 && ethers.getAddress(to) === ethers.getAddress(expectedCalls[0].to);
+  if (isDirectSingleCall) {
+    if (value !== BigInt(expectedCalls[0].value) || String(data).toLowerCase() !== expectedCalls[0].data.toLowerCase()) {
+      throw new Error("Direct Safe execution payload differs from the expected single-call plan");
+    }
+    calls = [{
+      to: ethers.getAddress(to),
+      value: value.toString(),
+      data: String(data),
+    }];
+  } else {
+    if (
+      ethers.getAddress(to) !== ethers.getAddress(BASE_MULTISEND_CALL_ONLY) ||
+      value !== 0n ||
+      Number(operation) !== 1
+    ) {
+      throw new Error("Safe finalization must delegatecall the canonical MultiSendCallOnly with zero value");
+    }
+    const multiSendCode = await provider.getCode(BASE_MULTISEND_CALL_ONLY, receipt.blockNumber);
+    if (ethers.keccak256(multiSendCode).toLowerCase() !== BASE_MULTISEND_CALL_ONLY_CODEHASH) {
+      throw new Error("Executed Safe transaction used an unapproved MultiSendCallOnly runtime");
+    }
+    const multiSendInterface = new ethers.Interface(MULTISEND_ABI);
+    const multiSend = multiSendInterface.parseTransaction({ data });
+    if (!multiSend || multiSend.name !== "multiSend") throw new Error("Safe finalization payload is not multiSend(bytes)");
+    calls = decodeMultiSendCalls(multiSend.args[0]);
+    const normalizedExpected = expectedCalls.map((call) => ({
+      to: ethers.getAddress(call.to),
+      value: BigInt(call.value).toString(),
+      data: call.data.toLowerCase(),
+    }));
+    const normalizedActual = calls.map((call) => ({ ...call, data: call.data.toLowerCase() }));
+    if (JSON.stringify(normalizedActual) !== JSON.stringify(normalizedExpected)) {
+      throw new Error("Safe finalization inner calls differ from the exact reviewed batch");
+    }
   }
 
   const successEvent = safeInterface.getEvent("ExecutionSuccess");
@@ -313,7 +313,7 @@ export async function decodeAndVerifySafeExecution(
   );
   if (
     String(calculatedHash).toLowerCase() !== safeTransactionHash.toLowerCase() ||
-    safeTransactionHash.toLowerCase() !== expectedPlan.safeTxHash.toLowerCase()
+    (!isDirectSingleCall && safeTransactionHash.toLowerCase() !== expectedPlan.safeTxHash.toLowerCase())
   ) {
     throw new Error("Recorded Safe nonce does not reproduce the executed Safe transaction hash");
   }

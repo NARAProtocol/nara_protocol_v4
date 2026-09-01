@@ -80,12 +80,31 @@ export class RpcDeadlineSet {
   ) {}
 
   one<T>(source: RpcSource, operation: string, task: () => Promise<T>): Promise<T> {
+    const retryTask = async (): Promise<T> => {
+      let delay = 150;
+      for (let attempt = 0; attempt < 4; attempt++) {
+        try {
+          return await task();
+        } catch (err: unknown) {
+          const e = err as { info?: { error?: { code?: number } }; message?: string };
+          const isRateLimit = e?.info?.error?.code === -32016 ||
+            (typeof e?.message === "string" && (e.message.includes("rate limit") || e.message.includes("429")));
+          if (isRateLimit && attempt < 3) {
+            await new Promise((resolve) => setTimeout(resolve, delay));
+            delay *= 2;
+            continue;
+          }
+          throw err;
+        }
+      }
+      return task();
+    };
     return withRuntimeDeadline(this.gate, {
       code: "RPC_REQUEST_TIMEOUT",
       rpcSource: source,
       operation,
       timeoutMs: this.timeoutMs,
-    }, task);
+    }, retryTask);
   }
 
   all<T>(

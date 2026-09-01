@@ -2,7 +2,7 @@ import { ethers } from "ethers";
 import { canonicalProductionV4Deployment } from "../../../scripts/lib/v4LiveConfig.js";
 import { publicSettlerConfig, readSettlerConfig } from "./config.js";
 import { SettlementExecutor } from "./executor.js";
-import { postStatus, safeErrorCode, structuredLog } from "./logging.js";
+import { postStatus, safeErrorCode, sendTelegramNotification, structuredLog } from "./logging.js";
 import { Reconciler } from "./reconciliation.js";
 import { FatalRuntimeGate, RpcDeadlineSet, allSettledOrThrow, type RuntimeFault } from "./runtime.js";
 import { SweepCoordinator } from "./sweepCoordinator.js";
@@ -13,12 +13,21 @@ async function main(): Promise<void> {
   const production = canonicalProductionV4Deployment();
   const primary = new ethers.WebSocketProvider(config.primaryWsRpc, 8453, { staticNetwork: true });
   const secondary = new ethers.WebSocketProvider(config.secondaryWsRpc, 8453, { staticNetwork: true });
-  const fallback = new ethers.JsonRpcProvider(config.fallbackHttpRpc, 8453, { staticNetwork: true });
+  const fallback = new ethers.JsonRpcProvider(config.fallbackHttpRpc, 8453, { staticNetwork: true, batchMaxCount: 6 });
   let watcher: SwapWatcher | undefined;
   let heartbeat: NodeJS.Timeout | undefined;
   let fatalShutdownStarted = false;
   let lastSuccessAt = 0;
   const lastAlertAt = new Map<string, number>();
+
+  const TRANSIENT_RPC_CODES = new Set([
+    "SERVER_ERROR",
+    "NETWORK_ERROR",
+    "TIMEOUT",
+    "UNKNOWN_ERROR",
+    "ECONNRESET",
+    "FETCH_ERROR",
+  ]);
 
   const alert = async (reasonCode: string, source: string): Promise<void> => {
     const alertKey = `${reasonCode}:${source}`;
@@ -26,6 +35,20 @@ async function main(): Promise<void> {
     if (now - (lastAlertAt.get(alertKey) ?? 0) < 300_000) return;
     lastAlertAt.set(alertKey, now);
     structuredLog("error", "settler_alert", { instanceId: config.instanceId, manager: config.managerAddress, reasonCode, source });
+    if (!TRANSIENT_RPC_CODES.has(reasonCode)) {
+      void sendTelegramNotification(
+        config.telegramBotToken,
+        config.telegramChatId,
+        [
+          `🟡 ⚠️ [SETTLER ALERT: ${reasonCode}]`,
+          "━━━━━━━━━━━━━━━━━━━━",
+          `📊 Reason: ${reasonCode}`,
+          `🔍 Source: ${source}`,
+          `🛡️ Manager: ${config.managerAddress}`,
+          `⏱️ Time: ${new Date().toISOString().replace("T", " ").slice(0, 19)} UTC`,
+        ].join("\n"),
+      );
+    }
     await postStatus(config.alertWebhookUrl, {
       service: "nara-v4-treasury-range-settler",
       instanceId: config.instanceId,
@@ -149,6 +172,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((error) => {
-  structuredLog("error", "settler_fatal", { reasonCode: safeErrorCode(error) });
+  structuredLog("error", "settler_fatal", { reasonCode: safeErrorCode(error), message: (error as Error)?.message });
   process.exitCode = 1;
 });

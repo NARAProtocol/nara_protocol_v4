@@ -48,43 +48,32 @@ Only sanitized Matrix evidence is public; the implementation remains private
 local operator tooling and is not a protocol repository component.
 The documentation state and downstream handoff boundary are recorded in
 [`NARA-20260830-documentation-convergence.md`](releases/NARA-20260830-documentation-convergence.md).
+The live deployment and tactical order activation record is
+[`NARA-20260901-v4-treasury-range-activation.md`](releases/NARA-20260901-v4-treasury-range-activation.md).
 
-## PROTECTED DEDICATED-SAFE SOURCE - Treasury Range Manager V1 (merged, not deployed)
+## LIVE DEPLOYED & ACTIVE - Treasury Range Manager V1 (Base Mainnet)
 
-Change ID `NARA-20260828-v4-treasury-range-manager` adds an undeployed
-Safe-bound periphery manager for tactical one-sided NARA/USDC ranges, an exact
-state reader/planner/optimizer, unsigned Safe builders, an adversarial Base-fork
-simulator, and a separate permissionless gas-only settlement service. It does
-not modify permanent POL, the active Hook, Vault, Compounder, production roles,
-or either existing maintainer.
+`NARATreasuryRangeManagerV1` is deployed and active on Base mainnet at
+[`0xd58afa5eaB20B0ED287851Cf98f359AdEd58a69C`](https://basescan.org/address/0xd58afa5eaB20B0ED287851Cf98f359AdEd58a69C)
+(deployment block `50736510`, tx `0xa657e0be76f040195fddb791e030b2fa0275f6ed989e2c17e2d1256bb95cb869`).
+All 12 tactical range orders (`CONSERVATIVE-100000-NARA` canary) were created at
+block `50738288` (tx `0xff1c88baab9b5e4f3f6b1950b5de3c87f19336f7be494555c306535875271823`).
+The manager holds Position NFTs `2994935` through `2994946`.
 
-The pre-remediation implementation commit was
-`b34b78330f2f40b514d2bf6a0e5cff96c92ff928`. Protected PR #52 merged the
-2026-08-30 internal-audit remediation as GitHub-verified source commit
-`35091010de09802f39ccda7e726ff8c4b240e165`. That immutable source evidence is
-not deployment authority. PR #59 later merged the bounded 500-USDC canary policy
-at commit `5a6b449df7d50b25d71715b3bbedc720ef6960ee`. Protected PR #62 then merged the
-dedicated-Safe role correction as GitHub-verified commit
-`a20ce9c40c174d032cacdf602efa6afe8c6585f9`; all required PR checks passed.
-Protected PR #64 then merged the exact prefunded-swap route and strict
-quote-evidence hardening as GitHub-verified commit
-`162c24be080398b65c76e542a48ccb608cd1fb43`; all required protected checks were
-green. That is the latest protected commit that changed functional
-implementation before later launch-evidence-only corrections; every deployment
-proposal must bind the exact then-current protected `origin/main` tip. No
-manager address, deployment receipt, funding, signature, broadcast, activation,
-or production transaction exists.
+The autonomous cloud settler daemon (`services/v4-treasury-range-settler`) is deployed and
+active on Railway (project `glistening-peace`, service `nara_protocol_v4`, instance `settler-railway-primary`,
+keeper wallet [`0xa4B4B00f067cB4f5607c9a7298827fa1C1315aB7`](https://basescan.org/address/0xa4B4B00f067cB4f5607c9a7298827fa1C1315aB7)).
+It executes 15-second polling sweeps and real-time WebSocket swap listening using Multicall3
+to trigger permissionless terminal settlement directly back to the dedicated Safe.
 
-Change `NARA-20260831-v4-treasury-range-dedicated-safe` is protected source with
-two explicit, non-interchangeable roles:
+Two explicit, non-interchangeable Safe roles govern the system:
 
 - protocol 2-of-3 Safe `0xd65c0e390Dc187A22c52c03816591CC736C0D755`
-  owns the canonical CREATE2 deployer and may execute only the manager
-  deployment packet;
+  owns the canonical CREATE2 deployer and executed the manager deployment packet;
 - dedicated Treasury Range Safe
-  `0x5050BC6dc3E07313D52D05cecD53f727D6CDa245` is the proposed immutable
+  `0x5050BC6dc3E07313D52D05cecD53f727D6CDa245` is the immutable
   `TREASURY_SAFE`, order/cancellation signer, inventory custodian, and terminal
-  settlement recipient.
+  settlement recipient (holding unallocated reserve of 10,000 NARA + 301.0 USDC).
 
 The dedicated Safe is currently 1-of-1. Its exact runtime, singleton, version,
 threshold, owner count/hash, fallback handler, zero guard, and zero modules are
