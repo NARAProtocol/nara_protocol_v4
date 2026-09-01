@@ -580,8 +580,14 @@ export function assertTreasuryRangeCanaryCustodyBalances(
   if (treasuryRangeSafeBalances.nara < requiredNara) {
     throw new Error("Treasury Range Safe NARA balance is below the exact canary budget");
   }
+  if (treasuryRangeSafeBalances.nara > requiredNara) {
+    throw new Error("Treasury Range Safe NARA balance exceeds the exact canary budget");
+  }
   if (treasuryRangeSafeBalances.usdc < requiredUsdc) {
     throw new Error("Treasury Range Safe USDC balance is below the exact canary budget");
+  }
+  if (treasuryRangeSafeBalances.usdc > requiredUsdc) {
+    throw new Error("Treasury Range Safe USDC balance exceeds the exact canary budget");
   }
   if (treasuryRangeSafeBalances.usdc - exposedUsdc < protectedUsdc) {
     throw new Error("Canary orders would breach the protected Treasury Range Safe USDC reserve");
