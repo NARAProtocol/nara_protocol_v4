@@ -1,8 +1,8 @@
-# NARA Liquidity Growth Hook — Uniswap v4 Deep-Dive
+﻿# NARA Liquidity Growth Hook â€” Uniswap v4 Deep-Dive
 
 > Source: [`contracts/v4/NARALiquidityGrowthHook.sol`](../contracts/v4/NARALiquidityGrowthHook.sol)
-> · [`contracts/v4/NARALiquidityGrowthVault.sol`](../contracts/v4/NARALiquidityGrowthVault.sol)
-> · [`contracts/v4/utils/Create2HookDeployer.sol`](../contracts/v4/utils/Create2HookDeployer.sol)
+> Â· [`contracts/v4/NARALiquidityGrowthVault.sol`](../contracts/v4/NARALiquidityGrowthVault.sol)
+> Â· [`contracts/v4/utils/Create2HookDeployer.sol`](../contracts/v4/utils/Create2HookDeployer.sol)
 > Verified against code and the real Uniswap v4 PoolManager test on
 > **2026-08-08**.
 
@@ -14,7 +14,7 @@ asymmetric pressure fee into the Vault. Exact-output swaps are rejected. NARA
 ERC-20 transfers and swaps in third-party or unregistered pools are outside
 this Hook and are not universally taxed.
 
-> **READ THIS FIRST — the mechanism is POL-first, not locker-first.** The vault's **default route mode
+> **READ THIS FIRST â€” the mechanism is POL-first, not locker-first.** The vault's **default route mode
 > is `Liquidity`** (`NARALiquidityGrowthVault` constructor sets `routeMode = RouteMode.Liquidity`). The
 > skim is designed to **compound back into protocol-owned liquidity (POL) first**, building depth.
 > The replacement vault may later redirect USDC to `Genesis` or
@@ -68,7 +68,7 @@ to the protocol fee vault. The hook lets NARA:
    redeploying the token or engine.
 
 ```
-swap ──▶ hook (beforeSwap) ──skim input token──▶ vault ──▶ {LP compound | Genesis}
+swap â”€â”€â–¶ hook (beforeSwap) â”€â”€skim input tokenâ”€â”€â–¶ vault â”€â”€â–¶ {LP compound | Genesis}
 ```
 
 ---
@@ -77,7 +77,7 @@ swap ──▶ hook (beforeSwap) ──skim input token──▶ vault ──▶
 
 Uniswap v4 encodes a hook's permissions in the **low bits of its address**. The PoolManager reads
 those bits to know which callbacks to invoke, so a hook must be **deployed at an address whose bits
-match its declared permissions** — achieved by mining a CREATE2 salt.
+match its declared permissions** â€” achieved by mining a CREATE2 salt.
 
 `NARALiquidityGrowthHook.getHookPermissions()` declares exactly three:
 
@@ -90,10 +90,10 @@ match its declared permissions** — achieved by mining a CREATE2 salt.
 `0x2000 | 0x0080 | 0x0008` = **`0x2088`**.
 
 So the documented "hook address must end in `0x2088`" requirement is **precisely the encoding of the
-hook's declared permissions** — not an arbitrary magic number. `utils/Create2HookDeployer` mines a salt
+hook's declared permissions** â€” not an arbitrary magic number. `utils/Create2HookDeployer` mines a salt
 that yields an address with those bits, and `npm run verify:v4:preflight` checks them post-deploy. If
 the address bits and the permissions ever disagreed, the PoolManager would reject the hook at pool
-initialization. ✅ Verified consistent.
+initialization. âœ… Verified consistent.
 
 ---
 
@@ -112,14 +112,14 @@ deployment leaves the hook unregistered until the final Safe executes
 atomic batch. This removes the public pre-seed interval; direct seeding is
 disabled.
 
-### `beforeSwap` — the fee algorithm
+### `beforeSwap` â€” the fee algorithm
 Called before the AMM math on every attempted swap through the registered Hook
 pool. Supported exact-input swaps are charged; exact-output attempts revert.
 Step by step (from the verified source):
 
 1. **Exact-input only.** `params.amountSpecified >= 0` reverts `ExactOutputUnsupported`;
    `type(int256).min` reverts `AmountTooLarge`. The fee model is defined on exact-input swaps.
-2. **Buy vs sell.** The input currency is `base` (USDC) → **buy**, or `token` (NARA) → **sell**; anything
+2. **Buy vs sell.** The input currency is `base` (USDC) â†’ **buy**, or `token` (NARA) â†’ **sell**; anything
    else reverts `InvalidTokenPair`.
 3. **Depth = configured `protocolDepth`.** The hook captures the configured
    input-currency depth on that currency's first swap in a block and reuses the
@@ -171,19 +171,19 @@ seven-day fee-update delay has elapsed. Operational material must therefore repo
 the active onchain curve rather than describe 20% as an immutable contract ceiling.
 
 **Current active curve (post-timelock):** production later optimized the fee
-curves via the seven-day timelock. Active buy curve: base 3% → medium 5% →
-high 8% → extreme 12% (cap 12%). Active sell curve: base 5% → medium 8% →
-high 12% → extreme 20% (cap 20%).
+curves via the seven-day timelock. Active buy curve: base 3% â†’ medium 5% â†’
+high 8% â†’ extreme 12% (cap 12%). Active sell curve: base 5% â†’ medium 8% â†’
+high 12% â†’ extreme 20% (cap 20%).
 
 ---
 
-## 5. Vault routing — `NARALiquidityGrowthVault`
+## 5. Vault routing â€” `NARALiquidityGrowthVault`
 
 The vault receives every skim and routes it by **mode**:
 
 | Mode | Behavior |
 |------|----------|
-| `Liquidity` | **default** — compound a balanced NARA/USDC subset into a full-range LP position through the no-swap **`NARALiquidityCompounderV4`**. The production adapter is validated and the Vault binding is permanently frozen. Unmatched inventory remains banked in the Compounder. |
+| `Liquidity` | **default** â€” compound a balanced NARA/USDC subset into a full-range LP position through the no-swap **`NARALiquidityCompounderV4`**. The production adapter is validated and the Vault binding is permanently frozen. Unmatched inventory remains banked in the Compounder. |
 | `Engine` | legacy enum value; `setRouteMode` permanently reverts `EngineTokenRoutingDisabled` |
 | `Split` | legacy enum value; `setRouteMode` permanently reverts `EngineTokenRoutingDisabled` |
 | `Genesis` | route USDC to the Genesis reward distributor |
@@ -207,35 +207,35 @@ consumer; it needs no hook permission bits of its own.
 
 ## 7. Verification status (2026-08-09)
 
-- ✅ `getHookPermissions()` = `beforeInitialize + beforeSwap + beforeSwapReturnDelta` → address bits
+- âœ… `getHookPermissions()` = `beforeInitialize + beforeSwap + beforeSwapReturnDelta` â†’ address bits
   `0x2088`, matching the deploy/preflight requirement.
-- ✅ Built on the canonical `BaseHook` from Uniswap v4-periphery.
-- ✅ Exact-input-only, buy/sell detection, configured-depth block snapshots,
+- âœ… Built on the canonical `BaseHook` from Uniswap v4-periphery.
+- âœ… Exact-input-only, buy/sell detection, configured-depth block snapshots,
   cumulative fee deltas, and `maxFeeBps` caps.
-- ✅ Fee skim via `BeforeSwapDelta` + `poolManager.take()` to the vault, followed
+- âœ… Fee skim via `BeforeSwapDelta` + `poolManager.take()` to the vault, followed
   by direct fail-closed `vault.recordPoolFee(...)` accounting in the same call.
-- ✅ Single-pool authorization (`UnauthorizedPool` / `PoolNotRegistered`).
-- ✅ Exact opening-price binding plus canonical fee/tick validation.
-- ✅ Reciprocal vault/hook/compounder binding checks protect one-shot wiring.
-- ✅ Covered by the focused mock suite and
+- âœ… Single-pool authorization (`UnauthorizedPool` / `PoolNotRegistered`).
+- âœ… Exact opening-price binding plus canonical fee/tick validation.
+- âœ… Reciprocal vault/hook/compounder binding checks protect one-shot wiring.
+- âœ… Covered by the focused mock suite and
   `NARALiquidityGrowth.real-v4.test.ts`, which deploys the actual Uniswap v4
   PoolManager and official test routers, moves live depth in both directions,
   and proves single-swap versus meaningful same-block split equality for buys
   and sells.
-- ✅ Replacement vault prevents the deployed engine's ERC-20 accounting issue
+- âœ… Replacement vault prevents the deployed engine's ERC-20 accounting issue
   from being reached through pool-fee routing.
-- ✅ Initial public flow plus twenty distinct-block buys and ten distinct-block
+- âœ… Initial public flow plus twenty distinct-block buys and ten distinct-block
   sells reconciled Hook fees, Vault counters, ERC-20 transfers, and receipt
   blocks on Base. The matrices exercised 5%/8% buy tiers and the 5% sell tier;
   they do not substitute for live coverage of every same-block higher tier.
-- ✅ At freeze block `49736809`, the bounded validation had added
+- âœ… At freeze block `49736809`, the bounded validation had added
   `99.999999999997037752 NARA` and `0.894127 USDC` to LP NFT `2898486`, adding
   liquidity `9455824137787`. The Vault binding freeze is receipt-pinned. Vault
   balances were zero; unmatched `1718.586695052747189931 NARA` and
   `24.518753 USDC` were banked in the Compounder. Later balances require a new
   readback.
 
-The canonical record for findings #1–#5 is
+The canonical record for findings #1â€“#5 is
 [`NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md`](NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md).
 These internal fixes and tests do not convert the repository into an
 independent audit or remove the operational gates in
@@ -247,3 +247,10 @@ The fresh convert-to-liquidity layer (`NARALiquidityCompounderV4`) is deployed,
 source-verified, validation-compounded, and permanently bound to the Vault.
 Recurring maintenance and whole-product availability remain gated. See
 [`NARA_V4_PROJECT_SCOPE.md`](NARA_V4_PROJECT_SCOPE.md).
+
+### Live Mainnet MEV & Cross-Pool Arbitrage Enforcement
+
+On 2026-09-02, live mainnet transactions confirmed that the Hook enforces dynamic fee capture even when third-party arbitrageurs execute multi-pool atomic flash-swaps across secondary un-hooked pools:
+- **Case 1 (`0x86a1...` at block `50791502`):** Arbitrage bot bought 18.239 NARA on a hookless secondary pool and dumped into the canonical pool. Hook intercepted 0.9119 NARA (5.00% fee) and banked it into `NARALiquidityGrowthVault`.
+- **Case 2 (`0x9361...` at block `50791597`):** Arbitrage bot bought 14.710 NARA on a hookless secondary pool and dumped into the canonical pool. Hook intercepted 0.7355 NARA (5.00% fee) and banked it into `NARALiquidityGrowthVault`.
+- **Full Forensic Evidence:** [`docs/releases/NARA-20260902-mev-cross-pool-arbitrage-forensics.md`](releases/NARA-20260902-mev-cross-pool-arbitrage-forensics.md).
