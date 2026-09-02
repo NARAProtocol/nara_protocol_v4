@@ -1,4 +1,4 @@
-/**
+﻿/**
  * NARA v4 Single-Wallet Burst Buyer
  *
  * Executes waves of 15 micro-buys ($1.00 each) per block from your single operational
@@ -79,7 +79,7 @@ async function main() {
   console.log("================================================================================");
   console.log("  NARA v4 SINGLE-WALLET BURST BUYER: MULTI-BLOCK VOLUME ENGINE");
   console.log("================================================================================");
-  console.log(`Execution Mode:     ${isDryRun ? "🧪 DRY-RUN (Local Simulation)" : "🔥 LIVE ON-CHAIN BROADCAST"}`);
+  console.log(`Execution Mode:     ${isDryRun ? "ðŸ§ª DRY-RUN (Local Simulation)" : "ðŸ”¥ LIVE ON-CHAIN BROADCAST"}`);
   console.log(`Burst Size:         ${burstSize} micro-buys per block wave`);
   console.log(`Trade Size:         $${tradeAmountUsdc.toFixed(2)} USDC per micro-buy`);
   console.log(`Wave Total:         $${(burstSize * tradeAmountUsdc).toFixed(2)} USDC per block`);
@@ -96,7 +96,7 @@ async function main() {
     : (process.env.LIQ_PRIVATE_KEY || process.env.PRIVATE_KEY);
 
   if (!privateKey) {
-    console.error("❌ No private key found in .env for wallet choice:", walletChoice);
+    console.error("âŒ No private key found in .env for wallet choice:", walletChoice);
     process.exit(1);
   }
 
@@ -121,7 +121,7 @@ async function main() {
 
   const actualTargetSpend = Math.min(targetSpendArg, humanUsdc);
   if (actualTargetSpend < tradeAmountUsdc && !isDryRun) {
-    console.error(`❌ Insufficient USDC in wallet ($${humanUsdc.toFixed(2)}) for target spend.`);
+    console.error(`âŒ Insufficient USDC in wallet ($${humanUsdc.toFixed(2)}) for target spend.`);
     process.exit(1);
   }
 
@@ -138,7 +138,7 @@ async function main() {
   // DRY RUN SIMULATION
   // --------------------------------------------------------------------------
   if (isDryRun) {
-    console.log(`▶ DRY-RUN SIMULATION: ${totalWaves} Waves of ${burstSize} Buys ($${waveUsdc.toFixed(2)} USDC/block)...`);
+    console.log(`â–¶ DRY-RUN SIMULATION: ${totalWaves} Waves of ${burstSize} Buys ($${waveUsdc.toFixed(2)} USDC/block)...`);
     let simSpent = 0;
     const startBlock = await provider.getBlockNumber();
 
@@ -149,13 +149,13 @@ async function main() {
       const simBlock = startBlock + wave;
 
       console.log(
-        `  🌊 Wave #${String(wave).padStart(2, "0")} | Block #${simBlock} | ${burstSize} Swaps | +$${currentWaveSpend.toFixed(2)} USDC | Cumulative: $${simSpent.toFixed(2)} / $${actualTargetSpend.toFixed(2)} (${progressPct}%)`
+        `  ðŸŒŠ Wave #${String(wave).padStart(2, "0")} | Block #${simBlock} | ${burstSize} Swaps | +$${currentWaveSpend.toFixed(2)} USDC | Cumulative: $${simSpent.toFixed(2)} / $${actualTargetSpend.toFixed(2)} (${progressPct}%)`
       );
       await sleep(100);
     }
 
     console.log("\n================================================================================");
-    console.log("  🎉 DRY-RUN COMPLETE: SIMULATION VERIFIED!");
+    console.log("  ðŸŽ‰ DRY-RUN COMPLETE: SIMULATION VERIFIED!");
     console.log(`  Total Waves / Blocks : ${totalWaves} Base blocks (~${totalWaves * 2} seconds)`);
     console.log(`  Total USDC Allocated : $${simSpent.toFixed(2)} USDC`);
     console.log("  To execute LIVE on Base, run with --execute:");
@@ -167,14 +167,14 @@ async function main() {
   // --------------------------------------------------------------------------
   // LIVE PRE-FLIGHT: Ensure Allowances
   // --------------------------------------------------------------------------
-  console.log("🔍 Checking Permit2 & Universal Router allowances...");
+  console.log("ðŸ” Checking Permit2 & Universal Router allowances...");
   const maxApproval = ethers.MaxUint256;
   const currentAllowance = (await usdc.allowance(wallet.address, config.permit2)) as bigint;
   if (currentAllowance < ethers.parseUnits(actualTargetSpend.toFixed(6), 6)) {
     console.log("  -> Approving USDC to Permit2...");
     const tx = await usdc.approve(config.permit2, maxApproval);
     await tx.wait();
-    console.log("     ✅ Permit2 approved.");
+    console.log("     âœ… Permit2 approved.");
   }
 
   const [rAllowance, rExpiration] = (await p2.allowance(
@@ -189,10 +189,10 @@ async function main() {
     const maxU48 = (1n << 48n) - 1n;
     const tx = await p2.approve(config.base, config.universalRouter, maxU160, maxU48);
     await tx.wait();
-    console.log("     ✅ Universal Router allowance set.");
+    console.log("     âœ… Universal Router allowance set.");
   }
 
-  console.log("✅ Wallet allowances verified and active.\n");
+  console.log("âœ… Wallet allowances verified and active.\n");
 
   // --------------------------------------------------------------------------
   // LIVE MULTI-BLOCK BURST EXECUTION LOOP
@@ -210,7 +210,7 @@ async function main() {
     const currentWaveRaw = ethers.parseUnits(currentWaveTotal.toFixed(6), 6);
 
     console.log("--------------------------------------------------------------------------------");
-    console.log(`🌊 [WAVE #${waveNum}] Preparing ${currentBurst} micro-buys ($${currentWaveTotal.toFixed(2)} USDC total)...`);
+    console.log(`ðŸŒŠ [WAVE #${waveNum}] Preparing ${currentBurst} micro-buys ($${currentWaveTotal.toFixed(2)} USDC total)...`);
 
     // Fetch live pool state and calculate minimums
     const sqrtPriceX96 = await readSqrtPriceX96(provider, config.poolManager, config.poolId);
@@ -233,7 +233,7 @@ async function main() {
     );
     const settleParams = abi.encode(["address", "uint256"], [config.base, currentWaveRaw]);
     const aggregateMinNara = (singleMinNara * BigInt(currentBurst) * (10_000n - BigInt(slippageBps))) / 10_000n;
-    const takeParams = abi.encode(["address", "uint256"], [config.token, aggregateMinNara]);
+    const takeParams = abi.encode(["address", "uint256"], [config.token, 0n]);
 
     const actions = ethers.hexlify(
       new Uint8Array([
@@ -251,25 +251,25 @@ async function main() {
     const commands = ethers.hexlify(new Uint8Array([V4_SWAP]));
     const deadline = BigInt(Math.floor(Date.now() / 1000)) + 600n;
 
-    console.log(`  🚀 Broadcasting Atomic Wave #${waveNum} (${currentBurst} swaps in 1 block)...`);
-    const tx = await ur.execute(commands, [v4Input], deadline, { gasLimit: 800_000n });
-    console.log(`  🔗 Tx Broadcast: https://basescan.org/tx/${tx.hash}`);
+    console.log(`  ðŸš€ Broadcasting Atomic Wave #${waveNum} (${currentBurst} swaps in 1 block)...`);
+    const tx = await ur.execute(commands, [v4Input], deadline, { gasLimit: 1_500_000n });
+    console.log(`  ðŸ”— Tx Broadcast: https://basescan.org/tx/${tx.hash}`);
 
     const receipt = await tx.wait(1);
     cumulativeSpent += currentWaveTotal;
     const progressPct = ((cumulativeSpent / actualTargetSpend) * 100).toFixed(1);
 
-    console.log(`  ✅ Confirmed in Block #${receipt.blockNumber}! Gas Used: ${receipt.gasUsed.toString()}`);
-    console.log(`  💰 Cumulative Progress: $${cumulativeSpent.toFixed(2)} / $${actualTargetSpend.toFixed(2)} USDC (${progressPct}%)`);
+    console.log(`  âœ… Confirmed in Block #${receipt.blockNumber}! Gas Used: ${receipt.gasUsed.toString()}`);
+    console.log(`  ðŸ’° Cumulative Progress: $${cumulativeSpent.toFixed(2)} / $${actualTargetSpend.toFixed(2)} USDC (${progressPct}%)`);
 
     if (cumulativeSpent < actualTargetSpend) {
-      console.log("  ⏳ Pacing 2.5s for next block transition...");
+      console.log("  â³ Pacing 2.5s for next block transition...");
       await sleep(2500);
     }
   }
 
   console.log("\n================================================================================");
-  console.log("  🎉 SINGLE-WALLET MULTI-BLOCK BURST COMPLETE!");
+  console.log("  ðŸŽ‰ SINGLE-WALLET MULTI-BLOCK BURST COMPLETE!");
   console.log(`  Wallet Used          : ${wallet.address}`);
   console.log(`  Total Waves Executed : ${waveNum}`);
   console.log(`  Total USDC Injected  : $${cumulativeSpent.toFixed(2)} USDC`);
