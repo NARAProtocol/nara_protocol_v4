@@ -288,56 +288,48 @@ On **2026-09-02**, live Base mainnet transactions established empirical proof th
 5. **Exact-Spend Invariant:** Pulls exact allowances from Vault, guaranteeing zero stuck funds in intermediate stages.
 6. **7-Day Recovery Timelock:** Owner POL-removal operations (`WindDown`, `MigratePosition`, `RecoverPoolTokens`) require `RECOVERY_DELAY = 7 days`.
 
-### 5.1 Treasury Range Manager Candidate
+### 5.1 Treasury Range Manager Production Deployment & Activation
 
-The authoritative `nara-protocol-hardhat` candidate includes
-`NARATreasuryRangeManagerV1`, an exact spot/state planner and optimizer,
-unsigned Safe builders, adversarial fork simulation, and a separate gas-only
-settlement service. Protected PR #64 merged the current implementation at
-`162c24be080398b65c76e542a48ccb608cd1fb43`. Evidence state is **merged and
-tested source only**: the manager is not funded, deployed, configured,
-activated, independently externally audited, or available.
+The Treasury Range Manager (`NARATreasuryRangeManagerV1.sol`) is **DEPLOYED, FUNDED, AND ACTIVATED ON BASE MAINNET**:
+- **Contract Address:** [`0xd58afa5eaB20B0ED287851Cf98f359AdEd58a69C`](https://basescan.org/address/0xd58afa5eaB20B0ED287851Cf98f359AdEd58a69C)
+- **Dedicated Treasury Range Safe:** [`0x5050BC6dc3E07313D52D05cecD53f727D6CDa245`](https://basescan.org/address/0x5050BC6dc3E07313D52D05cecD53f727D6CDa245) (1-of-1 threshold, owned by `0xfe3A8678A9c729438BB11718bD1391E7Ab491E8e`). Holds exclusive custody of order inventory and receives all cancellation and settlement proceeds.
+- **Protocol 2-of-3 Safe:** `0xd65c0e390Dc187A22c52c03816591CC736C0D755` executed the CREATE2 deployment packet only; it holds zero operational range custody.
+- **Autonomous Settler Daemon:** Active on Railway (`services/v4-treasury-range-settler`, keeper `0xa4B4B00f067cB4f5607c9a7298827fa1C1315aB7`), executing 15-second polling sweeps to return terminal profits to the Safe.
+- **Invariants:**
+  1. The manager contract holds zero persistent token balances.
+  2. Every rebalance execution ends with `assertOperationalClean()`.
+  3. Strict Uniswap v4 tick alignment: Buy orders have $tickLower \ge currentTick$ (dollar price lower); Sell orders have $tickUpper \le currentTick$ (dollar price higher).
 
-The manager is separate from permanent POL. The protocol 2-of-3 Safe is only
-the CREATE2 deployment executor. The distinct, currently 1-of-1 Treasury Range
-Safe is the immutable custody/order authority and receives every settlement or
-cancellation output. The approved canary is exactly 100,000 NARA plus 500 USDC:
-200 USDC exposed across four buy ranges (`40 / 50 / 50 / 60`) and 300 USDC left
-unallocated in the Safe. This is not a $500-total position or a profit
-guarantee.
+### 5.2 Adversarial Matrix, MEV Stress-Testing & Autonomous Range Ranger
 
-The planner evaluates all 21 constrained candidates from a pinned Base
-snapshot. Matrix-row v4 binds the prefunded `SETTLE -> SWAP -> TAKE` route and
-per-swap quote status. Every quotable swap needs a positive official v4 Quoter
-result or exact PoolManager-prefund proof; only B `same_block_transactions`, C
-`same_transaction_actions`, and F `atomic_buy_reverse` may use their exact
-supported unquoted reasons. The route is fork evidence, not a universal wallet
-router repair. Historical 5,000-USDC and matrix-v3 artifacts are reproducibility
-evidence only and cannot build a launch packet.
+The **Adversarial Matrix** and the **Multi-Block Burst Buyer** are specialized **security, verification, and liquidity-defense testing harnesses**. They are strictly protocol research, testing, and automated market stability tools—**NOT market manipulation, wash trading, or price-fixing instruments**.
 
-Only terminal settlement may be automated. Deployment, funding, initial
-12-order creation, cancellation, pausing, and every rebalance/new range require
-separate human authorization. The settler never replans or reinvests. Protected
-protocol documentation is synchronized through PR #65 commit
-`4aec5b8c5054bc1f862acb6a50028dec35a5f3cc`; public parity is synchronized
-through PR #12 commit `d0d09c8da33b40efe9367ec461233cde70ce96c0`.
+#### A. Purpose & Regulatory UX Boundary of the Matrix
+1. **Adversarial Hook Stress-Testing:** The 21-case matrix (`scripts/runV4LiveSameBlockBuyTaxMatrix.ts`, `runV4LiveSameBlockSellReversal.ts`) systematically verified that same-block Block-0 swap volume aggregates properly across transactions and scales taxes up to the 20% cap without overflow or rounding flaws.
+2. **MEV & Arbitrage Resistance Proof:** The matrix verified that MEV sandwichers and cross-pool searchers cannot exploit the canonical pool. Instead, their arbitrage volume is taxed, capturing POL directly into `NARALiquidityGrowthVault.sol` (proven by Base transactions `0x86a1...8c3` and `0x9361...394`).
+3. **Liquidity Defense Calibration:** The Single-Wallet Burst Buyer (`scripts/runSingleWalletBurstBuys.ts`) was used to simulate sequential micro-volume ($1.00 trades across blocks) to test how the automated order book responds to real-world demand, ensuring that liquidity floors adjust upwards to lock in protocol value and prevent predatory down-wicks.
 
-The first exact-canary deployment proposal was generated and Safe-simulated at
-Base block `50700857`, protocol Safe nonce `46`, but received no signatures and
-expired at `2026-08-31T15:59:21Z`. Its JSON and review are retained under the
-`EXPIRED-DO-NOT-IMPORT-v4-treasury-range-deployment-50700857-nonce-46` prefix;
-they are evidence only and must never be imported. When two protocol Safe
-signers are actually ready, generate the matrix and unsigned packet once more
-from then-current protected-main and live state, then review and execute within
-that new packet's deadline.
+#### B. The Autonomous Range Ranger Engine
+To remove manual UI bottlenecks and protect the pool 24/7, the system features an autonomous rebalance engine:
+- **CLI Atomic Rebalancer:** `nara-protocol-hardhat/scripts/autoRangeManager.ts`
+- **Zero-Waste Adaptive Streamer:** `nara-protocol-hardhat/scripts/rangeRangerEventEngine.ts`
+- **Cloud 24/7 Watcher (Railway):** `nara-swarm-monitor/scripts/rangeRangerWatcher.mjs`
+- **Core Viem Runtime:** `nara-swarm-monitor/scripts/rangeRangerRuntime.mjs`
+
+#### C. Execution Architecture & Anti-Exploit Safeguards
+1. **Atomic MultiSend Execution:** All actions (cancellations, approvals, 4 fresh buy bands, 4 fresh sell bands, approval revocations, and `assertOperationalClean`) execute in **1 single atomic EVM transaction** via Safe 1.4.1 MultiSendCallOnly (`0x40A2aCCbd92BCA938b02010E17A5b8929b49130D`).
+2. **Gas Ceiling:** Requires `7_500_000` gas limit (batch consumes ~3.8M - 4.2M gas across Uniswap v4 position mints/burns).
+3. **Anti-Flash-Loan Guard:** 2,500-tick instant shift ceiling prevents rebalancing against single-block flash loan spikes without multi-block confirmation.
+4. **Live On-Chain Evidence:**
+   - **Rebalance Cycle 1 (Block `50792858`):** Cancelled 5 stale orders, deployed 8 bands centered at $0.0727. ([Tx `0xe538...917`](https://basescan.org/tx/0xe5382c9a83d171a9c9707ef49e5ac4cc1cb9e35d5e07dc6d5b4efe359dcf5917)).
+   - **Rebalance Cycle 2 (Block `50794578`):** Autonomously triggered by 28% pump to $0.0964. Cancelled stale orders, deployed 4 new buy floors ($0.0678 - $0.0920) and 4 new sell targets up to $0.2710. ([Tx `0x73a0...e0b`](https://basescan.org/tx/0x73a0a92dc351668994bf3ec9c7ec0774ae8f789c89320ebb96dfd89f64f95e0b)).
 
 Protocol authority:
-
 - `nara-protocol-hardhat/docs/CURRENT_STATE.md`
 - `nara-protocol-hardhat/docs/architecture/NARA_TREASURY_RANGE_MANAGER_V1.md`
-- `nara-protocol-hardhat/docs/releases/NARA-20260831-v4-treasury-range-500-usdc-canary.md`
 - `nara-protocol-hardhat/docs/runbooks/NARA_V4_TREASURY_RANGE_SETTLER_RUNBOOK.md`
-- `nara-protocol-hardhat/deployments/v4-treasury-range-custody-policy-2026-08-31.json`
+- `nara-protocol-hardhat/scripts/autoRangeManager.ts`
+- `nara-swarm-monitor/scripts/rangeRangerWatcher.mjs`
 
 ---
 
