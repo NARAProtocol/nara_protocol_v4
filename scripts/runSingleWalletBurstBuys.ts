@@ -68,7 +68,7 @@ const isDryRun = args.includes("--dry-run") || !isExecute;
 const burstSize = Number(getArg("--burst", "15"));
 const tradeAmountUsdc = Number(getArg("--amount", "1.0"));
 const targetSpendArg = Number(getArg("--target-spend", "500"));
-const walletChoice = getArg("--wallet", "liq"); // 'liq' or 'deployer'
+const walletChoice = getArg("--wallet", "treasury").toLowerCase(); // 'treasury', 'liq', or 'deployer'
 const slippageBps = boundedSlippageBps(getArg("--slippage", "500"));
 
 async function sleep(ms: number) {
@@ -91,9 +91,16 @@ async function main() {
   const provider = new ethers.JsonRpcProvider(requiredBaseRpcUrl(), 8453, { staticNetwork: true });
 
   // Select Wallet Key
-  const privateKey = walletChoice === "deployer"
-    ? process.env.PRIVATE_KEY
-    : (process.env.LIQ_PRIVATE_KEY || process.env.PRIVATE_KEY);
+  let privateKey: string | undefined;
+  if (walletChoice === "treasury") {
+    privateKey = process.env.TREASURY_PRIVATE_KEY;
+  } else if (walletChoice === "deployer") {
+    privateKey = process.env.PRIVATE_KEY;
+  } else if (walletChoice === "liq") {
+    privateKey = process.env.LIQ_PRIVATE_KEY;
+  } else {
+    privateKey = process.env.TREASURY_PRIVATE_KEY || process.env.LIQ_PRIVATE_KEY || process.env.PRIVATE_KEY;
+  }
 
   if (!privateKey) {
     console.error("âŒ No private key found in .env for wallet choice:", walletChoice);
