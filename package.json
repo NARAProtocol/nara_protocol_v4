@@ -5,7 +5,7 @@
   "description": "NARA v4 contracts and operations workspace. v3 stack archived under archive/legacy-v3/.",
   "type": "module",
   "scripts": {
-    "build": "hardhat compile",
+    "build": "hardhat compile && npm run build:landing",
     "build:pages": "npm --prefix tools/v4-test-console ci && npm --prefix tools/v4-test-console run build && node -e \"const fs = require('fs'); fs.cpSync('tools/v4-test-console/dist', 'dist', { recursive: true });\"",
     "build:landing": "npm --prefix tools/nara-landing ci && npm --prefix tools/nara-landing run build",
     "clean": "hardhat clean",
