@@ -7,19 +7,19 @@ export default function HeroReticle() {
     <section className="relative pt-12 pb-16 overflow-hidden flex flex-col items-center text-center">
       {/* Structural Minimalist Header Title */}
       <div className="shell max-w-4xl mx-auto mb-8 z-10">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-white/[0.04] border border-white/10 font-mono text-[11px] text-nara-gold uppercase tracking-widest mb-4">
-          <span>THE SOVEREIGN EXPERIMENT // BASE 8453</span>
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-white/[0.04] border border-white/10 font-mono text-[11px] text-silver uppercase tracking-widest mb-4">
+          <span>DECENTRALIZED ARCHITECTURE // BASE 8453</span>
         </div>
 
         <h1 className="text-4xl sm:text-5xl md:text-7xl font-display font-black tracking-tight text-white leading-none mb-4">
-          THE TIME-WEIGHTED <br />
+          THE SOVEREIGN <br />
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-silver via-white to-dim">
-            WEALTH INSTRUMENT.
+            LIQUIDITY INSTRUMENT.
           </span>
         </h1>
 
         <p className="text-dim font-mono text-xs sm:text-sm max-w-2xl mx-auto leading-relaxed">
-          1,000,000 fixed supply. Zero inflation. Real rewards every 15 minutes. A financial game where panic sellers permanently surrender their yield to the patient.
+          1,000,000 fixed non-mintable supply. Zero inflation. Autonomous Uniswap v4 fee capture. Time-weighted commitment consensus on Base.
         </p>
       </div>
 
@@ -55,7 +55,7 @@ export default function HeroReticle() {
           className="inline-flex items-center gap-2 px-4 py-3 rounded bg-surface hover:bg-surface/80 text-emerald-400 border border-emerald-500/30 font-semibold transition-all duration-200"
         >
           <ShieldCheck size={16} weight="bold" />
-          <span>BEGINNER'S GUIDE</span>
+          <span>DOCUMENTATION</span>
         </a>
       </div>
     </section>

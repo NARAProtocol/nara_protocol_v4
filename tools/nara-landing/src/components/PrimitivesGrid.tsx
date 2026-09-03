@@ -13,30 +13,30 @@ export default function PrimitivesGrid() {
     <section id="how-it-works" className="shell my-16 scroll-mt-20">
       {/* Section Header */}
       <div className="text-center max-w-2xl mx-auto mb-12">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-white/[0.03] border border-white/10 font-mono text-[11px] text-nara-gold uppercase tracking-widest mb-3">
-          <span>THE UNBEATABLE MOAT</span>
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-white/[0.03] border border-white/10 font-mono text-[11px] text-silver uppercase tracking-widest mb-3">
+          <span>ONCHAIN MECHANISMS</span>
         </div>
         <h2 className="text-2xl sm:text-3xl md:text-5xl font-display font-black text-white tracking-tight">
-          HOW NARA WORKS
+          HOW NARA OPERATES
         </h2>
         <p className="text-dim text-xs sm:text-sm font-mono mt-3 max-w-xl mx-auto leading-relaxed">
-          No PhD required. How a simple, unyielding mathematical game turns patience into an unstoppable advantage.
+          Autonomous smart contract rules executed purely on the Base blockchain. No discretionary human operators, zero upgradeability proxies.
         </p>
       </div>
 
-      {/* 3 Core Pillars in Layman Terms */}
+      {/* 3 Core Pillars: Scarcity, Time, Weight Transfer */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
         {/* PILLAR 1: FIXED SCARCITY */}
         <div className="p-6 rounded-xl border border-white/10 bg-surface/60 backdrop-blur-md flex flex-col justify-between hover:border-white/30 transition-colors group">
           <div>
             <div className="flex items-center justify-between mb-4">
               <span className="font-mono text-xs font-bold text-silver">
-                RULE 01 // SCARCITY
+                PRIMITIVE 01 // SCARCITY
               </span>
               <button
                 onClick={() => toggleInfo(1)}
                 className="p-1 rounded text-muted hover:text-white transition-colors"
-                title="Contract Proof"
+                title="Technical Specifications"
               >
                 <Info size={16} weight="bold" />
               </button>
@@ -47,24 +47,24 @@ export default function PrimitivesGrid() {
             </div>
 
             <h3 className="font-display text-xl font-bold text-white mb-2">
-              No Printing Press. Ever.
+              Fixed 1,000,000 Cap
             </h3>
 
             <p className="text-xs text-dim leading-relaxed font-sans mb-4">
-              Most crypto tokens print billions of new coins to dump on you. NARA is capped at exactly <strong>1,000,000 tokens</strong> forever. There is no mint function, zero venture capital unlocks, and zero inflation.
+              Immutable total supply sealed at genesis. The smart contract has zero minting functions, zero owner privileges to create tokens, and zero inflationary dilution.
             </p>
 
             {activeInfo === 1 && (
               <div className="p-3 rounded bg-black/50 border border-white/10 font-mono text-[11px] text-muted space-y-1 mb-4">
-                <div>• Supply: <span className="text-silver">1,000,000.000000000000000000</span></div>
-                <div>• Mint Function: <span className="text-emerald-400">NONE (Code Sealed)</span></div>
-                <div>• Verified on BaseScan: <a href={SOCIAL_LINKS.basescanToken} target="_blank" rel="noopener noreferrer" className="text-base-blue underline">View Contract</a></div>
+                <div>• Total Supply: <span className="text-silver">1,000,000.000000000000000000</span></div>
+                <div>• Mint Function: <span className="text-emerald-400">None (Hardcoded)</span></div>
+                <div>• Verified Contract: <a href={SOCIAL_LINKS.basescanToken} target="_blank" rel="noopener noreferrer" className="text-base-blue underline">BaseScan Explorer</a></div>
               </div>
             )}
           </div>
 
           <div className="pt-4 border-t border-white/5 flex items-center justify-between font-mono text-xs text-muted">
-            <span>MAX CAP</span>
+            <span>MAX CEILING</span>
             <span className="text-silver font-bold">1,000,000 NARA</span>
           </div>
         </div>
@@ -74,12 +74,12 @@ export default function PrimitivesGrid() {
           <div>
             <div className="flex items-center justify-between mb-4">
               <span className="font-mono text-xs font-bold text-silver">
-                RULE 02 // TIME
+                PRIMITIVE 02 // CADENCE
               </span>
               <button
                 onClick={() => toggleInfo(2)}
                 className="p-1 rounded text-muted hover:text-white transition-colors"
-                title="Contract Proof"
+                title="Technical Specifications"
               >
                 <Info size={16} weight="bold" />
               </button>
@@ -90,34 +90,34 @@ export default function PrimitivesGrid() {
             </div>
 
             <h3 className="font-display text-xl font-bold text-white mb-2">
-              96 Payouts Every Day.
+              15-Minute Epochs
             </h3>
 
             <p className="text-xs text-dim leading-relaxed font-sans mb-4">
-              Time is money. Every 15 minutes (900 seconds), the blockchain calculates protocol trading fees and streams real rewards directly to committed holders around the clock.
+              Discrete cyclical consensus. Every 15 minutes (900 seconds), the staking engine computes epoch fee distributions according to time-weighted quadratic commitment rules.
             </p>
 
             {activeInfo === 2 && (
               <div className="p-3 rounded bg-black/50 border border-white/10 font-mono text-[11px] text-muted space-y-1 mb-4">
-                <div>• Interval: <span className="text-silver">900 seconds (15 min)</span></div>
-                <div>• Daily Cadence: <span className="text-silver">96 Epochs / Day</span></div>
-                <div>• Engine: <a href={SOCIAL_LINKS.basescanEngine} target="_blank" rel="noopener noreferrer" className="text-base-blue underline">View Staking Engine</a></div>
+                <div>• Duration: <span className="text-silver">900 seconds (15 min)</span></div>
+                <div>• Frequency: <span className="text-silver">96 Epochs Daily</span></div>
+                <div>• Engine: <a href={SOCIAL_LINKS.basescanEngine} target="_blank" rel="noopener noreferrer" className="text-base-blue underline">NARAEngine.sol</a></div>
               </div>
             )}
           </div>
 
           <div className="pt-4 border-t border-white/5 flex items-center justify-between font-mono text-xs text-muted">
-            <span>FREQUENCY</span>
-            <span className="text-silver font-bold">EVERY 15 MIN</span>
+            <span>CADENCE</span>
+            <span className="text-silver font-bold">96 EPOCHS / DAY</span>
           </div>
         </div>
 
-        {/* PILLAR 3: THE SACRIFICIAL LAW (THE MOAT) */}
-        <div className="p-6 rounded-xl border border-nara-gold/30 bg-nara-gold/[0.03] backdrop-blur-md flex flex-col justify-between hover:border-nara-gold/60 transition-colors group">
+        {/* PILLAR 3: SACRIFICIAL WEIGHT TRANSFER */}
+        <div className="p-6 rounded-xl border border-white/10 bg-surface/60 backdrop-blur-md flex flex-col justify-between hover:border-white/30 transition-colors group">
           <div>
             <div className="flex items-center justify-between mb-4">
-              <span className="font-mono text-xs font-bold text-nara-gold">
-                RULE 03 // THE MOAT
+              <span className="font-mono text-xs font-bold text-silver">
+                PRIMITIVE 03 // DYNAMICS
               </span>
               <button
                 onClick={() => toggleInfo(3)}
@@ -128,80 +128,80 @@ export default function PrimitivesGrid() {
               </button>
             </div>
 
-            <div className="w-10 h-10 rounded-lg bg-nara-gold/10 border border-nara-gold/20 flex items-center justify-center text-nara-gold mb-4">
+            <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-silver mb-4">
               <Flame size={22} weight="duotone" />
             </div>
 
             <h3 className="font-display text-xl font-bold text-white mb-2">
-              Panic Sellers Feed You.
+              Weight Redistribution
             </h3>
 
             <p className="text-xs text-dim leading-relaxed font-sans mb-4">
-              When an impatient staker panic-sells, their onchain position is <strong>permanently destroyed and burned</strong>. Their future rewards don't vanish—<strong>they are automatically transferred directly to the patient holders who remained.</strong>
+              When a position is unlocked, its bearer NFT is permanently executed and burned onchain. As total network weight decreases, remaining active positions represent a proportionally larger share of epoch distributions.
             </p>
 
             {activeInfo === 3 && (
               <div className="p-3 rounded bg-black/50 border border-white/10 font-mono text-[11px] text-muted space-y-1 mb-4">
-                <div>• Action on exit: <span className="text-rose-400">Position Burned Forever</span></div>
-                <div>• Consequence: <span className="text-emerald-400">Network Weight Shrinks</span></div>
-                <div>• Result: <span className="text-silver">Remaining Yield Shares Multiply</span></div>
+                <div>• Unlock behavior: <span className="text-rose-400">Position NFT Burned</span></div>
+                <div>• Network effect: <span className="text-silver">Total Weight Contracts</span></div>
+                <div>• Active positions: <span className="text-emerald-400">Proportional Share Expands</span></div>
               </div>
             )}
           </div>
 
           <div className="pt-4 border-t border-white/5 flex items-center justify-between font-mono text-xs text-muted">
-            <span>THE DYNAMIC</span>
-            <span className="text-nara-gold font-bold">YIELD AUTO-SPIKES</span>
+            <span>EQUILIBRIUM</span>
+            <span className="text-silver font-bold">NON-CUSTODIAL</span>
           </div>
         </div>
       </div>
 
-      {/* The Curiosity Trap: Visual Paper-Hands vs Patient Survivor Comparison */}
+      {/* Factual Mechanics Breakdown: Exit vs Commitment */}
       <div className="p-8 rounded-2xl border border-white/10 bg-surface/40 backdrop-blur-md">
         <div className="text-center max-w-xl mx-auto mb-8">
-          <span className="font-mono text-xs text-dim uppercase tracking-wider">THE GAME-THEORETIC REALITY</span>
+          <span className="font-mono text-xs text-dim uppercase tracking-wider">ONCHAIN CONSENSUS DYNAMICS</span>
           <h3 className="text-xl sm:text-2xl font-display font-black text-white mt-1">
-            Every Exit is a Direct Gift to the Survivors.
+            Mathematical Balance of Commitment
           </h3>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 font-mono text-xs">
-          {/* Panic Seller Box */}
-          <div className="p-6 rounded-xl border border-rose-500/20 bg-rose-500/[0.03]">
-            <div className="text-rose-400 font-bold mb-3 flex items-center gap-2">
-              <span>✕</span>
-              <span>THE PANIC SELLER</span>
+          {/* Unlocking / Burn Tile */}
+          <div className="p-6 rounded-xl border border-white/10 bg-white/[0.02]">
+            <div className="text-silver font-bold mb-3 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-rose-400" />
+              <span>POSITION EXIT & BURN</span>
             </div>
-            <ul className="space-y-2 text-dim">
-              <li>• Unlocks early when prices fluctuate.</li>
-              <li>• Onchain position is permanently burned from the network.</li>
-              <li>• Forfeits all future 15-minute reward streams forever.</li>
+            <ul className="space-y-2 text-dim leading-relaxed">
+              <li>• Positions may unlock when their lock duration reaches maturity.</li>
+              <li>• Unlocking executes an irrevocable onchain burn (`_burn(tokenId)`).</li>
+              <li>• The position's weight is immediately subtracted from active network weight.</li>
             </ul>
           </div>
 
-          {/* Patient Survivor Box */}
-          <div className="p-6 rounded-xl border border-emerald-500/30 bg-emerald-500/[0.04]">
-            <div className="text-emerald-400 font-bold mb-3 flex items-center gap-2">
-              <span>✓</span>
-              <span>THE PATIENT SURVIVOR</span>
+          {/* Active Commitment Tile */}
+          <div className="p-6 rounded-xl border border-white/10 bg-white/[0.02]">
+            <div className="text-silver font-bold mb-3 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              <span>ACTIVE PARTICIPATION</span>
             </div>
-            <ul className="space-y-2 text-dim">
-              <li>• Holds their ground across time epochs.</li>
-              <li>• As panic sellers burn out, total network weight drops.</li>
-              <li>• <strong>Your reward percentage AUTOMATICALLY DOUBLES or TRIPLES without spending an extra dollar.</strong></li>
+            <ul className="space-y-2 text-dim leading-relaxed">
+              <li>• Active positions maintain time-weighted quadratic consensus weight.</li>
+              <li>• When other participants exit, overall denominator weight contracts.</li>
+              <li>• Remaining active stakers automatically retain a larger proportional share of epoch fee distributions.</li>
             </ul>
           </div>
         </div>
 
-        {/* Action Link to the Full Beginner Guide */}
+        {/* Documentation Link */}
         <div className="mt-8 text-center">
           <a
             href={SOCIAL_LINKS.noobGuide}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 text-xs font-mono text-silver hover:text-white underline underline-offset-4 transition-colors"
+            className="inline-flex items-center gap-2 text-xs font-mono text-dim hover:text-white underline underline-offset-4 transition-colors"
           >
-            <span>Read the full Beginner's Guide on GitHub</span>
+            <span>Review Full Architectural Specifications in Documentation</span>
             <ArrowUpRight size={14} />
           </a>
         </div>
