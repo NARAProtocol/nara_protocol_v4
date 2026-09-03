@@ -1,0 +1,9 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "nara-protocol-v4",
+  "compatibility_date": "2026-09-01",
+  "assets": {
+    "directory": "./tools/nara-landing/dist",
+    "not_found_handling": "single-page-application"
+  }
+}
