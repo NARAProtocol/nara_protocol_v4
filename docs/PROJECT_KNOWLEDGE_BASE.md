@@ -22,6 +22,7 @@
 9. [NARA Category Baskets (Foundry Architecture & Adapters)](#9-nara-category-baskets-foundry-architecture--adapters)
 10. [Swarm Monitor & Real-Time Indexer (Ponder)](#10-swarm-monitor--real-time-indexer-ponder)
 11. [Frontend Ecosystem & Design Systems](#11-frontend-ecosystem--design-systems)
+    - [11.4 Official NARA Brand Identity, Logo Standards & Hosted Asset Registry](#114-official-nara-brand-identity-logo-standards--hosted-asset-registry)
 12. [Operations, Keepers & Multisig Governance](#12-operations-keepers--multisig-governance)
 13. [Cross-Repository Release Protocol & State Gates](#13-cross-repository-release-protocol--state-gates)
 14. [Codex Solidity Audit Pipeline](#14-codex-solidity-audit-pipeline)
@@ -538,6 +539,38 @@ Located in `nara-swarm-monitor/`. Powered by Ponder framework for real-time Base
 - **Typography:** `JetBrains Mono` everywhere.
 - **Prefix:** `nb-` class naming convention (`nb-shell`, `nb-slot`, `nb-board-wrap`).
 - **Epoch Backlog Guard:** Apps must inspect `currentEpoch` vs `epochState.epoch`. If backlog $> 0$, disable mutating actions and show an explicit **Sync Epoch** button.
+
+### 11.4 Official NARA Brand Identity, Logo Standards & Hosted Asset Registry
+
+#### Canonical Master Asset Locations
+- **Desktop Master Branding Suite:** `C:\Users\linas\Desktop\NARA_Branding_Package\`
+  - Master Logo: `07_HighRes_Masters_and_Logos\nara-logo-white.png` (1024×1024, Dual Concentric Radar Rings + 15-Notch Epoch Dial + Monolithic Architectural N on solid `#000000` deep black canvas).
+  - Token Icons: `05_Token_Icons_DEX_and_Trackers\` (all standard sizes from 128px to 1024px).
+  - Web & App Icons: `06_Web_and_App_Icons\` (`favicon.ico`, `apple-touch-icon_180x180.png`, web favicons).
+  - Community & DEX Headers: `01_DexScreener_and_DEX_Banners\`, `02_Twitter_X_Assets\`, `03_Telegram_Assets\`, `04_Discord_Assets\`.
+- **Authoritative Repository Public Assets:** `tools/nara-landing/public/`
+  - Canonical files: `nara_token_128.png`, `nara_token_200.png`, `nara_token_256.png`, `nara_token_512.png`, `nara-logo-white.png`.
+
+#### Where It Is Hosted (Direct Permanent Raw Links & CDN Routing)
+All official token icons are rendered on a **solid deep black `#000000` square canvas** with zero transparent corners to completely eliminate white-box/border artifacts in Chromium browsers and tracker interfaces:
+
+| Target Platform / Form | Required Size | Asset Purpose | Permanent Raw HTTPS Link | Production Cloudflare URL |
+| :--- | :---: | :--- | :--- | :--- |
+| **BaseScan Explorer** | `128x128` | Token contract verification & explorer avatar | `https://files.catbox.moe/snrc7s.png` | `https://naraprotocol.com/nara_token_128.png` |
+| **CoinGecko / CoinMarketCap** | `200x200` | Listing submission form token icon | `https://files.catbox.moe/f9xge7.png` | `https://naraprotocol.com/nara_token_200.png` |
+| **DexScreener / Uniswap / Wallets** | `256x256` | DEX profile update, Uniswap tokenlist, TrustWallet | `https://files.catbox.moe/b16drt.png` | `https://naraprotocol.com/nara_token_256.png` |
+| **Telegram / Discord / Channels** | `512x512` | Official announcements, group avatar, Discord server | `https://files.catbox.moe/f5tan3.png` | `https://naraprotocol.com/nara_token_512.png` |
+| **Master Brand Emblem** | `1024x1024` | Master high-res artwork & web app display | `https://files.catbox.moe/4v6oup.png` | `https://naraprotocol.com/nara-logo-white.png` |
+
+#### Mandatory Brand & Icon Design Rules
+1. **Full-Bleed Solid Black Canvas (`#000000`):** Token listing icons must NEVER have transparent outer corners. When platforms mask the icon with `border-radius: 50%`, the circle is cleanly carved out of solid black. Transparent corners cause Chromium and light-themed dashboards to render an ugly white square around the emblem.
+2. **Insignia Symbolism:**
+   - **Outer Radar Ring & 15-Notch Epoch Dial:** Encodes the on-chain 15-minute engine epoch cadence of the NARA Engine (`NARAEngine.sol`).
+   - **Monolithic Architectural "N":** Pure white (`#FFFFFF`) central block letterform symbolizing structural resilience and immutable store of value.
+3. **Core Brand Color Palette:**
+   - **Primary Substrate:** Deep Black (`#000000`) for token icons, dark interfaces, and brand emblems; Warm Ivory (`#FAF7EF`) for basket web dApp.
+   - **Primary Mark:** Pure White (`#FFFFFF`).
+   - **Primary Action Accent:** Base Blue (`#0000FF`) for CTAs, active highlights, and canonical NARA allocation rails.
 
 ---
 
