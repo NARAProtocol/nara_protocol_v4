@@ -8,11 +8,17 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
+    "verify:ui": "node scripts/verify-ui-symmetry.cjs",
     "deploy:cf": "npm run build && npx wrangler@latest pages deploy dist --project-name nara-landing",
     "deploy:cf:prod": "npm run build && npx wrangler@latest pages deploy dist --project-name nara-landing --branch main"
   },
   "dependencies": {
+    "@kyberswap/widgets": "^2.4.1",
     "@phosphor-icons/react": "^2.1.7",
+    "@web3-onboard/injected-wallets": "^2.11.3",
+    "@web3-onboard/react": "^2.11.0",
+    "@web3-onboard/walletconnect": "^2.6.3",
+    "ethers": "^5.8.0",
     "framer-motion": "^11.3.19",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

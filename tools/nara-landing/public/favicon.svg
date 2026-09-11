@@ -1,4 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" fill="none">
+  <!-- CIRCULAR SOLID BLACK SUBSTRATE (TRANSPARENT CORNERS) -->
+  <circle cx="500" cy="500" r="460" fill="#000000" />
+
   <!-- DUAL CONCENTRIC RINGS -->
   <circle cx="500" cy="500" r="410" stroke="#FFFFFF" stroke-width="18" />
   <circle cx="500" cy="500" r="350" stroke="#FFFFFF" stroke-width="18" />
