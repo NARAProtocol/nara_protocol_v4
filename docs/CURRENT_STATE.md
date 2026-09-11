@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-08-31.
+Last updated: 2026-09-11.
 > **Technical live testing on Base mainnet — not public product availability.**
 > The canonical v4 contracts and NARA/USDC pool use real assets. This document
 > records observed technical state only; it does not mean every NARA product or
@@ -49,9 +49,34 @@ local operator tooling and is not a protocol repository component.
 The documentation state and downstream handoff boundary are recorded in
 [`NARA-20260830-documentation-convergence.md`](releases/NARA-20260830-documentation-convergence.md).
 
-## PROTECTED DEDICATED-SAFE SOURCE - Treasury Range Manager V1 (merged, not deployed)
+## DEPLOYED (technical testing) — Treasury Range Manager V1
 
-Change ID `NARA-20260828-v4-treasury-range-manager` adds an undeployed
+Change ID `NARA-20260828-v4-treasury-range-manager` and follow-on protected PRs (#52, #59, #62, #64) remain the **source** lineage. They were not themselves deployment authority.
+
+**On-chain 2026-09-01 (CONFIRMED LIVE, technical testing, not public GA):**
+
+| Fact | Value |
+|---|---|
+| Manager | `0xd58afa5eaB20B0ED287851Cf98f359AdEd58a69C` |
+| Class | CONFIRMED LIVE on Base 8453 for technical testing. **available = NO.** |
+| Creation tx | `0xa657e0be76f040195fddb791e030b2fa0275f6ed989e2c17e2d1256bb95cb869` (Success) |
+| Block / time | `50736510` / 2026-09-01 11:32:47 UTC |
+| Path | Protocol Safe `0xd65c0e390Dc187A22c52c03816591CC736C0D755` `execTransaction` → CREATE2 deployer `0xDE9E3Cac08b7a31Db18c7432d4C45DF4584Fd646` |
+| Runtime | 23620 bytes; keccak256 `0xbd53ab49bd70983a352c5fc3c638f8df2d527e42011671218461aa5fb5b83a09` (QA independent `eth_getCode`) |
+| Dedicated TR Safe | `0x5050BC6dc3E07313D52D05cecD53f727D6CDa245` (1-of-1; owner `0xfe3A8678A9c729438BB11718bD1391E7Ab491E8e`). **R2 OPEN HIGH.** |
+| Ladder | implemented / tested / merged / **deployed** YES; configured/activated PARTIAL; indexed UNKNOWN; **available NO** |
+
+Prior CURRENT_STATE language dated 2026-08-31 that the manager was undeployed is **stale document lag**, not a second chain.
+
+**Canary honesty (CONFLICTING):** the only permitted launch candidate remains `CONSERVATIVE-100000-NARA` (100,000 NARA + 500 USDC). Observed 2026-09-11 dedicated-Safe balances were ~12,183 NARA + ~1,335 USDC. Do **not** claim policy-conformant funding, AGENTS-style "FUNDED AND ACTIVATED" as fully proven, or Safe Haven. QA and Security independently matched those balances.
+
+**Packaging gap:** `deployments/` still has custody-policy JSON only; there is **no** sanitized TRM deployment manifest. Do not invent one. Cite tx/block/runtime hash until a future evidence package exists.
+
+TRM is tactical range periphery, separate from permanent POL (Hook → Vault → Compounder).
+
+### Historical source lineage (through 2026-08-31)
+
+Change ID `NARA-20260828-v4-treasury-range-manager` added a then-undeployed
 Safe-bound periphery manager for tactical one-sided NARA/USDC ranges, an exact
 state reader/planner/optimizer, unsigned Safe builders, an adversarial Base-fork
 simulator, and a separate permissionless gas-only settlement service. It does
@@ -71,9 +96,10 @@ quote-evidence hardening as GitHub-verified commit
 `162c24be080398b65c76e542a48ccb608cd1fb43`; all required protected checks were
 green. That is the latest protected commit that changed functional
 implementation before later launch-evidence-only corrections; every deployment
-proposal must bind the exact then-current protected `origin/main` tip. No
-manager address, deployment receipt, funding, signature, broadcast, activation,
-or production transaction exists.
+proposal must bind the exact then-current protected `origin/main` tip. As of
+this 2026-08-31 source record, no manager address, deployment receipt, funding,
+signature, broadcast, activation, or production transaction had been recorded.
+That present-tense claim is **stale document lag**; see the 2026-09-01 on-chain facts above.
 
 Change `NARA-20260831-v4-treasury-range-dedicated-safe` is protected source with
 two explicit, non-interchangeable roles:
@@ -200,6 +226,8 @@ Phase 2 initially deployed and verified the static baseline stack on Base Mainne
 5. `NARAPositionRendererV5`: `0x607b08365C23a983C542898a79E670e6D4B80673`
 6. `NARAPositionAccountV4`: `0x3a8c9cA4f95E94751774810B33caF01bb992A55F`
 7. `NARAPositionNFTV4`: `0xCcBD8c59664958636369F8fe24B927aEBc3DF7cC`
+
+Phase-2 protocol authority remains `0xCcBD8c59664958636369F8fe24B927aEBc3DF7cC` (`integrationReady: false`). Label `0x01D3AC0acda01FE5D6788fA0B4062de94C8DE52b` **CONFLICTING / non-Phase2**; Founder 2026-09-11: do not promote.
 
 Safe finalization transaction `0xfb83cb4cb4b8a2c30216f46be69b519628ad74259795806e30d158a7736c6e8f`
 (mined in block `50296367`) executed the atomic batch:
