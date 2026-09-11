@@ -15,7 +15,7 @@
 3. [NARA Engine & Adaptive Mathematical Models](#3-nara-engine--adaptive-mathematical-models)
 4. [Uniswap v4 Dynamic Fee Hook & Fee Vault](#4-uniswap-v4-dynamic-fee-hook--fee-vault)
 5. [Liquidity Compounder and Fee-to-LP Flow](#5-liquidity-compounder-and-fee-to-lp-flow)
-   - [5.1 Treasury Range Manager Candidate](#51-treasury-range-manager-candidate)
+   - [5.1 Treasury Range Manager — production technical testing (not available)](#51-treasury-range-manager--production-technical-testing-not-available)
 6. [Position NFTs & Generative On-Chain Art Engine](#6-position-nfts--generative-on-chain-art-engine)
 7. [Bond Markets & Genesis Reward Distribution](#7-bond-markets--genesis-reward-distribution)
 8. [Composability Layer (stNARA, SY-stNARA, Fractional Positions)](#8-composability-layer-stnara-sy-stnara-fractional-positions)
@@ -261,9 +261,23 @@ timelock.
    integration, or recovery risk.
 6. **7-Day Recovery Timelock:** Owner POL-removal operations (`WindDown`, `MigratePosition`, `RecoverPoolTokens`) require `RECOVERY_DELAY = 7 days`.
 
-### 5.1 Treasury Range Manager Candidate
+### 5.1 Treasury Range Manager — production technical testing (not available)
 
-`NARATreasuryRangeManagerV1.sol` is an implemented and tested, but undeployed,
+`NARATreasuryRangeManagerV1` is **CONFIRMED LIVE** on Base at
+`0xd58afa5eaB20B0ED287851Cf98f359AdEd58a69C` for technical testing.
+It is **not** public GA and **not** available.
+
+- Dedicated Treasury Range Safe `0x5050BC6dc3E07313D52D05cecD53f727D6CDa245` (1-of-1). R2 open.
+- Protocol 2-of-3 Safe `0xd65c0e390Dc187A22c52c03816591CC736C0D755` executed CREATE2 on 2026-09-01 (tx `0xa657e0be…`, block `50736510`).
+- Runtime keccak256 `0xbd53ab49bd70983a352c5fc3c638f8df2d527e42011671218461aa5fb5b83a09`.
+- Canary policy 100,000 NARA + 500 USDC vs observed ~12,183 NARA / ~1,335 USDC: **CONFLICTING**. Do not claim Safe Haven or policy-conformant funding.
+- Hardhat CURRENT_STATE/PKB text dated 2026-08-31 calling the manager undeployed is **stale lag**.
+
+This manager is strictly separate from permanent POL.
+
+### Historical candidate notes (through 2026-08-31)
+
+`NARATreasuryRangeManagerV1.sol` was documented as an implemented and tested, then-undeployed,
 Safe-bound periphery candidate for tactical one-sided NARA/USDC ranges. It is
 strictly separate from permanent POL: it owns only manager-registered tactical
 PositionManager NFTs, never changes the Hook/Vault/Compounder, and sends every
@@ -272,7 +286,8 @@ Range Safe. Protected PR #62 separated that 1-of-1 canary-custody Safe from the
 protocol 2-of-3 deployment Safe. Protected PR #64 merged the prefunded-route and
 strict matrix-evidence hardening as GitHub-verified commit
 `162c24be080398b65c76e542a48ccb608cd1fb43`. No deployment, funding, signature,
-broadcast, activation, or production transaction followed from those merges.
+broadcast, activation, or production transaction followed from those merges
+(the 2026-09-01 CREATE2 is a later human/Safe action, not implied by those PRs).
 
 The companion planner reads a pinned PoolManager spot, pool liquidity, active
 positions, Hook configuration and pending updates, runtime bindings, and
@@ -320,9 +335,9 @@ PoolManager-prefund proof. Explicit supported unquoted reasons are limited to B
 `atomic_buy_reverse`; every other path rejects an unquoted label. The prefunded
 route is fork evidence, not a universal public-router repair.
 
-The manager remains unfunded and undeployed. A fresh 21-candidate matrix-v4
-snapshot and unsigned deployment packet must be built from the exact final
-protected commit. Deployment requires the protocol 2-of-3 Safe. Funding,
+The 2026-08-31 present-tense claim that the manager remains unfunded and undeployed is **stale document lag**.
+A fresh 21-candidate matrix-v4 snapshot and unsigned order packets must still be built from the exact then-current
+protected commit. Further orders require the dedicated Treasury Range Safe. Funding,
 12-order creation, every cancellation or rebalance, and any new range creation
 remain separately human-authorized; only terminal settlement may be automated.
 
