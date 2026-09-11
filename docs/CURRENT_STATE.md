@@ -1,4 +1,4 @@
-# Current State
+﻿# Current State
 
 Last updated: 2026-08-31.
 > **Technical live testing on Base mainnet — not public product availability.**
@@ -219,6 +219,32 @@ must supply immutable origin, receipts, runtime/source proof, complete mint
 history, smoke, observation, and downstream handoff evidence before any such
 claim becomes authoritative.
 
+### Observed renderer stack state (read-only verification, 2026-09-11)
+
+Independent read-only Base readback on 2026-09-11 confirmed the **active
+production Position NFT** is `NARAPositionNFTV4` at
+`0x01D3AC0acda01FE5D6788fA0B4062de94C8DE52b` (deployed 2026-08-22, distinct
+from the Phase-2 baseline `0xCcBD...` above). Its owner is the deployer EOA
+`0xAE9D1667B45558232BeD9d45DcCA53940F892aB5` (not the Admin Safe), with
+`royaltyFrozen()` true at 10% to that same EOA, claim fees 0 BPS but not
+frozen, `genesisRewardDistributor()` set to
+`0x1A6E7B52Db9738622b835059F8C0B2f146829EC8`, and `nextTokenId()` = 48.
+
+The active renderer, read live from `renderer()`, is
+`NARAPositionRendererV9` at `0xBe25F3cE387e01cAe5dA7d7F0bc2FdE72c244a98`,
+activated by transaction
+`0x7c162cb0efd26c08964d855b9064f0e79cfca8937cd050a73a116e5b540cc70f` at block
+`51159172` (2026-09-11T06:21:31Z), supported by `NARAArtDefsPlateV5`
+`0xECdaf4B930cec3293479de0404B72282c7Bf9Aba` (3,785 B),
+`NARAArtCorePlateV5` `0x3Ae72d3ef410AE9baE795Cf9a027ef9fDcBf9996` (24,420 B),
+and `NARAArtMetadataV5` `0xe644Be90A7B46EE146be0C1Eb79Ee47C9cf700d9`
+(6,957 B), each runtime-size-checked. These contracts are NOT yet covered by a
+canonical deployment manifest, source verification, or Safe finalization in
+this repository; no `deployments/v4-position-nft-v9-*.json` evidence exists.
+This record is an observed live-state snapshot and does not by itself
+authorize downstream consumers. Governance divergence (EOA ownership/royalty,
+mutable renderer, unfrozen claim fees, Genesis distributor bound) is recorded
+as observed, pending an explicit human policy decision.
 The Cloudflare console at
 `https://nara-v4-console-preview.pages.dev` is a preview deployment only. Its
 existence does not establish Position NFT integration or public availability.

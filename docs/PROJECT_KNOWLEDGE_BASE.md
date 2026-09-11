@@ -625,7 +625,7 @@ Located in `.codex/audit/`. Workspace serves as a dedicated security audit hub.
 | **`NARAArtGenesisPlateV1`** | `0x20520115546c28F99aE581d62935e62D9E8B9022` | Verified | Position NFT Phase-2 baseline; no Genesis distributor binding |
 | **`NARAPositionRendererV5`** | `0x607b08365C23a983C542898a79E670e6D4B80673` | Verified | Position NFT Phase-2 baseline |
 | **`NARAPositionAccountV4`** | `0x3a8c9cA4f95E94751774810B33caF01bb992A55F` | Verified | Position NFT Phase-2 implementation |
-| **`NARAPositionNFTV4`** | `0xCcBD8c59664958636369F8fe24B927aEBc3DF7cC` | Verified and Safe-finalized | Manifest remains `integrationReady: false`; consumers disabled |
+| **`NARAPositionNFTV4`** | `0xCcBD8c59664958636369F8fe24B927aEBc3DF7cC` | Verified and Safe-finalized | Phase-2 baseline; historical - superseded by production `0x01D3AC0acda01FE5D6788fA0B4062de94C8DE52b` (see CURRENT_STATE renderer-stack record) |
 | **Uniswap v4 Pool ID** | `0x83edced1f39e6adf7469cd718eeb409824d948959263408d4cfb6e745c8db464` | Initialized | NARA/USDC 0.30% fee, tick 60 |
 | **Seed LP NFT** | `2898124` | Active | Owned by Production Safe |
 | **Compounder LP NFT** | `2898486` | Active | Owned by Compounder |
