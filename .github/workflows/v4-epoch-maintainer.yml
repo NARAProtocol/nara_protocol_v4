@@ -2,7 +2,7 @@ name: NARA v4 epoch maintainer
 
 on:
   schedule:
-    - cron: "3,18,33,48 * * * *"
+    - cron: "7 * * * *"
   workflow_dispatch:
     inputs:
       execute:

@@ -242,8 +242,8 @@ transaction.
 > liquidity workflow was separately authorized and activated on 2026-08-15.
 > Read the two dated maintainer activation records before changing either path.
 
-`.github/workflows/v4-epoch-maintainer.yml` is an epoch-only cycle at minutes
-`3,18,33,48` of every UTC hour. Its active configuration requires:
+`.github/workflows/v4-epoch-maintainer.yml` is an epoch-only cycle at minute
+`7` of every UTC hour (`7 * * * *`, hourly batching). Its active configuration requires:
 
 - repository variable `V4_EPOCH_MAINTAINER_ENABLED=true`;
 - repository variable `V4_EPOCH_KEEPER_ADDRESS` with a dedicated gas-only EOA;

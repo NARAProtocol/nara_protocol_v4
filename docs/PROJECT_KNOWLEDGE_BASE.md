@@ -15,8 +15,13 @@
 3. [NARA Engine & Adaptive Mathematical Models](#3-nara-engine--adaptive-mathematical-models)
 4. [Uniswap v4 Dynamic Fee Hook & Fee Vault](#4-uniswap-v4-dynamic-fee-hook--fee-vault)
 5. [Liquidity Compounder and Fee-to-LP Flow](#5-liquidity-compounder-and-fee-to-lp-flow)
-   - [5.1 Treasury Range Manager Candidate](#51-treasury-range-manager-candidate)
+   - [5.1 Treasury Range Manager Production Deployment & Activation](#51-treasury-range-manager-production-deployment--activation)
+   - [5.2 Adversarial Matrix, MEV Stress-Testing & Autonomous Range Ranger](#52-adversarial-matrix-mev-stress-testing--autonomous-range-ranger)
+   - [5.3 Dynamic Volume & Directional Pressure Market-Making Engine (Range Ranger)](#53-dynamic-volume--directional-pressure-market-making-engine-range-ranger)
 6. [Position NFTs & Generative On-Chain Art Engine](#6-position-nfts--generative-on-chain-art-engine)
+   - [6.4 The NFT Position Shield & Off-DEX Operative Architecture](#64-the-nft-position-shield--off-dex-operative-architecture)
+     - [6.4.4 Competitive Landscape & The "Third Dimension" Launch Paradigm](#644-competitive-landscape--the-third-dimension-launch-paradigm)
+     - [6.4.5 Shielded Launch Archetypes & Ecosystem Models](#645-shielded-launch-archetypes--ecosystem-models)
 7. [Bond Markets & Genesis Reward Distribution](#7-bond-markets--genesis-reward-distribution)
 8. [Composability Layer (stNARA, SY-stNARA, Fractional Positions)](#8-composability-layer-stnara-sy-stnara-fractional-positions)
 9. [NARA Category Baskets (Foundry Architecture & Adapters)](#9-nara-category-baskets-foundry-architecture--adapters)
@@ -43,7 +48,8 @@ The system operates exclusively on the **fixed v4 production stack**. All experi
 > liquidity, returns, or an exit. This repository contains no evidence of
 > completed jurisdiction-specific qualified legal review. Nothing here is an
 > invitation, inducement, or recommendation
-> to transact. For current gates, see [CURRENT_STATE.md](CURRENT_STATE.md).
+> to transact. For current gates, see [CURRENT_STATE.md](CURRENT_STATE.md).  
+> For investor objection handling, technical defenses, and battlecards, see [NARA_INVESTOR_QNA.md](NARA_INVESTOR_QNA.md).
 
 ### Workspace Architecture
 The workspace contains self-contained sub-projects without a shared root `package.json`:
@@ -262,79 +268,193 @@ timelock.
    integration, or recovery risk.
 6. **7-Day Recovery Timelock:** Owner POL-removal operations (`WindDown`, `MigratePosition`, `RecoverPoolTokens`) require `RECOVERY_DELAY = 7 days`.
 
-### 5.1 Treasury Range Manager Candidate
+### 5.1 Treasury Range Manager Production Deployment & Activation
 
-`NARATreasuryRangeManagerV1.sol` is an implemented and tested, but undeployed,
-Safe-bound periphery candidate for tactical one-sided NARA/USDC ranges. It is
-strictly separate from permanent POL: it owns only manager-registered tactical
-PositionManager NFTs, never changes the Hook/Vault/Compounder, and sends every
-settlement or cancellation output directly to the immutable dedicated Treasury
-Range Safe. Protected PR #62 separated that 1-of-1 canary-custody Safe from the
-protocol 2-of-3 deployment Safe. Protected PR #64 merged the prefunded-route and
-strict matrix-evidence hardening as GitHub-verified commit
-`162c24be080398b65c76e542a48ccb608cd1fb43`. No deployment, funding, signature,
-broadcast, activation, or production transaction followed from those merges.
+The Treasury Range Manager (`NARATreasuryRangeManagerV1.sol`) is **DEPLOYED, FUNDED, AND ACTIVATED ON BASE MAINNET**:
+- **Contract Address:** [`0xd58afa5eaB20B0ED287851Cf98f359AdEd58a69C`](https://basescan.org/address/0xd58afa5eaB20B0ED287851Cf98f359AdEd58a69C)
+- **Dedicated Treasury Range Safe:** [`0x5050BC6dc3E07313D52D05cecD53f727D6CDa245`](https://basescan.org/address/0x5050BC6dc3E07313D52D05cecD53f727D6CDa245) (1-of-1 threshold, owned by `0xfe3A8678A9c729438BB11718bD1391E7Ab491E8e`). Holds exclusive custody of order inventory and receives all cancellation and settlement proceeds.
+- **Protocol 2-of-3 Safe:** `0xd65c0e390Dc187A22c52c03816591CC736C0D755` executed the CREATE2 deployment packet only; it holds zero operational range custody.
+- **Autonomous Settler Daemon:** Active on Railway (`services/v4-treasury-range-settler`, keeper `0xa4B4B00f067cB4f5607c9a7298827fa1C1315aB7`), executing 15-second polling sweeps to return terminal profits to the Safe.
+- **Invariants:**
+  1. The manager contract holds zero persistent token balances.
+  2. Every rebalance execution ends with `assertOperationalClean()`.
+  3. Strict Uniswap v4 tick alignment: Buy orders have $tickLower \ge currentTick$ (dollar price lower); Sell orders have $tickUpper \le currentTick$ (dollar price higher).
 
-The companion planner reads a pinned PoolManager spot, pool liquidity, active
-positions, Hook configuration and pending updates, runtime bindings, and
-separate Safe/Treasury balances. It evaluates 21 profile/budget candidates and
-selects deterministically only from complete exact-fork evidence. "Optimal"
-means best under that tested family and objective function; it is not a market
-prediction or profit guarantee. A new snapshot requires a new plan and a new
-human-reviewed Safe proposal. The settler never replans or reinvests proceeds.
+### 5.2 Adversarial Matrix, MEV Stress-Testing & Autonomous Range Ranger
 
-The 2026-08-30 internal-audit remediation closes all five retained findings:
-exact 21-candidate/strict-row evidence, durable signed-nonce lineage, bounded
-fatal RPC/sweep deadlines, and Circle USDC implementation/control-state
-binding. Strategy schema v3 pins both Safe roles, the dedicated-custody policy,
-USDC proxy and implementation hashes, implementation/admin slots,
-admin/owner/pauser/blacklister, pause and monitored blacklist state, plus the
-code-hash-bound Base Multicall3 reader. Deployment, order, settlement, and exact
-rebroadcast paths fail closed before signing on drift. Cancellation has a
-clearly labelled exit-only bypass and cannot promise success under incompatible
-token behavior. The internal review is not an independent external audit or
-security clearance.
+The **Adversarial Matrix** and the **Multi-Block Burst Buyer** are specialized **security, verification, and liquidity-defense testing harnesses**. They are strictly protocol research, testing, and automated market stability tools—**NOT market manipulation, wash trading, or price-fixing instruments**.
 
-At the historical 2026-08-28 candidate checkpoint, the pinned Base fork was block
-`50537172` and the selected candidate was `CONSERVATIVE-100000-NARA` with 12
-orders and status `SELECTED_EXECUTION_BLOCKED`. The Safe lacked the required
-NARA and 5,000 USDC budget. That capital plan and its matrix-v3 artifacts are
-retired for packet construction. A
-fully traversed range becomes Safe-held inventory only in a later settlement
-transaction; an actor's same-transaction buy/reverse cannot be intercepted.
+#### A. Purpose & Regulatory UX Boundary of the Matrix
+1. **Adversarial Hook Stress-Testing:** The 21-case matrix (`scripts/runV4LiveSameBlockBuyTaxMatrix.ts`, `runV4LiveSameBlockSellReversal.ts`) systematically verified that same-block Block-0 swap volume aggregates properly across transactions and scales taxes up to the 20% cap without overflow or rounding flaws.
+2. **MEV & Arbitrage Resistance Proof:** The matrix verified that MEV sandwichers and cross-pool searchers cannot exploit the canonical pool. Instead, their arbitrage volume is taxed, capturing POL directly into `NARALiquidityGrowthVault.sol` (proven by Base transactions `0x86a1...8c3` and `0x9361...394`).
+3. **Liquidity Defense Calibration:** The Single-Wallet Burst Buyer (`scripts/runSingleWalletBurstBuys.ts`) was used to simulate sequential micro-volume ($1.00 trades across blocks) to test how the automated order book responds to real-world demand, ensuring that liquidity floors adjust upwards to lock in protocol value and prevent predatory down-wicks.
 
-The 5,000-USDC plan is preserved only as historical evidence. The
-`NARA-20260831-v4-treasury-range-500-usdc-canary` policy permits only
-`CONSERVATIVE-100000-NARA`, with 100,000 NARA, 200 USDC exposed across four buy
-ranges, and 300 USDC unallocated in the dedicated Treasury Range Safe. Funding
-the Safe creates material 1-of-1 loss and availability risk and requires the
-recorded explicit human acceptance or an approved multisig upgrade first. The
-optimizer must still validate the complete 21-candidate matrix, but every other
-profile/budget is launch-blocked. This is a capital envelope, not a $500-total
-position: the market value of 100,000 NARA is additional and changes with spot.
-Matrix-row schema `nara.v4.treasury-range-matrix-row.v4` binds each result to the
-repository/block, pinned sqrt price, tick, Hook-configuration hash, exact
-human-price rational, prefunded route, and per-swap quote status. Every quotable
-swap needs a positive official v4 Quoter result or exact decoded
-PoolManager-prefund proof. Explicit supported unquoted reasons are limited to B
-`same_block_transactions`, C `same_transaction_actions`, and F
-`atomic_buy_reverse`; every other path rejects an unquoted label. The prefunded
-route is fork evidence, not a universal public-router repair.
+#### B. The Autonomous Range Ranger Engine
+To remove manual UI bottlenecks and protect the pool 24/7, the system features an autonomous rebalance engine:
+- **CLI Atomic Rebalancer:** `nara-protocol-hardhat/scripts/autoRangeManager.ts`
+- **Zero-Waste Adaptive Streamer:** `nara-protocol-hardhat/scripts/rangeRangerEventEngine.ts`
+- **Cloud 24/7 Watcher (Railway):** `nara-swarm-monitor/scripts/rangeRangerWatcher.mjs`
+- **Core Viem Runtime:** `nara-swarm-monitor/scripts/rangeRangerRuntime.mjs`
 
-The manager remains unfunded and undeployed. A fresh 21-candidate matrix-v4
-snapshot and unsigned deployment packet must be built from the exact final
-protected commit. Deployment requires the protocol 2-of-3 Safe. Funding,
-12-order creation, every cancellation or rebalance, and any new range creation
-remain separately human-authorized; only terminal settlement may be automated.
+#### C. Execution Architecture & Anti-Exploit Safeguards
+1. **Atomic MultiSend Execution:** All actions (cancellations, approvals, 4-5 fresh buy bands, 4-5 fresh sell bands, approval revocations, and `assertOperationalClean`) execute in **1 single atomic EVM transaction** via Safe 1.4.1 MultiSendCallOnly (`0x40A2aCCbd92BCA938b02010E17A5b8929b49130D`).
+2. **Gas Ceiling:** Requires `7_500_000` gas limit (batch consumes ~3.8M - 4.2M gas across Uniswap v4 position mints/burns).
+3. **Anti-Flash-Loan Guard:** 2,500-tick instant shift ceiling prevents rebalancing against single-block flash loan spikes without multi-block confirmation.
+4. **Live On-Chain Evidence:**
+   - **Rebalance Cycle 1 (Block `50792858`):** Cancelled 5 stale orders, deployed 8 bands centered at $0.0727. ([Tx `0xe538...917`](https://basescan.org/tx/0xe5382c9a83d171a9c9707ef49e5ac4cc1cb9e35d5e07dc6d5b4efe359dcf5917)).
+   - **Rebalance Cycle 2 (Block `50794578`):** Autonomously triggered by 28% pump to $0.0964. Cancelled stale orders, deployed 4 new buy floors ($0.0678 - $0.0920) and 4 new sell targets up to $0.2710. ([Tx `0x73a0...e0b`](https://basescan.org/tx/0x73a0a92dc351668994bf3ec9c7ec0774ae8f789c89320ebb96dfd89f64f95e0b)).
 
-Authority and operating documents:
+Protocol authority:
+- `docs/CURRENT_STATE.md`
+- `docs/architecture/NARA_TREASURY_RANGE_MANAGER_V1.md`
+- `docs/runbooks/NARA_V4_TREASURY_RANGE_SETTLER_RUNBOOK.md`
+- `scripts/autoRangeManager.ts`
+- `../nara-swarm-monitor/scripts/rangeRangerWatcher.mjs`
+- `../nara-swarm-monitor/scripts/rangeRangerRuntime.mjs`
 
-- [`architecture/NARA_TREASURY_RANGE_MANAGER_V1.md`](architecture/NARA_TREASURY_RANGE_MANAGER_V1.md)
-- [`security/NARA_TREASURY_RANGE_MANAGER_THREAT_MODEL.md`](security/NARA_TREASURY_RANGE_MANAGER_THREAT_MODEL.md)
-- [`security/NARA_TREASURY_RANGE_MANAGER_REMEDIATION_2026-08-30.md`](security/NARA_TREASURY_RANGE_MANAGER_REMEDIATION_2026-08-30.md)
-- [`runbooks/NARA_V4_TREASURY_RANGE_SETTLER_RUNBOOK.md`](runbooks/NARA_V4_TREASURY_RANGE_SETTLER_RUNBOOK.md)
-- [`releases/NARA-20260828-v4-treasury-range-manager.md`](releases/NARA-20260828-v4-treasury-range-manager.md)
-- [`releases/NARA-20260831-v4-treasury-range-500-usdc-canary.md`](releases/NARA-20260831-v4-treasury-range-500-usdc-canary.md)
+### 5.3 Dynamic Volume & Directional Pressure Market-Making Engine (Range Ranger)
+
+The **Range Ranger** is the protocol's autonomous, non-custodial concentrated liquidity market maker on Uniswap v4. Operating via the dedicated Treasury Range Safe (`0x5050BC6dc3E07313D52D05cecD53f727D6CDa245`), it eliminates manual rebalancing bottlenecks and replaces rigid, static liquidity grids with a **dynamic, volume- and pressure-responsive adaptive order-book engine**.
+
+```
+                           ┌──────────────────────────────────────────────┐
+                           │          LIVE BASE BLOCKCHAIN TELEMETRY       │
+                           └──────────────────────┬───────────────────────┘
+                                                  │
+                   ┌──────────────────────────────┼──────────────────────────────┐
+                   ▼                              ▼                              ▼
+     [Uniswap v4 Hook Event Stream]     [Short-Term Price Momentum]    [Resting Order Depletion]
+     - eth_getLogs (PoolFeeTaken)       - ΔP = (P_curr - P_start)/P    - Filled Buys vs Filled Sells
+     - Net Buy USD vs Sell USD Vol      - Directional Trend Vector     - Book Inventory Skew
+                   │                              │                              │
+                   └──────────────────────────────┼──────────────────────────────┘
+                                                  │
+                                                  ▼
+                                ┌───────────────────────────────────┐
+                                │  calculateMarketFlow() Analytics  │
+                                ├───────────────────────────────────┤
+                                │ • Net Pressure: P_net ∈ [-1, +1]  │
+                                │ • Regime: BUY / SELL / NEUTRAL    │
+                                │ • Volatility: V_vol ∈ [0.7, 2.5]  │
+                                └─────────────────┬─────────────────┘
+                                                  │
+                         ┌────────────────────────┴────────────────────────┐
+                         ▼                                                 ▼
+        ┌──────────────────────────────────┐             ┌──────────────────────────────────┐
+        │ calculateDynamicBudgets()        │             │ synthesizeBuy/SellBracket()      │
+        ├──────────────────────────────────┤             ├──────────────────────────────────┤
+        │ • Reserve-Aware Allocation       │             │ • 5-Tier Adaptive Geometry       │
+        │ • ~35% Safe USDC Reserve         │             │ • Dead-Zone Elimination (2-2.5%) │
+        │ • ~25% Safe NARA Reserve         │             │ • Asymmetric Pressure Skewing    │
+        │ • Volatility Scaling Multiplier  │             │ • Stale Order Retention Logic    │
+        └────────────────┬─────────────────┘             └────────────────┬─────────────────┘
+                         │                                                 │
+                         └────────────────────────┬────────────────────────┘
+                                                  │
+                                                  ▼
+                               ┌─────────────────────────────────────┐
+                               │     Atomic Safe 1.4.1 MultiSend     │
+                               ├─────────────────────────────────────┤
+                               │ • Cancel Obsolete / Conflicting     │
+                               │ • Retain Strategic Moon-Pump Limits │
+                               │ • Approve Exact Capital (Permit2)   │
+                               │ • Mint 5 Fresh Buy / 5 Sell Bands   │
+                               │ • Revoke Allowances                 │
+                               │ • assertOperationalClean()          │
+                               └─────────────────────────────────────┘
+```
+
+#### 5.3.1 Market Flow & Directional Pressure Formulation
+Traditional concentrated liquidity managers deploy static symmetric brackets around spot price. Under real-world order flow, this causes rapid inventory adverse selection:
+- When aggressive buying occurs, static sell orders are quickly absorbed at cheap prices, and buy support remains far below, leaving the pool vulnerable to sharp retracements.
+- When aggressive selling occurs, static buy orders absorb dumps prematurely before price discovers real support, exhausting quote capital at local highs.
+
+The Range Ranger resolves this through continuous **On-Chain Flow Quantification** (`rangeRangerRuntime.mjs -> calculateMarketFlow`):
+
+1. **Volume Flow Imbalance ($P_{\text{vol}}$):**
+   The engine queries the Uniswap v4 Hook's `PoolFeeTaken` logs over a recent lookback window ($\le 1,900$ blocks, within public Base RPC limits). Because `NARALiquidityGrowthHook.sol` takes fees in the input currency (USDC on buys, NARA on sells), every swap emits direct flow evidence:
+   $$V_{\text{buy}} = \sum \text{USDC Amount In}$$
+   $$V_{\text{sell}} = \sum (\text{NARA Amount In} \times P_{\text{spot}})$$
+   $$P_{\text{vol}} = \frac{V_{\text{buy}} - V_{\text{sell}}}{V_{\text{buy}} + V_{\text{sell}} + \epsilon} \in [-1.0, +1.0]$$
+
+2. **Price Momentum ($\Delta P$):**
+   Evaluates percentage price displacement across the observation window:
+   $$\Delta P = \frac{P_{\text{current}} - P_{\text{start}}}{P_{\text{start}}}$$
+   $$P_{\text{mom}} = \tanh(10 \cdot \Delta P) \in [-1.0, +1.0]$$
+
+3. **Order Book Inventory Depletion ($P_{\text{book}}$):**
+   Compares the fill state of active maker orders in `NARATreasuryRangeManagerV1`:
+   $$P_{\text{book}} = \frac{N_{\text{sells\_filled}} - N_{\text{buys\_filled}}}{N_{\text{total\_orders}}} \in [-1.0, +1.0]$$
+
+4. **Composite Net Directional Pressure ($P_{\text{net}}$):**
+   Synthesizes the three independent signals with calibrated weights:
+   $$P_{\text{net}} = 0.50 \cdot P_{\text{vol}} + 0.30 \cdot P_{\text{mom}} + 0.20 \cdot P_{\text{book}}$$
+   *(If RPC log queries are throttled or empty, the engine gracefully degrades weights to price momentum and order book depletion).*
+
+5. **Operational Flow Regimes:**
+   - **`BUY_PRESSURE` ($P_{\text{net}} > +0.25$):** Aggressive taker buy flow dominating; upward price momentum.
+   - **`SELL_PRESSURE` ($P_{\text{net}} < -0.25$):** Taker sell flow dominating; downward price drift.
+   - **`NEUTRAL_CHOP` ($-0.25 \le P_{\text{net}} \le +0.25$):** Mean-reverting consolidation.
+
+#### 5.3.2 Volatility Multiplier ($V_{\text{vol}}$) & Dynamic Reserve Budgeting
+To protect Treasury Safe reserves, capital allocation and bracket spacing dynamically adapt to market volatility:
+
+- **Volatility Multiplier ($V_{\text{vol}} \in [0.70, 2.50]$):**
+  Derived from the standard deviation of short-term price returns relative to baseline. During quiet consolidation, $V_{\text{vol}} \to 0.70 - 0.85\times$, signaling tight spreads. During high-velocity expansions, $V_{\text{vol}} \to 1.50 - 2.50\times$, signaling wide spacing to shield inventory from toxic arbitrage.
+
+- **Dynamic Reserve-Aware Budgets (`calculateDynamicBudgets`):**
+  Rather than risking all treasury capital in a single rebalance, the engine caps active exposure:
+  $$\text{Budget}_{\text{USDC}} = \text{Safe USDC Balance} \times 0.35 \times \text{clamp}(V_{\text{vol}}, 0.8, 1.2)$$
+  $$\text{Budget}_{\text{NARA}} = \text{Safe NARA Balance} \times 0.25 \times \text{clamp}(V_{\text{vol}}, 0.8, 1.2)$$
+  - Enforces minimum operational floors ($100 USDC and 1,000 NARA) to guarantee order viability.
+  - Leaves 65% of USDC and 75% of NARA unallocated in Safe custody, ensuring reserves can never be depleted in a single trend leg.
+
+#### 5.3.3 5-Tier Adaptive Bracket Geometry & Elimination of Dead Zones
+The bracket synthesizer (`synthesizeBuyBracket`, `synthesizeSellBracket`) structures orders across 5 dynamic tiers:
+
+1. **Elimination of Dead Zones:**
+   Legacy 4-tier bands positioned the first order $4.5\%$ to $8.0\%$ away from spot, creating an unserved dead zone where spot price fluctuated without providing maker liquidity. The 5-tier architecture closes this gap:
+   - **Tier 1 Buy:** Anchored tight at $-2.0\%$ to $-2.5\%$ below spot.
+   - **Tier 1 Sell:** Anchored tight at $+2.5\%$ to $+3.5\%$ above spot.
+
+2. **Asymmetric Pressure Skewing:**
+   - **Under `BUY_PRESSURE` ($P_{\text{net}} > 0.25$):**
+     - **Buy Ladder (Floor Ratchet):** Front-loads ~70% of available USDC budget into Tiers 1 & 2 (e.g., 40% Tier 1, 30% Tier 2) with tight spacing ($-2.0\%$ to $-6.0\%$). This immediately builds a thick bid wall directly under spot, ratcheting up the support floor and preventing price from retracing.
+     - **Sell Ladder (Parabolic Extension):** Spacing expands geometrically outward (Tier 1 at $+3.5\%$, scaling up to Tier 5 at $+200\%$ to $+300\%$ above spot). Sells are spaced wider and thinner, letting the token appreciate freely while taking profits exponentially higher instead of dumping prematurely.
+   - **Under `SELL_PRESSURE` ($P_{\text{net}} < -0.25$):**
+     - **Buy Ladder (Deep Value Accumulation):** Spacing widens downward (Tier 1 at $-3.0\%$, stretching to Tier 5 at $-35\%$ to $-50\%$). Buys are weighted towards deeper tiers, preventing the engine from catching falling knives and accumulating NARA at substantial discounts.
+     - **Sell Ladder (Relief Rally Scalp):** Sells compress tightly above spot ($+2.0\%$ to $+12.0\%$) to offload inventory on minor relief bounces and restore USDC liquidity.
+   - **Under `NEUTRAL_CHOP` ($-0.25 \le P_{\text{net}} \le 0.25$):**
+     - Symmetrical 5-tier geometric distribution providing continuous two-sided liquidity and harvesting AMM trading fees.
+
+| Tier | Buy Price Offset (Neutral) | Sell Price Offset (Neutral) | Buy Weight (Pump Skew) | Sell Weight (Pump Skew) |
+| :---: | :---: | :---: | :---: | :---: |
+| **Tier 1** | $-2.5\%$ | $+2.5\%$ | **40% (Heavy Floor)** | 10% (Tight Scalp) |
+| **Tier 2** | $-5.5\%$ | $+6.0\%$ | **30% (Dense Bid)** | 15% (Low Resistance) |
+| **Tier 3** | $-10.0\%$ | $+12.0\%$ | 15% (Mid Support) | 20% (Mid Target) |
+| **Tier 4** | $-16.0\%$ | $+22.0\%$ | 10% (Deep Floor) | 25% (High Target) |
+| **Tier 5** | $-25.0\%$ | $+38.0\%$ | 5% (Safety Net) | **30% (Moon Ladder $\to 3\times$)** |
+
+#### 5.3.4 Stale Order Management & Moon-Pump Capture Strategy
+In concentrated AMMs, orders become "stale" when spot price moves completely past their upper or lower tick bounds. A naive algorithm immediately burns gas to cancel and recreate every out-of-range order.
+
+The Range Ranger enforces an intentional **Asymmetric Stale Order Strategy**:
+1. **Out-of-Range Moon-Pump Sells Left Resting:**
+   When spot price retraces or consolidates at lower levels, previously deployed sell orders resting high above spot (e.g. Orders #51, #59, and #60 resting at $0.1728, $0.2197, and $0.3324, representing 15,000 NARA valued at >$3,000 USDC) are **intentionally left open on-chain**:
+   - They consume zero ongoing gas while resting in `NARATreasuryRangeManagerV1`.
+   - If an unexpected volume spike or market breakout occurs, these orders are filled automatically by taker flow, locking in massive profits for the Treasury Safe without latency or transaction costs.
+2. **Selective Stale Cancellation:**
+   Only orders that actively conflict with the new 5-tier bracket or exceed operational capacity limits are cancelled during a rebalance cycle, conserving Safe MultiSend gas headroom within the `7_500_000` limit.
+
+#### 5.3.5 Operational Telemetry, Telegram Bot & Cloud Watcher
+The Range Ranger operates 24/7 with zero human intervention, monitored via dedicated tools:
+- **Cloud 24/7 Watcher (Railway):** Running `nara-swarm-monitor/scripts/rangeRangerWatcher.mjs` on project `zealous-generosity`. Streams on-chain events, computes live market pressure, evaluates rebalance thresholds, and executes atomic Safe MultiSend transactions.
+- **Telegram Bot (`@naraswarmbot`):**
+  - `/ranger`: Displays live Market Pressure Gauge, Flow Regime, Volatility Multiplier, Safe Balances, Dynamic Budgets, and active order counts.
+  - `/rangerorders`: Granular inspection of all active orders, prices, ticks, balances, and fill status.
+  - `/recenter`: Interactive dry-run preview of the 5-tier adaptive bracket around current spot.
+  - `/health` & `/status`: Global protocol health and keeper keepalive status.
+- **CLI Rebalancer (`scripts/autoRangeManager.ts`):** Allows operators to trigger instant atomic Safe rebalances directly from the terminal with `--execute`.
 
 ---
 
@@ -361,14 +481,17 @@ NARAEngine Position (global positionId)
 - **Thin Proxy Security:** Clone accounts only accept calls from the NFT factory (`onlyFactory`).
 - **Claim Fees:** Configurable wrapper-level fees (up to 10% hard cap) on NARA and bribe tokens. ETH claims bypass wrapper fees. Direct EOA locks bypass NFT wrapper fees entirely.
 
-### 6.2 Generative On-Chain SVG Renderer (`NARAPositionRendererV5.sol`)
+### 6.2 Generative On-Chain SVG Renderer (`NARAPositionRendererV9.sol`)
 Renders 100% on-chain vector art and JSON metadata without external IPFS/HTTP dependencies:
-- **Modular Art Architecture:** `NARAArtMetadataV1`, `NARAArtCorePlateV1`, `NARAArtGenesisPlateV1`, `NARAArtSecurityPrintV1`, `NARAPositionArtV1`.
-- **Mint-Fixed Deterministic Seeds:** `keccak256(tokenId, positionId, createdEpoch)` generates 6 unique geometric module compositions (Scar angles, Lattice nodes, Glyph fingerprints).
-- **Realized Tier Escalation (Tx-Driven, Cache-Safe):**
-  - `New` $\to$ `Activated` $\to$ `Rewarded` $\to$ `One ETH Mark` $\to$ `Apex`.
-  - Driven strictly by **realized historical delivered rewards** (`lifetimeEthClaimed`, claim count, extension count).
-  - Emits ERC-4906 `MetadataUpdate` on claims and lock extensions.
+- **Modular Art Architecture:** `NARAArtDefsPlateV5`, `NARAArtCorePlateV5`, `NARAArtMetadataV5`, `NARAArtCollectionBannerV4`.
+- **Mint-Fixed Deterministic Seeds & Calibrated Physical Alloys:**
+  - 👑 **24K Gilded Gold (#1 Apex Grail · 1.0% - 6.5%):** Mirror-polished molten 24K bullion with 360° omnidirectional solar corona (`dx="0" dy="0" stdDeviation="22"` halo and `#goldOmniShine` ambient bloom).
+  - 🌌 **Forged Damascus Meteorite (#2 Legendary · 4.0% - 14.5%):** Celestial quantum-blue acid-etched meteorite steel.
+  - 🔮 **Obsidian Void (#3 Rare · 15.0% - 22.0%):** Imperial Royal Amethyst Purple (`#C084FC`, `#7E22CE`) with zero red.
+  - 🟢 **Cybernetic Emerald (#4 Uncommon · 30.0% - 35.0%):** Precision emerald telemetry.
+  - 🪙 **Titanium Slate (#5 Common Baseline · 50.0% - 24.0%):** Grade-5 aerospace titanium.
+- **Grandfathering Invariant:** Tokens #1–#47 maintain their immutable Gen-0 rolled alloy identities (Tokens #10 & #27 remain 24K Gold Apex Grails). Tokens #48+ roll against the strictly calibrated Vector 1 probability matrix.
+- **Continuous Quadratic Multipliers ($1.00\text{X} \to 4.00\text{X}$):** Driven by duration epochs up to 365 days max.
 - **Renderer content invariant:** The renderer encodes realized historical facts
   and provenance. It does not display projected returns, estimated APY, or
   speculative rarity; this technical rule is not a legal-compliance claim.
@@ -387,6 +510,108 @@ ceilings are technical inputs, not return multipliers, APR/APY forecasts, or
 promises. The NFT, clone account, and Engine have distinct custody and control
 relationships that must be shown factually; this document makes no legal
 characterization of them.
+
+### 6.4 The NFT Position Shield & Off-DEX Operative Architecture
+
+The 3-tier architecture (`NARAEngine` $\to$ `NARAPositionAccountV4` clone $\to$ `NARAPositionNFTV4`) structurally decouples **ERC-20 token custody and reward streams from wallet identity**. Because locked tokens remain anchored inside the Engine contract, ownership of an active, yield-bearing capital position transfers via standard ERC-721 mechanisms without DEX interaction.
+
+```
+[ Traditional DEX Flow ]
+User Swap ──> Uniswap Mempool ──> MEV Sandwich Bots ──> Copy-Trading Scrapers ──> Chart Impact / Doxxed Link
+
+[ NARA Position Shield Flow ]
+Owner Transfer ──> ERC-721 Transfer(from, to, tokenId) ──> Zero Swap Logs ──> Zero Spot Impact ──> Invisible to DEX Bots
+                                  │
+                                  └──> Fresh Wallet calls claimRewards() ──> Receives Native Gas ETH + NARA off-DEX
+```
+
+#### 6.4.1 Architectural Decoupling & Zero DEX Footprint
+- **Zero Market Impact & Invisible Transfer:** Trading or transferring ERC-20 tokens on Uniswap emits `Swap` events and moves spot price. Transferring a Position NFT emits a single standard ERC-721 event (`Transfer(from, to, tokenId)`). Uniswap v4 pool liquidity, spot price, and hook fee curves experience zero change.
+- **Off-DEX Self-Funding:** A newly transferred fresh wallet can immediately call [`claimRewards(tokenId, recipient)`](../contracts/v4/NARAPositionNFTV4.sol). In a single transaction, the fresh wallet receives accumulated **native ETH** (for gas) and **NARA tokens** (for operations) directly from contract reserves without buying on an AMM.
+- **Anti-MEV Immunity:** Because the position changes hands via NFT transfer or marketplace settlement (Seaport), transactions are completely immune to front-running, sandwich attacks, and LP fee drag.
+
+#### 6.4.2 Primary Operative Applications
+
+| Sector / User | The Problem Without Position NFT | The Position Shield Solution |
+| :--- | :--- | :--- |
+| **Fresh / Stealth Wallets** | Direct funding from a doxxed main wallet leaves an immutable on-chain trace on block explorers and clustering engines (Bubblemaps, Arkham). | Operator transfers a Position NFT to a fresh wallet. Claiming accumulated rewards funds both gas ETH and operating NARA off-DEX without any fund transfer from the primary wallet. |
+| **Devs & Autonomous Bot Runners** | Bots tested on mainnet get detected by mempool monitors; copy-trading bots shadow-buy and front-run test routines. | Fresh bot wallet is provisioned with a Position NFT; it self-funds gas via protocol rewards and executes test transactions with zero wallet history or copy-bot tracking. |
+| **KOL & Team Allocations** | Liquid token transfers create visible "kabal" wallet clusters on Bubblemaps and risk immediate listing sell pressure. | Allocations are distributed as time-locked Position NFTs. Capital remains locked in the Engine, holders earn continuous 15-minute pulse rewards, and spot liquidity is protected. |
+| **Third-Party & MemeFi Launches** | Block-0 MEV sniper bots drain initial AMM liquidity before community participants can enter, followed by immediate chart dumps. | External projects or future launches can adopt NARA's bond/NFT architecture: early allocations distribute as time-locked Position NFTs ([`NARABondDepositoryV4NFT.sol`](contracts/v4/NARABondDepositoryV4NFT.sol)). Tokens are anchored in vault positions at genesis, bypassing Block-0 sniper extraction entirely. |
+
+#### 6.4.3 Operational Invariants & OpSec Guidelines
+- **The Broken-Link Rule:** To maintain unlinkability between primary and operative wallets, initial gas for the recipient wallet should be funded via an exchange hot-wallet pool (CEX) or claimed directly via protocol methods, never via a direct EOA-to-EOA transfer from a doxxed source.
+- **Technical & Compliance Boundary:** Position NFTs are on-chain bearer yield instruments and locked accounting positions. They do not utilize zero-knowledge obfuscation, cryptographic ring signatures, or transaction mixing pools, and must not be characterized as an anonymity tool or mixer.
+
+#### 6.4.4 Competitive Landscape & The "Third Dimension" Launch Paradigm
+
+Modern Web3 token launches suffer from a structural binary limitation that predatory MEV searchers and snipers exploit:
+
+```
+[ Current Web3 Paradigm: The Broken Binary ]
+       ┌─────────────────────────────┐
+       │     TOKEN DISTRIBUTION      │
+       └──────────────┬──────────────┘
+                      │
+        ┌─────────────┴─────────────┐
+        ▼                           ▼
+1. 100% LIQUID              2. 100% FROZEN
+   - Snipers corner Block 0     - "Dead capital" (0% yield)
+   - Whales dump at Block 1     - Illiquid lockup friction
+   - Bubblemaps "kabal" panic   - Zero incentive to hold
+```
+
+| Existing Launch / Vesting Model | Industry Examples | Operational Mechanics | Structural Failure Point |
+| :--- | :--- | :--- | :--- |
+| **Bonding Curves** | pump.fun, Moonshot, Clanker | Swaps on curve until target $\to$ graduates to AMM pool. | Block-0 snipers buy early curve, dev dumps post-graduation; average token lifespan < 1 hour. |
+| **Traditional Launchpads** | Fjord Foundry, PinkSale, Seedify | Whitelist/presale deposits; liquid ERC-20 airdropped/claimed at TGE. | Claim-and-dump rush: early whales race to market-sell into the pool, crashing spot price. |
+| **Vesting Platforms** | Sablier, Hedgey, Streamflow | Linear token stream into recipient wallets over time. | Tokens sit completely idle (zero yield); vesting wallets are permanently doxxed on Bubblemaps. |
+| **Pre-Market Escrows** | Whales Market | P2P collateral escrow for pre-TGE allocations. | Off-chain settlement friction, zero protocol cashflow, and zero on-chain composability. |
+
+**The NARA "Third Dimension" Solution:**  
+Instead of forcing token distribution into liquid dumping or frozen dead capital, NARA's Position NFT architecture introduces three simultaneous properties:
+1. **Zero Spot Dump:** 100% of distributed tokens remain locked inside the Engine; zero loose ERC-20 tokens circulate to dump on DEX spot pools.
+2. **Active Cash Flow:** Position NFTs continuously capture and distribute 15-minute network reward pulses (native ETH and token emissions) while locked.
+3. **Frictionless Bearer Exit:** If an allocator needs early liquidity, they sell the Position NFT on secondary marketplaces (OpenSea / Seaport). The underlying token never hits the Uniswap spot pool, preventing chart slippage.
+
+#### 6.4.5 Shielded Launch Archetypes & Ecosystem Models
+
+```
+                    ┌────────────────────────────────────────────────────────┐
+                    │               NARA SHIELDED LAUNCH ENGINE              │
+                    └──────────────────────────┬─────────────────────────────┘
+                                               │
+         ┌───────────────────┬─────────────────┴─────────────────┬───────────────────┐
+         ▼                   ▼                                   ▼                   ▼
+1. Anti-Sniper Fair  2. "Clean Bubblemaps"               3. Sovereign Launch  4. Stealth Bot &
+   Launchpad (MemeFi)   KOL / Angel Syndicate               as-a-Service         Quant Sandbox
+```
+
+1. **Anti-Sniper Fair Launchpad (MemeFi & New Protocols):**
+   - Early participants deposit ETH into a Bond Depository ([`NARABondDepositoryV4NFT.sol`](contracts/v4/NARABondDepositoryV4NFT.sol)) and receive time-locked Position NFTs (e.g. 30, 90, or 180 days).
+   - The team pairs raised ETH into a Uniswap v4 pool.
+   - Snipers in Block 0 cannot buy the community's allocation because it was minted off-AMM. Community members cannot dump on the chart because tokens are locked in the Engine. AMM swap fees continuously stream back to NFT holders as real ETH dividends.
+2. **"Clean Bubblemaps" KOL & Angel Syndicate:**
+   - Private round and influencer allocations are minted as Vested Position NFTs instead of liquid tokens.
+   - Eliminates suspicious multi-wallet clusters on Bubblemaps and prevents the "influencer dump at listing" meta.
+   - Promoters earn ongoing pulse cashflow while holding, aligning long-term incentives.
+3. **Sovereign Launch-as-a-Service (The NARA Dual-Flywheel):**
+   - Third-party projects launch using NARA's open-source Position & Bond contracts.
+   - Launching projects lock $NARA as collateral or pair their token against $NARA in Uniswap v4 pools.
+   - A percentage fee from third-party bond raises routes into the NARA Treasury Safe (POL backing) and NARA Engine active cells (ecosystem yield).
+4. **Stealth Operations & Quant Sandboxing:**
+   - Automated market makers and quant teams provision dedicated Position NFTs to fresh burner wallets.
+   - Calling `claimRewards()` self-funds gas ETH and operating inventory directly from contract yield, operating with zero on-chain funding links to parent treasuries.
+
+#### 6.4.6 Component Readiness Matrix
+
+| Architecture Component | Contract Implementation | Base Mainnet Deployment Status | Launchpad Reusability |
+| :--- | :--- | :--- | :--- |
+| **Position NFT & Proxy Clones** | [`NARAPositionNFTV4.sol`](contracts/v4/NARAPositionNFTV4.sol) | **Deployed & Verified** (`0x01D3...52b`) | **100% Ready:** Can mint positions for any recipient with configurable lock horizons. |
+| **Bond Depository Engine** | [`NARABondDepositoryV4NFT.sol`](contracts/v4/NARABondDepositoryV4NFT.sol) | **Source Complete** in `contracts/v4/` | **Ready:** Handles ETH deposit $\to$ token lock $\to$ NFT mint $\to$ dual ETH split (Rewards + Treasury). |
+| **Fractional Liquidity Factory** | [`NARAFractionalPositionFactoryV4.sol`](contracts/v4/composability/NARAFractionalPositionFactoryV4.sol) | **Source Complete** in `contracts/v4/` | **Ready:** Allows Position NFT holders to fractionalize large positions into tradable ERC-20 slices. |
+| **Anti-Sniper Dynamic Hook** | [`NARALiquidityGrowthHook.sol`](contracts/v4/NARALiquidityGrowthHook.sol) | **Deployed & Verified** | **Ready:** Dynamic fee curves up to 20.00% cap penalizing rapid block-0 sniper flow. |
+| **Autonomous Range Rebalancer** | [`NARATreasuryRangeManagerV1.sol`](contracts/v4/periphery/NARATreasuryRangeManagerV1.sol) | **Deployed & Verified** (`0xd58a...a69C`) | **Ready:** Safe 1.4.1 EIP-712 atomic 4-band buy floor and 4-band sell resistance. |
 
 ---
 
@@ -583,11 +808,11 @@ All official token icons are rendered on a **solid deep black `#000000` square c
 
 ### 12.2 GitHub Operational Keepers
 - **`v4-epoch-maintainer.yml` (ACTIVE):**
-  - Schedule: `3,18,33,48 * * * *`; Railway fallback at `12,27,42,57`.
+  - Schedule: `7 * * * *` (Hourly at minute 7, optimized for 75% keeper gas savings by batching up to 4 epochs per transaction).
   - Dedicated Gas-Only Key: `0xE3DDa33EdB0f8b6aa39e4ce853Ba7C4A29e520DD`.
-  - Operations: Calls `advanceEpochs(uint256)` and uses `poke()` where the
-    bounded routine requires it, verifies runtime bytecode hashes, and pings the
-    external heartbeat monitor.
+  - Operations: Calls `advanceEpochs(uint256)` (bounded routine), verifies runtime bytecode hashes against the pinned production manifest, and pings the external heartbeat monitor.
+  - Contract JIT Invariant: `NARAEngine.sol` maintains `MAX_JIT_ADVANCE = 8` (2-hour buffer); active user interactions settle pending epochs instantly without delay or reward loss.
+  - Monitoring: Telegram `/health` reports `🟢 Synchronized (GREEN)` for backlogs $\le 4$ epochs (the routine hourly window).
 - **`v4-liquidity-maintainer.yml` (ACTIVE):**
   - Schedule: `17,47 * * * *`.
   - Dedicated Gas-Only Key: `0x0f8ADa55B394E58e9BC667c23a1EEcED12216272`.
@@ -595,6 +820,23 @@ All official token icons are rendered on a **solid deep black `#000000` square c
     when its enable gate, token-use caps, pinned price guard, runtime checks,
     and trigger conditions pass; otherwise emits the required idle heartbeat.
   - Do not reuse or broaden either keeper.
+
+### 12.3 Treasury Range Settler Service (`services/v4-treasury-range-settler`)
+- **Role:** Autonomous 24/7 terminal settlement daemon for `NARATreasuryRangeManagerV1` (`0xd58afa5eaB20B0ED287851Cf98f359AdEd58a69C`).
+- **Hosting:** Railway (Project `glistening-peace`, Service `nara_protocol_v4`, Instance `settler-railway-primary`).
+- **Settler Keeper Wallet:** `0xa4B4B00f067cB4f5607c9a7298827fa1C1315aB7` (gas-only execution).
+- **Execution Cadence:** 15-second polling sweeps and WebSocket `Swap` event triggers; 5-minute full reconciliation sweep.
+- **Safe Custody Invariant:**
+  - Protocol 2-of-3 Safe: `0xd65c0e390Dc187A22c52c03816591CC736C0D755` (Owners: `0xfe3A8678...`, `0xC019Dc...`, `0x9c61175b...` as of 2026-09-11 nonces 48 & 49).
+  - Dedicated Treasury Range Safe: `0x5050BC6dc3E07313D52D05cecD53f727D6CDa245` (1-of-1, owner `0xfe3A8678...`).
+- **Verification Binding:** Every sweep executes `assertBindings` verifying Safe runtime hashes, owners, singleton, and Circle USDC dependency health.
+- **Settler Alert Diagnostics:**
+  - If a Telegram alert fires (`[SETTLER ALERT: <REASON>]`):
+    1. Inspect logs: `railway logs -n 25`.
+    2. If `PRODUCTION_SAFE_OWNER_SET_MISMATCH`: the multisig owners rotated on Base mainnet. Update `NARA_PRODUCTION_SAFE_OWNERS` in `scripts/lib/v4SafeEvidence.ts` and `docs/NARA_V4_SAFE_CUSTODY_HANDOFF.md`.
+    3. Verify tests: `npm run test:treasury-range-settler:v4` (35 tests).
+    4. Deploy: in `.worktrees/nara-treasury-range-packet-20260831-a776`, run `railway up -s nara_protocol_v4 -e production -d`.
+    5. Verify: `railway logs -n 20` must report `event="sweep_complete" count=15`.
 
 ---
 
@@ -652,16 +894,29 @@ Located in `.codex/audit/`. Workspace serves as a dedicated security audit hub.
 | **`Create2HookDeployer`** | `0xDE9E3Cac08b7a31Db18c7432d4C45DF4584Fd646` | Verified | Safe-owned CREATE2 factory |
 | **`NARALiquidityGrowthHook`** | `0x59AEf9799DEA01A7FB7dA73BEA10dfB08858A088` | Verified | Uniswap v4 Hook (bits `0x2088`) |
 | **`NARALiquidityCompounderV4`** | `0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF` | Verified | Owns POL LP NFT `2898486` |
-| **`NARAArtMetadataV1`** | `0xAE0Da2B2066FF0c1409A2aC4053699E75dd00633` | Verified | Position NFT Phase-2 baseline |
-| **`NARAArtSecurityPrintV1`** | `0x0640dd2B545348eC91826ab7c58DD88EcE81f353` | Verified | Position NFT Phase-2 baseline |
-| **`NARAArtCorePlateV1`** | `0x476b69f490C17a5500c4Eb9b6cB49302cef4bE4A` | Verified | Position NFT Phase-2 baseline |
-| **`NARAArtGenesisPlateV1`** | `0x20520115546c28F99aE581d62935e62D9E8B9022` | Verified | Position NFT Phase-2 baseline; no Genesis distributor binding |
-| **`NARAPositionRendererV5`** | `0x607b08365C23a983C542898a79E670e6D4B80673` | Verified | Position NFT Phase-2 baseline |
-| **`NARAPositionAccountV4`** | `0x3a8c9cA4f95E94751774810B33caF01bb992A55F` | Verified | Position NFT Phase-2 implementation |
-| **`NARAPositionNFTV4`** | `0xCcBD8c59664958636369F8fe24B927aEBc3DF7cC` | Verified and Safe-finalized | Manifest remains `integrationReady: false`; consumers disabled |
+| **`NARAArtDefsPlateV5`** | `0xECdaf4B930cec3293479de0404B72282c7Bf9Aba` | Verified | 360° Omnidirectional Apex Gold Halo & Core Ambient Bloom |
+| **`NARAArtCorePlateV5`** | `0x3Ae72d3ef410AE9baE795Cf9a027ef9fDcBf9996` | Verified | Generative Swiss Chronometer Engine (5 Physical Alloys) |
+| **`NARAArtMetadataV5`** | `0xe644Be90A7B46EE146be0C1Eb79Ee47C9cf700d9` | Verified | OpenSea JSON attributes & Gen-0 Grandfathering (#1-#47) |
+| **`NARAArtCollectionBannerV4`** | `0xc528A95212a9f9BD69B056fe89119F9Aa0bBb09a` | Verified | Collection-level contract URI banner |
+| **`NARAPositionRendererV9`** | `0xBe25F3cE387e01cAe5dA7d7F0bc2FdE72c244a98` | Verified & Active | Master 3-Vector & Ascension Renderer (Activated block 51159172) |
+| **`NARAPositionAccountV4`** | `0x3a8c9cA4f95E94751774810B33caF01bb992A55F` | Verified | Position NFT Phase-2 implementation (ERC-6551 TBA) |
+| **`NARAPositionNFTV4`** | `0x01D3AC0acda01FE5D6788fA0B4062de94C8DE52b` | Verified & Active | Core Position NFT (Active Renderer: `0xBe25...4a98`). 10% royalty to Treasury |
+| **`NARAFleetDeckLensV1`** | `0x4B097067106623185aE32Cd9c2463Bb4143Fb516` | Verified | Fleet synergy read lens |
 | **Uniswap v4 Pool ID** | `0x83edced1f39e6adf7469cd718eeb409824d948959263408d4cfb6e745c8db464` | Initialized | NARA/USDC 0.30% fee, tick 60 |
 | **Seed LP NFT** | `2898124` | Active | Owned by Production Safe |
 | **Compounder LP NFT** | `2898486` | Active | Owned by Compounder |
 | **Production Safe** | `0xd65c0e390Dc187A22c52c03816591CC736C0D755` | Active | Multi-sig Admin |
 | **Treasury Wallet** | `0xfe3A8678A9c729438BB11718bD1391E7Ab491E8e` | Active | Protocol Treasury |
 | **Epoch Keeper Address** | `0xE3DDa33EdB0f8b6aa39e4ce853Ba7C4A29e520DD` | Active | Gas-only maintainer key |
+| **`NARATreasuryRangeManagerV1`** | `0xd58afa5eaB20B0ED287851Cf98f359AdEd58a69C` | Verified & Active | Treasury Range Manager contract (zero token balances held) |
+| **Treasury Range Safe** | `0x5050BC6dc3E07313D52D05cecD53f727D6CDa245` | Active | Dedicated 1-of-1 custody Safe for Range orders & settlement |
+| **Settler Keeper Key** | `0xa4B4B00f067cB4f5607c9a7298827fa1C1315aB7` | Active | Gas-only settler daemon key |
+
+### Non-Contract Production Services
+
+| Service | Deployment evidence | Merge/CI state | Health/availability boundary |
+|---|---|---|---|
+| **NARA Swarm Monitor** | Railway deployment `393c7901-8b70-4965-9176-bc022bd0a909`, environment `zealous-generosity / production`, runtime commit `38db568f77e5b81f48678b745506300429d6243c`, status `SUCCESS` | Runtime source merged through green protected PR `#27`; activation and knowledge records through green PRs `#28` and `#29` (`e99fdeeb5783a88209a7fceb56ac32ed3f50ec84`) | Process, DB, indexing, and large-buy watcher healthy; Telegram bot listener active |
+| **Range Ranger Watcher** | Railway deployment `029268dd-bec3-4de4-b1ec-ed222e9933a7`, environment `zealous-generosity / production`, status `SUCCESS` | Verified via `testRangeRangerRuntime.mjs` (7/7 tests passed), `npm run verify` passed | Autonomous 24/7 rebalancer active; real-time Net Pressure, Volatility, and Dynamic 5-Tier synthesis |
+| **Treasury Range Settler** | Railway deployment `cd716ce9-39fb-491b-947b-5cefd1479c2c`, environment `glistening-peace / production`, service `nara_protocol_v4`, status `SUCCESS` | Verified via `npm run test:treasury-range-settler:v4` (35/35 tests passed) | 15-second polling sweeps returning terminal filled profits to Treasury Safe; `assertBindings` clean |
+

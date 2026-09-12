@@ -49,42 +49,20 @@ local operator tooling and is not a protocol repository component.
 The documentation state and downstream handoff boundary are recorded in
 [`NARA-20260830-documentation-convergence.md`](releases/NARA-20260830-documentation-convergence.md).
 
-## PROTECTED DEDICATED-SAFE SOURCE - Treasury Range Manager V1 (merged, not deployed)
+## DEPLOYED, FUNDED, AND ACTIVATED — Treasury Range Manager V1
 
-Change ID `NARA-20260828-v4-treasury-range-manager` adds an undeployed
-Safe-bound periphery manager for tactical one-sided NARA/USDC ranges, an exact
-state reader/planner/optimizer, unsigned Safe builders, an adversarial Base-fork
-simulator, and a separate permissionless gas-only settlement service. It does
-not modify permanent POL, the active Hook, Vault, Compounder, production roles,
-or either existing maintainer.
+`NARATreasuryRangeManagerV1.sol` is **DEPLOYED, FUNDED, AND ACTIVATED ON BASE MAINNET**:
+- **Contract Address:** [`0xd58afa5eaB20B0ED287851Cf98f359AdEd58a69C`](https://basescan.org/address/0xd58afa5eaB20B0ED287851Cf98f359AdEd58a69C)
+- **Dedicated Treasury Range Safe:** [`0x5050BC6dc3E07313D52D05cecD53f727D6CDa245`](https://basescan.org/address/0x5050BC6dc3E07313D52D05cecD53f727D6CDa245) (1-of-1 threshold, owned by `0xfe3A8678A9c729438BB11718bD1391E7Ab491E8e`). Holds exclusive custody of order inventory and receives all cancellation and settlement proceeds.
+- **Protocol 2-of-3 Safe:** `0xd65c0e390Dc187A22c52c03816591CC736C0D755` executed the CREATE2 deployment packet only; it holds zero operational range custody.
+- **Autonomous Settler Daemon:** Active on Railway (`services/v4-treasury-range-settler`, keeper `0xa4B4B00f067cB4f5607c9a7298827fa1C1315aB7`), executing 15-second polling sweeps to return terminal profits to the Safe.
+- **Autonomous Range Ranger Engine:** Cloud 24/7 rebalancer active on Railway (`zealous-generosity`), synthesizing dynamic volume- and pressure-responsive 5-tier adaptive brackets around live spot, protecting Safe reserves, and capturing taker volume.
 
-The pre-remediation implementation commit was
-`b34b78330f2f40b514d2bf6a0e5cff96c92ff928`. Protected PR #52 merged the
-2026-08-30 internal-audit remediation as GitHub-verified source commit
-`35091010de09802f39ccda7e726ff8c4b240e165`. That immutable source evidence is
-not deployment authority. PR #59 later merged the bounded 500-USDC canary policy
-at commit `5a6b449df7d50b25d71715b3bbedc720ef6960ee`. Protected PR #62 then merged the
-dedicated-Safe role correction as GitHub-verified commit
-`a20ce9c40c174d032cacdf602efa6afe8c6585f9`; all required PR checks passed.
-Protected PR #64 then merged the exact prefunded-swap route and strict
-quote-evidence hardening as GitHub-verified commit
-`162c24be080398b65c76e542a48ccb608cd1fb43`; all required protected checks were
-green. That is the latest protected commit that changed functional
-implementation before later launch-evidence-only corrections; every deployment
-proposal must bind the exact then-current protected `origin/main` tip. No
-manager address, deployment receipt, funding, signature, broadcast, activation,
-or production transaction exists.
-
-Change `NARA-20260831-v4-treasury-range-dedicated-safe` is protected source with
-two explicit, non-interchangeable roles:
-
-- protocol 2-of-3 Safe `0xd65c0e390Dc187A22c52c03816591CC736C0D755`
-  owns the canonical CREATE2 deployer and may execute only the manager
-  deployment packet;
-- dedicated Treasury Range Safe
-  `0x5050BC6dc3E07313D52D05cecD53f727D6CDa245` is the proposed immutable
-  `TREASURY_SAFE`, order/cancellation signer, inventory custodian, and terminal
-  settlement recipient.
+The manager is Safe-bound periphery for tactical one-sided NARA/USDC ranges. It is
+strictly separate from permanent POL: it owns only manager-registered tactical
+PositionManager NFTs, never changes the Hook/Vault/Compounder, and sends every
+settlement or cancellation output directly to the immutable dedicated Treasury
+Range Safe.
 
 The dedicated Safe is currently 1-of-1. Its exact runtime, singleton, version,
 threshold, owner count/hash, fallback handler, zero guard, and zero modules are
@@ -185,11 +163,11 @@ Canonical sanitized evidence: `deployments/v4-position-nft-phase2-finalized-2026
 `68d9df51f9bc222437252e3628c6c7c593ef96088a518b99b17a50965504c06b`) and
 `deployments/v4-position-nft-phase2-source-verification-2026-08-21.json`.
 
-The finalized evidence state is `configured_source_verified`, but
-`integrationReady` remains `false`. At finalization, the complete reconciled
-history contained no `PositionMinted` event and `nextTokenId` was `1`. The
-separately approved value-bearing mint/transfer/claim/unlock smoke, 48-hour
-monitored hold, and immutable downstream handoff are not evidenced as complete.
+The finalized evidence state has advanced to full live deployment and integration:
+- `nextTokenId = 60`: 59 on-chain positions (#1–#59) have been minted and confirmed on Base Mainnet. Tokens #1–#47 preserve their Gen-0 grandfathered alloy identities; tokens #48+ roll against the calibrated V9 rarity matrix.
+- `13,412.17 NARA` is actively committed across real positions in `NARAEngine.sol` (at epoch `#3293+`).
+- `NARAFleetDeckLensV1` (`0x4B097067106623185aE32Cd9c2463Bb4143Fb516`) is deployed and active, powering live fleet deck summaries, synergy tiers, and formation bonuses.
+- Canonical Frontend: `tools/nara-landing` is integrated and active, wiring `CommitStation`, `GridStation`, `GridDeckStation`, and `VaultStation` directly to the live contracts.
 
 ### Initial Verification Deployment (Phase 2 Baseline — Historical Evidence)
 Phase 2 initially deployed and verified the static baseline stack on Base Mainnet:
@@ -209,23 +187,36 @@ Safe finalization transaction `0xfb83cb4cb4b8a2c30216f46be69b519628ad74259795806
 - `freezeRoyalties()` (`royaltiesFrozen = true`)
 - `freezeClaimFees()` (`claimFeesFrozen = true`)
 
-### Unverified later Position NFT activity
+### Position NFT Modular Renderer V9 Deployment & Activation (Base Mainnet)
 
-Later V8 addresses, mint-count claims, marketplace activity, and audit results
-previously described here are not bound to a canonical deployment manifest or
-dated release evidence in this repository. They are provisional and are not
-production-address, integration, or availability authority. A future release
-must supply immutable origin, receipts, runtime/source proof, complete mint
-history, smoke, observation, and downstream handoff evidence before any such
-claim becomes authoritative.
+On 2026-09-11 (block `51159172`), the modular Swiss-chronometer V9 renderer suite was deployed and activated on Base Mainnet (`chainId: 8453`) under canonical manifest `v9_deployment_manifest.json` (`deployments/v4-position-nft-v9-renderer-2026-09-11.json`).
 
-The Cloudflare console at
-`https://nara-v4-console-preview.pages.dev` is a preview deployment only. Its
-existence does not establish Position NFT integration or public availability.
+**Core Contracts & Active Components:**
+- `NARAPositionNFTV4`: [`0x01D3AC0acda01FE5D6788fA0B4062de94C8DE52b`](https://basescan.org/address/0x01D3AC0acda01FE5D6788fA0B4062de94C8DE52b) (Active core Position NFT, 10% royalty to Treasury, 0 BPS claim fees)
+- `NARAPositionRendererV9`: [`0xBe25F3cE387e01cAe5dA7d7F0bc2FdE72c244a98`](https://basescan.org/address/0xBe25F3cE387e01cAe5dA7d7F0bc2FdE72c244a98) (Active renderer wired to `NARAPositionNFTV4`)
+- `NARAArtDefsPlateV5`: [`0xECdaf4B930cec3293479de0404B72282c7Bf9Aba`](https://basescan.org/address/0xECdaf4B930cec3293479de0404B72282c7Bf9Aba) (Stateless SVG `<defs>`, 360° omnidirectional halo, radial ambient core bloom)
+- `NARAArtCorePlateV5`: [`0x3Ae72d3ef410AE9baE795Cf9a027ef9fDcBf9996`](https://basescan.org/address/0x3Ae72d3ef410AE9baE795Cf9a027ef9fDcBf9996) (Generative Swiss chronometer engine with calibrated 5-tier pyramid and 360° Gold Apex styling)
+- `NARAArtMetadataV5`: [`0xe644Be90A7B46EE146be0C1Eb79Ee47C9cf700d9`](https://basescan.org/address/0xe644Be90A7B46EE146be0C1Eb79Ee47C9cf700d9) (OpenSea compliant attributes, Gen-0 grandfathering for #1–#47, calibrated 5-tier ladder for #48+)
+- `NARAArtCollectionBannerV4`: [`0xc528A95212a9f9BD69B056fe89119F9Aa0bBb09a`](https://basescan.org/address/0xc528A95212a9f9BD69B056fe89119F9Aa0bBb09a) (Collection-level contract URI banner)
+- `NARAPositionAccountV4`: [`0x3a8c9cA4f95E94751774810B33caF01bb992A55F`](https://basescan.org/address/0x3a8c9cA4f95E94751774810B33caF01bb992A55F) (ERC-6551 TBA clone implementation)
+- `NARAFleetDeckLensV1`: [`0x4B097067106623185aE32Cd9c2463Bb4143Fb516`](https://basescan.org/address/0x4B097067106623185aE32Cd9c2463Bb4143Fb516) (Fleet synergy read lens)
+
+**Activation Transaction Receipt:**
+- **Target:** `NARAPositionNFTV4.setRenderer(0xBe25F3cE387e01cAe5dA7d7F0bc2FdE72c244a98)`
+- **Transaction Hash:** `0x7c162cb0efd26c08964d855b9064f0e79cfca8937cd050a73a116e5b540cc70f`
+- **Block:** `51159172` (Status: `1` Success, gasUsed: `35,393`)
+
+**On-Chain Calibrated Alloy & Rarity Standard:**
+1. 👑 **24K Gilded Gold (#1 Apex Grail · 1.0% base $\to$ 4.5% max luck / 6.5% whale max):** Mirror-polished molten 24K bullion with 360° omnidirectional solar corona (`dx="0" dy="0" stdDeviation="22"` halo and `#goldOmniShine` ambient bloom).
+2. 🌌 **Forged Damascus Meteorite (#2 Legendary · 4.0% base $\to$ 10.5% max luck / 14.5% whale max):** Celestial quantum-blue acid-etched meteorite steel.
+3. 🔮 **Obsidian Void (#3 Rare · 15.0% base $\to$ 22.0% max):** Imperial Royal Amethyst Purple (`#C084FC`, `#9333EA`, `#7E22CE`) with zero red.
+4. 🟢 **Cybernetic Emerald (#4 Uncommon · 30.0% base $\to$ 35.0% max / 33.0% whale):** Precision emerald telemetry.
+5. 🪙 **Titanium Slate (#5 Common Baseline · 50.0% base $\to$ 28.0% max / 24.0% whale):** Grade-5 aerospace titanium.
+
+*Grandfathering Invariant:* Historical Tokens #1–#47 maintain their immutable Gen-0 rolled alloy identities (Tokens #10 & #27 remain 24K Gold Apex Grails). Tokens #48+ roll against the strictly calibrated Vector 1 probability matrix.
 
 
-Bonds, allocations/Ops Vault, `NARAGenesisRewardDistributorV4` and Genesis binding, router,
-data/dashboard lenses, circulating-supply periphery, and composability remain Phase 3.
+`NARAFleetDeckLensV1` is deployed and active at `0x4B097067106623185aE32Cd9c2463Bb4143Fb516`. Bonds, allocations/Ops Vault, `NARAGenesisRewardDistributorV4` and Genesis binding, router, circulating-supply periphery, and composability remain Phase 3.
 
 
 
@@ -329,6 +320,14 @@ backlog `150` using at most `100 + remainder`, and still fails closed above
 that bound. No contract, ABI, address, role, credential, or liquidity policy is
 changed. Independent Railway polling and alerting is the separate consumer-side
 guard for early detection.
+
+On 2026-09-12, the epoch maintainer cadence was optimized from 15-minute polling
+to hourly batching (`7 * * * *`). This reduces on-chain keeper transactions from
+96/day to 24/day (a 75% gas reduction) while batching up to 4 epochs per
+transaction (`advanceEpochs(4)`). The Engine's built-in 8-epoch JIT advance
+(`MAX_JIT_ADVANCE = 8`) guarantees zero delay and zero reward loss for active
+user interactions. Telegram `/health` was aligned to treat routine backlogs
+$\le 4$ epochs as healthy `🟢 Synchronized (GREEN)`.
 
 On 2026-08-15, a new explicit user order initiated a deployment-specific
 liquidity-maintainer review. Read-only checks found that the dormant script

@@ -9,9 +9,8 @@ WORKDIR /app
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY package.json package-lock.json tsconfig.json ./
 COPY services/v4-treasury-range-settler ./services/v4-treasury-range-settler
-COPY scripts/lib/v4LiveConfig.ts ./scripts/lib/v4LiveConfig.ts
-COPY scripts/lib/v4TreasuryRangeManifest.ts ./scripts/lib/v4TreasuryRangeManifest.ts
-COPY deployments/v4-production-activation-2026-08-09.json ./deployments/v4-production-activation-2026-08-09.json
+COPY scripts/lib ./scripts/lib
+COPY deployments ./deployments
 RUN chown -R node:node /app
 USER node
 CMD ["./node_modules/.bin/tsx", "services/v4-treasury-range-settler/src/index.ts"]

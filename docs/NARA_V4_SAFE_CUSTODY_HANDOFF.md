@@ -34,10 +34,11 @@ active deployment targets.
   `0xd7d408ebcd99b2b70be43e20253d6d92a8ea8fab29bd3be7f55b10032331fb4c`
 - Threshold: `2 of 3`
 - Enabled modules: none
-- Owners:
+- Current Owners (as of 2026-09-11 nonces 48 & 49):
   - `0xfe3A8678A9c729438BB11718bD1391E7Ab491E8e`
   - `0xC019Dc79412c4b20103ac4ce97B2615FF45D490d`
-  - `0x42365cAE9abB6cb357dd485734CAd75a2d3c6664`
+  - `0x9c61175b0117f6cED8C07c6846F4f31f8dc1008B`
+  *(Prior owner `0x42365cAE9abB6cb357dd485734CAd75a2d3c6664` removed at nonce 48 `0xb215da84889e97f97ad5367bf83aaf4c4b17670eb7f0d800a442496cf3bf5f54`, `0x9c61175b0117f6cED8C07c6846F4f31f8dc1008B` added at nonce 49 `0x9256c0b7dc80475a69f116c4e9a5a06bad5ebbb2b4384ac6c029e5fff929a903`)*
 
 No private key was requested, read, stored, or used by an agent.
 
