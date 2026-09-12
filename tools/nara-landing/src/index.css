@@ -5,6 +5,15 @@
 @layer base {
   :root {
     color-scheme: dark;
+    --onboard-modal-z-index: 100000;
+    --modal-z-index: 100000;
+    --account-center-z-index: 100000;
+    --notify-onboard-z-index: 100000;
+  }
+
+  onboard-v2 {
+    position: relative !important;
+    z-index: 100000 !important;
   }
 
   html {
@@ -151,3 +160,198 @@
 .animate-gyro-reverse {
   animation: gyroRotate 18s linear infinite reverse;
 }
+
+/* Tactical HUD Tick-Bracket Buttons */
+:root {
+  --cyan: #4fd8ff;
+  --cyan-dim: rgba(79, 216, 255, 0.35);
+  --text: #dbe9f2;
+}
+
+.btn-ticks {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  padding: 12px 24px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  user-select: none;
+  white-space: nowrap;
+}
+
+@media (min-width: 640px) {
+  .btn-ticks {
+    font-size: 13px;
+    padding: 16px 32px;
+  }
+}
+
+.btn-ticks span.corner {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--cyan-dim);
+  transition: all 0.2s ease;
+  pointer-events: none;
+}
+.btn-ticks span.tl { top: 0; left: 0; border-right: none; border-bottom: none; }
+.btn-ticks span.tr { top: 0; right: 0; border-left: none; border-bottom: none; }
+.btn-ticks span.bl { bottom: 0; left: 0; border-right: none; border-top: none; }
+.btn-ticks span.br { bottom: 0; right: 0; border-left: none; border-top: none; }
+
+.btn-ticks:hover span.corner {
+  border-color: var(--cyan);
+  width: 14px;
+  height: 14px;
+}
+
+/* primary (filled) variant */
+.btn-ticks.primary {
+  color: #eafcff;
+  background: rgba(79, 216, 255, 0.06);
+}
+.btn-ticks.primary span.corner {
+  border-color: var(--cyan);
+}
+.btn-ticks.primary:hover {
+  background: rgba(79, 216, 255, 0.12);
+}
+
+/* NARA DEX Chassis: Force 100% width and symmetric centering for Kyber widget internals */
+.nara-dex-chassis {
+  width: 100%;
+}
+
+.nara-dex-chassis [class*="sc-"] {
+  box-sizing: border-box !important;
+}
+
+.nara-dex-chassis div[class*="sc-aXZVg"],
+.nara-dex-chassis > div > [class*="sc-"]:first-of-type {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 auto !important;
+}
+
+/* Streamline settings header bar: align settings toggle to the right */
+.nara-dex-chassis div[class*="sc-kWtpeL"] {
+  display: flex !important;
+  justify-content: flex-end !important;
+  align-items: center !important;
+  min-height: 24px !important;
+  margin-bottom: 2px !important;
+  padding: 0 4px !important;
+}
+
+/* Input Containers: Crisp Inset Well matching Commit Station input wells */
+.nara-dex-chassis div[class*="sc-eqUAAy"] {
+  background-color: #030816 !important;
+  border: 1px solid #132640 !important;
+  border-radius: 10px !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.nara-dex-chassis div[class*="sc-eqUAAy"]:focus-within {
+  border-color: #00F0FF !important;
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.2) !important;
+}
+
+/* Inputs typography */
+.nara-dex-chassis input[class*="sc-jXbUNg"] {
+  font-family: inherit !important;
+  font-size: 19px !important;
+  font-weight: 500 !important;
+  color: #FFFFFF !important;
+}
+
+/* Token Selector Pills (ETH, NARA) */
+.nara-dex-chassis button[class*="sc-dhKdcB"] {
+  background-color: #0b162c !important;
+  border: 1px solid #182e4e !important;
+  border-radius: 10px !important;
+  color: #FFFFFF !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease !important;
+}
+
+.nara-dex-chassis button[class*="sc-dhKdcB"]:hover {
+  background-color: #11203e !important;
+  border-color: #22477a !important;
+}
+
+/* "Max" button: match Commit Station preset pill styling */
+.nara-dex-chassis button[class*="sc-fqkvVR"] {
+  background-color: #0b162c !important;
+  border: 1px solid #182e4e !important;
+  color: #8e9faf !important;
+  border-radius: 8px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease !important;
+}
+
+.nara-dex-chassis button[class*="sc-fqkvVR"]:hover {
+  background-color: #11203e !important;
+  color: #FFFFFF !important;
+  border-color: #00F0FF !important;
+}
+
+/* Reverse/Switch Button in center */
+.nara-dex-chassis button[class*="sc-gsFSXq"] {
+  background-color: #050c1e !important;
+  border: 1px solid #142948 !important;
+  color: #00F0FF !important;
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.2) !important;
+  transition: all 0.2s ease !important;
+}
+
+.nara-dex-chassis button[class*="sc-gsFSXq"]:hover {
+  border-color: #00F0FF !important;
+  box-shadow: 0 0 14px rgba(0, 240, 255, 0.4) !important;
+  transform: scale(1.05);
+}
+
+/* Main Action Button (Please connect your wallet / Swap) */
+.nara-dex-chassis button[class*="sc-jlZhew"] {
+  font-family: inherit !important;
+  border-radius: 12px !important;
+  font-size: 13.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer !important;
+}
+
+/* When disabled (e.g. Please connect your wallet) */
+.nara-dex-chassis button[class*="sc-jlZhew"]:disabled,
+.nara-dex-chassis button[class*="sc-jlZhew"][disabled] {
+  background-color: #0b162c !important;
+  border: 1px solid #182e4e !important;
+  color: #8fa1b8 !important;
+  opacity: 0.9 !important;
+}
+
+/* When ready to swap / active */
+.nara-dex-chassis button[class*="sc-jlZhew"]:not(:disabled) {
+  background-color: #00F0FF !important;
+  color: #041c24 !important;
+  font-weight: 800 !important;
+  border: none !important;
+  box-shadow: 0 0 24px rgba(0, 240, 255, 0.75) !important;
+}
+
+.nara-dex-chassis button[class*="sc-jlZhew"]:not(:disabled):hover {
+  background-color: #33f3ff !important;
+  box-shadow: 0 0 32px rgba(0, 240, 255, 0.95) !important;
+}
+
