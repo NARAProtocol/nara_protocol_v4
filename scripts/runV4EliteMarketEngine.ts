@@ -211,6 +211,8 @@ export function generateCandleBurstMarketSequence(targetBudget: number = 700): P
   return sequence;
 }
 
+export const generateRealisticMarketSequence = generateCandleBurstMarketSequence;
+
 export function renderAsciiHud(trades: readonly PlannedTrade[]) {
   let cumulativeUsdc = 0;
   let totalVaultUsdc = 0;
