@@ -273,12 +273,27 @@ timelock.
 The Treasury Range Manager (`NARATreasuryRangeManagerV1.sol`) is **DEPLOYED, FUNDED, AND ACTIVATED ON BASE MAINNET**:
 - **Contract Address:** [`0xd58afa5eaB20B0ED287851Cf98f359AdEd58a69C`](https://basescan.org/address/0xd58afa5eaB20B0ED287851Cf98f359AdEd58a69C)
 - **Dedicated Treasury Range Safe:** [`0x5050BC6dc3E07313D52D05cecD53f727D6CDa245`](https://basescan.org/address/0x5050BC6dc3E07313D52D05cecD53f727D6CDa245) (1-of-1 threshold, owned by `0xfe3A8678A9c729438BB11718bD1391E7Ab491E8e`). Holds exclusive custody of order inventory and receives all cancellation and settlement proceeds.
-- **Protocol 2-of-3 Safe:** `0xd65c0e390Dc187A22c52c03816591CC736C0D755` executed the CREATE2 deployment packet only; it holds zero operational range custody.
+- **Protocol 2-of-3 Safe:** `0xd65c0e390Dc187A22c52c03816591CC736C0D755` executed the CREATE2 deployment packet only on 2026-09-01 (tx `0xa657e0be76f040195fddb791e030b2fa0275f6ed989e2c17e2d1256bb95cb869`, block `50736510`); it holds zero operational range custody.
+- **Runtime Hash:** keccak256 `0xbd53ab49bd70983a352c5fc3c638f8df2d527e42011671218461aa5fb5b83a09` (23620 bytes).
 - **Autonomous Settler Daemon:** Active on Railway (`services/v4-treasury-range-settler`, keeper `0xa4B4B00f067cB4f5607c9a7298827fa1C1315aB7`), executing 15-second polling sweeps to return terminal profits to the Safe.
 - **Invariants:**
   1. The manager contract holds zero persistent token balances.
   2. Every rebalance execution ends with `assertOperationalClean()`.
   3. Strict Uniswap v4 tick alignment: Buy orders have $tickLower \ge currentTick$ (dollar price lower); Sell orders have $tickUpper \le currentTick$ (dollar price higher).
+
+This manager is strictly separate from permanent POL (Hook → Vault → Compounder). Prior documentation dated 2026-08-31 describing the manager as undeployed was stale document lag.
+
+### Historical candidate notes (through 2026-08-31)
+
+`NARATreasuryRangeManagerV1.sol` was documented as an implemented and tested, then-undeployed,
+Safe-bound periphery candidate for tactical one-sided NARA/USDC ranges. It is
+strictly separate from permanent POL: it owns only manager-registered tactical
+PositionManager NFTs, never changes the Hook/Vault/Compounder, and sends every
+settlement or cancellation output directly to the immutable dedicated Treasury
+Range Safe. Protected PR #62 separated that 1-of-1 canary-custody Safe from the
+protocol 2-of-3 deployment Safe. Protected PR #64 merged the prefunded-route and
+strict matrix-evidence hardening as GitHub-verified commit
+`162c24be080398b65c76e542a48ccb608cd1fb43`.
 
 ### 5.2 Adversarial Matrix, MEV Stress-Testing & Autonomous Range Ranger
 
