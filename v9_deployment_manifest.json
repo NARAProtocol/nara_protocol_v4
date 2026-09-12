@@ -1,0 +1,30 @@
+{
+  "chainId": 8453,
+  "network": "base",
+  "deployedAt": "2026-09-11T06:21:31.000Z",
+  "deployer": "0xAE9D1667B45558232BeD9d45DcCA53940F892aB5",
+  "contracts": {
+    "NARAArtDefsPlateV5": "0xECdaf4B930cec3293479de0404B72282c7Bf9Aba",
+    "NARAArtCorePlateV5": "0x3Ae72d3ef410AE9baE795Cf9a027ef9fDcBf9996",
+    "NARAArtMetadataV5": "0xe644Be90A7B46EE146be0C1Eb79Ee47C9cf700d9",
+    "NARAPositionRendererV9": "0xBe25F3cE387e01cAe5dA7d7F0bc2FdE72c244a98",
+    "NARAPositionNFTV4": "0x01D3AC0acda01FE5D6788fA0B4062de94C8DE52b",
+    "NARAArtCollectionBannerV4": "0xc528A95212a9f9BD69B056fe89119F9Aa0bBb09a",
+    "NARAEngine": "0x98ab6406D6B548F37dEF7110961bb45A399e5aFC"
+  },
+  "activation": {
+    "target": "0x01D3AC0acda01FE5D6788fA0B4062de94C8DE52b",
+    "method": "setRenderer(address)",
+    "newRenderer": "0xBe25F3cE387e01cAe5dA7d7F0bc2FdE72c244a98",
+    "transactionHash": "0x7c162cb0efd26c08964d855b9064f0e79cfca8937cd050a73a116e5b540cc70f",
+    "blockNumber": 51159172
+  },
+  "raritySpec": {
+    "tier1_gold": { "name": "24K Gilded Gold", "rank": "#1 Apex Grail", "base": "1.0%", "maxLuck": "4.5%", "whaleMax": "6.5%" },
+    "tier2_damascus": { "name": "Forged Damascus Meteorite", "rank": "#2 Legendary", "base": "4.0%", "maxLuck": "10.5%", "whaleMax": "14.5%" },
+    "tier3_obsidian": { "name": "Obsidian Void", "rank": "#3 Rare", "palette": "Imperial Royal Amethyst Purple (Zero Red)", "base": "15.0%", "maxLuck": "22.0%", "whaleMax": "22.0%" },
+    "tier4_emerald": { "name": "Cybernetic Emerald", "rank": "#4 Uncommon", "base": "30.0%", "maxLuck": "35.0%", "whaleMax": "33.0%" },
+    "tier5_slate": { "name": "Titanium Slate", "rank": "#5 Common Baseline", "base": "50.0%", "maxLuck": "28.0%", "whaleMax": "24.0%" },
+    "grandfathering": "Tokens #1-#47 preserve exact legacy rolled identities (Tokens #10 & #27 are 24K Gold Apex Grails)"
+  }
+}
