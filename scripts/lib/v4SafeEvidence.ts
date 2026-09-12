@@ -1,9 +1,15 @@
 import { ethers } from "ethers";
 
+function policyError(message: string, code: string): Error {
+  const err = new Error(message);
+  (err as { code?: string }).code = code;
+  return err;
+}
+
 export const NARA_PRODUCTION_SAFE_OWNERS = [
   "0xfe3A8678A9c729438BB11718bD1391E7Ab491E8e",
   "0xC019Dc79412c4b20103ac4ce97B2615FF45D490d",
-  "0x42365cAE9abB6cb357dd485734CAd75a2d3c6664",
+  "0x9c61175b0117f6cED8C07c6846F4f31f8dc1008B",
 ] as const;
 
 export const BASE_SAFE_141_SINGLETON = "0x29fcB43b46531BcA003ddC8FCB67FFE91900C762";
@@ -125,30 +131,54 @@ export function assertTreasuryRangeSafeSnapshot(
   const modules = snapshot.modules.map((value) => ethers.getAddress(value));
   const ownerSetHash = safeOwnerSetHash(normalizedOwners);
   if (ethers.getAddress(snapshot.address) !== safe) {
-    throw new Error("Treasury Range Safe snapshot address differs from the pinned policy");
+    throw policyError(
+      "Treasury Range Safe snapshot address differs from the pinned policy",
+      "TREASURY_SAFE_ADDRESS_MISMATCH",
+    );
   }
   if (snapshot.safeRuntimeCodeHash.toLowerCase() !== policy.safeRuntimeCodeHash.toLowerCase()) {
-    throw new Error("Treasury Range Safe runtime code hash differs from the pinned policy");
+    throw policyError(
+      "Treasury Range Safe runtime code hash differs from the pinned policy",
+      "TREASURY_SAFE_CODEHASH_MISMATCH",
+    );
   }
   if (ethers.getAddress(snapshot.singleton) !== ethers.getAddress(BASE_SAFE_141_SINGLETON)
       || snapshot.singletonRuntimeCodeHash.toLowerCase() !== BASE_SAFE_141_SINGLETON_CODEHASH) {
-    throw new Error("Treasury Range Safe is not bound to the approved Base Safe 1.4.1 singleton");
+    throw policyError(
+      "Treasury Range Safe is not bound to the approved Base Safe 1.4.1 singleton",
+      "TREASURY_SAFE_SINGLETON_MISMATCH",
+    );
   }
   if (snapshot.version !== policy.version || snapshot.threshold !== policy.threshold) {
-    throw new Error("Treasury Range Safe version or threshold differs from the pinned policy");
+    throw policyError(
+      "Treasury Range Safe version or threshold differs from the pinned policy",
+      "TREASURY_SAFE_VERSION_OR_THRESHOLD_MISMATCH",
+    );
   }
   if (normalizedOwners.length !== policy.ownerCount || ownerSetHash !== policy.ownerSetHash.toLowerCase()) {
-    throw new Error("Treasury Range Safe owner set differs from the pinned policy");
+    throw policyError(
+      "Treasury Range Safe owner set differs from the pinned policy",
+      "TREASURY_SAFE_OWNER_SET_MISMATCH",
+    );
   }
   if (ethers.getAddress(snapshot.guard) !== ethers.ZeroAddress) {
-    throw new Error("Treasury Range Safe must not have an active guard");
+    throw policyError(
+      "Treasury Range Safe must not have an active guard",
+      "TREASURY_SAFE_GUARD_ACTIVE",
+    );
   }
   if (ethers.getAddress(snapshot.fallbackHandler) !== ethers.getAddress(NARA_SAFE_FALLBACK_HANDLER)
       || snapshot.fallbackHandlerRuntimeCodeHash.toLowerCase() !== NARA_SAFE_FALLBACK_HANDLER_CODEHASH) {
-    throw new Error("Treasury Range Safe fallback handler differs from the approved code-pinned handler");
+    throw policyError(
+      "Treasury Range Safe fallback handler differs from the approved code-pinned handler",
+      "TREASURY_SAFE_FALLBACK_HANDLER_MISMATCH",
+    );
   }
   if (modules.length !== 0 || ethers.getAddress(snapshot.nextModule) !== ethers.getAddress(SAFE_MODULE_SENTINEL)) {
-    throw new Error("Treasury Range Safe must not have active modules");
+    throw policyError(
+      "Treasury Range Safe must not have active modules",
+      "TREASURY_SAFE_MODULES_ACTIVE",
+    );
   }
   return {
     address: safe,
@@ -178,7 +208,10 @@ export async function readCanonicalNaraSafeEvidence(
   const safe = ethers.getAddress(safeAddress);
   const block = await provider.getBlock(blockNumber);
   if (!block?.hash || /^0x0{64}$/i.test(block.hash)) {
-    throw new Error("Safe verification block does not have a canonical non-zero block hash");
+    throw policyError(
+      "Safe verification block does not have a canonical non-zero block hash",
+      "CANONICAL_BLOCK_HASH_MISSING",
+    );
   }
   const callAtBlock = { blockTag: blockNumber };
   const contract = new ethers.Contract(safe, NARA_SAFE_ABI, provider);
@@ -218,34 +251,55 @@ export async function readCanonicalNaraSafeEvidence(
   const normalizedOwners = (owners as string[]).map((value) => ethers.getAddress(value));
 
   if (safeCodeHash !== expectedSafeRuntimeCodeHash.toLowerCase()) {
-    throw new Error("Production Safe runtime code hash differs from the pinned core manifest");
+    throw policyError(
+      "Production Safe runtime code hash differs from the pinned core manifest",
+      "PRODUCTION_SAFE_CODEHASH_MISMATCH",
+    );
   }
   if (
     ethers.getAddress(singleton) !== ethers.getAddress(BASE_SAFE_141_SINGLETON) ||
     singletonCodeHash !== BASE_SAFE_141_SINGLETON_CODEHASH
   ) {
-    throw new Error("Production Safe is not bound to the approved Base Safe 1.4.1 singleton");
+    throw policyError(
+      "Production Safe is not bound to the approved Base Safe 1.4.1 singleton",
+      "PRODUCTION_SAFE_SINGLETON_MISMATCH",
+    );
   }
   if (version !== "1.4.1" || threshold !== 2n) {
-    throw new Error("Production Safe must remain the approved v1.4.1 2-of-3 configuration");
+    throw policyError(
+      "Production Safe must remain the approved v1.4.1 2-of-3 configuration",
+      "PRODUCTION_SAFE_THRESHOLD_MISMATCH",
+    );
   }
   if (
     JSON.stringify(normalizedSet(normalizedOwners)) !==
     JSON.stringify(normalizedSet(NARA_PRODUCTION_SAFE_OWNERS))
   ) {
-    throw new Error("Production Safe owner set differs from the approved custody handoff");
+    throw policyError(
+      "Production Safe owner set differs from the approved custody handoff",
+      "PRODUCTION_SAFE_OWNER_SET_MISMATCH",
+    );
   }
   if (guard !== ethers.ZeroAddress) {
-    throw new Error("Production Safe must not have an active guard");
+    throw policyError(
+      "Production Safe must not have an active guard",
+      "PRODUCTION_SAFE_GUARD_ACTIVE",
+    );
   }
   if (
     fallbackHandler !== ethers.getAddress(NARA_SAFE_FALLBACK_HANDLER) ||
     fallbackHandlerRuntimeCodeHash !== NARA_SAFE_FALLBACK_HANDLER_CODEHASH
   ) {
-    throw new Error("Production Safe fallback handler differs from the approved code-pinned handler");
+    throw policyError(
+      "Production Safe fallback handler differs from the approved code-pinned handler",
+      "PRODUCTION_SAFE_FALLBACK_HANDLER_MISMATCH",
+    );
   }
   if (modules.length !== 0 || nextModule !== ethers.getAddress(SAFE_MODULE_SENTINEL)) {
-    throw new Error("Production Safe must not have active modules");
+    throw policyError(
+      "Production Safe must not have active modules",
+      "PRODUCTION_SAFE_MODULES_ACTIVE",
+    );
   }
 
   return {

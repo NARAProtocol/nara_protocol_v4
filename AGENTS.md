@@ -298,3 +298,15 @@ See [CLAUDE.md](CLAUDE.md) → "MANDATORY PROTOCOL SAFETY STANDARDS" for the ful
 - If a v4 contract surface is not what this file claims (function name, parameter, return type), trust the source, update this file's table accordingly in a follow-up edit, and tell the user.
 - If you find yourself wanting to import from `archive/legacy-v3/`, stop and ask the user — almost always the right answer is to port to v4 instead.
 - If you find a v3 mainnet address referenced as "live" anywhere in active docs after this reset, flag it. The reset's promise is that v3 addresses are documented exclusively as "retired" in active docs.
+
+## Official NARA Brand Logo & Token Icon Standards
+
+- **Canonical Insignia**: 15-Notch Epoch Radar Dial + Monolithic Architectural N on full-bleed solid `#000000` deep black canvas (`nara-logo-white.png`).
+- **Master Files**: `C:\Users\linas\Desktop\NARA_Branding_Package\` and repo path `tools/nara-landing/public/`.
+- **Solid Black Background Mandate**: All token icons and avatars MUST use a solid `#000000` background. Never export transparent corners for token listing icons to prevent Chromium and tracker white box/border defects.
+- **Hosted URLs**:
+  - BaseScan (`128x128`): `https://files.catbox.moe/snrc7s.png` / `https://naraprotocol.com/nara_token_128.png`
+  - CoinGecko/CMC (`200x200`): `https://files.catbox.moe/f9xge7.png` / `https://naraprotocol.com/nara_token_200.png`
+  - DexScreener/Uniswap (`256x256`): `https://files.catbox.moe/b16drt.png` / `https://naraprotocol.com/nara_token_256.png`
+  - Community/Telegram/Discord (`512x512`): `https://files.catbox.moe/f5tan3.png` / `https://naraprotocol.com/nara_token_512.png`
+  - Master Logo (`1024x1024`): `https://files.catbox.moe/4v6oup.png` / `https://naraprotocol.com/nara-logo-white.png`

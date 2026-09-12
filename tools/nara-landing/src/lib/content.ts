@@ -33,9 +33,10 @@ export const PROTOCOL_CONSTANTS = {
 export const SOCIAL_LINKS = {
   website: "https://naraprotocol.pro",
   swapApp: "https://swap.naraprotocol.pro",
+  telegram: "https://t.me/NARAProtocol",
   twitter: "https://x.com/NARA_protocol",
   farcaster: "https://warpcast.com/naraprotocol",
-  github: "https://github.com/NARAProtocol/nara_protocol_v4",
+  github: "https://github.com/NARAProtocol/nara_protocol",
   publicDocs: "https://github.com/NARAProtocol/nara_protocol_public",
   noobGuide: "https://github.com/NARAProtocol/nara_protocol_public/blob/main/docs/User_Guide.md",
   basescanToken: `https://basescan.org/token/${PROTOCOL_CONSTANTS.tokenContract}`,
@@ -44,6 +45,35 @@ export const SOCIAL_LINKS = {
   defillamaPr: "https://github.com/DefiLlama/DefiLlama-Adapters/pull/20841",
   dexscreener: `https://dexscreener.com/base/${PROTOCOL_CONSTANTS.tokenContract}`,
 };
+
+/**
+ * Permanent NARA Official Master Emblem SVG & Brand Assets
+ * Mandatory per AGENTS.md Brand Standard:
+ * - Solid Black (#000000) canvas
+ * - Dual concentric radar rings
+ * - 15-notch epoch precision dial
+ * - Monolithic architectural N
+ */
+export const NARA_MASTER_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" fill="none"><rect width="1000" height="1000" fill="#000000"/><circle cx="500" cy="500" r="410" stroke="#FFFFFF" stroke-width="18"/><circle cx="500" cy="500" r="350" stroke="#FFFFFF" stroke-width="18"/><g><line x1="500" y1="65" x2="500" y2="175" stroke="#FFFFFF" stroke-width="22" stroke-linecap="square" transform="rotate(0 500 500)"/><line x1="500" y1="65" x2="500" y2="175" stroke="#FFFFFF" stroke-width="22" stroke-linecap="square" transform="rotate(24 500 500)"/><line x1="500" y1="65" x2="500" y2="175" stroke="#FFFFFF" stroke-width="22" stroke-linecap="square" transform="rotate(48 500 500)"/><line x1="500" y1="65" x2="500" y2="175" stroke="#FFFFFF" stroke-width="22" stroke-linecap="square" transform="rotate(72 500 500)"/><line x1="500" y1="65" x2="500" y2="175" stroke="#FFFFFF" stroke-width="22" stroke-linecap="square" transform="rotate(96 500 500)"/><line x1="500" y1="65" x2="500" y2="175" stroke="#FFFFFF" stroke-width="22" stroke-linecap="square" transform="rotate(120 500 500)"/><line x1="500" y1="65" x2="500" y2="175" stroke="#FFFFFF" stroke-width="22" stroke-linecap="square" transform="rotate(144 500 500)"/><line x1="500" y1="65" x2="500" y2="175" stroke="#FFFFFF" stroke-width="22" stroke-linecap="square" transform="rotate(168 500 500)"/><line x1="500" y1="65" x2="500" y2="175" stroke="#FFFFFF" stroke-width="22" stroke-linecap="square" transform="rotate(192 500 500)"/><line x1="500" y1="65" x2="500" y2="175" stroke="#FFFFFF" stroke-width="22" stroke-linecap="square" transform="rotate(216 500 500)"/><line x1="500" y1="65" x2="500" y2="175" stroke="#FFFFFF" stroke-width="22" stroke-linecap="square" transform="rotate(240 500 500)"/><line x1="500" y1="65" x2="500" y2="175" stroke="#FFFFFF" stroke-width="22" stroke-linecap="square" transform="rotate(264 500 500)"/><line x1="500" y1="65" x2="500" y2="175" stroke="#FFFFFF" stroke-width="22" stroke-linecap="square" transform="rotate(288 500 500)"/><line x1="500" y1="65" x2="500" y2="175" stroke="#FFFFFF" stroke-width="22" stroke-linecap="square" transform="rotate(312 500 500)"/><line x1="500" y1="65" x2="500" y2="175" stroke="#FFFFFF" stroke-width="22" stroke-linecap="square" transform="rotate(336 500 500)"/></g><g fill="#FFFFFF"><polygon points="330,345 375,300 420,300 420,700 330,700"/><polygon points="580,300 625,300 670,345 670,700 580,700"/><polygon points="375,300 445,300 545,465 475,465"/><polygon points="525,535 595,535 625,700 555,700"/><polygon points="410,340 435,340 590,660 565,660"/></g></svg>`;
+
+export const BRAND_ASSETS = {
+  masterSvg: NARA_MASTER_LOGO_SVG,
+  masterSolidBlackPng: "/nara-logo-white.png",
+  masterTransparentPng: "/nara-logo-transparent.png",
+  masterCirclePng: "/nara-circle-1024.png",
+  circle512: "/nara-circle-512.png",
+  circle256: "/nara-circle-256.png",
+  circle192: "/nara-circle-192.png",
+  circle128: "/nara-circle-128.png",
+  token128: "/nara_token_128.png",
+  token200: "/nara_token_200.png",
+  token256: "/nara_token_256.png",
+  token512: "/nara_token_512.png",
+  appleTouchIcon: "/apple-touch-icon.png",
+  faviconIco: "/favicon.ico",
+  faviconSvg: "/favicon.svg",
+};
+
 
 // Layman-accessible 4 core pillars for the reticle HUD
 export const TELEMETRY_NODES = [

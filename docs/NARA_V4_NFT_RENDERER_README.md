@@ -1,13 +1,14 @@
-# NARA Position NFT — Renderer V5 (implementation README)
+# NARA Position NFT — Master Renderer V9 (implementation README)
 
-Last updated: 2026-08-22.
-Contract: `contracts/v4/NARAPositionRendererV5.sol` (fully on-chain SVG, no uploaded image).
-Art modules: `NARAArtMetadataV1`, `NARAArtCorePlateV1`, `NARAArtGenesisPlateV1`, and `NARAArtSecurityPrintV1`.
-Art direction: `NARA_V4_NFT_ART_DESIGN_BIBLE.md` (the *why*). This file is the *how*.
+Last updated: 2026-09-11.
+Active Base Mainnet Contract: `contracts/v4/NARAPositionRendererV9.sol` (`0xBe25F3cE387e01cAe5dA7d7F0bc2FdE72c244a98`, activated block `51159172`).
+Art modules:
+- `NARAArtDefsPlateV5`: `0xECdaf4B930cec3293479de0404B72282c7Bf9Aba` (360° omnidirectional halo, radial ambient core bloom, SVG `<defs>`)
+- `NARAArtCorePlateV5`: `0x3Ae72d3ef410AE9baE795Cf9a027ef9fDcBf9996` (5 calibrated physical alloys, guilloché carbon lattice, Swiss chronometer 24-tooth gear ring)
+- `NARAArtMetadataV5`: `0xe644Be90A7B46EE146be0C1Eb79Ee47C9cf700d9` (OpenSea JSON attributes, Gen-0 grandfathering for #1–#47, calibrated 5-tier ladder for #48+)
+- `NARAArtCollectionBannerV4`: `0xc528A95212a9f9BD69B056fe89119F9Aa0bBb09a` (Collection-level contract banner)
 
-Render path: `NARAPositionNFTV4.tokenURI(id)` → `renderer.tokenURI(nft, id)` → builds JSON +
-base64 SVG in Solidity, on demand, every read. `MetadataUpdate` (ERC-4906) fires on claim/extend so
-marketplaces refresh.
+Render path: `NARAPositionNFTV4.tokenURI(id)` → `NARAPositionRendererV9.tokenURI(nft, id)` → builds OpenSea JSON + base64 SVG in Solidity on demand. `MetadataUpdate` (ERC-4906) fires on claim/extend.
 
 ---
 
@@ -70,7 +71,21 @@ The `Module` trait + one distinct accent, all in the same grammar:
 
 ---
 
-## Tier evolution (structural, not just color)
+## The 5 Calibrated Aerospace Physical Alloys (Vector 1 Mint-Fixed Rarity)
+
+The physical alloy substrate is deterministically derived from `keccak256(tokenId, positionId, createdEpoch)`:
+
+| Tier / Alloy | Rank | Base Odds | Max Luck (365d) | Whale Max (≥10k NARA) | Visual Characteristics |
+|---|---|---|---|---|---|
+| **24K Gilded Gold** | #1 Apex Grail | **1.0%** | **4.5%** | **6.5%** | Mirror-polished molten 24K bullion, 360° omnidirectional halo (`dx="0" dy="0" stdDeviation="22"` flood `#FFB300`), 16-ray solar astrolabe corona, radial ambient core bloom (`#goldOmniShine`), symmetrical bullion frame (`#FFE082`). |
+| **Forged Damascus Meteorite** | #2 Legendary | **4.0%** | **10.5%** | **14.5%** | Celestial quantum-blue acid-etched meteorite steel with folded layered damascene wave bands. |
+| **Obsidian Void** | #3 Rare | **15.0%** | **22.0%** | **22.0%** | Imperial Royal Amethyst Purple (`#C084FC`, `#9333EA`, `#7E22CE`, `#FAF5FF`) — 100% purple, zero red. |
+| **Cybernetic Emerald** | #4 Uncommon | **30.0%** | **35.0%** | **33.0%** | Jade cyber ceramic with emerald telemetry conduits. |
+| **Titanium Slate** | #5 Common | **50.0%** | **28.0%** | **24.0%** | Grade-5 aerospace brushed titanium with Cobalt conduits. |
+
+*Grandfathering Invariant:* Historical Tokens #1–#47 maintain their immutable Gen-0 rolled alloy identities (Tokens #10 & #27 remain 24K Gold Apex Grails). Tokens #48+ roll against the strictly calibrated Vector 1 probability matrix.
+
+## Realized Tier Evolution (Structural, Tx-Driven)
 
 `_tierIndex(lifetimeEthClaimed)`:
 
@@ -83,9 +98,6 @@ The `Module` trait + one distinct accent, all in the same grammar:
 | 4 | ≥10 ETH | Apex / Radiant | burned amber `#C2772E` restrained halo, denser security print |
 
 The blood-oxide Scar (`#6E2924`) appears on **every** card as the only violent mark.
-
-Rarity is **structural** (calibration, security-print density, history marks, scar width) — never just a
-border color.
 
 ## Archive modes
 - **Genesis** (`_genesisField`): replaces the reactor with a provenance plate — ledger rows with

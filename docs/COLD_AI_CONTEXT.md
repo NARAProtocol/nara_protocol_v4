@@ -30,19 +30,23 @@ This is a context-loss-safe summary for agents entering the NARA workspace.
   in transaction
   `0xf1ea7e7dfdf8e1021ceebf26a943cba604e0a8c894eec5f527bc01656b5890be`.
   It owns LP NFT `2898486`; the latest receipt-pinned full-inventory compound
-  increased that position to liquidity `4386316228001171` at Base block
-  `50499085`. The Vault binding
-  was permanently frozen in transaction
+  (tx `0xfb23c0ee4db133eec8b0c0521abd1604d4f89b33ee6b3015bf6d44acd91c5663`)
+  increased that position to liquidity `7105185825255508` (+62% POL depth) at
+  Base block `51182779`. The Vault binding was permanently frozen in transaction
   `0xccd73cf07602f18412bea291812f0d171fa5cabd41fcff6b6894029978084ef3`.
+- The Treasury Range Manager (`NARATreasuryRangeManagerV1.sol`) is **DEPLOYED,
+  FUNDED, AND ACTIVATED ON BASE MAINNET** at `0xd58afa5eaB20B0ED287851Cf98f359AdEd58a69C`.
+  Dedicated Treasury Range Safe `0x5050BC6dc3E07313D52D05cecD53f727D6CDa245` holds custody.
+  Autonomous 24/7 rebalancing is powered by Safe 1.4.1 EIP-712 atomic MultiSend with
+  the 5-tier adaptive volume/pressure engine running on Railway.
 - The fresh NARA/USDC pool is registered, initialized, and seeded. Its PoolId is
   `0x83edced1f39e6adf7469cd718eeb409824d948959263408d4cfb6e745c8db464`;
   the initial LP NFT is `2898124` with liquidity `4242640687119285`.
 - Receipt-pinned live buy/sell matrices and the same-block round trip passed.
   The separately authorized liquidity maintainer is active on the `17,47`
   schedule after a receipt-reconciled compound and hosted idle/heartbeat test.
-  The epoch workflow is separately active on its `3,18,33,48` schedule, with a
-  Railway fallback at `12,27,42,57`, a different keeper, and heartbeat. The
-  Engine lifecycle smoke is pending.
+  The epoch workflow is separately active on its hourly `7 * * * *` schedule,
+  with a dedicated gas-only keeper, heartbeat, and 75% keeper gas optimization.
   This evidence is not an overall production-readiness claim.
 - The Engine activation backlog was recovered through the Safe in transaction
   `0xcd6e52b319f21b5a6772a36cc076a5c6f8390dcd7326ab1adf822a16f6638493`.
@@ -63,10 +67,13 @@ This is a context-loss-safe summary for agents entering the NARA workspace.
   authority or policy without a new explicit user order and current
   deployment-specific review. Read both 2026-08-15 maintainer activation
   records first.
-- The seven-contract Position NFT Phase-2 baseline is deployed,
-  source-verified, and Safe-finalized. Its canonical manifest remains
-  `integrationReady: false`; do not enable consumers before the separately
-  approved value-bearing smoke, monitored hold, and immutable handoff exist.
+- The Position NFT stack is **DEPLOYED, ACTIVATED, AND INTEGRATED ON BASE MAINNET**:
+  - Core NFT: `NARAPositionNFTV4` (`0x01D3AC0acda01FE5D6788fA0B4062de94C8DE52b`).
+  - Modular Swiss-Chronometer V9 Renderer: `NARAPositionRendererV9` (`0xBe25F3cE387e01cAe5dA7d7F0bc2FdE72c244a98`).
+  - Active Plates: `NARAArtDefsPlateV5` (`0xECda...`), `NARAArtCorePlateV5` (`0x3Ae7...`), `NARAArtMetadataV5` (`0xe644...`).
+  - Read Lens: `NARAFleetDeckLensV1` (`0x4B097067106623185aE32Cd9c2463Bb4143Fb516`) computing deck synergy tiers, formation bonuses, and genesis aura.
+  - On-Chain State: `nextTokenId = 60` (tokens #1–#59 minted; Gen-0 grandfathering for #1–#47, calibrated 5-alloy lottery for #48+). Over `13,412 NARA` is actively committed in `NARAEngine`.
+  - Canonical Frontend: `tools/nara-landing` is integrated and active (`CommitStation`, `GridStation`, `GridDeckStation`, `VaultStation`).
 
 `NARAPositionRendererV5` is the historical name of the modular renderer revision
 inside the v4 contract family. It is not a protocol V5 stack.
