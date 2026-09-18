@@ -1,13 +1,7 @@
 // Cloudflare Pages Function: /api/leaderboard
 // Tracks All-Time Fame Board records (Fewest Clicks to complete 12/12 cards)
 
-const DEFAULT_SEEDS = [
-  { rank: 1, handle: "@Satoshi_Plunger", score: 31, tier: "GOD-TIER PORCELAIN DEITY", date: "Dec 2024" },
-  { rank: 2, handle: "@Vitalik_Roll", score: 38, tier: "ELITE SEWER TACTICIAN", date: "Jan 2025" },
-  { rank: 3, handle: "@Base_General", score: 44, tier: "ELITE SEWER TACTICIAN", date: "Feb 2025" },
-  { rank: 4, handle: "@Degen_Harvester", score: 51, tier: "CERTIFIED PURGER", date: "Feb 2025" },
-  { rank: 5, handle: "@Sewer_Sniper", score: 59, tier: "CERTIFIED PURGER", date: "Mar 2025" }
-];
+const DEFAULT_SEEDS = [];
 
 const JSON_HEADERS = {
   "Content-Type": "application/json; charset=utf-8",
@@ -29,8 +23,17 @@ export async function onRequestGet(context) {
     const kv = context?.env?.NARA_LEADERBOARD_KV || context?.env?.KV;
     if (kv) {
       const stored = await kv.get("fame_board_v1", "json");
-      if (Array.isArray(stored) && stored.length > 0) {
-        return new Response(JSON.stringify(stored), {
+      if (Array.isArray(stored)) {
+        // Filter out any legacy dummy seeds
+        const cleanList = stored.filter(item => 
+          item && 
+          item.handle !== "@Satoshi_Plunger" && 
+          item.handle !== "@Vitalik_Roll" && 
+          item.handle !== "@Base_General" && 
+          item.handle !== "@Degen_Harvester" && 
+          item.handle !== "@Sewer_Sniper"
+        );
+        return new Response(JSON.stringify(cleanList), {
           status: 200,
           headers: JSON_HEADERS
         });
@@ -40,8 +43,8 @@ export async function onRequestGet(context) {
     console.warn("KV fetch error:", err);
   }
 
-  // Fallback to default historic benchmark seeds
-  return new Response(JSON.stringify(DEFAULT_SEEDS), {
+  // Fresh board starts completely empty
+  return new Response(JSON.stringify([]), {
     status: 200,
     headers: JSON_HEADERS
   });
@@ -102,12 +105,19 @@ export async function onRequestPost(context) {
     };
 
     const kv = context?.env?.NARA_LEADERBOARD_KV || context?.env?.KV;
-    let list = [...DEFAULT_SEEDS];
+    let list = [];
 
     if (kv) {
       const stored = await kv.get("fame_board_v1", "json");
-      if (Array.isArray(stored) && stored.length > 0) {
-        list = stored;
+      if (Array.isArray(stored)) {
+        list = stored.filter(item => 
+          item && 
+          item.handle !== "@Satoshi_Plunger" && 
+          item.handle !== "@Vitalik_Roll" && 
+          item.handle !== "@Base_General" && 
+          item.handle !== "@Degen_Harvester" && 
+          item.handle !== "@Sewer_Sniper"
+        );
       }
 
       // Check if user already exists with a worse score -> update to better score

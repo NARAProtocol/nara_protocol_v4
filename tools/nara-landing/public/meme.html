@@ -683,7 +683,19 @@
               </tr>
             </thead>
             <tbody id="fameBoardBody" class="divide-y divide-white/[0.04] text-white/80">
-              <!-- Populated dynamically via JS -->
+              <tr id="emptyFameBoardRow">
+                <td colspan="5" class="py-10 px-4 text-center">
+                  <div class="flex flex-col items-center justify-center gap-2 text-white/50">
+                    <span class="text-3xl select-none">🚽</span>
+                    <div class="font-mono text-xs font-bold text-amber-300 tracking-widest uppercase">
+                      LEADERBOARD IS EMPTY // CLAIM #1 SPOT
+                    </div>
+                    <div class="text-[11px] text-white/60 max-w-md">
+                      No operator records logged yet. Complete all 12 collectibles in your vault to immortalize your handle on the All-Time Fame Board!
+                    </div>
+                  </div>
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -2799,13 +2811,7 @@
     }
 
     // --- ALL-TIME FAME BOARD & VICTORY ENGINE ---
-    const DEFAULT_FAME_BOARD = [
-      { rank: 1, handle: "@Satoshi_Plunger", score: 31, tier: "GOD-TIER PORCELAIN DEITY", date: "Dec 2024" },
-      { rank: 2, handle: "@Vitalik_Roll", score: 38, tier: "ELITE SEWER TACTICIAN", date: "Jan 2025" },
-      { rank: 3, handle: "@Base_General", score: 44, tier: "ELITE SEWER TACTICIAN", date: "Feb 2025" },
-      { rank: 4, handle: "@Degen_Harvester", score: 51, tier: "CERTIFIED PURGER", date: "Feb 2025" },
-      { rank: 5, handle: "@Sewer_Sniper", score: 59, tier: "CERTIFIED PURGER", date: "Mar 2025" }
-    ];
+    const DEFAULT_FAME_BOARD = [];
 
     function getRatingTier(score) {
       if (score < 35) {
@@ -2821,18 +2827,30 @@
 
     let localFameBoard = [];
 
+    function isLegacyMockSeed(handle) {
+      if (!handle || typeof handle !== "string") return true;
+      const h = handle.trim().toLowerCase();
+      return (
+        h === "@satoshi_plunger" ||
+        h === "@vitalik_roll" ||
+        h === "@base_general" ||
+        h === "@degen_harvester" ||
+        h === "@sewer_sniper"
+      );
+    }
+
     function loadLocalFameBoard() {
       try {
         const saved = localStorage.getItem("nara_fame_board_v1");
         if (saved) {
           const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            localFameBoard = parsed;
+          if (Array.isArray(parsed)) {
+            localFameBoard = parsed.filter(item => item && !isLegacyMockSeed(item.handle));
             return;
           }
         }
       } catch (e) {}
-      localFameBoard = [...DEFAULT_FAME_BOARD];
+      localFameBoard = [];
     }
 
     function saveLocalFameBoard() {
@@ -2844,9 +2862,28 @@
     function renderFameBoard(entries) {
       const tbody = document.getElementById("fameBoardBody");
       if (!tbody) return;
-      const list = Array.isArray(entries) && entries.length > 0 ? entries : localFameBoard;
+      const list = (Array.isArray(entries) ? entries : localFameBoard).filter(item => item && !isLegacyMockSeed(item.handle));
 
       tbody.innerHTML = "";
+      if (list.length === 0) {
+        tbody.innerHTML = `
+          <tr id="emptyFameBoardRow">
+            <td colspan="5" class="py-10 px-4 text-center">
+              <div class="flex flex-col items-center justify-center gap-2 text-white/50">
+                <span class="text-3xl select-none">🚽</span>
+                <div class="font-mono text-xs font-bold text-amber-300 tracking-widest uppercase">
+                  LEADERBOARD IS EMPTY // CLAIM #1 SPOT
+                </div>
+                <div class="text-[11px] text-white/60 max-w-md">
+                  No operator records logged yet. Complete all 12 collectibles in your vault to immortalize your handle on the All-Time Fame Board!
+                </div>
+              </div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
       list.forEach((entry, idx) => {
         const rank = idx + 1;
         const tier = getRatingTier(entry.score);
@@ -2892,11 +2929,12 @@
         const res = await fetch("/api/leaderboard", { method: "GET" });
         if (res.ok) {
           const remoteData = await res.json();
-          if (Array.isArray(remoteData) && remoteData.length > 0) {
+          if (Array.isArray(remoteData)) {
+            const cleanRemote = remoteData.filter(item => item && !isLegacyMockSeed(item.handle));
             // Merge with any offline submissions in localFameBoard
-            const merged = [...remoteData];
+            const merged = [...cleanRemote];
             localFameBoard.forEach(localItem => {
-              if (!merged.some(m => m.handle.toLowerCase() === localItem.handle.toLowerCase() && m.score === localItem.score)) {
+              if (!isLegacyMockSeed(localItem.handle) && !merged.some(m => m.handle.toLowerCase() === localItem.handle.toLowerCase() && m.score === localItem.score)) {
                 merged.push(localItem);
               }
             });

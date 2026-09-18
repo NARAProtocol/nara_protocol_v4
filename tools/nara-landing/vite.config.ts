@@ -25,25 +25,34 @@ export default defineConfig(({ mode }) => {
               res.end();
               return;
             }
+            const devLeaderboard: any[] = [];
             if (req.url === "/api/leaderboard" || req.url?.startsWith("/api/leaderboard")) {
               res.setHeader("Content-Type", "application/json");
               if (req.method === "POST") {
                 let body = "";
                 req.on("data", (chunk: any) => { body += chunk; });
                 req.on("end", () => {
+                  try {
+                    const data = JSON.parse(body);
+                    if (data && data.handle) {
+                      devLeaderboard.push({
+                        rank: devLeaderboard.length + 1,
+                        handle: data.handle,
+                        score: data.score,
+                        tier: data.tier || "CERTIFIED PURGER",
+                        date: "TODAY"
+                      });
+                      devLeaderboard.sort((a, b) => a.score - b.score);
+                      devLeaderboard.forEach((item, idx) => { item.rank = idx + 1; });
+                    }
+                  } catch (e) {}
                   res.writeHead(200);
-                  res.end(JSON.stringify({ ok: true }));
+                  res.end(JSON.stringify({ ok: true, list: devLeaderboard }));
                 });
                 return;
               }
               res.writeHead(200);
-              res.end(JSON.stringify([
-                { rank: 1, handle: "@Satoshi_Plunger", score: 31, tier: "GOD-TIER PORCELAIN DEITY", date: "Dec 2024" },
-                { rank: 2, handle: "@Vitalik_Roll", score: 38, tier: "ELITE SEWER TACTICIAN", date: "Jan 2025" },
-                { rank: 3, handle: "@Base_General", score: 44, tier: "ELITE SEWER TACTICIAN", date: "Feb 2025" },
-                { rank: 4, handle: "@Degen_Harvester", score: 51, tier: "CERTIFIED PURGER", date: "Feb 2025" },
-                { rank: 5, handle: "@Sewer_Sniper", score: 59, tier: "CERTIFIED PURGER", date: "Mar 2025" }
-              ]));
+              res.end(JSON.stringify(devLeaderboard));
               return;
             }
             next();
