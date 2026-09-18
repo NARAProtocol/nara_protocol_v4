@@ -8,7 +8,7 @@ export interface ContractPillProps {
 
 export default function ContractPill({ className = "" }: ContractPillProps) {
   const [copied, setCopied] = useState(false);
-  const ca = "0xB633...19c1";
+  const ca = "0x91FB...Ae0f";
 
   const handleCopy = () => {
     navigator.clipboard.writeText(PROTOCOL_CONSTANTS.tokenContract);

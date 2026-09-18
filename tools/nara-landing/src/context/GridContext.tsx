@@ -55,6 +55,8 @@ export interface GridContextType {
   countdownStr: string;
   totalGridLocked: ethers.BigNumber;
   activeTotalWeight: ethers.BigNumber;
+  epochEmission: ethers.BigNumber;
+  epochDistributedNara: ethers.BigNumber;
   totalGridCapacity: number;
   occupancyPercentStr: string;
   lockFeeWei: ethers.BigNumber;
@@ -70,6 +72,7 @@ export interface GridContextType {
   slottedTokenIds: ethers.BigNumber[];
   deckSummary: FleetDeckSummary | null;
   userPulseSharePercent: string;
+  userEstimated15mReward: string;
   aggregateClaimableEth: ethers.BigNumber;
   aggregateClaimableNara: ethers.BigNumber;
   aggregateClaimableUsdc: ethers.BigNumber;
@@ -130,6 +133,8 @@ export function GridProvider({
   const [countdownStr, setCountdownStr] = useState<string>("15:00");
   const [totalGridLocked, setTotalGridLocked] = useState<ethers.BigNumber>(ethers.BigNumber.from(0));
   const [activeTotalWeight, setActiveTotalWeight] = useState<ethers.BigNumber>(ethers.BigNumber.from(0));
+  const [epochEmission, setEpochEmission] = useState<ethers.BigNumber>(ethers.BigNumber.from(0));
+  const [epochDistributedNara, setEpochDistributedNara] = useState<ethers.BigNumber>(ethers.BigNumber.from(0));
   const [naraBalance, setNaraBalance] = useState<ethers.BigNumber>(ethers.BigNumber.from(0));
   const [naraAllowance, setNaraAllowance] = useState<ethers.BigNumber>(ethers.BigNumber.from(0));
   const [lockFeeWei, setLockFeeWei] = useState<ethers.BigNumber>(ethers.BigNumber.from("1000000000000"));
@@ -286,6 +291,8 @@ function getInjectedWalletLabel(): string {
             setEpochTimestamp(st.timestamp.toNumber());
             setTotalGridLocked(st.totalLocked);
             setActiveTotalWeight(st.activeTotalWeight);
+            if (st.emission) setEpochEmission(st.emission);
+            if (st.distributedNara) setEpochDistributedNara(st.distributedNara);
           }
           if (preResults[3]?.success) {
             try {
@@ -598,6 +605,25 @@ function getInjectedWalletLabel(): string {
             setUserPositions(SAMPLE_POSITIONS);
             setNaraBalance(ethers.utils.parseEther("12500"));
             setNaraAllowance(ethers.constants.MaxUint256);
+            try {
+              const previewStored = localStorage.getItem("nara_slotted_tokens_preview");
+              if (previewStored !== null) {
+                const parsed = JSON.parse(previewStored);
+                if (Array.isArray(parsed)) {
+                  setSlottedTokenIds(parsed.map((id: string) => ethers.BigNumber.from(id)));
+                }
+              } else {
+                const initialPreviewSlots = [
+                  ethers.BigNumber.from(65),
+                  ethers.BigNumber.from(64),
+                  ethers.BigNumber.from(63),
+                  ethers.BigNumber.from(60),
+                  ethers.BigNumber.from(24),
+                  ethers.BigNumber.from(26),
+                ];
+                setSlottedTokenIds(initialPreviewSlots);
+              }
+            } catch {}
           }
         }
       } catch (err: any) {
@@ -721,6 +747,38 @@ function getInjectedWalletLabel(): string {
     return share < 0.01 && share > 0 ? "< 0.01%" : `${share.toFixed(2)}%`;
   }, [deckSummary, totalUserCells, activeTotalWeight]);
 
+  // User's Estimated 15-Minute Pulse NARA Reward (Live On-Chain Calculation)
+  const userEstimated15mReward = useMemo(() => {
+    // 1. If user is connected and has active cells
+    if (!activeTotalWeight.isZero() && !totalUserCells.isZero()) {
+      const userWeight = deckSummary
+        ? parseFloat(ethers.utils.formatEther(deckSummary.effectiveTotalWeight))
+        : parseFloat(ethers.utils.formatEther(totalUserCells));
+      const totalWeight = parseFloat(ethers.utils.formatEther(activeTotalWeight));
+      if (totalWeight > 0) {
+        const shareRatio = userWeight / totalWeight;
+        const pool = !epochDistributedNara.isZero()
+          ? parseFloat(ethers.utils.formatEther(epochDistributedNara))
+          : !epochEmission.isZero()
+          ? parseFloat(ethers.utils.formatEther(epochEmission))
+          : 0.44695;
+        const reward = shareRatio * pool;
+        if (reward >= 100) return `+${reward.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} NARA`;
+        if (reward >= 10) return `+${reward.toFixed(2)} NARA`;
+        if (reward >= 1) return `+${reward.toFixed(3)} NARA`;
+        if (reward > 0) return `+${reward.toFixed(4)} NARA`;
+        return "0.0000 NARA";
+      }
+    }
+
+    // 2. Mockup / Preview Formation Mode (sample share 9.57% of live on-chain pulse emission)
+    const liveEmission = !epochEmission.isZero()
+      ? parseFloat(ethers.utils.formatEther(epochEmission))
+      : 0.44695;
+    const sampleReward = 0.0957 * liveEmission;
+    return `+${sampleReward.toFixed(4)} NARA`;
+  }, [deckSummary, totalUserCells, activeTotalWeight, epochDistributedNara, epochEmission]);
+
 function isUserRejection(err: any): boolean {
   if (!err) return false;
   if (err.code === 4001 || err.code === "ACTION_REJECTED") return true;
@@ -775,7 +833,7 @@ function isUserRejection(err: any): boolean {
       connect();
       return false;
     }
-    const horizon = DURATION_HORIZONS[horizonIdx];
+    const horizon = DURATION_HORIZONS[horizonIdx] || DURATION_HORIZONS[4];
     let parsed: ethers.BigNumber;
     try {
       parsed = ethers.utils.parseEther(amountInput || "0");
@@ -973,79 +1031,75 @@ function isUserRejection(err: any): boolean {
   };
 
   const handleEquip = async (tokenId: ethers.BigNumber): Promise<boolean> => {
-    if (!wallet || !connectedAddress) {
-      connect();
-      return false;
-    }
-    const targetPos = userPositions.find((p) => p.tokenId.eq(tokenId));
-    if (targetPos?.isSample) {
-      connect();
-      return false;
-    }
     if (slottedTokenIds.some((id) => id.eq(tokenId))) {
       setErrorMsg("Position is already equipped in your active fleet formation.");
       return false;
     }
     if (slottedTokenIds.length >= 6) {
-      setErrorMsg("Fleet Deck is full (maximum 6 formation slots). Unequip a position first.");
+      setErrorMsg("Fleet Deck is full (maximum 6 fleet units). Recall a position first.");
       return false;
     }
     const updated = [...slottedTokenIds, tokenId];
     setSlottedTokenIds(updated);
-    if (connectedAddress) {
-      try {
-        localStorage.setItem(`nara_slotted_tokens_${connectedAddress.toLowerCase()}`, JSON.stringify(updated.map((t) => t.toString())));
-      } catch {}
-    }
+    const storageKey = connectedAddress
+      ? `nara_slotted_tokens_${connectedAddress.toLowerCase()}`
+      : "nara_slotted_tokens_preview";
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(updated.map((t) => t.toString())));
+    } catch {}
     updateDeckSummary(updated);
-    setTxSuccessMsg(`Position #${tokenId.toString()} equipped to Fleet Deck.`);
+    setTxSuccessMsg(`Position #${tokenId.toString()} deployed to Fleet Deck.`);
     return true;
   };
 
   const handleUnequip = async (tokenId: ethers.BigNumber): Promise<boolean> => {
     const updated = slottedTokenIds.filter((id) => !id.eq(tokenId));
     setSlottedTokenIds(updated);
-    if (connectedAddress) {
-      try {
-        localStorage.setItem(`nara_slotted_tokens_${connectedAddress.toLowerCase()}`, JSON.stringify(updated.map((t) => t.toString())));
-      } catch {}
-    }
+    const storageKey = connectedAddress
+      ? `nara_slotted_tokens_${connectedAddress.toLowerCase()}`
+      : "nara_slotted_tokens_preview";
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(updated.map((t) => t.toString())));
+    } catch {}
     updateDeckSummary(updated);
-    setTxSuccessMsg(`Position #${tokenId.toString()} unequipped.`);
+    setTxSuccessMsg(`Position #${tokenId.toString()} recalled to Vault reserve.`);
     return true;
   };
 
   const handleAutoEquipTop6 = async (): Promise<boolean> => {
-    if (userPositions.length === 0) {
+    const pool = userPositions.length > 0 ? userPositions : SAMPLE_POSITIONS;
+    if (pool.length === 0) {
       setErrorMsg("No Position NFTs available to equip.");
       return false;
     }
-    const sorted = [...userPositions].sort((a, b) => {
+    const sorted = [...pool].sort((a, b) => {
       if (b.weight.gt(a.weight)) return 1;
       if (b.weight.lt(a.weight)) return -1;
       return 0;
     });
     const top6 = sorted.slice(0, 6).map((p) => p.tokenId);
     setSlottedTokenIds(top6);
-    if (connectedAddress) {
-      try {
-        localStorage.setItem(`nara_slotted_tokens_${connectedAddress.toLowerCase()}`, JSON.stringify(top6.map((t) => t.toString())));
-      } catch {}
-    }
+    const storageKey = connectedAddress
+      ? `nara_slotted_tokens_${connectedAddress.toLowerCase()}`
+      : "nara_slotted_tokens_preview";
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(top6.map((t) => t.toString())));
+    } catch {}
     updateDeckSummary(top6);
-    setTxSuccessMsg(`Auto-equipped top ${top6.length} positions for maximum formation synergy.`);
+    setTxSuccessMsg(`Auto-deployed top ${top6.length} units to Fleet Deck.`);
     return true;
   };
 
   const handleClearSlots = () => {
     setSlottedTokenIds([]);
     setDeckSummary(null);
-    if (connectedAddress) {
-      try {
-        localStorage.setItem(`nara_slotted_tokens_${connectedAddress.toLowerCase()}`, JSON.stringify([]));
-      } catch {}
-    }
-    setTxSuccessMsg("Fleet Deck cleared.");
+    const storageKey = connectedAddress
+      ? `nara_slotted_tokens_${connectedAddress.toLowerCase()}`
+      : "nara_slotted_tokens_preview";
+    try {
+      localStorage.setItem(storageKey, JSON.stringify([]));
+    } catch {}
+    setTxSuccessMsg("Fleet Deck recalled to Vault reserve.");
   };
 
   const handleHarvestSingle = async (tokenId: ethers.BigNumber): Promise<boolean> => {
@@ -1265,6 +1319,8 @@ function isUserRejection(err: any): boolean {
         countdownStr,
         totalGridLocked,
         activeTotalWeight,
+        epochEmission,
+        epochDistributedNara,
         totalGridCapacity,
         occupancyPercentStr,
         lockFeeWei,
@@ -1278,6 +1334,7 @@ function isUserRejection(err: any): boolean {
         slottedTokenIds,
         deckSummary,
         userPulseSharePercent,
+        userEstimated15mReward,
         aggregateClaimableEth,
         aggregateClaimableNara,
         aggregateClaimableUsdc,

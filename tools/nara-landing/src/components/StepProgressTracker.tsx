@@ -2,7 +2,7 @@ import { CaretRight } from "@phosphor-icons/react";
 import { useGrid } from "../context/GridContext";
 
 export interface StepProgressTrackerProps {
-  activeStep: "swap" | "commit" | "grid" | "vault";
+  activeStep: "swap" | "commit" | "activate" | "grid" | "vault";
   className?: string;
 }
 
@@ -10,7 +10,7 @@ export default function StepProgressTracker({ activeStep, className = "" }: Step
   const { naraBalance, userPositions, slottedTokenIds, aggregateClaimableEth, aggregateClaimableNara, navigate } = useGrid();
 
   const isSwapDone = naraBalance.gt(0) || userPositions.length > 0;
-  const isCommitDone = userPositions.length > 0;
+  const isActivateDone = userPositions.length > 0;
   const isGridDone = slottedTokenIds.length > 0;
   const isVaultReady = !aggregateClaimableEth.isZero() || !aggregateClaimableNara.isZero();
 
@@ -26,12 +26,12 @@ export default function StepProgressTracker({ activeStep, className = "" }: Step
     },
     {
       num: 2,
-      id: "commit",
-      path: "/commit",
-      title: "Commit",
+      id: "activate",
+      path: "/activate",
+      title: "Activate",
       sub: "Choose duration",
-      isDone: isCommitDone,
-      isActive: activeStep === "commit",
+      isDone: isActivateDone,
+      isActive: activeStep === "activate" || activeStep === "commit",
     },
     {
       num: 3,
@@ -54,7 +54,7 @@ export default function StepProgressTracker({ activeStep, className = "" }: Step
   ];
 
   return (
-    <nav aria-label="Protocol Flow Navigation" className={`w-full max-w-[1000px] mx-auto flex items-center justify-between font-sans select-none ${className}`}>
+    <nav aria-label="Protocol Flow Navigation" className={`hidden md:flex w-full max-w-[1000px] mx-auto items-center justify-between font-sans select-none ${className}`}>
       {/* 4 STEPS WITH CARETS */}
       <div className="flex items-center gap-2 sm:gap-3.5 md:gap-5 flex-nowrap overflow-x-auto no-scrollbar">
         {steps.map((step, idx) => {

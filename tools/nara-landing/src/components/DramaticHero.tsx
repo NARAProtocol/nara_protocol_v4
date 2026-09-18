@@ -259,12 +259,12 @@ export default function DramaticHero() {
                 {copied ? (
                   <>
                     <Check size={14} weight="bold" />
-                    <span>0xB633... COPIED</span>
+                    <span>0x91FB... COPIED</span>
                   </>
                 ) : (
                   <>
                     <Copy size={14} weight="bold" className="transition-transform group-hover:scale-110" />
-                    <span>CA: 0xB633...19c1</span>
+                    <span>CA: 0x91FB...Ae0f</span>
                   </>
                 )}
               </button>

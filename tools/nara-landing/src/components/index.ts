@@ -18,6 +18,7 @@ export { default as VisionModal } from "./VisionModal";
 export { default as NaraSwap } from "./NaraSwap";
 export { default as GridStation } from "./GridStation";
 export { default as CommitStation } from "./CommitStation";
+export { default as ActivateStation } from "./CommitStation";
 export { default as GridDeckStation } from "./GridDeckStation";
 export { default as VaultStation } from "./VaultStation";
 export { default as StepProgressTracker } from "./StepProgressTracker";

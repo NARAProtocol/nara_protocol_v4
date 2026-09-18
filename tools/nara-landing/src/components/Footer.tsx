@@ -1,13 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { SOCIAL_LINKS, PROTOCOL_CONSTANTS } from "../lib/content";
 import LegalModal from "./LegalModal";
-import { useGrid } from "../context/GridContext";
 import { 
   TelegramLogo, 
   TwitterLogo, 
   GithubLogo, 
   ShieldCheck, 
-  ArrowsClockwise, 
+  ChartLine, 
   Heart 
 } from "@phosphor-icons/react";
 
@@ -51,35 +50,8 @@ function MetaMaskFoxIcon({ className = "w-3.5 h-3.5" }: { className?: string }) 
 }
 
 export default function Footer({ onOpenLegal, className = "" }: FooterProps) {
-  // Single source of truth: derive the pulse clock from the on-chain epoch state
-  // (same epochTimestamp the Grid telemetry uses) instead of wall-clock UTC math,
-  // eliminating the 2-clock drift between Footer and Grid stations.
-  const { epochTimestamp, currentEpoch } = useGrid();
-  const [timeLeft, setTimeLeft] = useState<{ minutes: number; seconds: number }>({ minutes: 15, seconds: 0 });
-  const [dailyEpoch, setDailyEpoch] = useState(1);
   const [tokenStatus, setTokenStatus] = useState<"idle" | "added" | "copied">("idle");
   const [internalShowLegal, setInternalShowLegal] = useState(false);
-
-  useEffect(() => {
-    const updateEpoch = () => {
-      const nowSec = Math.floor(Date.now() / 1000);
-      const interval = 900; // 15 minutes
-      const elapsed =
-        epochTimestamp > 0
-          ? (nowSec - epochTimestamp) % interval
-          : nowSec % interval; // graceful fallback until first on-chain sync lands
-      const remainingSec = Math.max(0, interval - elapsed);
-      const m = Math.floor(remainingSec / 60);
-      const s = remainingSec % 60;
-      setTimeLeft({ minutes: m, seconds: s });
-      const dailyIdx = Math.floor((nowSec % 86400) / 900) + 1;
-      setDailyEpoch(dailyIdx);
-    };
-
-    updateEpoch();
-    const interval = setInterval(updateEpoch, 1000);
-    return () => clearInterval(interval);
-  }, [epochTimestamp]);
 
   const handleCopyFallback = () => {
     navigator.clipboard.writeText(PROTOCOL_CONSTANTS.tokenContract);
@@ -202,18 +174,19 @@ export default function Footer({ onOpenLegal, className = "" }: FooterProps) {
             </button>
           </div>
 
-          {/* Right: Live 15-Min Pulse (on-chain epoch-derived; EPOCH n/96 = daily slot index) */}
-          <div className="flex items-center gap-1.5 text-silver font-semibold whitespace-nowrap">
-            <ArrowsClockwise size={12} className="text-cyan-400 animate-spin" />
-            <span>
-              PULSE {String(timeLeft.minutes).padStart(2, "0")}:{String(timeLeft.seconds).padStart(2, "0")} (EPOCH {dailyEpoch}/96)
-            </span>
-            {currentEpoch > 0 && (
-              <span className="hidden lg:inline text-cyan-400/90" title="Live protocol epoch counter">
-                · #{currentEpoch}
-              </span>
-              )}
-          </div>
+          {/* Right: DexScreener Live Chart Link */}
+          <a
+            href={SOCIAL_LINKS.dexscreener}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-silver hover:text-white font-semibold whitespace-nowrap transition-colors group"
+            title="View $NARA Chart on DexScreener"
+            aria-label="View $NARA Chart on DexScreener"
+          >
+            <ChartLine size={13} className="text-cyan-400 group-hover:scale-110 transition-transform" />
+            <span>DEXSCREENER</span>
+            <span className="text-[9px] text-white/40 font-mono group-hover:text-cyan-400 transition-colors">[8453]</span>
+          </a>
 
         </div>
 

@@ -60,7 +60,7 @@ export const SUPPORTED_CHAINS: SupportedChain[] = [
 ];
 
 export const NARA_V4_CONFIG = {
-  token: "0xB6333F5D4cEd8dffA80F3F13697D6aA3BB3f19c1",
+  token: "0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f",
   base: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", // USDC
   hook: "0x59AEf9799DEA01A7FB7dA73BEA10dfB08858A088",
   vault: "0xD7f7b44BF65EBa3E90fDe0642687ed22A323084D",
@@ -73,10 +73,25 @@ export const NARA_V4_CONFIG = {
   poolId: "0x83edced1f39e6adf7469cd718eeb409824d948959263408d4cfb6e745c8db464",
 } as const;
 
+export const V3_WETH_USDC_CONFIG = {
+  weth: "0x4200000000000000000000000000000000000006",
+  fee: 500, // 0.05%
+  addressThis: "0x0000000000000000000000000000000000000002",
+} as const;
+
+const WRAP_ETH = 0x0b;
+const V3_SWAP_EXACT_IN = 0x00;
 const V4_SWAP = 0x10;
+const SWEEP = 0x04;
+
 const SWAP_EXACT_IN_SINGLE = 0x06;
+const SETTLE = 0x0b;
 const SETTLE_ALL = 0x0c;
 const TAKE_ALL = 0x0f;
+
+const CONTRACT_BALANCE = ethers.BigNumber.from(
+  "0x8000000000000000000000000000000000000000000000000000000000000000"
+);
 
 const QUOTER_ABI = [
   "function quoteExactInputSingle(((address currency0,address currency1,uint24 fee,int24 tickSpacing,address hooks) poolKey,bool zeroForOne,uint128 exactAmount,bytes hookData) params) returns (uint256 amountOut,uint256 gasEstimate)",
@@ -88,10 +103,11 @@ export interface UnifiedQuoteResult {
   exchangeRate: string;
   fromUsd: number;
   toUsd: number;
-  routeType: "v4_hook" | "kyber" | "composite";
+  routeType: "v4_hook" | "kyber" | "composite" | "v4_atomic_eth";
   routeLabel: string;
   routeSummary?: any;
   gasEstimate?: string;
+  intermediateUsdcWei?: string;
 }
 
 /**
@@ -214,15 +230,18 @@ export async function getCompositeTokenToNaraQuote(
   const finalOutNum = parseFloat(hookStep.amountOutFormatted.replace(/,/g, ""));
   const rate = num > 0 ? (finalOutNum / num).toFixed(6) : "0";
 
+  const isEth = tokenIn.symbol === "ETH";
+
   return {
     amountOut: hookStep.amountOut,
     amountOutFormatted: hookStep.amountOutFormatted,
     exchangeRate: rate,
     fromUsd: kyberStep.fromUsd,
     toUsd: hookStep.toUsd,
-    routeType: "composite",
-    routeLabel: `${tokenIn.symbol} → USDC (Kyber) → NARA (v4 Hook)`,
-    gasEstimate: "< 0.0002 ETH",
+    routeType: isEth ? "v4_atomic_eth" : "composite",
+    routeLabel: isEth ? "1-Click Atomic (ETH → USDC → NARA)" : `${tokenIn.symbol} → USDC (Kyber) → NARA (v4 Hook)`,
+    gasEstimate: isEth ? "< 0.00015 ETH" : "< 0.0002 ETH",
+    intermediateUsdcWei: ethers.utils.parseUnits(usdcAmount, 6).toString(),
   };
 }
 
@@ -315,3 +334,56 @@ export function buildV4SwapCall(
     inputs: [v4Input],
   };
 }
+
+/**
+ * Builds atomic Universal Router calldata for a 1-click ETH -> NARA swap:
+ * 1. 0x0b (WRAP_ETH) -> wraps native msg.value ETH to WETH in router (ADDRESS_THIS)
+ * 2. 0x00 (V3_SWAP_EXACT_IN) -> swaps WETH to USDC on 0.05% v3 pool in router (ADDRESS_THIS)
+ * 3. 0x10 (V4_SWAP) -> swaps USDC into NARA on v4 Hook with SETTLE(CONTRACT_BALANCE, payerIsUser: false) and TAKE_ALL to user
+ * 4. 0x04 (SWEEP) -> sweeps any residual dust USDC back to user
+ * ZERO token approvals required because transaction starts with native ETH!
+ */
+export function buildEthToNaraSwapCall(
+  ethAmountWei: ethers.BigNumberish,
+  recipientAddress: string,
+  minUsdcAmountWei: ethers.BigNumberish,
+  minNaraAmountWei: ethers.BigNumberish = 0
+): { commands: string; inputs: string[]; value: ethers.BigNumberish } {
+  const abi = ethers.utils.defaultAbiCoder;
+
+  // 1. WRAP_ETH (0x0b): recipient = ADDRESS_THIS
+  const wrapInput = abi.encode(["address", "uint256"], [V3_WETH_USDC_CONFIG.addressThis, ethAmountWei]);
+
+  // 2. V3_SWAP_EXACT_IN (0x00): recipient = ADDRESS_THIS, path = WETH -> 0.05% -> USDC, payerIsUser = false
+  const path = ethers.utils.solidityPack(
+    ["address", "uint24", "address"],
+    [V3_WETH_USDC_CONFIG.weth, V3_WETH_USDC_CONFIG.fee, NARA_V4_CONFIG.base]
+  );
+  const v3SwapInput = abi.encode(
+    ["address", "uint256", "uint256", "bytes", "bool"],
+    [V3_WETH_USDC_CONFIG.addressThis, ethAmountWei, minUsdcAmountWei, path, false]
+  );
+
+  // 3. V4_SWAP (0x10):
+  const poolKey = [NARA_V4_CONFIG.base, NARA_V4_CONFIG.token, NARA_V4_CONFIG.fee, NARA_V4_CONFIG.tickSpacing, NARA_V4_CONFIG.hook];
+
+  const swapParams = abi.encode(
+    ["tuple(tuple(address,address,uint24,int24,address) poolKey,bool zeroForOne,uint128 amountIn,uint128 amountOutMinimum,bytes hookData)"],
+    [[poolKey, true, minUsdcAmountWei, minNaraAmountWei, "0x"]]
+  );
+  const settleParams = abi.encode(["address", "uint256", "bool"], [NARA_V4_CONFIG.base, CONTRACT_BALANCE, false]);
+  const takeParams = abi.encode(["address", "uint256"], [NARA_V4_CONFIG.token, minNaraAmountWei]);
+
+  const actions = ethers.utils.hexlify(new Uint8Array([SWAP_EXACT_IN_SINGLE, SETTLE, TAKE_ALL]));
+  const v4Input = abi.encode(["bytes", "bytes[]"], [actions, [swapParams, settleParams, takeParams]]);
+
+  // 4. SWEEP (0x04): sweep any residual dust USDC to recipient
+  const sweepInput = abi.encode(["address", "address", "uint256"], [NARA_V4_CONFIG.base, recipientAddress, 0]);
+
+  return {
+    commands: ethers.utils.hexlify(new Uint8Array([WRAP_ETH, V3_SWAP_EXACT_IN, V4_SWAP, SWEEP])),
+    inputs: [wrapInput, v3SwapInput, v4Input, sweepInput],
+    value: ethAmountWei,
+  };
+}
+

@@ -11,7 +11,7 @@ export const PROTOCOL_CONSTANTS = {
   chainId: 8453,
   
   // Authoritative Core Contracts
-  tokenContract: "0xB6333F5D4cEd8dffA80F3F13697D6aA3BB3f19c1",
+  tokenContract: "0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f",
   engineContract: "0x98ab6406D6B548F37dEF7110961bb45A399e5aFC",
   hookContract: "0x59AEf9799DEA01A7FB7dA73BEA10dfB08858A088",
   hookBitmask: "0x2088",

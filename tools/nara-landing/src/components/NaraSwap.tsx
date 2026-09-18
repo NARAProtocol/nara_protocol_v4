@@ -6,17 +6,18 @@ import {
   CaretRight,
   ArrowsDownUp,
   ArrowsLeftRight,
-  Clock,
-  SlidersHorizontal,
-  ChartBar,
-  SquaresFour,
   WarningCircle,
   X,
   CheckCircle,
   MagnifyingGlass,
+  Check,
+  Copy,
+  ArrowSquareOut,
+  ChartLine,
+  ShieldCheck,
   Globe,
+  SlidersHorizontal,
 } from "@phosphor-icons/react";
-import StepProgressTracker from "./StepProgressTracker";
 import { useGrid } from "../context/GridContext";
 import {
   NARA_BASE_TOKENS,
@@ -30,11 +31,45 @@ import {
   NARA_V4_CONFIG,
   getUnifiedQuote,
   buildV4SwapCall,
+  buildEthToNaraSwapCall,
   type SupportedChain,
   type UnifiedQuoteResult,
 } from "../lib/dexRouter";
 
 const KYBER_ROUTER_ADDRESS = "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5";
+
+function MetaMaskFoxIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg 
+      fill="none" 
+      viewBox="0 0 35 33" 
+      xmlns="http://www.w3.org/2000/svg"
+      className={`${className} shrink-0`}
+    >
+      <g strokeLinecap="round" strokeLinejoin="round" strokeWidth=".25">
+        <path d="m32.9582 1-13.1341 9.7183 2.4424-5.72731z" fill="#e17726" stroke="#e17726"/>
+        <g fill="#e27625" stroke="#e27625">
+          <path d="m2.66296 1 13.01714 9.809-2.3254-5.81802z"/>
+          <path d="m28.2295 23.5335-3.4947 5.3386 7.4829 2.0603 2.1436-7.2823z"/>
+          <path d="m1.27281 23.6501 2.13055 7.2823 7.46994-2.0603-3.48166-5.3386z"/>
+          <path d="m10.4706 14.5149-2.0786 3.1358 7.405.3369-.2469-7.969z"/>
+          <path d="m25.1505 14.5149-5.1575-4.58704-.1688 8.05974 7.4049-.3369z"/>
+          <path d="m10.8733 28.8721 4.4819-2.1639-3.8583-3.0062z"/>
+          <path d="m20.2659 26.7082 4.4689 2.1639-.6105-5.1701z"/>
+        </g>
+        <path d="m24.7348 28.8721-4.469-2.1639.3638 2.9025-.039 1.231z" fill="#d5bfb2" stroke="#d5bfb2"/>
+        <path d="m10.8732 28.8721 4.1572 1.9696-.026-1.231.3508-2.9025z" fill="#d5bfb2" stroke="#d5bfb2"/>
+        <path d="m15.1084 21.7842-3.7155-1.0884 2.6243-1.2051z" fill="#233447" stroke="#233447"/>
+        <path d="m20.5126 21.7842 1.0913-2.2935 2.6372 1.2051z" fill="#233447" stroke="#233447"/>
+        <path d="m10.8733 28.8721.6495-5.3386-4.13117.1167z" fill="#cc6228" stroke="#cc6228"/>
+        <path d="m24.0982 23.5335.6366 5.3386 3.4946-5.2219z" fill="#cc6228" stroke="#cc6228"/>
+        <path d="m27.2291 17.6507-7.405.3369.6885 3.7966 1.0913-2.2935 2.6372 1.2051z" fill="#cc6228" stroke="#cc6228"/>
+        <path d="m11.3929 20.6958 2.6242-1.2051 1.0913 2.2935.6885-3.7966-7.40495-.3369z" fill="#cc6228" stroke="#cc6228"/>
+        <path d="m8.392 17.6507 3.1049 6.0513-.1039-3.0062z" fill="#e27525" stroke="#e27525"/>
+      </g>
+    </svg>
+  );
+}
 
 export default function NaraSwap() {
   const {
@@ -45,7 +80,6 @@ export default function NaraSwap() {
     handleSwitchToBase,
     fetchState,
     naraBalance,
-    navigate,
   } = useGrid();
 
   // Active Network
@@ -84,6 +118,40 @@ export default function NaraSwap() {
   const [isSwapping, setIsSwapping] = useState<boolean>(false);
   const [swapError, setSwapError] = useState<string | null>(null);
   const [swapSuccess, setSwapSuccess] = useState<string | null>(null);
+  const [copiedContract, setCopiedContract] = useState<boolean>(false);
+  const [metamaskStatus, setMetamaskStatus] = useState<"idle" | "added" | "copied">("idle");
+
+  const handleAddToMetaMask = async () => {
+    if (typeof window !== "undefined" && (window as any).ethereum) {
+      try {
+        const wasAdded = await (window as any).ethereum.request({
+          method: "wallet_watchAsset",
+          params: {
+            type: "ERC20",
+            options: {
+              address: NARA_TOKEN_ADDRESS,
+              symbol: "NARA",
+              decimals: 18,
+              image: "https://naraprotocol.com/nara_token_256.png",
+            },
+          },
+        });
+        if (wasAdded) {
+          setMetamaskStatus("added");
+          setTimeout(() => setMetamaskStatus("idle"), 3000);
+        }
+      } catch (err) {
+        console.warn("wallet_watchAsset error:", err);
+        navigator.clipboard.writeText(NARA_TOKEN_ADDRESS);
+        setMetamaskStatus("copied");
+        setTimeout(() => setMetamaskStatus("idle"), 3000);
+      }
+    } else {
+      navigator.clipboard.writeText(NARA_TOKEN_ADDRESS);
+      setMetamaskStatus("copied");
+      setTimeout(() => setMetamaskStatus("idle"), 3000);
+    }
+  };
 
   // Fetch Balances
   useEffect(() => {
@@ -295,8 +363,48 @@ export default function NaraSwap() {
       const isUsdcOut = toToken.address.toLowerCase() === NARA_V4_CONFIG.base.toLowerCase();
       const isNaraOut = toToken.address.toLowerCase() === NARA_V4_CONFIG.token.toLowerCase();
       const isDirectHookTrade = isBase && ((isUsdcIn && isNaraOut) || (isNaraIn && isUsdcOut));
+      const isEthToNara = isBase && fromToken.symbol === "ETH" && isNaraOut;
 
-      if (isDirectHookTrade) {
+      if (isEthToNara) {
+        // =====================================================================
+        // PATH C: 1-CLICK ATOMIC NATIVE ETH -> NARA (WRAP -> V3 -> V4 -> SWEEP)
+        // =====================================================================
+        // ZERO APPROVALS NEEDED! Native ETH is sent directly in value.
+        const currentBlock = await provider.getBlock("latest");
+        const deadline = currentBlock.timestamp + (txDeadlineMinutes * 60);
+
+        // Calculate minimum output with user slippage tolerance
+        const minNaraNum = parseFloat(toAmountOutput.replace(/,/g, "")) * (1 - slippageTolerance / 10000);
+        const minNaraWei = ethers.utils.parseUnits(
+          Math.max(minNaraNum, 0).toFixed(toToken.decimals),
+          toToken.decimals
+        );
+
+        // Expected intermediate USDC (from quote or fallback estimation)
+        const estUsdcWei = quoteResult?.intermediateUsdcWei
+          ? ethers.BigNumber.from(quoteResult.intermediateUsdcWei)
+          : ethers.utils.parseUnits((parseFloat(cleanAmount) * 2500).toFixed(6), 6);
+        const minUsdcWei = estUsdcWei.mul(10000 - slippageTolerance).div(10000);
+
+        const callData = buildEthToNaraSwapCall(
+          amountInWei,
+          connectedAddress,
+          minUsdcWei,
+          minNaraWei
+        );
+
+        const routerAbi = [
+          "function execute(bytes commands, bytes[] inputs, uint256 deadline) payable",
+        ];
+        const routerContract = new ethers.Contract(NARA_V4_CONFIG.universalRouter, routerAbi, signer);
+        const tx = await routerContract.execute(callData.commands, callData.inputs, deadline, {
+          value: callData.value,
+          gasLimit: 850000,
+        });
+        await tx.wait(1);
+
+        setSwapSuccess(`Successfully swapped ${cleanAmount} ETH to NARA in 1 click!`);
+      } else if (isDirectHookTrade) {
         // =====================================================================
         // PATH A: DIRECT UNISWAP V4 HOOK EXECUTION (USDC <-> NARA)
         // =====================================================================
@@ -412,13 +520,6 @@ export default function NaraSwap() {
       }
 
       if (fetchState) fetchState();
-
-      // Proceed to Step 2 if user acquired NARA
-      if (toToken.symbol === "NARA") {
-        setTimeout(() => {
-          navigate("/commit");
-        }, 1200);
-      }
     } catch (err: any) {
       console.error("Swap execution error:", err);
       const msg = err?.reason || err?.data?.message || err?.message || "Transaction was rejected or failed.";
@@ -464,35 +565,31 @@ export default function NaraSwap() {
   }, [selectedChain.id, tokenSearchQuery]);
 
   return (
-    <main className="w-full flex-1 flex flex-col items-center justify-center px-2 sm:px-4 py-2 sm:py-3 font-sans select-none nara-dex-chassis">
+    <main className="w-full flex-1 flex flex-col items-center justify-start md:justify-center px-2 sm:px-4 py-2 sm:py-4 pb-28 md:pb-6 font-sans select-none nara-dex-chassis">
       {/* ========================================================================= */}
-      {/* TOP CONTROL BAR (PIXEL-PERFECT AS IN USER REFERENCE IMAGE)                */}
-      {/* ========================================================================= */}
-      <div className="w-full flex justify-center mb-3 sm:mb-4">
-        <StepProgressTracker activeStep="swap" />
-      </div>
-
-      {/* ========================================================================= */}
-      {/* MAIN 2-CARD COMMAND CONSOLE (998px WIDTH MATCHING REFERENCE)               */}
+      {/* MAIN 2-CARD COMMAND CONSOLE (1000px WIDTH MATCHING REFERENCE)              */}
       {/* ========================================================================= */}
       <div className="w-full max-w-[1000px] grid grid-cols-1 lg:grid-cols-[620px_1fr] gap-3 sm:gap-3.5 items-stretch">
         
         {/* ======================================================================= */}
-        {/* LEFT CARD: GET NARA TO JOIN THE GRID                                   */}
+        {/* LEFT CARD: SWAP $NARA ON BASE                                          */}
         {/* ======================================================================= */}
-        <div className="rounded-2xl bg-[#04091a]/95 border border-[#0d1d36]/80 p-4 sm:p-5 shadow-2xl backdrop-blur-xl flex flex-col justify-between space-y-3">
+        <div className="rounded-2xl bg-[#04091a]/95 border border-[#0d1d36]/80 p-3 sm:p-5 shadow-2xl backdrop-blur-xl flex flex-col justify-between space-y-2 sm:space-y-3">
           
           {/* Header */}
           <div className="flex items-start justify-between gap-3">
-            <div className="space-y-1">
+            <div className="space-y-0.5 sm:space-y-1">
               <div className="flex items-center gap-2">
-                <Lightning size={22} weight="fill" className="text-[#00F0FF] drop-shadow-[0_0_8px_rgba(0,240,255,0.7)] shrink-0" />
-                <h2 className="text-[19px] sm:text-[21px] font-bold text-white tracking-tight font-sans">
-                  Get NARA to Join the Grid
+                <Lightning size={20} weight="fill" className="text-[#00F0FF] drop-shadow-[0_0_8px_rgba(0,240,255,0.7)] shrink-0" />
+                <h2 className="text-[18px] sm:text-[21px] font-bold text-white tracking-tight font-sans">
+                  Swap $NARA on Base
                 </h2>
               </div>
-              <p className="text-[12px] sm:text-[12.5px] text-[#8fa1b8] leading-relaxed pl-7 sm:pl-7">
-                Swap your tokens for <span className="text-[#00F0FF] font-semibold">NARA</span>. The NARA you receive will be used in the next step to join the Sovereign Grid and generate Active Cells.
+              <p className="hidden sm:block text-[12px] sm:text-[12.5px] text-[#8fa1b8] leading-relaxed pl-7 sm:pl-7">
+                Swap USDC or any Base token directly into <span className="text-[#00F0FF] font-semibold">$NARA</span> via Uniswap v4 Hook liquidity with direct 0% routing fee.
+              </p>
+              <p className="sm:hidden text-[11px] text-[#8fa1b8] pl-6 leading-tight">
+                Swap tokens for <span className="text-[#00F0FF] font-semibold">$NARA</span> directly on Base Mainnet.
               </p>
             </div>
 
@@ -681,16 +778,29 @@ export default function NaraSwap() {
             <div className="flex items-center gap-2 text-[#00F0FF] min-w-0">
               <span className="w-1.5 h-1.5 rounded-full bg-[#00F0FF] shadow-[0_0_6px_#00F0FF] animate-pulse shrink-0" />
               <span className="font-semibold tracking-wide truncate">
-                {quoteResult?.routeLabel || (selectedChain.id === 8453 && toToken.symbol === "NARA" ? "Uniswap v4 NARA Hook (Direct 0% Routing Fee)" : "Kyber Multi-DEX Aggregator")}
+                <span className="sm:hidden">
+                  {quoteResult?.routeType === "v4_hook" || (selectedChain.id === 8453 && toToken.symbol === "NARA")
+                    ? "Uniswap v4 NARA Hook"
+                    : quoteResult?.routeLabel || "Kyber Multi-DEX"}
+                </span>
+                <span className="hidden sm:inline">
+                  {quoteResult?.routeLabel || (selectedChain.id === 8453 && toToken.symbol === "NARA" ? "Uniswap v4 NARA Hook (Direct 0% Routing Fee)" : "Kyber Multi-DEX Aggregator")}
+                </span>
               </span>
             </div>
-            <span className="text-[#5c6d84] text-[10.5px] shrink-0 ml-2">
-              {quoteResult?.routeType === "v4_hook" ? "Direct On-Chain" : quoteResult?.routeType === "composite" ? "Auto-Routed" : "Best Execution"}
+            <span className="text-[#5c6d84] text-[10px] sm:text-[10.5px] shrink-0 ml-2">
+              {quoteResult?.routeType === "v4_hook"
+                ? "Direct On-Chain"
+                : quoteResult?.routeType === "v4_atomic_eth"
+                ? "1-Click Atomic"
+                : quoteResult?.routeType === "composite"
+                ? "Auto-Routed"
+                : "Best Execution"}
             </span>
           </div>
 
           {/* METRICS ROW */}
-          <div className="rounded-xl bg-[#020612] border border-[#132640] p-2.5 px-3.5 flex items-center justify-between text-xs">
+          <div className="rounded-xl bg-[#020612] border border-[#132640] p-2 px-3 sm:p-2.5 sm:px-3.5 flex items-center justify-between text-xs">
             {/* Exchange Rate */}
             <div className="flex items-center gap-2 font-mono text-[11px] sm:text-[11.5px] text-white">
               <span>1 {fromToken.symbol} = {exchangeRate} {toToken.symbol}</span>
@@ -709,8 +819,8 @@ export default function NaraSwap() {
 
             {/* Network Fee */}
             <div className="flex flex-col items-center">
-              <span className="text-[#8fa1b8] text-[10.5px]">Network Fee (est.)</span>
-              <span className="text-white font-mono text-[11.5px] font-semibold">&lt; 0.0001 ETH</span>
+              <span className="text-[#8fa1b8] text-[10px] sm:text-[10.5px]">Network Fee</span>
+              <span className="text-white font-mono text-[11px] sm:text-[11.5px] font-semibold">&lt; 0.0001 ETH</span>
             </div>
 
             {/* Subtle Divider */}
@@ -718,11 +828,11 @@ export default function NaraSwap() {
 
             {/* Slippage */}
             <div className="flex flex-col items-end">
-              <span className="text-[#8fa1b8] text-[10.5px]">Slippage</span>
+              <span className="text-[#8fa1b8] text-[10px] sm:text-[10.5px]">Slippage</span>
               <button
                 type="button"
                 onClick={() => setShowSlippageModal(!showSlippageModal)}
-                className="text-white hover:text-[#00F0FF] font-mono text-[11.5px] font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+                className="text-white hover:text-[#00F0FF] font-mono text-[11px] sm:text-[11.5px] font-semibold flex items-center gap-1 cursor-pointer transition-colors"
                 title="Adjust slippage tolerance"
               >
                 <span>{isAutoSlippage ? `Auto (${(slippageTolerance / 100).toFixed(1)}%)` : `${(slippageTolerance / 100).toFixed(1)}%`}</span>
@@ -732,118 +842,202 @@ export default function NaraSwap() {
           </div>
 
           {/* BOTTOM ACTION PANEL */}
-          <div className="rounded-xl bg-[#020714] border border-[#00F0FF]/40 p-3 px-4 flex items-center justify-between gap-3 shadow-[0_0_16px_rgba(0,240,255,0.1)]">
+          <div className="rounded-xl bg-[#020714] border border-[#00F0FF]/40 p-2.5 px-3.5 sm:p-3 sm:px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3 shadow-[0_0_16px_rgba(0,240,255,0.1)]">
             <div className="min-w-0">
-              <span className="text-[#00F0FF] text-[11px] font-medium block leading-tight">You will receive</span>
-              <div className="flex items-baseline gap-2 pt-0.5 truncate">
-                <span className="text-white font-bold text-[19px] sm:text-[21px] tracking-tight font-sans truncate">
+              <span className="text-[#00F0FF] text-[10.5px] sm:text-[11px] font-medium block leading-tight">You will receive</span>
+              <div className="flex items-baseline gap-2 pt-0.5 flex-wrap">
+                <span className="text-white font-bold text-[18px] sm:text-[21px] tracking-tight font-sans">
                   {toAmountOutput || "0"} {toToken.symbol}
                 </span>
-                <span className="text-[#5c6d84] font-mono text-[11.5px] truncate">
+                <span className="text-[#5c6d84] font-mono text-[11px] sm:text-[11.5px]">
                   (~${toUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
                 </span>
               </div>
             </div>
 
-            <div className="flex flex-col items-center shrink-0">
+            <div className="flex flex-col items-center w-full sm:w-auto shrink-0">
               <button
                 type="button"
                 onClick={handleSwapClick}
                 disabled={isSwapping}
-                className="h-[43px] px-6 sm:px-7 rounded-xl bg-[#00F0FF] hover:bg-[#33f3ff] text-[#022428] font-sans font-bold text-[13.5px] tracking-wide transition-all shadow-[0_0_24px_rgba(0,240,255,0.75)] hover:shadow-[0_0_32px_rgba(0,240,255,0.95)] flex items-center justify-center active:scale-95 disabled:opacity-50 cursor-pointer select-none"
+                className="w-full sm:w-auto h-[42px] sm:h-[43px] px-6 sm:px-7 rounded-xl bg-[#00F0FF] hover:bg-[#33f3ff] text-[#022428] font-sans font-bold text-[13.5px] tracking-wide transition-all shadow-[0_0_24px_rgba(0,240,255,0.75)] hover:shadow-[0_0_32px_rgba(0,240,255,0.95)] flex items-center justify-center active:scale-95 disabled:opacity-50 cursor-pointer select-none"
               >
-                <span>{isSwapping ? "Swapping..." : toToken.symbol === "NARA" ? "Swap & Continue →" : "Swap Tokens →"}</span>
+                <span>
+                  {isSwapping
+                    ? "Swapping..."
+                    : toToken.symbol === "NARA"
+                    ? fromToken.symbol === "ETH"
+                      ? "Swap ETH → NARA (1-Click)"
+                      : "Swap $NARA"
+                    : "Swap Tokens"}
+                </span>
               </button>
-              <span className="text-[#5c6d84] text-[9.5px] tracking-tight mt-1 select-none">
-                {toToken.symbol === "NARA" ? "Swap and proceed to commit setup" : "Execute instant multi-DEX swap"}
+              <span className="text-[#5c6d84] text-[9.5px] tracking-tight mt-1 select-none text-center">
+                {fromToken.symbol === "ETH" && toToken.symbol === "NARA"
+                  ? "Atomic 1-click on-chain execution (Zero token approvals)"
+                  : toToken.symbol === "NARA"
+                  ? "Direct Uniswap v4 Hook liquidity on Base"
+                  : "Execute instant multi-DEX swap"}
               </span>
             </div>
           </div>
         </div>
 
         {/* ======================================================================= */}
-        {/* RIGHT CARD: COMMIT SETUP COMPANION CARD                                */}
+        {/* RIGHT CARD: OFFICIAL $NARA TOKEN & NETWORK TELEMETRY CARD               */}
         {/* ======================================================================= */}
-        <div className="rounded-2xl bg-[#04091a]/95 border border-[#0d1d36]/80 p-4 sm:p-5 shadow-2xl backdrop-blur-xl flex flex-col justify-between space-y-3">
+        <div className="rounded-2xl bg-[#04091a]/95 border border-[#0d1d36]/80 p-4 sm:p-5 shadow-2xl backdrop-blur-xl flex flex-col justify-between space-y-3.5">
           
-          {/* Header */}
-          <div>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full border-2 border-[#00F0FF] bg-[#00F0FF]/10 text-[#00F0FF] flex items-center justify-center font-bold text-[17px] shadow-[0_0_14px_rgba(0,240,255,0.4)] shrink-0">
-                2
-              </div>
-              <div>
-                <span className="text-[#00F0FF] font-bold text-[9.5px] tracking-[0.14em] uppercase block">
-                  NEXT STEP
-                </span>
-                <h3 className="text-[20px] sm:text-[21px] font-bold text-white tracking-tight leading-tight mt-0.5">
-                  Commit Setup
-                </h3>
-              </div>
+          {/* Card Header with Verified Badge */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_#34d399]" />
+                BASE MAINNET (8453)
+              </span>
+              <span className="text-[10px] font-mono text-[#5c6d84]">
+                HOOK v4 NATIVE
+              </span>
             </div>
-            <p className="text-[12px] text-[#8fa1b8] leading-relaxed pt-2">
-              Your swapped NARA will be ready to commit in the next step.
+            <div className="flex items-center gap-2.5 pt-1">
+              <img
+                src="/nara-circle-256.png"
+                alt="NARA Token"
+                className="w-7 h-7 rounded-full object-contain border border-[#00F0FF]/30 shadow-[0_0_10px_rgba(0,240,255,0.3)] shrink-0"
+              />
+              <h3 className="text-[19px] sm:text-[20px] font-bold text-white tracking-tight leading-tight">
+                Official $NARA Token
+              </h3>
+            </div>
+            <p className="text-[12px] text-[#8fa1b8] leading-relaxed">
+              Canonical ERC-20 contract for the NARA Sovereign Grid with 100% ETH fee-routing Uniswap v4 Hook.
             </p>
           </div>
 
-          {/* Timeline Feature Steps */}
-          <div className="py-2 space-y-4 relative">
-            {/* Subtle Vertical Connecting Line */}
-            <div className="absolute left-4 top-4 bottom-4 w-[1px] bg-[#142948]" />
-
-            {/* Step 1 */}
-            <div className="relative flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-[#091426] border border-[#1b3252] flex items-center justify-center text-[#8fa1b8] shrink-0 z-10 shadow-sm">
-                <Clock size={16} weight="bold" />
-              </div>
-              <div>
-                <div className="text-white font-semibold text-[13px] leading-tight">Choose Amount</div>
-                <div className="text-[#8fa1b8] text-[10.5px] leading-tight mt-0.5">Set how much NARA to commit</div>
-              </div>
+          {/* Contract Address Copy Box */}
+          <div className="rounded-xl bg-[#020612] border border-[#132640] p-3 space-y-1.5 shadow-inner">
+            <div className="flex items-center justify-between text-[11px] text-[#8fa1b8] font-mono">
+              <span>CONTRACT ADDRESS</span>
+              <span className="text-[10px] text-emerald-400 font-semibold">VERIFIED</span>
             </div>
-
-            {/* Step 2 */}
-            <div className="relative flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-[#091426] border border-[#1b3252] flex items-center justify-center text-[#8fa1b8] shrink-0 z-10 shadow-sm">
-                <SlidersHorizontal size={16} weight="bold" />
-              </div>
-              <div>
-                <div className="text-white font-semibold text-[13px] leading-tight">Select Duration</div>
-                <div className="text-[#8fa1b8] text-[10.5px] leading-tight mt-0.5">1 day – 365 days</div>
-              </div>
-            </div>
-
-            {/* Step 3 */}
-            <div className="relative flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-[#091426] border border-[#1b3252] flex items-center justify-center text-[#8fa1b8] shrink-0 z-10 shadow-sm">
-                <ChartBar size={16} weight="bold" />
-              </div>
-              <div>
-                <div className="text-white font-semibold text-[13px] leading-tight">Generate Active Cells</div>
-                <div className="text-[#8fa1b8] text-[10.5px] leading-tight mt-0.5">Start earning your place in the network</div>
-              </div>
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-mono text-xs sm:text-[13px] font-bold text-white tracking-tight truncate">
+                0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText("0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f");
+                  setCopiedContract(true);
+                  setTimeout(() => setCopiedContract(false), 2000);
+                }}
+                className="px-2.5 py-1 rounded-lg bg-[#091426] hover:bg-[#132640] border border-[#1b3252] text-[#8fa1b8] hover:text-white text-[10px] font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
+                title="Copy Contract Address"
+              >
+                {copiedContract ? (
+                  <>
+                    <Check size={12} className="text-emerald-400" />
+                    <span className="text-emerald-300">COPIED</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy size={12} />
+                    <span>COPY</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
 
-          {/* Bottom Callout Box */}
+          {/* Prominent "Add to MetaMask" Action Button */}
           <button
             type="button"
-            onClick={() => navigate("/commit")}
-            className="w-full rounded-xl bg-[#020612] hover:bg-[#061026] border border-[#142948] hover:border-[#1e3e6b] p-2.5 px-3 flex items-center justify-between text-left transition-all cursor-pointer group mt-auto shadow-sm"
+            onClick={handleAddToMetaMask}
+            className={`w-full py-2.5 px-4 rounded-xl border text-xs sm:text-[13px] font-mono font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md ${
+              metamaskStatus === "added"
+                ? "bg-emerald-500/20 border-emerald-400 text-emerald-300 shadow-[0_0_16px_rgba(52,211,153,0.3)]"
+                : metamaskStatus === "copied"
+                ? "bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-[0_0_16px_rgba(0,240,255,0.3)]"
+                : "bg-gradient-to-r from-[#e27625]/20 to-[#e27625]/10 hover:from-[#e27625]/30 hover:to-[#e27625]/20 border-[#e27625]/40 hover:border-[#e27625] text-white hover:shadow-[0_0_16px_rgba(226,118,37,0.35)]"
+            }`}
+          >
+            <MetaMaskFoxIcon className="w-4 h-4" />
+            <span>
+              {metamaskStatus === "added"
+                ? "ADDED TO METAMASK!"
+                : metamaskStatus === "copied"
+                ? "CA COPIED TO CLIPBOARD"
+                : "ADD $NARA TO METAMASK"}
+            </span>
+          </button>
+
+          {/* Token Specification Grid */}
+          <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+            <div className="p-2 sm:p-2.5 rounded-xl bg-[#020612]/70 border border-[#132640]/70">
+              <span className="text-[10px] text-[#5c6d84] block">TOTAL SUPPLY</span>
+              <span className="text-white font-bold text-xs sm:text-[12.5px] mt-0.5 block">1,000,000 NARA</span>
+            </div>
+            <div className="p-2 sm:p-2.5 rounded-xl bg-[#020612]/70 border border-[#132640]/70">
+              <span className="text-[10px] text-[#5c6d84] block">DECIMALS</span>
+              <span className="text-white font-bold text-xs sm:text-[12.5px] mt-0.5 block">18 (Standard)</span>
+            </div>
+            <div className="p-2 sm:p-2.5 rounded-xl bg-[#020612]/70 border border-[#132640]/70">
+              <span className="text-[10px] text-[#5c6d84] block">POOL PAIR</span>
+              <span className="text-[#00F0FF] font-bold text-xs sm:text-[12.5px] mt-0.5 block">USDC / NARA</span>
+            </div>
+            <div className="p-2 sm:p-2.5 rounded-xl bg-[#020612]/70 border border-[#132640]/70">
+              <span className="text-[10px] text-[#5c6d84] block">ROUTING FEE</span>
+              <span className="text-emerald-400 font-bold text-xs sm:text-[12.5px] mt-0.5 block">0% Direct</span>
+            </div>
+          </div>
+
+          {/* Quick Ecosystem Links */}
+          <div className="grid grid-cols-2 gap-2 pt-0.5">
+            <a
+              href="https://dexscreener.com/base/0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-2 rounded-xl bg-[#020612] hover:bg-[#091426] border border-[#142948] hover:border-[#00F0FF]/40 text-[#8fa1b8] hover:text-white flex items-center justify-between text-xs font-mono font-medium transition-all group"
+            >
+              <div className="flex items-center gap-1.5">
+                <ChartLine size={14} className="text-[#00F0FF] group-hover:scale-110 transition-transform" />
+                <span>Live Chart</span>
+              </div>
+              <ArrowSquareOut size={12} className="opacity-60 group-hover:opacity-100" />
+            </a>
+
+            <a
+              href="https://basescan.org/token/0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-2 rounded-xl bg-[#020612] hover:bg-[#091426] border border-[#142948] hover:border-[#00F0FF]/40 text-[#8fa1b8] hover:text-white flex items-center justify-between text-xs font-mono font-medium transition-all group"
+            >
+              <div className="flex items-center gap-1.5">
+                <ShieldCheck size={14} className="text-emerald-400 group-hover:scale-110 transition-transform" />
+                <span>Basescan</span>
+              </div>
+              <ArrowSquareOut size={12} className="opacity-60 group-hover:opacity-100" />
+            </a>
+          </div>
+
+          {/* Sewer Terminal Callout Banner */}
+          <a
+            href="/meme.html"
+            className="w-full rounded-xl bg-gradient-to-r from-[#020612] via-[#041226] to-[#020612] hover:from-[#051630] hover:to-[#051630] border border-[#00F0FF]/30 hover:border-[#00F0FF]/60 p-2.5 px-3 flex items-center justify-between text-left transition-all cursor-pointer group shadow-sm"
           >
             <div className="flex items-center gap-2.5">
-              <SquaresFour size={20} weight="bold" className="text-[#8fa1b8] group-hover:text-[#00F0FF] transition-colors shrink-0" />
+              <span className="text-base group-hover:scale-110 transition-transform">🚽</span>
               <div>
-                <div className="text-[#dbe9f2] font-semibold text-[11px] leading-tight group-hover:text-white">
-                  More duration. More weight.
+                <div className="text-white font-semibold text-[11.5px] leading-tight group-hover:text-[#00F0FF] transition-colors">
+                  Sewer Meme Terminal
                 </div>
                 <div className="text-[#8fa1b8] text-[10px] leading-tight group-hover:text-slate-300 mt-0.5">
-                  More Active Cells.
+                  Viral Degen Tweet Generator & Soundboard
                 </div>
               </div>
             </div>
             <CaretRight size={13} weight="bold" className="text-[#6b7c93] group-hover:text-[#00F0FF] transition-colors shrink-0" />
-          </button>
+          </a>
         </div>
       </div>
 

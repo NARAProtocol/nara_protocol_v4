@@ -1,0 +1,3165 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-[#060709]">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NARA — Token First. The Machine Follows.</title>
+  <meta name="description" content="SOMETHING'S COMING. NARA on Base. Token first. The machine follows. CA: 0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#060709">
+
+  <!-- Open Graph & Social Cards for Viral Distribution on X / Telegram / Warpcast -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="NARA Protocol">
+  <meta property="og:url" content="https://naraprotocol.com/meme.html">
+  <meta property="og:title" content="NARA — Token First. The Machine Follows. 🐸🚽">
+  <meta property="og:description" content="Porcelain throne telemetry on Base. Flush the bears, wipe with green candlestick paper. CA: 0x91FB...Ae0f">
+  <meta property="og:image" content="https://naraprotocol.com/nara_meme_hero.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="675">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:site" content="@NARA_protocol">
+  <meta name="twitter:creator" content="@NARA_protocol">
+  <meta name="twitter:title" content="NARA — Token First. The Machine Follows. 🐸🚽">
+  <meta name="twitter:description" content="Porcelain throne telemetry on Base. Flush the bears, wipe with green candlestick paper. CA: 0x91FB...Ae0f">
+  <meta name="twitter:image" content="https://naraprotocol.com/nara_meme_hero.jpg">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700;900&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Space Grotesk', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            naraGreen: '#39FF14',
+            baseBlue: '#0052FF',
+            hazardRed: '#FF2A2A',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    .bg-grid-subtle {
+      background-size: 36px 36px;
+      background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+    }
+    .vignette-radial {
+      background: radial-gradient(circle at center, transparent 35%, rgba(6, 7, 9, 0.85) 85%, #060709 100%);
+    }
+    .specular-top {
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+
+    @keyframes fluorescent-hum {
+      0%, 100% { opacity: 1; }
+      3% { opacity: 0.88; }
+      6% { opacity: 1; }
+      42% { opacity: 0.94; }
+      43% { opacity: 0.75; }
+      44% { opacity: 0.98; }
+      45% { opacity: 0.82; }
+      46% { opacity: 1; }
+      82% { opacity: 0.96; }
+      83% { opacity: 0.6; }
+      84% { opacity: 1; }
+    }
+    .fluorescent-lighting {
+      animation: fluorescent-hum 14s infinite ease-in-out;
+    }
+
+    @keyframes violent-flush {
+      0% { transform: translate(0, 0) rotate(0deg); }
+      10% { transform: translate(-3px, 2px) rotate(-0.5deg); }
+      20% { transform: translate(3px, -3px) rotate(0.5deg); }
+      30% { transform: translate(-4px, 3px) rotate(-1deg); }
+      40% { transform: translate(4px, -2px) rotate(1deg); }
+      50% { transform: translate(-2px, 4px) rotate(-0.5deg); }
+      60% { transform: translate(3px, -3px) rotate(0.5deg); }
+      70% { transform: translate(-2px, 1px) rotate(0deg); }
+      80% { transform: translate(1px, -1px) rotate(0deg); }
+      100% { transform: translate(0, 0) rotate(0deg); }
+    }
+    .screen-flush-active {
+      animation: violent-flush 0.6s cubic-bezier(.36,.07,.19,.97) both;
+    }
+
+    .slime-drips {
+      background: radial-gradient(ellipse at top, rgba(57,255,20,0.15) 0%, transparent 70%);
+    }
+
+    .crt-lines::before {
+      content: " ";
+      display: block;
+      position: absolute;
+      top: 0; left: 0; bottom: 0; right: 0;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%);
+      z-index: 25;
+      background-size: 100% 3px;
+      pointer-events: none;
+      opacity: 0.5;
+    }
+  </style>
+</head>
+
+<body id="pageBody" class="min-h-[100dvh] bg-[#060709] text-[#E5E7EB] flex flex-col justify-between overflow-x-hidden relative font-mono bg-grid-subtle fluorescent-lighting">
+
+  <!-- Fullscreen Candlestick TP Physics Canvas -->
+  <canvas id="candleCanvas" class="fixed inset-0 pointer-events-none z-40 select-none"></canvas>
+
+  <!-- Ambient Depth Lighting -->
+  <div class="fixed inset-0 pointer-events-none z-0 overflow-hidden select-none">
+    <div id="ambientGreen" class="absolute -top-40 left-1/2 -translate-x-1/2 w-[850px] h-[350px] bg-emerald-500/[0.05] blur-[160px] rounded-full transition-all duration-300"></div>
+    <div class="absolute -bottom-40 left-1/2 -translate-x-1/2 w-[900px] h-[350px] bg-[#0052FF]/[0.06] blur-[160px] rounded-full"></div>
+    <div class="absolute top-0 inset-x-0 h-32 slime-drips pointer-events-none"></div>
+  </div>
+
+  <!-- Top Instrument Rail -->
+  <header class="relative z-30 w-full pt-3 sm:pt-4 px-3 sm:px-8 max-w-6xl mx-auto">
+    <div class="w-full flex items-center justify-between py-2 px-3 sm:px-4 bg-[#0D0F14]/90 border border-white/[0.08] specular-top backdrop-blur-md">
+      
+      <!-- System Telemetry & Audio Indicator -->
+      <div class="flex items-center gap-2 sm:gap-3 select-none">
+        <div class="flex items-center gap-2">
+          <span class="inline-block w-1.5 h-1.5 bg-naraGreen shadow-[0_0_8px_#39FF14] animate-pulse"></span>
+          <span class="text-[10px] sm:text-[11px] font-bold tracking-[0.18em] text-white uppercase">
+            NARA // BASE
+          </span>
+        </div>
+        <span class="text-white/20 hidden sm:inline">/</span>
+        <button 
+          id="audioToggleBtn"
+          onclick="toggleAudio()"
+          class="px-2.5 py-1.5 min-h-[36px] bg-white/[0.03] hover:bg-white/[0.08] focus-visible:ring-1 focus-visible:ring-naraGreen outline-none border border-white/10 hover:border-emerald-400/40 text-[9px] sm:text-[10px] text-white/70 hover:text-naraGreen transition-all tracking-widest uppercase flex items-center gap-1.5 cursor-pointer"
+          title="Switch SFX: Liquid Flush 💧 | Arcade Coin 🪙 | Muted 🔇"
+          aria-label="Toggle Sound Effects"
+        >
+          <svg id="audioIconOn" class="w-3 h-3 fill-current text-naraGreen shrink-0" viewBox="0 0 256 256">
+            <path d="M160,32V224a8,8,0,0,1-12.91,6.31L77.25,176H32a16,16,0,0,1-16-16V96A16,16,0,0,1,32,80H77.25l69.84-54.31A8,8,0,0,1,160,32Zm32,64a8,8,0,0,0-8,8,24,24,0,0,1,0,48,8,8,0,0,0,0,16,40,40,0,0,0,0-80,8,8,0,0,0-8-8Zm28.28-28.28a8,8,0,0,0-11.31,11.31,64,64,0,0,1,0,90.51,8,8,0,1,0,11.31,11.31,80,80,0,0,0,0-113.13Z"/>
+          </svg>
+          <svg id="audioIconOff" class="w-3 h-3 fill-current text-white/30 hidden shrink-0" viewBox="0 0 256 256">
+            <path d="M213.92,210.62l-160-176A8,8,0,1,0,42.08,45.38l38.29,42.12H32a16,16,0,0,0-16,16v64a16,16,0,0,0,16,16H77.25l69.84,54.31A8,8,0,0,0,160,232a8.25,8.25,0,0,0,3.34-.73l38.74,42.61a8,8,0,1,0,11.84-10.76ZM144,213.46l-60-46.69a8,8,0,0,0-4.94-1.77H32V104H79.06l64.94,71.43Zm16-117.84V32a8,8,0,0,0-12.91-6.31L107.52,56.57a8,8,0,0,0,9.94,12.56L144,48.54v47.08a8,8,0,0,0,16,0Z"/>
+          </svg>
+          <span id="audioLabel" class="hidden sm:inline font-mono font-bold">SFX: FLUSH</span>
+          <span id="audioModeBadge" class="text-xs">💧</span>
+        </button>
+      </div>
+
+      <!-- Right Controls: Flush Trigger & Copy CA -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        
+        <!-- Swap Button Link / Pre-Launch Trigger -->
+        <button
+          id="headerSwapBtn"
+          onclick="handleSwapButtonClick()"
+          class="px-2.5 sm:px-3 py-1.5 min-h-[36px] bg-amber-500/15 hover:bg-amber-500/25 active:bg-amber-500/40 focus-visible:ring-1 focus-visible:ring-amber-400 outline-none border border-amber-500/40 hover:border-amber-400 text-amber-300 hover:text-white text-[10px] font-bold tracking-[0.14em] uppercase transition-all duration-150 flex items-center gap-1.5 cursor-pointer shadow-[0_0_12px_rgba(245,158,11,0.2)] select-none"
+          title="NARA Swaps Activating at Launch"
+          aria-label="NARA Swaps Pre-Launch Information"
+        >
+          <span class="text-xs">🔒</span>
+          <span>SWAP <span class="text-[8px] sm:text-[9px] px-1 py-0.5 bg-amber-500/20 text-amber-200 border border-amber-500/40">SOON</span></span>
+        </button>
+
+        <!-- Flush Button with 1.0s Hydraulic Cooldown Gauge -->
+        <button
+          id="headerFlushBtn"
+          onclick="triggerHydraulicFlush()"
+          class="relative overflow-hidden px-3 py-1.5 min-h-[36px] bg-hazardRed/15 hover:bg-hazardRed/30 active:bg-hazardRed/50 focus-visible:ring-1 focus-visible:ring-hazardRed outline-none border border-hazardRed/40 hover:border-hazardRed text-red-200 hover:text-white text-[10px] font-bold tracking-[0.15em] uppercase transition-all duration-150 flex items-center gap-1.5 cursor-pointer shadow-[0_0_12px_rgba(255,42,42,0.25)] group select-none"
+          title="Hydraulic Flush (Space / F) [1.0s Cooldown]"
+          aria-label="Flush Toilet"
+        >
+          <div id="flushCooldownBar" class="absolute inset-y-0 left-0 bg-hazardRed/35 w-0 transition-none pointer-events-none"></div>
+          <span class="relative z-10 text-xs group-hover:rotate-12 transition-transform">🚽</span>
+          <span id="headerFlushBtnLabel" class="relative z-10">FLUSH <span class="hidden sm:inline">TOILET</span></span>
+        </button>
+
+        <!-- CA Copy Button -->
+        <div class="hidden md:flex items-center gap-2 pl-2 border-l border-white/[0.08]">
+          <span class="text-[10px] text-white/40">CA:</span>
+          <span class="text-[10px] text-white/80 font-mono select-text selection:bg-emerald-500/40">0x91FB...Ae0f</span>
+        </div>
+
+        <button 
+          id="copyBtn"
+          onclick="copyCA()"
+          class="px-3 py-1.5 min-h-[36px] text-[10px] font-bold tracking-widest uppercase bg-white/[0.04] hover:bg-white/[0.1] active:bg-white/[0.15] focus-visible:ring-1 focus-visible:ring-white/50 outline-none border border-white/[0.12] hover:border-white/30 text-white transition-all cursor-pointer flex items-center gap-1.5 select-none"
+          title="Copy token contract address"
+          aria-label="Copy token contract address"
+        >
+          <svg class="w-3 h-3 fill-current text-white/60" viewBox="0 0 256 256">
+            <path d="M216,32H88a8,8,0,0,0-8,8V80H40a8,8,0,0,0-8,8V216a8,8,0,0,0,8,8H168a8,8,0,0,0,8-8V176h40a8,8,0,0,0,8-8V40A8,8,0,0,0,216,32ZM160,208H48V96H160Zm48-48H176V88a8,8,0,0,0-8-8H96V48H208Z"/>
+          </svg>
+          <span id="copyBtnText">COPY</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Hero Cinematic Centerpiece -->
+  <main class="relative z-10 flex-1 flex flex-col items-center justify-center px-3 sm:px-8 py-3 sm:py-6 my-auto">
+    <div class="w-full max-w-5xl mx-auto">
+      
+      <!-- Precision Machined Housing -->
+      <div id="artHousing" class="relative bg-[#0A0C10] border border-white/[0.08] specular-top shadow-[0_30px_90px_rgba(0,0,0,0.9)] overflow-hidden transition-all duration-200">
+        
+        <!-- Corner Reticles -->
+        <div class="absolute top-2 left-2 z-20 w-2 h-2 border-t border-l border-white/30 pointer-events-none select-none"></div>
+        <div class="absolute top-2 right-2 z-20 w-2 h-2 border-t border-r border-white/30 pointer-events-none select-none"></div>
+        <div class="absolute bottom-2 left-2 z-20 w-2 h-2 border-b border-l border-white/30 pointer-events-none select-none"></div>
+        <div class="absolute bottom-2 right-2 z-20 w-2 h-2 border-b border-r border-white/30 pointer-events-none select-none"></div>
+
+        <!-- Master Art Image with Click Target -->
+        <div class="relative bg-black group/art cursor-pointer crt-lines select-none" onclick="triggerHydraulicFlush()">
+          <img 
+            src="/nara_meme_hero.jpg" 
+            alt="NARA - Token First. The Machine Follows." 
+            class="w-full h-auto max-h-[46vh] sm:max-h-[60vh] md:max-h-[68vh] object-contain mx-auto block select-none pointer-events-none transition-transform duration-300 group-hover/art:scale-[1.006]"
+            loading="eager"
+          />
+          <div class="absolute inset-0 vignette-radial pointer-events-none"></div>
+
+          <!-- Interactive Hover Hint -->
+          <div class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 group-hover/art:opacity-100 transition-opacity duration-300">
+            <div class="px-3 py-1.5 bg-black/85 border border-emerald-500/50 backdrop-blur-md shadow-[0_0_20px_rgba(57,255,20,0.3)]">
+              <span id="artHoverText" class="text-[10px] font-mono tracking-widest text-naraGreen font-bold uppercase flex items-center gap-1.5">
+                <span class="text-xs">👇</span> CLICK TO FLUSH CANDLES
+              </span>
+            </div>
+          </div>
+
+          <!-- Live Dynamic Counter & Immediate Tweet Action -->
+          <div class="absolute top-3 right-3 z-30 flex items-center gap-1.5" onclick="event.stopPropagation()">
+            <div class="px-2.5 py-1 bg-black/85 border border-white/15 backdrop-blur-md flex items-center gap-2">
+              <span class="text-[9px] font-mono text-white/50 tracking-wider">FLUSHES:</span>
+              <span id="flushCounter" class="text-[10px] font-mono text-naraGreen font-bold">0</span>
+            </div>
+            
+            <!-- Dynamic Tweet Score Action: Direct <a> with RFC 3986 encoding & zero popup blocker -->
+            <a
+              id="quickTweetBtn"
+              href="https://x.com/intent/post"
+              target="_blank"
+              rel="noopener noreferrer"
+              onclick="handleShareClick(event, 'x')"
+              class="px-2.5 py-1 bg-black/85 hover:bg-white/[0.1] border border-white/20 hover:border-emerald-400/50 text-[9px] font-bold text-white hover:text-naraGreen transition-all flex items-center gap-1.5 cursor-pointer font-mono no-underline shadow-[0_0_10px_rgba(0,0,0,0.5)]"
+              title="Post your unique degen score to X"
+            >
+              <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 256 256">
+                <path d="M214.75,211.71l-62.6-98.38,61.77-67.95a8,8,0,0,0-11.84-10.76L143.24,99.9,94.06,22.69A8,8,0,0,0,87.27,19H40a8,8,0,0,0-6.75,12.29l62.6,98.37L34.08,197.62a8,8,0,1,0,11.84,10.76l58.84-64.72,49.18,77.21A8,8,0,0,0,160.73,225H208a8,8,0,0,0,6.75-12.29ZM165.23,209,68.88,41h21.89l96.35,168Z"/>
+              </svg>
+              <span id="quickTweetLabel">POST SCORE</span>
+            </a>
+          </div>
+
+          <!-- Unique Milestone Popout Ribbon -->
+          <div 
+            id="milestoneBanner" 
+            class="hidden absolute bottom-4 inset-x-3 sm:inset-x-8 z-30 p-3.5 bg-[#0D0F14]/95 border border-emerald-500/60 backdrop-blur-xl shadow-[0_15px_40px_rgba(0,0,0,0.95)] flex flex-col sm:flex-row items-center justify-between gap-3"
+            onclick="event.stopPropagation()"
+          >
+            <div class="flex items-center gap-3 text-left w-full sm:w-auto">
+              <span class="text-2xl shrink-0">🚽</span>
+              <div class="flex-1 min-w-0">
+                <div id="milestoneRankBadge" class="text-[11px] font-bold text-naraGreen tracking-wider uppercase truncate font-mono">
+                  RANK: SEWER LIQUIDATOR // 10 PURGES
+                </div>
+                <div id="milestoneQuotePreview" class="text-[10px] text-white/70 italic line-clamp-2 max-w-lg mt-0.5 font-sans">
+                  "The candlestick roll doesn't lie..."
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-1.5 sm:gap-2 shrink-0 self-end sm:self-auto select-none">
+              <!-- Reroll Quote inside Banner -->
+              <button 
+                onclick="rerollBannerQuote(event)" 
+                class="px-2.5 py-1.5 min-h-[36px] bg-white/[0.08] hover:bg-emerald-500/20 text-white/70 hover:text-naraGreen border border-white/10 hover:border-emerald-500/40 text-[10px] font-mono cursor-pointer flex items-center gap-1 uppercase transition-all focus-visible:ring-1 focus-visible:ring-naraGreen outline-none"
+                title="Roll another unique quote"
+                aria-label="Reroll quote"
+              >
+                <span>🎲</span>
+                <span class="hidden sm:inline">REROLL</span>
+              </button>
+
+              <!-- Post to X: Native link that popup blockers CANNOT block -->
+              <a 
+                id="milestoneTweetBtn"
+                href="https://x.com/intent/post" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                onclick="handleShareClick(event, 'x')" 
+                class="px-3 py-1.5 min-h-[36px] bg-white text-black hover:bg-white/90 text-[10px] font-bold tracking-widest uppercase transition-all flex items-center gap-1.5 cursor-pointer shadow-[0_0_12px_rgba(255,255,255,0.3)] font-mono no-underline focus-visible:ring-1 focus-visible:ring-white outline-none"
+                title="Share this unique roll to X"
+                aria-label="Post milestone to X"
+              >
+                <svg class="w-3 h-3 fill-current" viewBox="0 0 256 256">
+                  <path d="M214.75,211.71l-62.6-98.38,61.77-67.95a8,8,0,0,0-11.84-10.76L143.24,99.9,94.06,22.69A8,8,0,0,0,87.27,19H40a8,8,0,0,0-6.75,12.29l62.6,98.37L34.08,197.62a8,8,0,1,0,11.84,10.76l58.84-64.72,49.18,77.21A8,8,0,0,0,160.73,225H208a8,8,0,0,0,6.75-12.29ZM165.23,209,68.88,41h21.89l96.35,168Z"/>
+                </svg>
+                <span>TWEET</span>
+              </a>
+
+              <!-- Post to Warpcast: Native link that popup blockers CANNOT block -->
+              <a 
+                id="milestoneCastBtn"
+                href="https://warpcast.com/~/compose" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                onclick="handleShareClick(event, 'warpcast')" 
+                class="px-3 py-1.5 min-h-[36px] bg-purple-600 hover:bg-purple-500 text-white text-[10px] font-bold tracking-widest uppercase transition-all flex items-center gap-1.5 cursor-pointer shadow-[0_0_12px_rgba(147,51,234,0.3)] font-mono no-underline focus-visible:ring-1 focus-visible:ring-purple-400 outline-none"
+                title="Cast this unique roll to Warpcast"
+                aria-label="Cast milestone to Warpcast"
+              >
+                <svg class="w-3 h-3 fill-current" viewBox="0 0 1000 1000">
+                  <path d="M150 200h700v100H150zm80 160h540v440h-80V460H570v340h-80V460H370v340h-80V460H230v340h-80V360h80z" fill="currentColor"/>
+                </svg>
+                <span>CAST</span>
+              </a>
+
+              <!-- Dismiss -->
+              <button 
+                onclick="dismissMilestone(event)" 
+                class="px-2.5 py-1.5 min-h-[36px] min-w-[36px] bg-white/[0.05] hover:bg-white/[0.15] text-white/50 hover:text-white text-[10px] border border-white/10 cursor-pointer font-mono focus-visible:ring-1 focus-visible:ring-white/50 outline-none flex items-center justify-center"
+                title="Dismiss"
+                aria-label="Dismiss milestone"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Subhead Ribbon -->
+        <div class="w-full bg-[#0C0E13] border-t border-white/[0.08] px-4 py-2 flex flex-wrap items-center justify-between gap-2 text-[10px] text-white/50 tracking-widest uppercase">
+          <div class="flex items-center gap-2">
+            <span class="text-naraGreen animate-pulse">●</span>
+            <span class="text-white/80">TOKEN FIRST. THE MACHINE FOLLOWS.</span>
+          </div>
+          <div class="flex items-center gap-3 text-white/40">
+            <span>UNISWAP V4 HOOK</span>
+            <span>//</span>
+            <span>15M EPOCH COMPOUND</span>
+            <span class="hidden md:inline">//</span>
+            <span class="hidden md:inline text-emerald-400/80">RAD: 99.4% TOXIC</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- VIRAL DEGEN LAUNCHPAD & OPERATOR FORGE -->
+      <div class="w-full mt-3 bg-[#0A0C10] border border-white/[0.08] specular-top shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden">
+        
+        <!-- Top Status Bar: Level, Rank, XP Progress & Combo -->
+        <div class="px-3 sm:px-4 py-2 bg-[#0C0E13] border-b border-white/[0.08] flex flex-wrap items-center justify-between gap-2.5 text-[10px]">
+          
+          <!-- Left: Rank & Level Badge -->
+          <div class="flex items-center gap-2">
+            <span id="rankBadgePill" class="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/30 text-naraGreen font-bold font-mono uppercase tracking-wider flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-naraGreen animate-pulse"></span>
+              <span id="operatorRankLabel">LVL 1: SEWER RECRUIT</span>
+            </span>
+            <span class="text-white/30 hidden sm:inline font-mono">//</span>
+            <span id="operatorTitleLabel" class="text-white/60 font-mono hidden sm:inline">NOVICE TOILET OPERATOR</span>
+          </div>
+
+          <!-- Middle: Live XP Progress to Next Promotion -->
+          <div class="flex-1 max-w-xs min-w-[140px] flex flex-col gap-1">
+            <div class="flex items-center justify-between text-[9px] font-mono text-white/50">
+              <span id="xpTitleLabel">XP TO NEXT RANK</span>
+              <span id="xpPercentLabel">0%</span>
+            </div>
+            <div class="w-full h-1.5 bg-white/[0.06] overflow-hidden border border-white/10">
+              <div id="xpProgressBar" class="h-full bg-naraGreen transition-all duration-150 shadow-[0_0_8px_#39FF14]" style="width: 0%"></div>
+            </div>
+          </div>
+
+          <!-- Right: Combo Multiplier Overdrive -->
+          <div class="flex items-center gap-2 font-mono">
+            <div id="comboContainer" class="px-2 py-0.5 bg-white/[0.03] border border-white/10 text-[9px] text-white/40 uppercase tracking-widest flex items-center gap-1 transition-all">
+              <span>COMBO:</span>
+              <span id="comboLabel" class="text-white font-bold">1X</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Center: Interactive Viral Tweet Forge -->
+        <div class="p-3 sm:p-4">
+          
+          <!-- Mode Tabs (4 distinct viral angles) -->
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+            <div class="flex flex-wrap items-center gap-1 sm:gap-1.5">
+              <button 
+                onclick="setTweetMode('flex')" 
+                id="tabBtn-flex" 
+                class="px-3 py-1.5 min-h-[36px] text-[10px] font-bold font-mono uppercase tracking-wider bg-white text-black border border-white transition-all cursor-pointer flex items-center gap-1.5 focus-visible:ring-1 focus-visible:ring-naraGreen outline-none"
+              >
+                <span>🔥</span> <span>SCORE FLEX</span>
+              </button>
+
+              <button 
+                onclick="setTweetMode('receipt')" 
+                id="tabBtn-receipt" 
+                class="px-3 py-1.5 min-h-[36px] text-[10px] font-bold font-mono uppercase tracking-wider bg-white/[0.04] text-white/60 hover:text-white border border-white/10 hover:border-white/20 transition-all cursor-pointer flex items-center gap-1.5 focus-visible:ring-1 focus-visible:ring-white outline-none"
+              >
+                <span>💀</span> <span>LIQUIDATION RECEIPT</span>
+              </button>
+
+              <button 
+                onclick="setTweetMode('lore')" 
+                id="tabBtn-lore" 
+                class="px-3 py-1.5 min-h-[36px] text-[10px] font-bold font-mono uppercase tracking-wider bg-white/[0.04] text-white/60 hover:text-white border border-white/10 hover:border-white/20 transition-all cursor-pointer flex items-center gap-1.5 focus-visible:ring-1 focus-visible:ring-white outline-none"
+              >
+                <span>🐸</span> <span>TOAD ALPHA</span>
+              </button>
+
+              <button 
+                onclick="setTweetMode('unhinged')" 
+                id="tabBtn-unhinged" 
+                class="px-3 py-1.5 min-h-[36px] text-[10px] font-bold font-mono uppercase tracking-wider bg-white/[0.04] text-white/60 hover:text-white border border-white/10 hover:border-white/20 transition-all cursor-pointer flex items-center gap-1.5 focus-visible:ring-1 focus-visible:ring-white outline-none"
+              >
+                <span>🎲</span> <span>UNHINGED</span>
+              </button>
+
+              <button 
+                onclick="setTweetMode('sticker')" 
+                id="tabBtn-sticker" 
+                class="px-3 py-1.5 min-h-[36px] text-[10px] font-bold font-mono uppercase tracking-wider bg-white/[0.04] text-amber-300 hover:text-white border border-amber-500/30 hover:border-amber-400 transition-all cursor-pointer flex items-center gap-1.5 focus-visible:ring-1 focus-visible:ring-amber-400 outline-none"
+              >
+                <span>🎴</span> <span>STICKER NFT</span>
+              </button>
+            </div>
+
+            <!-- Quick Reroll Dice Action -->
+            <button 
+              onclick="rerollActiveMode()" 
+              class="px-3 py-1.5 min-h-[36px] text-[10px] font-mono text-naraGreen hover:text-white hover:bg-emerald-500/20 border border-emerald-500/30 hover:border-emerald-500 transition-all cursor-pointer flex items-center gap-1.5 uppercase font-bold focus-visible:ring-1 focus-visible:ring-naraGreen outline-none"
+              title="Roll a fresh randomized hook for this mode"
+              aria-label="Reroll angle"
+            >
+              <span>🎲</span> <span>REROLL ANGLE</span>
+            </button>
+          </div>
+
+          <!-- CRT Terminal Output Screen with Live Formatted Tweet Preview -->
+          <div class="relative bg-black border border-white/[0.12] p-3 mb-2.5 font-mono text-left crt-lines overflow-hidden shadow-inner group">
+            
+            <div class="flex items-center justify-between text-[9px] text-white/40 border-b border-white/[0.08] pb-1.5 mb-2 select-none">
+              <span class="flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-naraGreen"></span>
+                <span>X_INTENT_BUFFER // READY_TO_BROADCAST</span>
+              </span>
+              <span id="charCountLabel" class="text-white/50">179 / 280 CHARS</span>
+            </div>
+
+            <div id="tweetPreviewDisplay" class="text-[11px] sm:text-[12px] text-white/90 leading-relaxed font-mono whitespace-pre-line select-text selection:bg-emerald-500/40">
+              <!-- Live text renders here -->
+            </div>
+
+            <div id="copyToast" class="hidden absolute inset-0 bg-black/95 backdrop-blur-sm flex items-center justify-center text-naraGreen font-mono font-bold text-xs tracking-widest uppercase transition-opacity">
+              ✓ COPIED TO CLIPBOARD // READY TO PASTE
+            </div>
+          </div>
+
+          <!-- Bottom Action Deck: Direct X Post, Warpcast, Copy -->
+          <div class="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+            
+            <div class="flex flex-wrap items-center gap-2">
+              <!-- Direct Native X Post Anchor -->
+              <a 
+                id="forgeXBtn" 
+                href="https://x.com/intent/post" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                onclick="handleForgeClick(event, 'x')"
+                class="px-3.5 py-1.5 min-h-[36px] bg-white text-black hover:bg-white/90 active:bg-white/80 font-mono text-[10px] sm:text-[11px] font-bold tracking-wider uppercase transition-all flex items-center gap-2 cursor-pointer shadow-[0_0_15px_rgba(255,255,255,0.25)] no-underline focus-visible:ring-1 focus-visible:ring-white outline-none select-none"
+                title="Post to X immediately (RFC-3986 encoded, popup-proof)"
+              >
+                <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 256 256">
+                  <path d="M214.75,211.71l-62.6-98.38,61.77-67.95a8,8,0,0,0-11.84-10.76L143.24,99.9,94.06,22.69A8,8,0,0,0,87.27,19H40a8,8,0,0,0-6.75,12.29l62.6,98.37L34.08,197.62a8,8,0,1,0,11.84,10.76l58.84-64.72,49.18,77.21A8,8,0,0,0,160.73,225H208a8,8,0,0,0,6.75-12.29ZM165.23,209,68.88,41h21.89l96.35,168Z"/>
+                </svg>
+                <span>POST TO X</span>
+              </a>
+
+              <!-- Direct Native Warpcast Anchor -->
+              <a 
+                id="forgeCastBtn" 
+                href="https://warpcast.com/~/compose" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                onclick="handleForgeClick(event, 'warpcast')"
+                class="px-3 py-1.5 min-h-[36px] bg-purple-600 hover:bg-purple-500 active:bg-purple-700 text-white font-mono text-[10px] sm:text-[11px] font-bold tracking-wider uppercase transition-all flex items-center gap-1.5 cursor-pointer shadow-[0_0_15px_rgba(147,51,234,0.3)] no-underline focus-visible:ring-1 focus-visible:ring-purple-400 outline-none select-none"
+                title="Post to Warpcast / Farcaster immediately"
+              >
+                <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 1000 1000">
+                  <path d="M150 200h700v100H150zm80 160h540v440h-80V460H570v340h-80V460H370v340h-80V460H230v340h-80V360h80z" fill="currentColor"/>
+                </svg>
+                <span>CAST</span>
+              </a>
+
+              <!-- Copy Tweet Text Button -->
+              <button 
+                onclick="copyForgeTweetText()" 
+                class="px-3 py-1.5 min-h-[36px] bg-white/[0.05] hover:bg-white/[0.1] active:bg-white/[0.15] border border-white/10 hover:border-white/25 text-white/80 hover:text-white font-mono text-[10px] font-bold tracking-wider uppercase transition-all flex items-center gap-1.5 cursor-pointer focus-visible:ring-1 focus-visible:ring-white/50 outline-none select-none"
+                title="Copy formatted tweet to clipboard"
+              >
+                <svg class="w-3 h-3 fill-current text-white/60" viewBox="0 0 256 256">
+                  <path d="M216,32H88a8,8,0,0,0-8,8V80H40a8,8,0,0,0-8,8V216a8,8,0,0,0,8,8H168a8,8,0,0,0,8-8V176h40a8,8,0,0,0,8-8V40A8,8,0,0,0,216,32ZM160,208H48V96H160Zm48-48H176V88a8,8,0,0,0-8-8H96V48H208Z"/>
+                </svg>
+                <span id="forgeCopyBtnLabel">COPY TWEET</span>
+              </button>
+
+              <!-- Copy Sticker Card Image Button -->
+              <button 
+                id="forgeCopyCardBtn" 
+                onclick="copyStickerCardFromForge()" 
+                class="hidden px-3 py-1.5 min-h-[36px] bg-amber-500/15 hover:bg-amber-500/25 active:bg-amber-500/40 border border-amber-500/40 hover:border-amber-400 text-amber-300 hover:text-white font-mono text-[10px] font-bold tracking-wider uppercase transition-all flex items-center gap-1.5 cursor-pointer focus-visible:ring-1 focus-visible:ring-amber-400 outline-none select-none"
+                title="Copy collectible card image to clipboard. Press Ctrl+V in Twitter to attach!"
+              >
+                <span>🎴</span>
+                <span id="forgeCardBtnLabel">COPY CARD IMAGE</span>
+              </button>
+            </div>
+
+            <!-- Real-time Instruction -->
+            <div class="text-[9px] sm:text-[10px] font-mono text-white/40 flex items-center gap-1.5">
+              <span class="text-naraGreen">⚡</span>
+              <span>CLICK TOILET TO FLUSH BEARS & DREDGE STICKER NFTS</span>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- Live Global Sewer Feed Ticker -->
+        <div class="px-3 sm:px-4 py-1.5 bg-[#08090C] border-t border-white/[0.06] flex items-center gap-2 overflow-hidden text-[9px] font-mono text-white/40">
+          <span class="shrink-0 flex items-center gap-1 text-emerald-400 font-bold uppercase tracking-wider">
+            <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span>
+            SEWER GRID:
+          </span>
+          <div id="sewerTickerText" class="truncate font-mono text-white/60">
+            [SYS] Live Base telemetry synchronized. Ready to purge bears.
+          </div>
+        </div>
+
+      </div>
+
+      <!-- SEWER STICKER VAULT // LOOT LOCKER -->
+      <div id="stickerVaultSection" class="w-full mt-3 bg-[#0A0C10] border border-white/[0.08] specular-top shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden">
+        
+        <!-- Vault Header Bar: Run Tracking, Personal Best & Progress -->
+        <div class="px-3 sm:px-4 py-2 bg-[#0C0E13] border-b border-white/[0.08] flex flex-wrap items-center justify-between gap-2 text-[10px]">
+          <div class="flex items-center gap-2">
+            <span class="w-1.5 h-1.5 rounded-full bg-naraGreen shadow-[0_0_8px_#39FF14]"></span>
+            <span class="font-bold font-mono text-white tracking-widest uppercase">
+              SEWER STICKER VAULT // LOOT LOCKER
+            </span>
+            <span class="text-white/30 hidden sm:inline font-mono">//</span>
+            <span class="text-white/50 font-mono hidden sm:inline">12 ONCHAIN POOP COLLECTIBLES</span>
+          </div>
+
+          <!-- Stash Progress & Run Stats -->
+          <div class="flex flex-wrap items-center gap-2 font-mono">
+            <div class="flex items-center gap-1 text-[9px]">
+              <span class="text-white/40">RUN:</span>
+              <span class="px-1.5 py-0.5 bg-white/[0.06] border border-white/10 text-white font-bold tracking-wider">
+                <span id="runFlushesCount">0</span> CLICKS
+              </span>
+            </div>
+            <div class="flex items-center gap-1 text-[9px]">
+              <span class="text-white/40">BEST:</span>
+              <span class="px-1.5 py-0.5 bg-amber-500/10 border border-amber-500/30 text-amber-300 font-bold tracking-wider">
+                <span id="bestRecordCount">--</span>
+              </span>
+            </div>
+            <span class="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/30 text-naraGreen font-bold text-[9px] uppercase tracking-wider flex items-center gap-1">
+              <span id="vaultUnlockedCount">0</span> / 12 (<span id="vaultProgressPercent">0</span>%)
+            </span>
+            <button 
+              id="resetRunBtn"
+              onclick="confirmResetRun()" 
+              class="px-2 py-0.5 min-h-[26px] bg-hazardRed/15 hover:bg-hazardRed/30 active:bg-hazardRed/50 border border-hazardRed/30 hover:border-hazardRed text-red-300 hover:text-white text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer select-none"
+              title="Reset current 12-card attempt to start a fresh run from 0 clicks"
+            >
+              RESET RUN
+            </button>
+          </div>
+        </div>
+
+        <!-- 12-Card Grid -->
+        <div id="vaultGrid" class="p-3 sm:p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-2.5">
+          <!-- Dynamically populated from STICKER_COLLECTION -->
+        </div>
+
+        <!-- Vault Footer Hint Bar -->
+        <div class="px-3 sm:px-4 py-1.5 bg-[#08090C] border-t border-white/[0.06] flex flex-wrap items-center justify-between gap-2 text-[9px] font-mono text-white/40">
+          <div class="flex items-center gap-1.5">
+            <span class="text-naraGreen">💡</span>
+            <span>FLUSH TOILET TO DREDGE RARE POOPS // CLICK ANY UNLOCKED CARD TO TWEET</span>
+          </div>
+          <button 
+            onclick="shareFullStashTweet()"
+            class="hover:text-naraGreen transition-colors cursor-pointer text-white/60 underline uppercase font-bold"
+            title="Post your full sticker discovery progress to X"
+          >
+            SHARE STASH ON X
+          </button>
+        </div>
+
+      </div>
+
+      <!-- ALL-TIME FAME BOARD // LEADERBOARD SECTION -->
+      <div id="fameBoardSection" class="w-full mt-3 bg-[#0A0C10] border border-white/[0.08] specular-top shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden">
+        
+        <!-- Fame Board Header -->
+        <div class="px-3 sm:px-4 py-2.5 bg-[#0C0E13] border-b border-white/[0.08] flex flex-wrap items-center justify-between gap-2 text-[10px]">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_#FFD700] animate-pulse"></span>
+            <span class="font-bold font-mono text-amber-300 tracking-widest uppercase flex items-center gap-1.5">
+              <span>👑</span> ALL-TIME FAME BOARD // FEWEST CLICKS TO 12/12
+            </span>
+            <span class="text-white/30 hidden sm:inline font-mono">//</span>
+            <span class="text-white/50 font-mono hidden sm:inline">1.0s HYDRAULIC COOLDOWN ENFORCED</span>
+          </div>
+          <div class="flex items-center gap-2 font-mono text-[9px] text-white/50">
+            <span>SORT: FEWEST CLICKS</span>
+            <button onclick="refreshLeaderboardUI()" class="px-2 py-0.5 bg-white/[0.05] hover:bg-white/[0.1] text-white/70 hover:text-white border border-white/10 uppercase cursor-pointer transition-all">
+              🔄 REFRESH
+            </button>
+          </div>
+        </div>
+
+        <!-- Game Rules Panel -->
+        <div class="px-3 sm:px-4 py-2 bg-black/40 border-b border-white/[0.05] grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 text-[9px] font-mono text-white/60">
+          <div class="flex items-center gap-1.5">
+            <span class="text-hazardRed font-bold">1.0s</span>
+            <span>Hydraulic cooldown per flush. Zero auto-clickers.</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-naraGreen font-bold">12/12</span>
+            <span>Collect all 12 unique onchain poop collectibles.</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-amber-300 font-bold">FEWEST</span>
+            <span>clicks to 12/12 secures all-time glory.</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-purple-400 font-bold">RESET</span>
+            <span>Start new runs anytime to beat your record.</span>
+          </div>
+        </div>
+
+        <!-- Leaderboard Table -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left font-mono text-[10px] divide-y divide-white/[0.05]">
+            <thead>
+              <tr class="bg-[#08090C] text-white/40 uppercase tracking-wider text-[9px]">
+                <th class="py-2 px-3 sm:px-4 w-14 text-center">RANK</th>
+                <th class="py-2 px-3 sm:px-4">OPERATOR</th>
+                <th class="py-2 px-3 sm:px-4 text-center">SCORE</th>
+                <th class="py-2 px-3 sm:px-4 hidden sm:table-cell">RATING TIER</th>
+                <th class="py-2 px-3 sm:px-4 text-right hidden md:table-cell">RECORD DATE</th>
+              </tr>
+            </thead>
+            <tbody id="fameBoardBody" class="divide-y divide-white/[0.04] text-white/80">
+              <!-- Populated dynamically via JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Footer Note -->
+        <div class="px-3 sm:px-4 py-1.5 bg-[#08090C] border-t border-white/[0.06] flex flex-wrap items-center justify-between gap-2 text-[9px] font-mono text-white/40">
+          <span class="flex items-center gap-1.5">
+            <span class="text-amber-400">⚡</span>
+            <span>Complete your 12-card vault to immortalize your handle on the Fame Board.</span>
+          </span>
+          <span class="text-emerald-400/80">VERIFIED ON BASE</span>
+        </div>
+
+      </div>
+  </main>
+
+  <!-- Flight-Deck Dock Footer -->
+  <footer class="relative z-30 w-full pb-4 sm:pb-6 px-3 sm:px-8 max-w-6xl mx-auto">
+    <div class="w-full bg-[#0D0F14]/95 border border-white/[0.1] specular-top shadow-[0_20px_50px_rgba(0,0,0,0.8)] backdrop-blur-xl">
+      
+      <div class="grid grid-cols-1 md:grid-cols-12 divide-y md:divide-y-0 md:divide-x divide-white/[0.08] items-stretch">
+        
+        <!-- Column 1: MetaMask Add Action -->
+        <div class="md:col-span-4 p-2 sm:p-2.5 flex items-center justify-between gap-2">
+          <button
+            id="mmBtn"
+            onclick="addNaraToMetaMask()"
+            class="w-full min-h-[44px] px-3.5 py-2 bg-white/[0.03] hover:bg-white/[0.08] active:bg-white/[0.12] border border-white/[0.1] hover:border-white/30 text-white transition-all duration-150 flex items-center justify-between group cursor-pointer focus-visible:ring-1 focus-visible:ring-white outline-none select-none"
+            title="Import $NARA to MetaMask wallet"
+            aria-label="Add NARA to MetaMask"
+          >
+            <div class="flex items-center gap-2.5">
+              <svg class="w-3.5 h-3.5 opacity-80 group-hover:opacity-100 transition-opacity" viewBox="0 0 35 33" fill="none">
+                <path d="m32.9582 1-13.1341 9.7183 2.4424-5.72731z" fill="#E27625"/>
+                <path d="m2.66296 1 13.01714 9.809-2.3254-5.81802z" fill="#E27625"/>
+                <path d="m28.2295 23.5335-3.4947 5.3386 7.4829 2.0603 2.1436-7.2823z" fill="#E27625"/>
+                <path d="m1.27281 23.6501 2.13055 7.2823 7.46994-2.0603-3.48166-5.3386z" fill="#E27625"/>
+                <path d="m10.4706 14.5149-2.0786 3.1358 7.405.3369-.2469-7.969z" fill="#E27625"/>
+                <path d="m25.1505 14.5149-5.1575-4.58704-.1688 8.05974 7.4049-.3369z" fill="#E27625"/>
+                <path d="m10.8733 28.8721 4.4819-2.1639-3.8583-3.0062z" fill="#E27625"/>
+                <path d="m20.2659 26.7082 4.4689 2.1639-.6105-5.1701z" fill="#E27625"/>
+              </svg>
+              <span id="mmBtnLabel" class="text-[10px] sm:text-[11px] font-bold tracking-[0.14em] uppercase text-white">
+                ADD $NARA TO METAMASK
+              </span>
+            </div>
+            <svg class="w-3 h-3 fill-current text-white/40 group-hover:text-white group-hover:translate-x-0.5 transition-all shrink-0" viewBox="0 0 256 256">
+              <path d="M221.66,133.66l-72,72a8,8,0,0,1-11.32-11.32L196.69,136H40a8,8,0,0,1,0-16H196.69L138.34,61.66a8,8,0,0,1,11.32-11.32l72,72A8,8,0,0,1,221.66,133.66Z"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Column 2: Hard Base Telemetry -->
+        <div class="md:col-span-3 p-2 sm:p-2.5 flex items-center">
+          <a 
+            href="https://base.org" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            class="w-full min-h-[44px] px-3 py-2 bg-transparent hover:bg-white/[0.04] text-white/80 hover:text-white transition-colors flex items-center justify-between group focus-visible:ring-1 focus-visible:ring-[#0052FF] outline-none select-none"
+            title="Verified Base L2 Deployment"
+            aria-label="Verified Base L2 Deployment"
+          >
+            <div class="flex items-center gap-2">
+              <span class="w-1.5 h-1.5 bg-[#0052FF] shadow-[0_0_8px_#0052FF]"></span>
+              <span class="text-[10px] sm:text-[11px] font-bold tracking-[0.14em] uppercase text-white">
+                HARD BASE
+              </span>
+            </div>
+            <span class="text-[10px] text-white/40 group-hover:text-[#0052FF] transition-colors font-mono">
+              [8453]
+            </span>
+          </a>
+        </div>
+
+        <!-- Column 3: Social & Analytics Terminal Dispatches -->
+        <div class="md:col-span-5 p-2 sm:p-2.5 flex items-center justify-between gap-1 sm:gap-1.5 select-none">
+          <a 
+            href="https://t.me/NARAProtocol" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            class="flex-1 min-h-[44px] py-2 px-1 sm:px-2 text-center text-[10px] sm:text-[11px] font-bold tracking-[0.12em] sm:tracking-[0.15em] uppercase text-white/60 hover:text-white hover:bg-white/[0.05] border border-transparent hover:border-white/10 transition-all flex items-center justify-center gap-1 font-mono focus-visible:ring-1 focus-visible:ring-white outline-none"
+            title="Telegram Community"
+            aria-label="Telegram Community"
+          >
+            <span class="text-sky-400">✈</span>
+            <span>TG</span>
+          </a>
+
+          <span class="text-white/10 select-none">/</span>
+
+          <a 
+            href="https://x.com/NARA_protocol" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            class="flex-1 min-h-[44px] py-2 px-1 sm:px-2 text-center text-[10px] sm:text-[11px] font-bold tracking-[0.12em] sm:tracking-[0.15em] uppercase text-white/60 hover:text-white hover:bg-white/[0.05] border border-transparent hover:border-white/10 transition-all flex items-center justify-center gap-1 font-mono focus-visible:ring-1 focus-visible:ring-white outline-none"
+            title="Official X Channel"
+            aria-label="Official X Channel"
+          >
+            <svg class="w-3 h-3 fill-current text-white" viewBox="0 0 256 256">
+              <path d="M214.75,211.71l-62.6-98.38,61.77-67.95a8,8,0,0,0-11.84-10.76L143.24,99.9,94.06,22.69A8,8,0,0,0,87.27,19H40a8,8,0,0,0-6.75,12.29l62.6,98.37L34.08,197.62a8,8,0,1,0,11.84,10.76l58.84-64.72,49.18,77.21A8,8,0,0,0,160.73,225H208a8,8,0,0,0,6.75-12.29ZM165.23,209,68.88,41h21.89l96.35,168Z"/>
+            </svg>
+            <span>X</span>
+          </a>
+
+          <span class="text-white/10 select-none">/</span>
+
+          <a 
+            href="https://warpcast.com/naraprotocol" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            class="flex-1 min-h-[44px] py-2 px-1 sm:px-2 text-center text-[10px] sm:text-[11px] font-bold tracking-[0.12em] sm:tracking-[0.15em] uppercase text-white/60 hover:text-white hover:bg-white/[0.05] border border-transparent hover:border-white/10 transition-all flex items-center justify-center gap-1 focus-visible:ring-1 focus-visible:ring-purple-400 outline-none"
+            title="Farcaster / Warpcast"
+            aria-label="Farcaster / Warpcast"
+          >
+            <svg class="w-3 h-3 fill-current text-purple-400" viewBox="0 0 1000 1000">
+              <path d="M150 200h700v100H150zm80 160h540v440h-80V460H570v340h-80V460H370v340h-80V460H230v340h-80V360h80z" fill="currentColor"/>
+            </svg>
+            <span class="hidden sm:inline">FARCASTER</span>
+            <span class="sm:hidden">CAST</span>
+          </a>
+
+          <span class="text-white/10 select-none">/</span>
+
+          <a 
+            href="https://dexscreener.com/base/0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            class="flex-1 min-h-[44px] py-2 px-1 sm:px-2 text-center text-[10px] sm:text-[11px] font-bold tracking-[0.12em] sm:tracking-[0.15em] uppercase text-white/60 hover:text-[#00F0FF] hover:bg-white/[0.05] border border-transparent hover:border-white/10 transition-all flex items-center justify-center gap-1 font-mono focus-visible:ring-1 focus-visible:ring-[#00F0FF] outline-none"
+            title="DexScreener Live Chart"
+            aria-label="DexScreener Live Chart"
+          >
+            <svg class="w-3 h-3 fill-current text-[#00F0FF]" viewBox="0 0 256 256">
+              <path d="M224,200h-8V40a8,8,0,0,0-8-8H152a8,8,0,0,0-8,8V80H96a8,8,0,0,0-8,8v40H48a8,8,0,0,0-8,8v64H32a8,8,0,0,0,0,16H224a8,8,0,0,0,0-16ZM160,48h40V200H160ZM104,96h40V200H104ZM56,144H88v56H56Z"/>
+            </svg>
+            <span>CHART</span>
+          </a>
+        </div>
+
+      </div>
+
+      <!-- Micro Rights Bar -->
+      <div class="px-4 py-2 border-t border-white/[0.06] bg-[#0A0C10] flex flex-wrap items-center justify-between gap-2 text-[9px] text-white/35 tracking-[0.2em] uppercase">
+        <span>© 2026 NARA PROTOCOL. ALL RIGHTS RESERVED.</span>
+        <span class="hidden sm:inline">CONTRACT: VERIFIED // BASE MAINNET</span>
+      </div>
+
+    </div>
+  </footer>
+
+  <!-- SEWER LOOT REVEAL MODAL (POPS ON DISCOVERY OR CARD INSPECT) -->
+  <div 
+    id="lootModal" 
+    class="hidden fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-black/90 backdrop-blur-md"
+    onclick="closeLootModal(event)"
+  >
+    <div 
+      class="relative w-full max-w-[340px] sm:max-w-md max-h-[90dvh] sm:max-h-[88vh] bg-[#0D0F14] border border-white/20 specular-top shadow-[0_20px_70px_rgba(0,0,0,0.98)] p-3 sm:p-5 flex flex-col items-center text-center font-mono overflow-y-auto overscroll-contain"
+      onclick="event.stopPropagation()"
+    >
+      <!-- Corner Reticles -->
+      <div class="absolute top-2 left-2 w-2 h-2 border-t border-l border-white/40 pointer-events-none"></div>
+      <div class="absolute top-2 right-2 w-2 h-2 border-t border-r border-white/40 pointer-events-none"></div>
+      <div class="absolute bottom-2 left-2 w-2 h-2 border-b border-l border-white/40 pointer-events-none"></div>
+      <div class="absolute bottom-2 right-2 w-2 h-2 border-b border-r border-white/40 pointer-events-none"></div>
+
+      <!-- Close Button -->
+      <button 
+        onclick="closeLootModal()"
+        class="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 w-8 h-8 flex items-center justify-center text-white/40 hover:text-white bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 cursor-pointer text-xs transition-all focus-visible:ring-1 focus-visible:ring-white/50 outline-none"
+        title="Close (Esc)"
+        aria-label="Close loot modal"
+      >
+        ✕
+      </button>
+
+      <!-- Loot Status Pill -->
+      <div id="modalStatusBadge" class="px-2.5 py-0.5 sm:py-1 bg-emerald-500/15 border border-emerald-500/40 text-naraGreen text-[9px] sm:text-[10px] font-bold tracking-widest uppercase mb-2 sm:mb-2.5 flex items-center gap-1.5 shadow-[0_0_12px_rgba(57,255,20,0.3)] select-none">
+        <span>🚽</span> <span id="modalStatusText">NEW SEWER DROP DREDGED!</span>
+      </div>
+
+      <!-- Scaled Mobile-First Retina Card Canvas -->
+      <div class="relative w-44 sm:w-56 md:w-64 max-h-[30vh] sm:max-h-[36vh] aspect-square mb-2 sm:mb-2.5 shadow-[0_12px_36px_rgba(0,0,0,0.8)] border border-white/15 bg-black overflow-hidden group select-none flex items-center justify-center">
+        <canvas id="cardCanvas" width="600" height="600" class="w-full h-full object-contain block"></canvas>
+        <div id="cardCopyOverlay" class="hidden absolute inset-0 bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center p-2 text-naraGreen text-xs font-bold uppercase tracking-wider">
+          <span class="text-2xl mb-1">📋✓</span>
+          <span>CARD COPIED TO CLIPBOARD!</span>
+          <span class="text-[9px] text-white/70 normal-case mt-1 font-sans">Press Ctrl+V in your tweet to attach!</span>
+        </div>
+      </div>
+
+      <!-- Card Metadata Summary -->
+      <div class="w-full bg-black/60 border border-white/[0.08] p-2 sm:p-2.5 mb-2 sm:mb-2.5 text-left select-none">
+        <div class="flex items-center justify-between text-[10px] sm:text-[11px] mb-0.5">
+          <span id="modalCardName" class="font-bold text-white tracking-wider truncate">CROWN ROYAL SOVEREIGN</span>
+          <span id="modalCardRarity" class="px-1.5 py-0.5 text-[8px] sm:text-[9px] font-bold uppercase border border-amber-400 text-amber-400">EPIC</span>
+        </div>
+        <div class="flex items-center justify-between text-[8px] sm:text-[9px] text-white/50">
+          <span id="modalCardSerial">SERIAL: #08-7749</span>
+          <span id="modalCardPerk" class="text-emerald-400 font-bold">+40% Royal Flush</span>
+        </div>
+      </div>
+
+      <!-- Action Deck -->
+      <div class="w-full flex flex-col gap-1.5 sm:gap-2">
+        <!-- 1-Click Clipboard Image Copy & Tweet Action -->
+        <button 
+          id="modalCopyAndTweetBtn"
+          onclick="copyCardAndTweet()"
+          class="w-full min-h-[38px] sm:min-h-[42px] py-1.5 sm:py-2 bg-white text-black hover:bg-white/90 active:bg-white/80 font-bold text-[10px] sm:text-[11px] tracking-wider uppercase transition-all flex items-center justify-center gap-2 cursor-pointer shadow-[0_0_15px_rgba(255,255,255,0.3)] font-mono focus-visible:ring-1 focus-visible:ring-white outline-none"
+          title="Copies card PNG to clipboard and opens X tweet intent"
+        >
+          <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 256 256">
+            <path d="M214.75,211.71l-62.6-98.38,61.77-67.95a8,8,0,0,0-11.84-10.76L143.24,99.9,94.06,22.69A8,8,0,0,0,87.27,19H40a8,8,0,0,0-6.75,12.29l62.6,98.37L34.08,197.62a8,8,0,1,0,11.84,10.76l58.84-64.72,49.18,77.21A8,8,0,0,0,160.73,225H208a8,8,0,0,0,6.75-12.29ZM165.23,209,68.88,41h21.89l96.35,168Z"/>
+          </svg>
+          <span id="modalTweetBtnText">📋 COPY CARD & TWEET ON X</span>
+        </button>
+
+        <div class="w-full grid grid-cols-2 gap-1.5 sm:gap-2">
+          <!-- Download Card PNG Button -->
+          <button 
+            onclick="downloadCardPNG()"
+            class="w-full min-h-[34px] sm:min-h-[36px] py-1 sm:py-1.5 bg-white/[0.05] hover:bg-white/[0.1] active:bg-white/[0.15] border border-white/15 text-white/80 hover:text-white font-bold text-[9px] sm:text-[10px] tracking-wider uppercase transition-all flex items-center justify-center gap-1.5 cursor-pointer font-mono focus-visible:ring-1 focus-visible:ring-white/50 outline-none"
+            title="Download high-res 600x600 collectible card"
+          >
+            <span>💾</span> <span>DOWNLOAD</span>
+          </button>
+
+          <!-- Dismiss -->
+          <button 
+            onclick="closeLootModal()"
+            class="w-full min-h-[34px] sm:min-h-[36px] py-1 sm:py-1.5 bg-white/[0.02] hover:bg-white/[0.06] border border-white/10 text-white/50 hover:text-white font-mono text-[9px] sm:text-[10px] uppercase tracking-wider transition-all cursor-pointer focus-visible:ring-1 focus-visible:ring-white/50 outline-none"
+          >
+            <span>KEEP FLUSHING</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Explanatory Help Note -->
+      <div class="mt-2 text-[8px] sm:text-[9px] font-sans text-white/40 leading-tight select-none">
+        💡 <span class="text-white/60">How it works:</span> "Copy & Tweet" copies the card image to your clipboard and opens Twitter. Simply press <kbd class="px-1 py-0.5 bg-white/10 text-white font-mono text-[8px]">Ctrl+V</kbd> to paste the sticker image!
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SWAP PRE-LAUNCH TRANSMISSION MODAL -->
+  <div 
+    id="swapPrelaunchModal" 
+    class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/90 backdrop-blur-md"
+    onclick="closeSwapModal(event)"
+  >
+    <div 
+      class="relative w-full max-w-[340px] sm:max-w-md bg-[#0D0F14] border border-amber-500/40 specular-top shadow-[0_20px_70px_rgba(245,158,11,0.25)] p-4 sm:p-6 flex flex-col items-center text-center font-mono select-none"
+      onclick="event.stopPropagation()"
+    >
+      <!-- Corner Reticles -->
+      <div class="absolute top-2 left-2 w-2 h-2 border-t border-l border-amber-400/60 pointer-events-none"></div>
+      <div class="absolute top-2 right-2 w-2 h-2 border-t border-r border-amber-400/60 pointer-events-none"></div>
+      <div class="absolute bottom-2 left-2 w-2 h-2 border-b border-l border-amber-400/60 pointer-events-none"></div>
+      <div class="absolute bottom-2 right-2 w-2 h-2 border-b border-r border-amber-400/60 pointer-events-none"></div>
+
+      <!-- Close Button -->
+      <button 
+        onclick="closeSwapModal()"
+        class="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 w-8 h-8 flex items-center justify-center text-white/40 hover:text-white bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 cursor-pointer text-xs transition-all focus-visible:ring-1 focus-visible:ring-white/50 outline-none"
+        title="Close (Esc)"
+        aria-label="Close modal"
+      >
+        ✕
+      </button>
+
+      <!-- Lock Icon & Status -->
+      <div class="w-12 h-12 flex items-center justify-center bg-amber-500/15 border border-amber-500/40 text-amber-300 text-2xl mb-3 shadow-[0_0_20px_rgba(245,158,11,0.3)]">
+        🔒
+      </div>
+
+      <div class="px-2.5 py-0.5 bg-amber-500/15 border border-amber-500/40 text-amber-300 text-[9px] sm:text-[10px] font-bold tracking-widest uppercase mb-2">
+        PRE-LAUNCH TRANSMISSION
+      </div>
+
+      <h3 class="text-base sm:text-lg font-bold text-white tracking-wide uppercase mb-1.5">
+        $NARA SWAPS LOCKED
+      </h3>
+
+      <p class="text-[11px] text-white/70 leading-relaxed font-sans max-w-xs mb-4">
+        The Uniswap dynamic pool hook is currently preparing for public launch on Base Mainnet. Swaps will be unlocked for the public upon official launch.
+      </p>
+
+      <!-- Contract Info Box -->
+      <div class="w-full bg-black/60 border border-white/10 p-2.5 mb-4 text-left font-mono">
+        <div class="flex items-center justify-between text-[9px] text-white/40 mb-1">
+          <span>TOKEN CONTRACT (BASE 8453)</span>
+          <span class="text-naraGreen">VERIFIED</span>
+        </div>
+        <div class="text-[10px] text-white font-mono break-all selection:bg-emerald-500/40 select-text">
+          0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="w-full flex flex-col gap-2">
+        <button 
+          onclick="copyCA()"
+          class="w-full min-h-[38px] py-2 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-naraGreen hover:text-white text-[10px] font-bold tracking-wider uppercase transition-all flex items-center justify-center gap-1.5 cursor-pointer focus-visible:ring-1 focus-visible:ring-naraGreen outline-none"
+        >
+          <span>📋</span> <span>COPY TOKEN ADDRESS</span>
+        </button>
+
+        <a 
+          href="https://t.me/NARAProtocol" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          class="w-full min-h-[38px] py-2 bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-sky-300 hover:text-white text-[10px] font-bold tracking-wider uppercase transition-all flex items-center justify-center gap-1.5 cursor-pointer no-underline focus-visible:ring-1 focus-visible:ring-sky-400 outline-none"
+        >
+          <span>✈</span> <span>GET LAUNCH ALERT ON TG</span>
+        </a>
+
+        <a 
+          href="https://dexscreener.com/base/0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          class="w-full min-h-[38px] py-2 bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/40 text-[#00F0FF] hover:text-white text-[10px] font-bold tracking-wider uppercase transition-all flex items-center justify-center gap-1.5 cursor-pointer no-underline focus-visible:ring-1 focus-visible:ring-cyan-400 outline-none"
+        >
+          <span>📊</span> <span>VIEW $NARA ON DEXSCREENER</span>
+        </a>
+
+        <button 
+          onclick="closeSwapModal()"
+          class="w-full min-h-[36px] py-1.5 bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 text-white/60 hover:text-white text-[10px] uppercase tracking-wider transition-all cursor-pointer focus-visible:ring-1 focus-visible:ring-white/50 outline-none"
+        >
+          RETURN TO SEWER TERMINAL
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 12/12 VICTORY CONQUERED MODAL (POPS ON COMPLETING ALL 12 CARDS) -->
+  <div 
+    id="victoryModal" 
+    class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/90 backdrop-blur-md"
+    onclick="closeVictoryModal(event)"
+  >
+    <div 
+      class="relative w-full max-w-[340px] sm:max-w-md bg-[#0D0F14] border border-amber-400/60 specular-top shadow-[0_20px_80px_rgba(255,215,0,0.3)] p-4 sm:p-6 flex flex-col items-center text-center font-mono select-none"
+      onclick="event.stopPropagation()"
+    >
+      <!-- Corner Reticles -->
+      <div class="absolute top-2 left-2 w-2 h-2 border-t border-l border-amber-400 pointer-events-none"></div>
+      <div class="absolute top-2 right-2 w-2 h-2 border-t border-r border-amber-400 pointer-events-none"></div>
+      <div class="absolute bottom-2 left-2 w-2 h-2 border-b border-l border-amber-400 pointer-events-none"></div>
+      <div class="absolute bottom-2 right-2 w-2 h-2 border-b border-r border-amber-400 pointer-events-none"></div>
+
+      <!-- Close Button -->
+      <button 
+        onclick="closeVictoryModal()"
+        class="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 w-8 h-8 flex items-center justify-center text-white/40 hover:text-white bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 cursor-pointer text-xs transition-all focus-visible:ring-1 focus-visible:ring-white/50 outline-none"
+        title="Close (Esc)"
+        aria-label="Close victory modal"
+      >
+        ✕
+      </button>
+
+      <!-- Trophy Icon & Badge -->
+      <div class="w-14 h-14 flex items-center justify-center bg-amber-500/20 border border-amber-400 text-amber-300 text-3xl mb-2.5 shadow-[0_0_24px_rgba(255,215,0,0.4)]">
+        👑
+      </div>
+
+      <div class="px-3 py-1 bg-amber-500/20 border border-amber-400/60 text-amber-300 text-[10px] font-bold tracking-widest uppercase mb-2 shadow-[0_0_12px_rgba(255,215,0,0.2)]">
+        🏆 12/12 SEWER VAULT CONQUERED!
+      </div>
+
+      <h3 class="text-lg sm:text-xl font-bold text-white tracking-wide uppercase mb-1">
+        PORCELAIN TRIUMPH
+      </h3>
+
+      <p class="text-[11px] text-white/70 font-sans max-w-xs mb-3 leading-relaxed">
+        You dredged every single rare onchain poop collectible through pure hydraulic discipline.
+      </p>
+
+      <!-- Score Banner -->
+      <div class="w-full bg-black/70 border border-amber-400/40 p-3 mb-3 text-center">
+        <div class="text-[9px] text-white/50 uppercase tracking-widest mb-1 font-mono">
+          OFFICIAL RUN SCORE
+        </div>
+        <div class="text-2xl sm:text-3xl font-extrabold text-amber-300 font-mono tracking-tight flex items-center justify-center gap-1.5">
+          <span id="victoryScoreNumber">0</span>
+          <span class="text-xs text-white/60 font-bold uppercase">CLICKS</span>
+        </div>
+        <div class="mt-1.5 inline-block px-2.5 py-0.5 text-[9px] font-bold font-mono uppercase tracking-wider border border-amber-400 text-amber-300 bg-amber-500/10" id="victoryTierBadge">
+          GOD-TIER PORCELAIN DEITY
+        </div>
+      </div>
+
+      <!-- Handle Input & Fame Board Submission -->
+      <div class="w-full mb-3 text-left">
+        <label for="victoryHandleInput" class="block text-[9px] text-white/60 font-mono uppercase mb-1">
+          OPERATOR HANDLE FOR ALL-TIME FAME BOARD:
+        </label>
+        <div class="flex items-center gap-1.5">
+          <input 
+            id="victoryHandleInput" 
+            type="text" 
+            maxlength="20" 
+            placeholder="@anon_operator"
+            class="flex-1 px-2.5 py-1.5 bg-black/80 border border-white/20 text-white font-mono text-[11px] focus:border-amber-400 outline-none placeholder:text-white/30"
+          />
+          <button 
+            id="victorySubmitBtn"
+            onclick="submitVictoryToFameBoard()"
+            class="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 active:bg-amber-300 text-black font-bold text-[10px] font-mono uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap shadow-[0_0_12px_rgba(245,158,11,0.3)]"
+          >
+            <span id="victorySubmitBtnText">SUBMIT SCORE</span>
+          </button>
+        </div>
+        <div id="victorySubmitNotice" class="hidden text-[8px] text-naraGreen font-mono mt-1">
+          ✓ RECORD IMMORTALIZED ON ALL-TIME FAME BOARD!
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="w-full flex flex-col gap-2">
+        <!-- Post Victory to X -->
+        <a 
+          id="victoryTweetBtn" 
+          href="https://x.com/intent/post" 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          onclick="handleVictoryTweet(event)"
+          class="w-full min-h-[38px] py-2 bg-white text-black hover:bg-white/90 font-bold text-[10px] tracking-wider uppercase transition-all flex items-center justify-center gap-2 cursor-pointer font-mono no-underline shadow-[0_0_15px_rgba(255,255,255,0.25)]"
+        >
+          <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 256 256">
+            <path d="M214.75,211.71l-62.6-98.38,61.77-67.95a8,8,0,0,0-11.84-10.76L143.24,99.9,94.06,22.69A8,8,0,0,0,87.27,19H40a8,8,0,0,0-6.75,12.29l62.6,98.37L34.08,197.62a8,8,0,1,0,11.84,10.76l58.84-64.72,49.18,77.21A8,8,0,0,0,160.73,225H208a8,8,0,0,0,6.75-12.29ZM165.23,209,68.88,41h21.89l96.35,168Z"/>
+          </svg>
+          <span>POST VICTORY PROOF ON X</span>
+        </a>
+
+        <!-- Reset Vault & Start New Run -->
+        <button 
+          onclick="resetAndStartNewRun()"
+          class="w-full min-h-[36px] py-1.5 bg-hazardRed/15 hover:bg-hazardRed/30 border border-hazardRed/40 text-red-200 hover:text-white text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 font-mono"
+        >
+          <span>🔄</span> <span>RESET VAULT & CHASE LOWER SCORE</span>
+        </button>
+
+        <button 
+          onclick="closeVictoryModal()"
+          class="w-full min-h-[32px] py-1 bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 text-white/50 hover:text-white text-[9px] uppercase tracking-wider transition-all cursor-pointer font-mono"
+        >
+          KEEP BROWSING VAULT
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Web3, Audio Synth, Physics, and Viral Social Sharing -->
+  <script>
+    const NARA_CONTRACT = "0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f";
+    const NARA_SYMBOL = "NARA";
+    const NARA_DECIMALS = 18;
+    const NARA_IMAGE = "https://naraprotocol.com/nara_token_256.png";
+    const BASE_CHAIN_ID_HEX = "0x2105"; // 8453
+
+    // --- PRE-LAUNCH SWAP GATE (ONE-CLICK LAUNCH SWITCH) ---
+    // Change to `true` when swaps are officially open to the public!
+    const SWAP_PUBLIC_LAUNCHED = false;
+
+    function handleSwapButtonClick() {
+      playMechanicalClick();
+      const isLocalDev = typeof window !== "undefined" && (
+        window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1"
+      );
+      const hasPreviewParam = isLocalDev && window.location.search.includes("preview=true");
+      if (SWAP_PUBLIC_LAUNCHED || hasPreviewParam) {
+        window.location.href = "/swap.html";
+      } else {
+        const modal = document.getElementById("swapPrelaunchModal");
+        if (modal) modal.classList.remove("hidden");
+      }
+    }
+
+    function closeSwapModal(e) {
+      if (e) e.stopPropagation();
+      playMechanicalClick();
+      const modal = document.getElementById("swapPrelaunchModal");
+      if (modal) modal.classList.add("hidden");
+    }
+
+    // --- HIGH-PERFORMANCE PROCEDURAL & RECORDED AUDIO ENGINE ---
+    let audioCtx = null;
+    let masterLimiter = null;
+    let cachedPinkNoiseBuffer = null;
+    let realFlushAudioBuffer = null;
+    let isFlushAudioLoading = false;
+    // Modes: 'flush' (authentic recorded flush & bubbling siphon) | 'arcade' (crisp 8-bit candle coin) | 'mute'
+    let soundMode = 'flush';
+
+    function getAudioContext() {
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) {
+          audioCtx = new AudioContextClass();
+
+          // Master Dynamics Compressor & Soft Limiter:
+          // Prevents digital clipping, distortion, and ear fatigue during rapid 100+ spam clicking
+          masterLimiter = audioCtx.createDynamicsCompressor();
+          masterLimiter.threshold.setValueAtTime(-14, audioCtx.currentTime);
+          masterLimiter.knee.setValueAtTime(6, audioCtx.currentTime);
+          masterLimiter.ratio.setValueAtTime(12, audioCtx.currentTime);
+          masterLimiter.attack.setValueAtTime(0.003, audioCtx.currentTime);
+          masterLimiter.release.setValueAtTime(0.12, audioCtx.currentTime);
+          masterLimiter.connect(audioCtx.destination);
+
+          // Pre-allocate 0.8s cyclic Pink Noise buffer once
+          // Pink noise has equal energy per octave (-3dB/octave) which perfectly models turbulent fluids & water whoosh
+          const bufferSize = Math.floor(audioCtx.sampleRate * 0.8);
+          cachedPinkNoiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+          const data = cachedPinkNoiseBuffer.getChannelData(0);
+          let b0 = 0, b1 = 0, b2 = 0;
+          for (let i = 0; i < bufferSize; i++) {
+            const white = Math.random() * 2 - 1;
+            b0 = 0.99765 * b0 + white * 0.0990460;
+            b1 = 0.96300 * b1 + white * 0.2965164;
+            b2 = 0.57000 * b2 + white * 1.0526913;
+            data[i] = (b0 + b1 + b2 + white * 0.1848) * 0.18;
+          }
+        }
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(() => {});
+      }
+      return audioCtx;
+    }
+
+    // Load authentic recorded flush audio file from public endpoint /flush.mp3
+    function loadRealFlushAudio() {
+      if (realFlushAudioBuffer || isFlushAudioLoading) return;
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      isFlushAudioLoading = true;
+      fetch('/flush.mp3')
+        .then(res => {
+          if (!res.ok) throw new Error('Audio fetch status ' + res.status);
+          return res.arrayBuffer();
+        })
+        .then(ab => ctx.decodeAudioData(ab))
+        .then(decodedBuf => {
+          realFlushAudioBuffer = decodedBuf;
+          isFlushAudioLoading = false;
+        })
+        .catch(err => {
+          console.warn('Fallback to procedural liquid flush:', err);
+          isFlushAudioLoading = false;
+        });
+    }
+
+    // Audio unlock for mobile and desktop user gestures
+    function unlockAudioOnce() {
+      getAudioContext();
+      loadRealFlushAudio();
+      window.removeEventListener('touchstart', unlockAudioOnce);
+      window.removeEventListener('pointerdown', unlockAudioOnce);
+    }
+    window.addEventListener('touchstart', unlockAudioOnce, { passive: true });
+    window.addEventListener('pointerdown', unlockAudioOnce, { passive: true });
+    if (document.readyState === 'complete') {
+      setTimeout(loadRealFlushAudio, 250);
+    } else {
+      window.addEventListener('load', () => setTimeout(loadRealFlushAudio, 250));
+    }
+
+    function toggleAudio() {
+      const label = document.getElementById("audioLabel");
+      const onIcon = document.getElementById("audioIconOn");
+      const offIcon = document.getElementById("audioIconOff");
+      const modeBadge = document.getElementById("audioModeBadge");
+
+      if (soundMode === 'flush') {
+        soundMode = 'arcade';
+        if (label) label.innerText = "SFX: COIN";
+        if (modeBadge) modeBadge.innerText = "🪙";
+        if (onIcon) onIcon.classList.remove("hidden");
+        if (offIcon) offIcon.classList.add("hidden");
+        try { playArcadeChime(getAudioContext()); } catch (e) {}
+      } else if (soundMode === 'arcade') {
+        soundMode = 'mute';
+        if (label) label.innerText = "SFX: OFF";
+        if (modeBadge) modeBadge.innerText = "🔇";
+        if (onIcon) onIcon.classList.add("hidden");
+        if (offIcon) offIcon.classList.remove("hidden");
+      } else {
+        soundMode = 'flush';
+        if (label) label.innerText = "SFX: FLUSH";
+        if (modeBadge) modeBadge.innerText = "💧";
+        if (onIcon) onIcon.classList.remove("hidden");
+        if (offIcon) offIcon.classList.add("hidden");
+        playHydraulicFlushSound();
+      }
+    }
+
+    function playMechanicalClick() {
+      if (soundMode === 'mute') return;
+      try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        const t = ctx.currentTime;
+        const target = masterLimiter || ctx.destination;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(750, t);
+        osc.frequency.exponentialRampToValueAtTime(260, t + 0.024);
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.linearRampToValueAtTime(0.045, t + 0.003);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.028);
+        osc.connect(gain);
+        gain.connect(target);
+        osc.start(t);
+        osc.stop(t + 0.032);
+      } catch (e) {}
+    }
+
+    // Minnaert physical bubble blip synthesis (upward frequency chirp simulating rising/collapsing liquid bubble)
+    function playLiquidBubble(ctx, target, startTime, startFreq, endFreq, dur, peakGain) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(startFreq, startTime);
+      osc.frequency.exponentialRampToValueAtTime(endFreq, startTime + dur);
+
+      gain.gain.setValueAtTime(0.0001, startTime);
+      gain.gain.linearRampToValueAtTime(peakGain, startTime + dur * 0.22);
+      gain.gain.exponentialRampToValueAtTime(0.0001, startTime + dur);
+
+      osc.connect(gain);
+      gain.connect(target);
+      osc.start(startTime);
+      osc.stop(startTime + dur + 0.01);
+    }
+
+    // Authentic Liquid Swirl & Bubbling Drain Siphon
+    // Zero harsh transients: smooth 70ms attack, resonant bandpass swirl, playful bubbles, gentle porcelain hum
+    function playWaterVortexFlush(ctx) {
+      const t = ctx.currentTime;
+      const target = masterLimiter || ctx.destination;
+
+      // 1. Fluid Swirl Layer: Filtered Pink Noise with resonant bandpass sweep
+      if (cachedPinkNoiseBuffer) {
+        const noise = ctx.createBufferSource();
+        noise.buffer = cachedPinkNoiseBuffer;
+
+        const bpFilter = ctx.createBiquadFilter();
+        bpFilter.type = "bandpass";
+        bpFilter.Q.setValueAtTime(2.6, t);
+        bpFilter.frequency.setValueAtTime(540, t);
+        bpFilter.frequency.exponentialRampToValueAtTime(210, t + 0.58);
+
+        const lpFilter = ctx.createBiquadFilter();
+        lpFilter.type = "lowpass";
+        lpFilter.frequency.setValueAtTime(680, t);
+        lpFilter.frequency.exponentialRampToValueAtTime(160, t + 0.58);
+
+        const noiseGain = ctx.createGain();
+        // Gentle 70ms linear attack completely eliminates the gunshot / firing transient
+        noiseGain.gain.setValueAtTime(0.0001, t);
+        noiseGain.gain.linearRampToValueAtTime(0.18, t + 0.07);
+        noiseGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.62);
+
+        noise.connect(bpFilter);
+        bpFilter.connect(lpFilter);
+        lpFilter.connect(noiseGain);
+        noiseGain.connect(target);
+
+        noise.start(t);
+        noise.stop(t + 0.65);
+      }
+
+      // 2. Playful Water Bubble Blips (bloop, bloop, glug)
+      playLiquidBubble(ctx, target, t + 0.03, 260, 520, 0.045, 0.09);
+      playLiquidBubble(ctx, target, t + 0.10, 380, 760, 0.040, 0.08);
+      playLiquidBubble(ctx, target, t + 0.22, 220, 460, 0.055, 0.10);
+      playLiquidBubble(ctx, target, t + 0.35, 310, 620, 0.048, 0.07);
+
+      // 3. Gentle Porcelain Resonator (warm water mass, NOT an artillery cannon)
+      const drainOsc = ctx.createOscillator();
+      const drainGain = ctx.createGain();
+      drainOsc.type = "sine";
+      drainOsc.frequency.setValueAtTime(105, t);
+      drainOsc.frequency.exponentialRampToValueAtTime(55, t + 0.48);
+
+      drainGain.gain.setValueAtTime(0.0001, t);
+      drainGain.gain.linearRampToValueAtTime(0.09, t + 0.08);
+      drainGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.50);
+
+      drainOsc.connect(drainGain);
+      drainGain.connect(target);
+
+      drainOsc.start(t);
+      drainOsc.stop(t + 0.52);
+    }
+
+    // Crisp 8-Bit Green Candle Arcade Ping (for high-speed degen gaming)
+    function playArcadeChime(ctx) {
+      const t = ctx.currentTime;
+      const target = masterLimiter || ctx.destination;
+      const notes = [
+        { freq: 987.77, start: t, dur: 0.10, vol: 0.11 },      // B5
+        { freq: 1318.51, start: t + 0.06, dur: 0.22, vol: 0.14 } // E6
+      ];
+
+      notes.forEach(({ freq, start, dur, vol }) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(freq, start);
+
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.linearRampToValueAtTime(vol, start + 0.006);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+
+        osc.connect(gain);
+        gain.connect(target);
+        osc.start(start);
+        osc.stop(start + dur + 0.02);
+      });
+    }
+
+    // Celebratory Promotion Fanfare (Plays on Tier Rank Promotions)
+    function playPromotionFanfare() {
+      if (soundMode === 'mute') return;
+      try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        const t = ctx.currentTime;
+        const target = masterLimiter || ctx.destination;
+        const chord = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+        chord.forEach((freq, idx) => {
+          const start = t + idx * 0.065;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(freq, start);
+          gain.gain.setValueAtTime(0.0001, start);
+          gain.gain.linearRampToValueAtTime(0.12, start + 0.012);
+          gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.38);
+          osc.connect(gain);
+          gain.connect(target);
+          osc.start(start);
+          osc.stop(start + 0.40);
+        });
+      } catch (e) {}
+    }
+
+    // Sparkling 4-Note Loot Drop Fanfare (Plays when Dredging Sticker Cards)
+    function playLootDropChime() {
+      if (soundMode === 'mute') return;
+      try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        const t = ctx.currentTime;
+        const target = masterLimiter || ctx.destination;
+        const notes = [
+          { freq: 587.33, start: t, dur: 0.12, vol: 0.09 },        // D5
+          { freq: 739.99, start: t + 0.07, dur: 0.12, vol: 0.11 }, // F#5
+          { freq: 880.00, start: t + 0.14, dur: 0.14, vol: 0.13 }, // A5
+          { freq: 1174.66, start: t + 0.22, dur: 0.32, vol: 0.16 } // D6
+        ];
+        notes.forEach(({ freq, start, dur, vol }) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(freq, start);
+          gain.gain.setValueAtTime(0.0001, start);
+          gain.gain.linearRampToValueAtTime(vol, start + 0.008);
+          gain.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+          osc.connect(gain);
+          gain.connect(target);
+          osc.start(start);
+          osc.stop(start + dur + 0.02);
+        });
+      } catch (e) {}
+    }
+
+    // Glorious Gold Victory Fanfare (Plays on Conquering all 12/12 Cards)
+    function playVictoryFanfare() {
+      if (soundMode === 'mute') return;
+      try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        const t = ctx.currentTime;
+        const target = masterLimiter || ctx.destination;
+        const arpeggio = [523.25, 659.25, 783.99, 1046.50, 1318.51, 1567.98]; // C5, E5, G5, C6, E6, G6
+        arpeggio.forEach((freq, idx) => {
+          const start = t + idx * 0.075;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(freq, start);
+          gain.gain.setValueAtTime(0.0001, start);
+          gain.gain.linearRampToValueAtTime(0.14, start + 0.012);
+          gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.42);
+          osc.connect(gain);
+          gain.connect(target);
+          osc.start(start);
+          osc.stop(start + 0.45);
+        });
+      } catch (e) {}
+    }
+
+    function playHydraulicFlushSound() {
+      if (soundMode === 'mute') return;
+      try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        if (soundMode === 'arcade') {
+          playArcadeChime(ctx);
+        } else if (realFlushAudioBuffer) {
+          const source = ctx.createBufferSource();
+          source.buffer = realFlushAudioBuffer;
+          const gainNode = ctx.createGain();
+          gainNode.gain.setValueAtTime(0.9, ctx.currentTime);
+          source.connect(gainNode);
+          gainNode.connect(masterLimiter || ctx.destination);
+          source.start(ctx.currentTime);
+        } else {
+          loadRealFlushAudio();
+          playWaterVortexFlush(ctx);
+        }
+      } catch (e) {
+        try { playWaterVortexFlush(getAudioContext()); } catch (err) {}
+      }
+    }
+
+    // --- RETINA DPR-AWARE CANDLESTICK PHYSICS ---
+    const canvas = document.getElementById("candleCanvas");
+    const ctx = canvas.getContext("2d");
+    let candles = [];
+    const MAX_CANDLES = 500;
+    let flushCount = 0;
+    let dpr = 1;
+
+    // --- XSS PROTECTION & INPUT SANITIZATION ---
+    function escapeHTML(str) {
+      if (typeof str !== 'string') return String(str ?? '');
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    // --- FLUSH & RUN PROGRESS PERSISTENCE ---
+    let runFlushes = 0;
+    let bestRunRecord = null;
+    let runWon = false;
+
+    function loadFlushProgress() {
+      try {
+        const saved = localStorage.getItem("nara_flush_progress");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && typeof parsed.flushCount === "number" && Number.isFinite(parsed.flushCount)) {
+            flushCount = Math.max(0, Math.min(1000000, Math.floor(parsed.flushCount)));
+            previousTierLevel = Math.max(1, Math.min(9, Math.floor(Number(parsed.previousTierLevel) || 1)));
+          }
+        }
+        const savedRun = localStorage.getItem("nara_current_run_flushes_v1");
+        if (savedRun !== null) {
+          const num = parseInt(savedRun, 10);
+          if (Number.isFinite(num) && num >= 0) runFlushes = num;
+        }
+        const savedBest = localStorage.getItem("nara_best_run_record_v1");
+        if (savedBest !== null) {
+          const num = parseInt(savedBest, 10);
+          if (Number.isFinite(num) && num >= 12) bestRunRecord = num;
+        }
+      } catch (e) {}
+      updateRunDisplayUI();
+    }
+
+    function saveFlushProgress() {
+      try {
+        localStorage.setItem("nara_flush_progress", JSON.stringify({
+          flushCount: Math.max(0, Math.floor(flushCount)),
+          previousTierLevel: Math.max(1, Math.min(9, Math.floor(previousTierLevel)))
+        }));
+        localStorage.setItem("nara_current_run_flushes_v1", String(runFlushes));
+        if (bestRunRecord !== null) {
+          localStorage.setItem("nara_best_run_record_v1", String(bestRunRecord));
+        }
+      } catch (e) {}
+    }
+
+    function updateRunDisplayUI() {
+      const runEl = document.getElementById("runFlushesCount");
+      if (runEl) runEl.innerText = runFlushes;
+      const bestEl = document.getElementById("bestRecordCount");
+      if (bestEl) {
+        bestEl.innerText = bestRunRecord !== null ? `${bestRunRecord} CLICKS` : "--";
+      }
+    }
+
+    function resizeCanvas() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = window.innerWidth * dpr;
+      canvas.height = window.innerHeight * dpr;
+      canvas.style.width = window.innerWidth + 'px';
+      canvas.style.height = window.innerHeight + 'px';
+      ctx.resetTransform?.();
+      ctx.scale(dpr, dpr);
+    }
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
+
+    class Candlestick {
+      constructor(x, y) {
+        this.x = x || Math.random() * window.innerWidth;
+        this.y = y || -30;
+        this.isGreen = Math.random() > 0.35;
+        this.color = this.isGreen ? "#39FF14" : "#FF2A2A";
+        this.glow = this.isGreen ? "rgba(57,255,20,0.5)" : "rgba(255,42,42,0.4)";
+        this.bodyWidth = Math.random() * 8 + 6;
+        this.bodyHeight = Math.random() * 26 + 14;
+        this.wickTop = Math.random() * 12 + 6;
+        this.wickBottom = Math.random() * 12 + 6;
+        
+        this.vx = (Math.random() - 0.5) * 12;
+        this.vy = Math.random() * 4 + 4;
+        this.gravity = 0.32;
+        this.rotation = Math.random() * Math.PI * 2;
+        this.vRot = (Math.random() - 0.5) * 0.18;
+        this.alpha = 1;
+        this.life = 0;
+        this.maxLife = Math.random() * 140 + 120;
+      }
+
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.vy += this.gravity;
+        this.rotation += this.vRot;
+        this.life++;
+        this.vx *= 0.985;
+        if (this.life > this.maxLife - 30) {
+          this.alpha = Math.max(0, (this.maxLife - this.life) / 30);
+        }
+      }
+
+      draw(c) {
+        c.save();
+        c.translate(this.x, this.y);
+        c.rotate(this.rotation);
+        c.globalAlpha = this.alpha;
+        c.shadowColor = this.glow;
+        c.shadowBlur = 8;
+
+        c.strokeStyle = this.color;
+        c.lineWidth = 1.5;
+        c.beginPath();
+        c.moveTo(0, -this.bodyHeight / 2 - this.wickTop);
+        c.lineTo(0, -this.bodyHeight / 2);
+        c.stroke();
+
+        c.fillStyle = this.color;
+        c.fillRect(-this.bodyWidth / 2, -this.bodyHeight / 2, this.bodyWidth, this.bodyHeight);
+
+        c.beginPath();
+        c.moveTo(0, this.bodyHeight / 2);
+        c.lineTo(0, this.bodyHeight / 2 + this.wickBottom);
+        c.stroke();
+
+        c.restore();
+      }
+    }
+
+    function animateCandles() {
+      ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+      for (let i = candles.length - 1; i >= 0; i--) {
+        candles[i].update();
+        candles[i].draw(ctx);
+        if (candles[i].alpha <= 0 || candles[i].y > window.innerHeight + 60) {
+          candles.splice(i, 1);
+        }
+      }
+      // Hard cap to prevent memory leak during spam clicking
+      if (candles.length > MAX_CANDLES) {
+        candles = candles.slice(-MAX_CANDLES);
+      }
+      requestAnimationFrame(animateCandles);
+    }
+    requestAnimationFrame(animateCandles);
+
+    // --- OPERATOR PROGRESSION & TIER MATRIX (LEVELS 1 TO 9) ---
+    const OPERATOR_LEVELS = [
+      { minFlushes: 0, level: 1, rank: "Sewer Recruit", title: "Novice Toilet Operator", color: "#9CA3AF" },
+      { minFlushes: 5, level: 2, rank: "Candlestick Handler", title: "Green Paper Specialist", color: "#34D399" },
+      { minFlushes: 15, level: 3, rank: "3 AM Chart Watcher", title: "Porcelain Scout", color: "#60A5FA" },
+      { minFlushes: 30, level: 4, rank: "Sewer Liquidator", title: "Submerged Bear Hunter", color: "#A78BFA" },
+      { minFlushes: 50, level: 5, rank: "Base Sewer Tactician", title: "Tactical Plunger Master", color: "#FBBF24" },
+      { minFlushes: 75, level: 6, rank: "Hydraulic Warlord", title: "Commanding Flush General", color: "#F87171" },
+      { minFlushes: 100, level: 7, rank: "Porcelain Warlord", title: "100+ Bear Purger", color: "#39FF14" },
+      { minFlushes: 200, level: 8, rank: "Uniswap Hook Master", title: "15M Epoch Purger", color: "#38BDF8" },
+      { minFlushes: 420, level: 9, rank: "GOD CANDLE DEITY", title: "Sovereign Porcelain Overlord", color: "#FFD700" }
+    ];
+
+    function getOperatorTier(count) {
+      for (let i = OPERATOR_LEVELS.length - 1; i >= 0; i--) {
+        if (count >= OPERATOR_LEVELS[i].minFlushes) {
+          const tier = OPERATOR_LEVELS[i];
+          const nextTier = OPERATOR_LEVELS[i + 1] || null;
+          let progress = 100;
+          if (nextTier) {
+            const range = nextTier.minFlushes - tier.minFlushes;
+            const current = count - tier.minFlushes;
+            progress = Math.min(100, Math.max(0, Math.floor((current / range) * 100)));
+          }
+          return { ...tier, progress, nextTier };
+        }
+      }
+      return { ...OPERATOR_LEVELS[0], progress: 0, nextTier: OPERATOR_LEVELS[1] };
+    }
+
+    const RANDOM_HOOKS = [
+      (n) => n > 0 
+        ? `The toad stared into my soul while I flushed ${n} short sellers. I will never be the same.` 
+        : `The toad stared into my soul from the porcelain bowl. Something unhinged is brewing on Base.`,
+      (n) => n > 0 
+        ? `Checked my portfolio on the toilet at 3 AM. Ended up flushing ${n} bears down the $NARA bowl.`
+        : `Checked my portfolio on the toilet at 3 AM. Found the $NARA bowl and the machine is loading.`,
+      (n) => n > 0 
+        ? `He who controls the candlestick toilet paper controls the machine. ${n} bears flushed.`
+        : `He who controls the candlestick toilet paper controls the machine. Token first.`,
+      (n) => n > 0 
+        ? `Thought it was just a meme. Then I flushed ${n} times and the pipes whispered 'token first'.`
+        : `Thought it was just a meme. Then the pipes whispered 'token first. The machine follows.'`,
+      (n) => n > 0 
+        ? `Just wiped the floor with ${n} liquidated shorts. Something's coming to Base.`
+        : `Just wiped the floor with liquidated shorts. Something's coming to Base.`,
+      (n) => n > 0 
+        ? `The candlestick roll doesn't lie. ${n} bears sent straight to the sewer grid.`
+        : `The candlestick roll doesn't lie. Green candles only on Base.`,
+      (n) => n > 0 
+        ? `Told him not to short $NARA on Base. Now he's in the bowl and I've flushed him ${n} times.`
+        : `Told him not to short $NARA on Base. Green candles are loading.`,
+      (n) => n > 0 
+        ? `Red candle paper wiped. ${n} flushes later, only green God candles remain.`
+        : `Red candle paper wiped. Only green God candles remain on Base.`,
+      (n) => n > 0 
+        ? `Doctor said to stop checking charts on the toilet. So I flushed ${n} bears on $NARA instead.`
+        : `Doctor said to stop checking charts on the toilet. So I opened $NARA on Base instead.`,
+      (n) => n > 0 
+        ? `The machine follows. But first, ${n} bears had to be purged down the porcelain throne.`
+        : `The machine follows. Token first. The revolution starts on Base.`,
+      (n) => n > 0 
+        ? `Wiped my portfolio with the candlestick roll. Flushed ${n} times. Pure catharsis.`
+        : `Wiped my portfolio with the candlestick roll. Pure catharsis on Base.`,
+      (n) => n > 0 
+        ? `No whitepaper needed when you can flush ${n} short sellers into the sewer.`
+        : `No whitepaper needed when green God candles wipe out the bears.`
+    ];
+
+    const RANDOM_REPLY_BAITS = [
+      "Drop your purge score below 👇",
+      "How many bears did you flush? Drop your badge 👇",
+      "Beat my purge score or wipe with red paper 👇",
+      "Can anyone top this operator rank? 👇",
+      "Drop your score below if you survived the flush 👇"
+    ];
+
+    let currentRoll = {
+      rank: OPERATOR_LEVELS[0].rank,
+      hook: "",
+      cta: RANDOM_REPLY_BAITS[0],
+      opId: Math.floor(1000 + Math.random() * 9000)
+    };
+
+    let activeTweetMode = 'flex'; // 'flex' | 'receipt' | 'lore' | 'unhinged'
+    let combo = 0;
+    let comboTimer = null;
+    let previousTierLevel = 1;
+
+    function rollNewDegenMessage(count) {
+      const hookFn = RANDOM_HOOKS[Math.floor(Math.random() * RANDOM_HOOKS.length)];
+      const cta = RANDOM_REPLY_BAITS[Math.floor(Math.random() * RANDOM_REPLY_BAITS.length)];
+      const hook = hookFn(count);
+      currentRoll.hook = hook;
+      currentRoll.cta = cta;
+      return currentRoll;
+    }
+
+    // --- VIRAL SOCIAL POSTING ENGINE (RFC-3986 STRICT & POPUP-PROOF) ---
+    function getShareUrl() {
+      if (typeof window !== "undefined" && window.location) {
+        const origin = window.location.origin;
+        if (origin && !origin.includes("localhost") && !origin.includes("127.0.0.1") && origin.startsWith("http")) {
+          return window.location.href.split("?")[0].split("#")[0];
+        }
+      }
+      return "https://naraprotocol.com/meme.html";
+    }
+
+    function buildTweetByMode(mode, count, roll) {
+      const tier = getOperatorTier(count);
+      const purgeLabel = count > 0 ? `${count} BEARS PURGED` : `READY TO PURGE`;
+      const opId = roll.opId;
+
+      if (mode === 'receipt') {
+        const bears = count > 0 ? count : 1;
+        return `[SEWER LIQUIDATION RECEIPT #${opId}] 🧾🐸\n\nAsset: $NARA (Base)\nTarget: ${bears} Short Sellers\nOutcome: WIPED DOWN THE BOWL 🚽\nPaper: 100% Green Candlestick Roll\n\nDrop your receipt below 👇\nCA: 0x91FB...Ae0f`;
+      }
+
+      if (mode === 'lore') {
+        return `[SEWER TRANSMISSION // TOAD PROTOCOL] 🐸📡\n\n"The toad stared into my soul while I flushed ${count || 1} times. The pipes whispered: token first. the machine follows."\n\nSomething unhinged on Base.\nDrop OP badge 👇\n⛓️ CA: 0x91FB...Ae0f`;
+      }
+
+      if (mode === 'unhinged') {
+        return `Doctor said to stop checking charts on the toilet.\nSo I purged ${count || 69} bears down the $NARA bowl on Base instead.\n\n[OP #${opId} // LVL ${tier.level}: ${tier.rank.toUpperCase()}]\nBeat my score or wipe with red paper 👇\n⛓️ CA: 0x91FB...Ae0f`;
+      }
+
+      if (mode === 'sticker') {
+        const hasUnlocked = userStash && userStash.unlocked && Object.keys(userStash.unlocked).length > 0;
+        if (!hasUnlocked) {
+          return `[SEWER STICKER VAULT] 🐸🚽🔒\n\nNo sticker NFTs dredged yet! Flush the porcelain bowl to unlock your first rare on-chain collectible.\n\n⛓️ CA: 0x91FB...Ae0f\n\nStart dredging 👇\nhttps://naraprotocol.com/meme.html`;
+        }
+        const stickerId = userStash.activeStickerId || 1;
+        const sticker = STICKER_COLLECTION.find(s => s.id === stickerId) || STICKER_COLLECTION[0];
+        const serial = (userStash.unlocked[sticker.id] && userStash.unlocked[sticker.id].serial) || roll.opId;
+        const bears = count > 0 ? count : 1;
+        return `[SEWER STICKER DROP #${serial}] 🐸🚽💩\n\nItem: ${sticker.deco} ${sticker.name}\nRarity: ${sticker.rarity} [${sticker.perk}]\nOperator: ${tier.rank.toUpperCase()} // ${bears} Flushed\n\n(Card image attached 👆)\n⛓️ CA: 0x91FB...Ae0f\n\nStash 👇\nhttps://naraprotocol.com/meme.html`;
+      }
+
+      // Default: 'flex'
+      return `[OP #${opId} // LVL ${tier.level}: ${tier.rank.toUpperCase()} // ${purgeLabel}] 🐸🚽\n\n"${roll.hook}"\n\n${roll.cta}\n\n⛓️ $NARA on Base: 0x91FB...Ae0f`;
+    }
+
+    function setTweetMode(mode) {
+      playMechanicalClick();
+      activeTweetMode = mode;
+      
+      const modes = ['flex', 'receipt', 'lore', 'unhinged', 'sticker'];
+      modes.forEach(m => {
+        const btn = document.getElementById(`tabBtn-${m}`);
+        if (btn) {
+          if (m === mode) {
+            btn.className = "px-3 py-1.5 min-h-[36px] text-[10px] font-bold font-mono uppercase tracking-wider bg-white text-black border border-white transition-all cursor-pointer flex items-center gap-1.5 focus-visible:ring-1 focus-visible:ring-naraGreen outline-none";
+          } else {
+            const extraColor = m === 'sticker' ? 'text-amber-300 hover:text-white border-amber-500/30' : 'text-white/60 hover:text-white border-white/10';
+            btn.className = `px-3 py-1.5 min-h-[36px] text-[10px] font-bold font-mono uppercase tracking-wider bg-white/[0.04] ${extraColor} hover:border-white/20 transition-all cursor-pointer flex items-center gap-1.5 focus-visible:ring-1 focus-visible:ring-white outline-none`;
+          }
+        }
+      });
+
+      updateForgeUI();
+    }
+
+    function rerollActiveMode() {
+      playMechanicalClick();
+      rollNewDegenMessage(flushCount);
+      currentRoll.opId = Math.floor(1000 + Math.random() * 9000);
+      updateForgeUI();
+
+      const preview = document.getElementById("tweetPreviewDisplay");
+      if (preview) {
+        preview.classList.add("text-naraGreen");
+        setTimeout(() => preview.classList.remove("text-naraGreen"), 200);
+      }
+    }
+
+    function updateForgeUI() {
+      if (!currentRoll.hook) {
+        rollNewDegenMessage(flushCount);
+      }
+      const tier = getOperatorTier(flushCount);
+      const shareUrl = getShareUrl();
+      const text = buildTweetByMode(activeTweetMode, flushCount, currentRoll);
+
+      // 1. Status Bar updates
+      const rankLabel = document.getElementById("operatorRankLabel");
+      const titleLabel = document.getElementById("operatorTitleLabel");
+      const xpPercentLabel = document.getElementById("xpPercentLabel");
+      const xpBar = document.getElementById("xpProgressBar");
+      const xpTitle = document.getElementById("xpTitleLabel");
+
+      if (rankLabel) rankLabel.innerText = `LVL ${tier.level}: ${tier.rank.toUpperCase()}`;
+      if (titleLabel) titleLabel.innerText = tier.title.toUpperCase();
+      if (xpPercentLabel) xpPercentLabel.innerText = `${tier.progress}%`;
+      if (xpBar) xpBar.style.width = `${tier.progress}%`;
+      if (xpTitle) {
+        xpTitle.innerText = tier.nextTier ? `XP TO LVL ${tier.nextTier.level} (${tier.nextTier.minFlushes - flushCount} LEFT)` : `MAX DEITY TIER REACHED`;
+      }
+
+      // 2. Terminal Preview update
+      const preview = document.getElementById("tweetPreviewDisplay");
+      const charCountLabel = document.getElementById("charCountLabel");
+      if (preview) preview.innerText = text;
+      if (charCountLabel) {
+        charCountLabel.innerText = `${text.length} / 280 CHARS`;
+        if (text.length > 280) {
+          charCountLabel.classList.add("text-red-400");
+          charCountLabel.classList.remove("text-white/50");
+        } else {
+          charCountLabel.classList.remove("text-red-400");
+          charCountLabel.classList.add("text-white/50");
+        }
+      }
+
+      // 3. Share URL encoding & anchor pre-population
+      const xUrl = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`;
+      const castText = `${text}\n${shareUrl}`;
+      const warpcastUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(castText)}`;
+
+      const forgeX = document.getElementById("forgeXBtn");
+      const forgeCast = document.getElementById("forgeCastBtn");
+      const quickBtn = document.getElementById("quickTweetBtn");
+      const mTweet = document.getElementById("milestoneTweetBtn");
+      const mCast = document.getElementById("milestoneCastBtn");
+
+      if (forgeX) forgeX.href = xUrl;
+      if (forgeCast) forgeCast.href = warpcastUrl;
+      if (quickBtn) quickBtn.href = xUrl;
+      if (mTweet) mTweet.href = xUrl;
+      if (mCast) mCast.href = warpcastUrl;
+
+      // 4. Toggle Copy Card Image button visibility
+      const forgeCardBtn = document.getElementById("forgeCopyCardBtn");
+      const hasUnlockedStickers = userStash && userStash.unlocked && Object.keys(userStash.unlocked).length > 0;
+      if (forgeCardBtn) {
+        if (activeTweetMode === 'sticker' && hasUnlockedStickers) {
+          forgeCardBtn.classList.remove("hidden");
+        } else {
+          forgeCardBtn.classList.add("hidden");
+        }
+      }
+    }
+
+    function handleForgeClick(e, platform) {
+      playMechanicalClick();
+      updateForgeUI();
+      const forgeX = document.getElementById("forgeXBtn");
+      const forgeCast = document.getElementById("forgeCastBtn");
+      const targetUrl = platform === "warpcast" ? forgeCast?.href : forgeX?.href;
+      
+      if (e && e.currentTarget && e.currentTarget.tagName && e.currentTarget.tagName.toLowerCase() === "a") {
+        if (targetUrl) e.currentTarget.href = targetUrl;
+      } else {
+        if (e && e.preventDefault) e.preventDefault();
+        openSafeWindow(targetUrl);
+      }
+    }
+
+    function handleShareClick(e, platform) {
+      handleForgeClick(e, platform);
+    }
+
+    function copyForgeTweetText() {
+      playMechanicalClick();
+      const text = buildTweetByMode(activeTweetMode, flushCount, currentRoll) + `\n${getShareUrl()}`;
+      
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(() => copyTextFallback(text));
+      } else {
+        copyTextFallback(text);
+      }
+
+      const toast = document.getElementById("copyToast");
+      const btnLabel = document.getElementById("forgeCopyBtnLabel");
+      if (btnLabel) {
+        btnLabel.innerText = "COPIED!";
+        setTimeout(() => { btnLabel.innerText = "COPY TWEET"; }, 2000);
+      }
+      if (toast) {
+        toast.classList.remove("hidden");
+        setTimeout(() => { toast.classList.add("hidden"); }, 1600);
+      }
+    }
+
+    function updateComboUI() {
+      const container = document.getElementById("comboContainer");
+      const label = document.getElementById("comboLabel");
+      if (!container || !label) return;
+
+      if (combo <= 1) {
+        label.innerText = "1X";
+        container.className = "px-2 py-0.5 bg-white/[0.03] border border-white/10 text-[9px] text-white/40 uppercase tracking-widest flex items-center gap-1 transition-all";
+      } else if (combo < 10) {
+        const mult = Math.min(5, Math.floor(combo / 2) + 1);
+        label.innerText = `${mult}X`;
+        container.className = "px-2 py-0.5 bg-emerald-500/15 border border-emerald-500/40 text-[9px] text-naraGreen font-bold uppercase tracking-widest flex items-center gap-1 transition-all";
+      } else if (combo < 25) {
+        label.innerText = `10X OVERDRIVE!`;
+        container.className = "px-2 py-0.5 bg-hazardRed/20 border border-hazardRed text-[9px] text-red-300 font-bold uppercase tracking-widest flex items-center gap-1 animate-pulse transition-all shadow-[0_0_12px_rgba(255,42,42,0.4)]";
+      } else {
+        label.innerText = `25X RAD-MAX! 🔥`;
+        container.className = "px-2 py-0.5 bg-naraGreen text-black border border-naraGreen text-[9px] font-bold uppercase tracking-widest flex items-center gap-1 animate-pulse transition-all shadow-[0_0_15px_#39FF14]";
+      }
+    }
+
+    function openSafeWindow(url) {
+      if (!url) return;
+      try {
+        const a = document.createElement("a");
+        a.href = url;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => a.remove(), 100);
+      } catch (err) {
+        try {
+          const win = window.open(url, "_blank");
+          if (!win || win.closed || typeof win.closed === "undefined") {
+            window.location.href = url;
+          }
+        } catch (e) {
+          window.location.href = url;
+        }
+      }
+    }
+
+    // --- LIVE SIMULATED GLOBAL SEWER FEED ---
+    const GLOBAL_SEWER_EVENTS = [
+      "anon_4210 liquidated 18 short sellers on Base L2",
+      "toad_disciple_99 triggered 10X HYDRAULIC OVERDRIVE",
+      "base_warlord_0x just wiped portfolio with green candlestick roll",
+      "operator_8820 achieved PROMOTION: PORCELAIN WARLORD",
+      "degen_whale_77 flushed 69 bears into the sewer grid",
+      "anon_1337 detected $NARA Uniswap v4 hook compounding",
+      "porcelain_sniper_9 just broadcasted official liquidation receipt",
+      "toad_whisperer_01 wiped 420 bears with God candles"
+    ];
+
+    function injectSewerEvent(text) {
+      const ticker = document.getElementById("sewerTickerText");
+      if (ticker) {
+        ticker.innerText = text;
+        ticker.classList.add("text-naraGreen");
+        setTimeout(() => ticker.classList.remove("text-naraGreen"), 800);
+      }
+    }
+
+    let sewerTickerInterval = setInterval(() => {
+      if (document.hidden) return; // Skip when tab is backgrounded
+      const event = GLOBAL_SEWER_EVENTS[Math.floor(Math.random() * GLOBAL_SEWER_EVENTS.length)];
+      injectSewerEvent(`[SEWER FEED] ${event}`);
+    }, 4500);
+
+    // --- 12 ONCHAIN DECORATED POOP STICKER & NFT COLLECTION ENGINE ---
+    const STICKER_COLLECTION = [
+      { id: 1, key: 'rusty_floater', name: 'Rusty Pipe Floater', icon: '💩', deco: '🔧', rarity: 'COMMON', dropWeight: 350, border: '#94a3b8', bg: 'rgba(148,163,184,0.2)', perk: '+10 Liquidated Bears', quote: 'Survives any sewer pressure.' },
+      { id: 2, key: 'green_candle', name: 'Green Candle Shitter', icon: '💩', deco: '🕯️', rarity: 'COMMON', dropWeight: 250, border: '#34d399', bg: 'rgba(52,211,153,0.2)', perk: '+25% Candle Wicks', quote: 'Wiped with red paper. Rose with green candles.' },
+      { id: 3, key: 'soggy_whitepaper', name: 'Soggy Whitepaper Stool', icon: '💩', deco: '📜', rarity: 'COMMON', dropWeight: 150, border: '#cbd5e1', bg: 'rgba(203,213,225,0.2)', perk: '+20 Roadmaps Burned', quote: 'Better than reading the whitepaper.' },
+      { id: 4, key: 'base_blue', name: 'Based Blue Floater', icon: '💩', deco: '🔵', rarity: 'UNCOMMON', dropWeight: 90, border: '#0052FF', bg: 'rgba(0,82,255,0.25)', perk: '+50 Hard Base Gas', quote: 'Permanently onchain on Base.' },
+      { id: 5, key: 'toxic_sludge', name: 'Radioactive Toxic Sludge', icon: '💩', deco: '☢️', rarity: 'UNCOMMON', dropWeight: 60, border: '#a3e635', bg: 'rgba(163,230,53,0.25)', perk: '+99.4% Toxicity', quote: 'Do not touch without rubber gloves.' },
+      { id: 6, key: 'plunger_ninja', name: 'Plunger Samurai', icon: '💩', deco: '🪠', rarity: 'RARE', dropWeight: 35, border: '#06b6d4', bg: 'rgba(6,182,212,0.25)', perk: '+200 Siphon Force', quote: 'Master of the 1000-flush strike.' },
+      { id: 7, key: 'toad_pepe', name: 'Pepe Sewer Toad', icon: '💩', deco: '🐸', rarity: 'RARE', dropWeight: 25, border: '#10b981', bg: 'rgba(16,185,129,0.25)', perk: '+420 Smug Alpha', quote: 'Feels good man in the porcelain bowl.' },
+      { id: 8, key: 'sir_flushes', name: 'Sir Flushes-a-Lot', icon: '💩', deco: '🎩', rarity: 'EPIC', dropWeight: 18, border: '#a855f7', bg: 'rgba(168,85,247,0.3)', perk: '+500 High Society Class', quote: 'Indubitably porcelain, my good sir.' },
+      { id: 9, key: 'gigachad_turd', name: 'Based Gigachad Turd', icon: '💩', deco: '🕶️', rarity: 'EPIC', dropWeight: 12, border: '#f43f5e', bg: 'rgba(244,63,94,0.3)', perk: '+1000 Green God Candles', quote: 'Never sold. Never flushed backwards.' },
+      { id: 10, key: 'crown_royal', name: 'Crown Royal Golden Stool', icon: '💩', deco: '👑', rarity: 'LEGENDARY', dropWeight: 6, border: '#f59e0b', bg: 'rgba(245,158,11,0.35)', perk: '+5000 Royal Dividend', quote: 'Bow before the porcelain monarch.' },
+      { id: 11, key: 'diamond_hands', name: 'Diamond Hands Floater', icon: '💩', deco: '💎', rarity: 'LEGENDARY', dropWeight: 3, border: '#67e8f9', bg: 'rgba(103,232,249,0.35)', perk: '+10000 Impervious Volatility', quote: 'Immune to dumps, impervious to gravity.' },
+      { id: 12, key: 'cyber_god', name: 'Cyber God Overlord', icon: '💩', deco: '🛸', rarity: 'MYTHIC', dropWeight: 1, border: '#39FF14', bg: 'rgba(57,255,20,0.4)', perk: '+∞ Infinite Machine Float', quote: 'I am the flush. I am the machine. I am NARA.' }
+    ];
+
+    let userStash = {
+      unlocked: {},
+      activeStickerId: 1,
+      totalDrops: 0
+    };
+    let currentInspectedSticker = null;
+
+    function loadUserStash() {
+      try {
+        const saved = localStorage.getItem("nara_sewer_stash");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && typeof parsed.unlocked === "object" && parsed.unlocked !== null) {
+            const sanitizedUnlocked = {};
+            for (const [key, item] of Object.entries(parsed.unlocked)) {
+              const numericId = parseInt(key, 10);
+              const exists = STICKER_COLLECTION.some(s => s.id === numericId);
+              if (exists && item && typeof item === "object") {
+                sanitizedUnlocked[numericId] = {
+                  id: numericId,
+                  serial: Math.max(1, Math.min(999999, Math.floor(Number(item.serial) || 1))),
+                  count: Math.max(1, Math.min(999999, Math.floor(Number(item.count) || 1))),
+                  firstDiscoveredAt: Math.max(0, Math.floor(Number(item.firstDiscoveredAt) || Date.now())),
+                };
+              }
+            }
+            userStash = {
+              unlocked: sanitizedUnlocked,
+              totalDrops: Math.max(0, Math.min(1000000, Math.floor(Number(parsed.totalDrops) || 0)))
+            };
+          }
+        }
+      } catch (e) {}
+    }
+
+    function saveUserStash() {
+      try {
+        localStorage.setItem("nara_sewer_stash", JSON.stringify(userStash));
+      } catch (e) {}
+    }
+
+    function formatStickerTweet(sticker, serial, opRank, flushNum) {
+      const bears = flushNum > 0 ? flushNum : 1;
+      return `[SEWER STICKER DROP #${serial}] 🐸🚽💩\n\nItem: ${sticker.deco} ${sticker.name}\nRarity: ${sticker.rarity} [${sticker.perk}]\nOperator: ${opRank.toUpperCase()} // ${bears} Bears Flushed\n\n(Card image pasted above 👆)\n⛓️ CA: 0x91FB...Ae0f\n\nCollect your stash 👇\nhttps://naraprotocol.com/meme.html`;
+    }
+
+    function renderStickerCardCanvas(sticker, serial, opRank, flushNum) {
+      const cardCanvas = document.getElementById("cardCanvas");
+      if (!cardCanvas) return;
+      const c = cardCanvas.getContext("2d");
+      const W = 600;
+      const H = 600;
+      cardCanvas.width = W;
+      cardCanvas.height = H;
+
+      // 1. Metallic Gradient Background
+      const bgGrad = c.createLinearGradient(0, 0, W, H);
+      bgGrad.addColorStop(0, "#0E1118");
+      bgGrad.addColorStop(0.5, "#080A0E");
+      bgGrad.addColorStop(1, "#040507");
+      c.fillStyle = bgGrad;
+      c.fillRect(0, 0, W, H);
+
+      // Subtle Background Grid
+      c.strokeStyle = "rgba(255, 255, 255, 0.028)";
+      c.lineWidth = 1;
+      for (let x = 20; x < W - 20; x += 30) {
+        c.beginPath(); c.moveTo(x, 20); c.lineTo(x, H - 20); c.stroke();
+      }
+      for (let y = 20; y < H - 20; y += 30) {
+        c.beginPath(); c.moveTo(20, y); c.lineTo(W - 20, y); c.stroke();
+      }
+
+      // 2. Neon Glowing Card Frame
+      c.save();
+      c.strokeStyle = sticker.border || "#39FF14";
+      c.lineWidth = 2.5;
+      c.shadowColor = sticker.border || "#39FF14";
+      c.shadowBlur = 18;
+      c.strokeRect(20, 20, W - 40, H - 40);
+      c.restore();
+
+      // Corner Brackets
+      const bSize = 14;
+      c.strokeStyle = "#FFFFFF";
+      c.lineWidth = 2;
+      c.beginPath(); c.moveTo(25, 25 + bSize); c.lineTo(25, 25); c.lineTo(25 + bSize, 25); c.stroke();
+      c.beginPath(); c.moveTo(W - 25 - bSize, 25); c.lineTo(W - 25, 25); c.lineTo(W - 25, 25 + bSize); c.stroke();
+      c.beginPath(); c.moveTo(25, H - 25 - bSize); c.lineTo(25, H - 25); c.lineTo(25 + bSize, H - 25); c.stroke();
+      c.beginPath(); c.moveTo(W - 25 - bSize, H - 25); c.lineTo(W - 25, H - 25); c.lineTo(W - 25, H - 25 - bSize); c.stroke();
+
+      // 3. Top Header
+      c.font = "bold 13px 'JetBrains Mono', monospace";
+      c.fillStyle = "rgba(255, 255, 255, 0.7)";
+      c.textAlign = "left";
+      c.fillText("NARA // PORCELAIN DREDGE NFT", 42, 52);
+
+      c.textAlign = "right";
+      c.fillStyle = "#0052FF";
+      c.fillText("BASE [8453]", W - 42, 52);
+
+      // 4. Center Halo & Avatar Circle
+      const cx = W / 2;
+      const cy = 205;
+      const radGlow = c.createRadialGradient(cx, cy, 10, cx, cy, 135);
+      radGlow.addColorStop(0, sticker.bg || "rgba(57, 255, 20, 0.25)");
+      radGlow.addColorStop(1, "transparent");
+      c.fillStyle = radGlow;
+      c.beginPath();
+      c.arc(cx, cy, 135, 0, Math.PI * 2);
+      c.fill();
+
+      // Avatar Circular Border
+      c.strokeStyle = "rgba(255, 255, 255, 0.15)";
+      c.lineWidth = 1.5;
+      c.beginPath();
+      c.arc(cx, cy, 95, 0, Math.PI * 2);
+      c.stroke();
+
+      // 5. Emojis (Poop + Decoration)
+      c.textAlign = "center";
+      c.textBaseline = "middle";
+      c.font = "105px 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif";
+      c.fillText(sticker.icon, cx - 10, cy + 12);
+
+      c.font = "55px 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif";
+      c.fillText(sticker.deco, cx + 46, cy - 36);
+
+      // 6. Rarity Pill
+      c.textBaseline = "alphabetic";
+      const rarityText = `${sticker.rarity} // ${sticker.dropWeight ? (sticker.dropWeight / 10).toFixed(1) + '%' : 'EXCLUSIVE'}`;
+      c.font = "bold 11px 'JetBrains Mono', monospace";
+      const textW = c.measureText(rarityText).width;
+      const pillW = textW + 22;
+      const pillH = 22;
+      const pillX = cx - pillW / 2;
+      const pillY = 316;
+
+      c.fillStyle = sticker.border || "#39FF14";
+      c.globalAlpha = 0.15;
+      c.fillRect(pillX, pillY, pillW, pillH);
+      c.globalAlpha = 1.0;
+      c.strokeStyle = sticker.border || "#39FF14";
+      c.lineWidth = 1;
+      c.strokeRect(pillX, pillY, pillW, pillH);
+
+      c.fillStyle = sticker.border || "#39FF14";
+      c.fillText(rarityText, cx, pillY + 15);
+
+      // 7. Sticker Name
+      c.font = "900 24px 'Space Grotesk', sans-serif";
+      c.fillStyle = "#FFFFFF";
+      c.textAlign = "center";
+      c.fillText(sticker.name.toUpperCase(), cx, 372);
+
+      // 8. Serial & Operator
+      c.font = "12px 'JetBrains Mono', monospace";
+      c.fillStyle = "rgba(255, 255, 255, 0.65)";
+      c.fillText(`SERIAL: #${String(serial).padStart(4, '0')} // OP: ${opRank}`, cx, 400);
+
+      // 9. Perk Box
+      const boxY = 418;
+      const boxH = 48;
+      c.fillStyle = "rgba(0, 0, 0, 0.4)";
+      c.fillRect(40, boxY, W - 80, boxH);
+      c.strokeStyle = "rgba(255, 255, 255, 0.08)";
+      c.strokeRect(40, boxY, W - 80, boxH);
+
+      c.font = "bold 12px 'JetBrains Mono', monospace";
+      c.fillStyle = sticker.border || "#39FF14";
+      c.fillText(`⚡ PERK: ${sticker.perk}`, cx, boxY + 20);
+
+      c.font = "italic 11px 'Space Grotesk', sans-serif";
+      c.fillStyle = "rgba(255, 255, 255, 0.6)";
+      c.fillText(`"${sticker.quote}"`, cx, boxY + 39);
+
+      // 10. Footer Bar
+      c.strokeStyle = "rgba(255, 255, 255, 0.1)";
+      c.beginPath();
+      c.moveTo(40, 520);
+      c.lineTo(W - 40, 520);
+      c.stroke();
+
+      c.font = "10px 'JetBrains Mono', monospace";
+      c.fillStyle = "rgba(255, 255, 255, 0.45)";
+      c.textAlign = "left";
+      c.fillText("CA: 0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f", 42, 545);
+
+      c.textAlign = "right";
+      c.fillStyle = "#39FF14";
+      c.fillText("naraprotocol.com/meme.html", W - 42, 545);
+    }
+
+    function showLootModal(sticker, serial, isNew, flushNum, isExplicitInspect = false) {
+      const modal = document.getElementById("lootModal");
+      const statusText = document.getElementById("modalStatusText");
+      const nameEl = document.getElementById("modalCardName");
+      const rarityEl = document.getElementById("modalCardRarity");
+      const serialEl = document.getElementById("modalCardSerial");
+      const perkEl = document.getElementById("modalCardPerk");
+      const copyOverlay = document.getElementById("cardCopyOverlay");
+
+      if (copyOverlay) copyOverlay.classList.add("hidden");
+
+      if (statusText) {
+        statusText.innerText = isNew ? "⭐ NEW SEWER STICKER DISCOVERED!" : "🔥 DUPLICATE STICKER DREDGED!";
+      }
+      if (nameEl) nameEl.innerText = sticker.name.toUpperCase();
+      if (rarityEl) {
+        rarityEl.innerText = sticker.rarity;
+        rarityEl.style.color = sticker.border;
+        rarityEl.style.borderColor = sticker.border;
+      }
+      if (serialEl) serialEl.innerText = `SERIAL: #${String(serial).padStart(4, '0')}`;
+      if (perkEl) {
+        perkEl.innerText = sticker.perk;
+        perkEl.style.color = sticker.border;
+      }
+
+      currentInspectedSticker = { sticker, serial };
+      const tier = getOperatorTier(flushCount);
+      renderStickerCardCanvas(sticker, serial, tier.rank.toUpperCase(), flushNum || flushCount);
+
+      if (modal) {
+        modal.classList.remove("hidden");
+        clearTimeout(modal._autoDismiss);
+        // Only auto-dismiss random loot drops so it doesn't block fast flushing; keep open if user explicitly inspected
+        if (!isExplicitInspect) {
+          modal._autoDismiss = setTimeout(() => {
+            modal.classList.add("hidden");
+          }, 4000);
+        }
+      }
+    }
+
+    function openCardInspector(stickerId) {
+      playMechanicalClick();
+      const sticker = STICKER_COLLECTION.find(s => s.id === stickerId);
+      if (!sticker) return;
+      const stashItem = userStash.unlocked[stickerId] || { serial: currentRoll.opId || 1337 };
+      userStash.activeStickerId = stickerId;
+      showLootModal(sticker, stashItem.serial, false, flushCount, true);
+      if (activeTweetMode === 'sticker') updateForgeUI();
+    }
+
+    function closeLootModal(e) {
+      if (e) e.stopPropagation();
+      // Only play click sound when closed via button, not backdrop tap
+      if (!e) playMechanicalClick();
+      const modal = document.getElementById("lootModal");
+      if (modal) {
+        clearTimeout(modal._autoDismiss);
+        modal.classList.add("hidden");
+      }
+    }
+
+    async function copyCardAndTweet() {
+      playMechanicalClick();
+      const cardCanvas = document.getElementById("cardCanvas");
+      const copyOverlay = document.getElementById("cardCopyOverlay");
+      const btnText = document.getElementById("modalTweetBtnText");
+
+      if (!currentInspectedSticker) return;
+      const { sticker, serial } = currentInspectedSticker;
+      const tier = getOperatorTier(flushCount);
+      const tweetText = formatStickerTweet(sticker, serial, tier.rank, flushCount);
+      const shareUrl = getShareUrl();
+      const xUrl = `https://x.com/intent/post?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(shareUrl)}`;
+
+      // Copy image to clipboard
+      let imageCopied = false;
+      if (cardCanvas && cardCanvas.toBlob) {
+        try {
+          const blob = await new Promise(resolve => cardCanvas.toBlob(resolve, 'image/png'));
+          if (blob && navigator.clipboard && window.ClipboardItem) {
+            const item = new ClipboardItem({ 'image/png': blob });
+            await navigator.clipboard.write([item]);
+            imageCopied = true;
+          }
+        } catch (err) {
+          console.warn('Clipboard image copy fallback:', err);
+        }
+      }
+
+      if (copyOverlay) {
+        copyOverlay.classList.remove("hidden");
+        if (!imageCopied) {
+          copyOverlay.innerHTML = `
+            <span class="text-2xl mb-1">💾</span>
+            <span>CARD READY TO ATTACH!</span>
+            <span class="text-[9px] text-white/70 normal-case mt-1 font-sans">Browser blocked clipboard image. Click DOWNLOAD below to attach!</span>
+          `;
+        }
+      }
+      if (btnText) btnText.innerText = imageCopied ? "✓ COPIED! OPENING X..." : "OPENING X...";
+
+      setTimeout(() => {
+        openSafeWindow(xUrl);
+        setTimeout(() => {
+          if (btnText) btnText.innerText = "📋 COPY CARD & TWEET ON X";
+        }, 3000);
+      }, 700);
+    }
+
+    function downloadCardPNG() {
+      playMechanicalClick();
+      const cardCanvas = document.getElementById("cardCanvas");
+      if (!cardCanvas || !currentInspectedSticker) return;
+      const { sticker, serial } = currentInspectedSticker;
+      const dataUrl = cardCanvas.toDataURL("image/png");
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = `NARA_STICKER_${String(sticker.id).padStart(2, '0')}_${serial}.png`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => a.remove(), 100);
+      injectSewerEvent(`[DOWNLOAD] Saved ${sticker.name} high-res collectible card.`);
+    }
+
+    async function copyStickerCardFromForge() {
+      playMechanicalClick();
+      const btnLabel = document.getElementById("forgeCardBtnLabel");
+      const stickerId = userStash.activeStickerId || 1;
+      const sticker = STICKER_COLLECTION.find(s => s.id === stickerId) || STICKER_COLLECTION[0];
+      const stashItem = userStash.unlocked[sticker.id] || { serial: currentRoll.opId || 1337 };
+      const tier = getOperatorTier(flushCount);
+
+      renderStickerCardCanvas(sticker, stashItem.serial, tier.rank.toUpperCase(), flushCount);
+      const cardCanvas = document.getElementById("cardCanvas");
+
+      let imageCopied = false;
+      if (cardCanvas && cardCanvas.toBlob) {
+        try {
+          const blob = await new Promise(resolve => cardCanvas.toBlob(resolve, 'image/png'));
+          if (blob && navigator.clipboard && window.ClipboardItem) {
+            const item = new ClipboardItem({ 'image/png': blob });
+            await navigator.clipboard.write([item]);
+            imageCopied = true;
+          }
+        } catch (err) {
+          console.warn('Forge image copy error:', err);
+        }
+      }
+
+      if (btnLabel) {
+        btnLabel.innerText = imageCopied ? "COPIED! PRESS CTRL+V" : "COPY FAILED (DOWNLOAD BELOW)";
+        setTimeout(() => { btnLabel.innerText = "COPY CARD IMAGE"; }, 2500);
+      }
+
+      const toast = document.getElementById("copyToast");
+      if (toast) {
+        toast.innerText = imageCopied
+          ? "✓ STICKER CARD COPIED! PRESS CTRL+V IN TWITTER"
+          : "⚠️ CLIPBOARD BLOCKED — USE DOWNLOAD IN LOCKER";
+        toast.classList.remove("hidden");
+        setTimeout(() => {
+          toast.classList.add("hidden");
+          toast.innerText = "✓ COPIED TO CLIPBOARD // READY TO PASTE";
+        }, 2500);
+      }
+    }
+
+    function shareFullStashTweet() {
+      playMechanicalClick();
+      const unlockedKeys = Object.keys(userStash.unlocked);
+      const count = unlockedKeys.length;
+      const tier = getOperatorTier(flushCount);
+      const shareUrl = getShareUrl();
+      const text = `[SEWER LOOT LOCKER // DISCOVERY REPORT] 🎴💩\n\nStickers Unlocked: ${count} / 12 (${Math.round((count/12)*100)}%)\nPurge Rank: ${tier.rank.toUpperCase()} (${flushCount} flushes)\n\nCan anyone complete the porcelain 12? 👇\n\n⛓️ CA: 0x91FB...Ae0f`;
+      const xUrl = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`;
+      openSafeWindow(xUrl);
+    }
+
+    function updateVaultUI() {
+      const grid = document.getElementById("vaultGrid");
+      const countEl = document.getElementById("vaultUnlockedCount");
+      const percentEl = document.getElementById("vaultProgressPercent");
+      if (!grid) return;
+
+      const unlockedKeys = Object.keys(userStash.unlocked);
+      const count = unlockedKeys.length;
+      const pct = Math.round((count / STICKER_COLLECTION.length) * 100);
+
+      if (countEl) countEl.innerText = count;
+      if (percentEl) percentEl.innerText = pct;
+
+      grid.innerHTML = "";
+      STICKER_COLLECTION.forEach(sticker => {
+        const stashItem = userStash.unlocked[sticker.id];
+        const isUnlocked = !!stashItem;
+        const cardDiv = document.createElement("div");
+
+        if (isUnlocked) {
+          cardDiv.className = "relative bg-[#0E1117] border p-2.5 flex flex-col items-center justify-between text-center transition-all duration-200 hover:scale-[1.03] cursor-pointer group";
+          cardDiv.style.borderColor = sticker.border;
+          cardDiv.style.boxShadow = `0 4px 18px ${sticker.bg}`;
+          cardDiv.onclick = () => openCardInspector(sticker.id);
+
+          cardDiv.innerHTML = `
+            <div class="w-full flex items-center justify-between text-[8px] font-mono mb-1 select-none">
+              <span class="px-1 py-0.5 text-[7px] font-bold uppercase tracking-wider" style="color:${sticker.border}; border:1px solid ${sticker.border}">${sticker.rarity}</span>
+              ${stashItem.count > 1 ? `<span class="px-1 py-0.5 bg-white/10 text-white font-bold">x${stashItem.count}</span>` : `<span class="text-white/40">#${String(stashItem.serial).padStart(4, '0')}</span>`}
+            </div>
+            <div class="relative my-1.5 flex items-center justify-center select-none">
+              <span class="text-3xl sm:text-4xl filter drop-shadow">${sticker.icon}</span>
+              <span class="absolute -top-1.5 -right-1 text-base sm:text-lg">${sticker.deco}</span>
+            </div>
+            <div class="w-full truncate text-[9px] sm:text-[10px] font-bold text-white tracking-tight mt-1 font-mono select-none">
+              ${sticker.name}
+            </div>
+            <div class="text-[8px] text-naraGreen/80 font-mono mt-0.5 truncate w-full select-none">
+              ${sticker.perk}
+            </div>
+            <div class="mt-2 w-full pt-1 border-t border-white/10 text-[8px] text-white/50 group-hover:text-white transition-colors flex items-center justify-center gap-1 select-none">
+              <span>📋</span> <span>TWEET CARD</span>
+            </div>
+          `;
+        } else {
+          cardDiv.className = "relative bg-[#07080B] border border-white/[0.05] p-2.5 flex flex-col items-center justify-between text-center opacity-60 hover:opacity-80 transition-opacity cursor-pointer select-none";
+          cardDiv.onclick = () => {
+            playMechanicalClick();
+            injectSewerEvent(`[SEWER LOCKER] Sticker #${sticker.id} locked. Keep flushing to dredge!`);
+          };
+
+          cardDiv.innerHTML = `
+            <div class="w-full flex items-center justify-between text-[8px] font-mono mb-1">
+              <span class="text-white/30 text-[7px] font-bold uppercase tracking-wider">${sticker.rarity}</span>
+              <span class="text-white/20">#${String(sticker.id).padStart(2, '0')}</span>
+            </div>
+            <div class="my-2.5 text-2xl sm:text-3xl opacity-25 filter grayscale">
+              💩❓
+            </div>
+            <div class="w-full truncate text-[9px] font-mono text-white/30 mt-1">
+              ??? LOCKED
+            </div>
+            <div class="text-[8px] text-white/20 font-mono mt-0.5">
+              Flush to dredge
+            </div>
+          `;
+        }
+        grid.appendChild(cardDiv);
+      });
+    }
+
+    function checkLootDrop(count) {
+      const isMilestone = [10, 25, 50, 69, 100, 200, 420].includes(count);
+      const isFirst = count === 1;
+      const willDrop = isFirst || isMilestone || Math.random() < 0.30;
+
+      if (!willDrop) return;
+
+      let pool = STICKER_COLLECTION;
+      if (isMilestone) {
+        pool = STICKER_COLLECTION.filter(s => s.rarity !== 'COMMON');
+      }
+      const totalWeight = pool.reduce((sum, s) => sum + s.dropWeight, 0);
+      let r = Math.random() * totalWeight;
+      let chosen = pool[0];
+      for (const s of pool) {
+        if (r < s.dropWeight) {
+          chosen = s;
+          break;
+        }
+        r -= s.dropWeight;
+      }
+
+      const isNew = !userStash.unlocked[chosen.id];
+      const serial = isNew 
+        ? Math.floor(1000 + Math.random() * 9000) 
+        : userStash.unlocked[chosen.id].serial;
+
+      if (isNew) {
+        userStash.unlocked[chosen.id] = {
+          count: 1,
+          serial: serial,
+          firstDropAt: Date.now()
+        };
+      } else {
+        userStash.unlocked[chosen.id].count++;
+      }
+      userStash.activeStickerId = chosen.id;
+      userStash.totalDrops = (userStash.totalDrops || 0) + 1;
+      saveUserStash();
+
+      playLootDropChime();
+      injectSewerEvent(`🚽 [SEWER DREDGE] You dredged: ${chosen.deco} ${chosen.name} (${chosen.rarity})!`);
+      showLootModal(chosen, serial, isNew, count);
+      updateVaultUI();
+      if (activeTweetMode === 'sticker') {
+        updateForgeUI();
+      }
+
+      // Check for 12/12 Victory Conquered!
+      const totalUnlocked = Object.keys(userStash.unlocked).length;
+      if (totalUnlocked === 12 && !runWon) {
+        runWon = true;
+        setTimeout(() => {
+          triggerVictoryFlow();
+        }, 600);
+      }
+    }
+
+    // --- CLIENT-SIDE 1.0s HYDRAULIC COOLDOWN & ANTI-AUTO-CLICKER ---
+    let lastFlushTimestamp = 0;
+    let isFlushingCooldown = false;
+    const FLUSH_RATE_LIMIT_MS = 1000; // Strict 1.0-second hydraulic cooldown
+
+    function triggerHydraulicFlush() {
+      const now = Date.now();
+      if (isFlushingCooldown || (now - lastFlushTimestamp < FLUSH_RATE_LIMIT_MS)) {
+        // Visual shake feedback on header button if user tries to spam before 1.0s
+        const headerBtn = document.getElementById("headerFlushBtn");
+        if (headerBtn) {
+          headerBtn.classList.remove("animate-pulse");
+          void headerBtn.offsetWidth;
+          headerBtn.classList.add("animate-pulse");
+        }
+        return; // Throttled
+      }
+      isFlushingCooldown = true;
+      lastFlushTimestamp = now;
+
+      // Update Cooldown Gauge UI
+      const headerBtn = document.getElementById("headerFlushBtn");
+      const headerLabel = document.getElementById("headerFlushBtnLabel");
+      const cooldownBar = document.getElementById("flushCooldownBar");
+      const hoverText = document.getElementById("artHoverText");
+
+      if (headerBtn) headerBtn.classList.add("opacity-75", "cursor-wait");
+      if (headerLabel) headerLabel.innerHTML = '⏳ RECHARGING...';
+      if (hoverText) hoverText.innerHTML = '<span class="text-xs">⏳</span> RECHARGING PRESSURE (1.0s)...';
+
+      if (cooldownBar) {
+        cooldownBar.style.transition = "none";
+        cooldownBar.style.width = "0%";
+        void cooldownBar.offsetWidth; // Force layout reflow
+        cooldownBar.style.transition = "width 1000ms linear";
+        cooldownBar.style.width = "100%";
+      }
+
+      setTimeout(() => {
+        isFlushingCooldown = false;
+        if (headerBtn) headerBtn.classList.remove("opacity-75", "cursor-wait");
+        if (headerLabel) headerLabel.innerHTML = 'FLUSH <span class="hidden sm:inline">TOILET</span>';
+        if (hoverText) hoverText.innerHTML = '<span class="text-xs">👇</span> CLICK TO FLUSH CANDLES';
+        if (cooldownBar) {
+          cooldownBar.style.transition = "none";
+          cooldownBar.style.width = "0%";
+        }
+      }, FLUSH_RATE_LIMIT_MS);
+
+      playHydraulicFlushSound();
+
+      const body = document.getElementById("pageBody");
+      body.classList.remove("screen-flush-active");
+      void body.offsetWidth;
+      body.classList.add("screen-flush-active");
+
+      // Visual flash
+      const ambient = document.getElementById("ambientGreen");
+      ambient.style.background = combo >= 10 ? "rgba(57, 255, 20, 0.45)" : "rgba(57, 255, 20, 0.25)";
+      setTimeout(() => {
+        ambient.style.background = "rgba(57, 255, 20, 0.05)";
+      }, 400);
+
+      flushCount++;
+      runFlushes++;
+      const counterEl = document.getElementById("flushCounter");
+      if (counterEl) counterEl.innerText = flushCount;
+      const runCounterEl = document.getElementById("runFlushesCount");
+      if (runCounterEl) runCounterEl.innerText = runFlushes;
+
+      // Persist progress
+      saveFlushProgress();
+
+      // Update Quick Tweet button label
+      const quickLabel = document.getElementById("quickTweetLabel");
+      if (quickLabel) {
+        quickLabel.innerText = `POST [${flushCount}]`;
+      }
+
+      // Combo management
+      combo++;
+      updateComboUI();
+      clearTimeout(comboTimer);
+      comboTimer = setTimeout(() => {
+        combo = 0;
+        updateComboUI();
+      }, 1600);
+
+      // Roll a fresh, unique message for this state and update entire Forge
+      rollNewDegenMessage(flushCount);
+      updateForgeUI();
+
+      // Check for Tier Level Up!
+      const tier = getOperatorTier(flushCount);
+      if (tier.level > previousTierLevel) {
+        previousTierLevel = tier.level;
+        saveFlushProgress();
+        playPromotionFanfare();
+        injectSewerEvent(`⚡ [PROMOTION] YOU reached LVL ${tier.level}: ${tier.rank.toUpperCase()}!`);
+        showMilestone(flushCount, currentRoll, tier);
+      } else {
+        // ALWAYS update the banner if it's currently open, so it never freezes on old numbers!
+        const banner = document.getElementById("milestoneBanner");
+        if (banner && !banner.classList.contains("hidden")) {
+          const rankBadge = document.getElementById("milestoneRankBadge");
+          const previewEl = document.getElementById("milestoneQuotePreview");
+          if (rankBadge) rankBadge.innerText = `[OP #${currentRoll.opId}] LVL ${tier.level}: ${tier.rank.toUpperCase()} // ${flushCount} PURGES`;
+          if (previewEl) previewEl.innerText = `"${currentRoll.hook}"`;
+          resetBannerAutoDismiss();
+        }
+      }
+
+      // Trigger popout at iconic milestones (10, 25, 50, 69, 100, 200, 420)
+      if (flushCount === 10 || flushCount === 25 || flushCount === 50 || flushCount === 69 || flushCount === 100 || flushCount === 200 || flushCount === 420) {
+        showMilestone(flushCount, currentRoll, tier);
+      }
+
+      // Check for Collectible Sticker Loot Dredge!
+      checkLootDrop(flushCount);
+
+      // Candlestick burst count multiplies with combo overdrive!
+      const burstCount = combo >= 20 ? 90 : (combo >= 10 ? 65 : 45);
+      const originX = window.innerWidth / 2;
+      const originY = window.innerHeight * 0.38;
+
+      for (let i = 0; i < burstCount; i++) {
+        const c = new Candlestick(
+          originX + (Math.random() - 0.5) * 200,
+          originY + (Math.random() - 0.5) * 120
+        );
+        c.vx = (Math.random() - 0.5) * (combo >= 10 ? 32 : 22);
+        c.vy = (Math.random() * -14) - 3;
+        candles.push(c);
+      }
+    }
+
+    let bannerDismissTimer = null;
+    function resetBannerAutoDismiss() {
+      clearTimeout(bannerDismissTimer);
+      bannerDismissTimer = setTimeout(() => {
+        const banner = document.getElementById("milestoneBanner");
+        if (banner) banner.classList.add("hidden");
+      }, 7000);
+    }
+
+    function rerollBannerQuote(e) {
+      if (e) e.stopPropagation();
+      playMechanicalClick();
+      rollNewDegenMessage(flushCount);
+      currentRoll.opId = Math.floor(1000 + Math.random() * 9000);
+      const tier = getOperatorTier(flushCount);
+      const rankBadge = document.getElementById("milestoneRankBadge");
+      const previewEl = document.getElementById("milestoneQuotePreview");
+      if (rankBadge) rankBadge.innerText = `[OP #${currentRoll.opId}] LVL ${tier.level}: ${tier.rank.toUpperCase()} // ${flushCount} PURGES`;
+      if (previewEl) previewEl.innerText = `"${currentRoll.hook}"`;
+      updateForgeUI();
+      resetBannerAutoDismiss();
+    }
+
+    function showMilestone(count, roll, tier) {
+      const banner = document.getElementById("milestoneBanner");
+      const rankBadge = document.getElementById("milestoneRankBadge");
+      const previewEl = document.getElementById("milestoneQuotePreview");
+      const currentTier = tier || getOperatorTier(count);
+      if (banner && rankBadge && previewEl) {
+        rankBadge.innerText = `[OP #${roll.opId}] PROMOTION: LVL ${currentTier.level} ${currentTier.rank.toUpperCase()} // ${count} PURGES`;
+        previewEl.innerText = `"${roll.hook}"`;
+        banner.classList.remove("hidden");
+        resetBannerAutoDismiss();
+      }
+    }
+
+    function dismissMilestone(e) {
+      if (e) e.stopPropagation();
+      clearTimeout(bannerDismissTimer);
+      document.getElementById("milestoneBanner")?.classList.add("hidden");
+    }
+
+    // --- ALL-TIME FAME BOARD & VICTORY ENGINE ---
+    const DEFAULT_FAME_BOARD = [
+      { rank: 1, handle: "@Satoshi_Plunger", score: 31, tier: "GOD-TIER PORCELAIN DEITY", date: "Dec 2024" },
+      { rank: 2, handle: "@Vitalik_Roll", score: 38, tier: "ELITE SEWER TACTICIAN", date: "Jan 2025" },
+      { rank: 3, handle: "@Base_General", score: 44, tier: "ELITE SEWER TACTICIAN", date: "Feb 2025" },
+      { rank: 4, handle: "@Degen_Harvester", score: 51, tier: "CERTIFIED PURGER", date: "Feb 2025" },
+      { rank: 5, handle: "@Sewer_Sniper", score: 59, tier: "CERTIFIED PURGER", date: "Mar 2025" }
+    ];
+
+    function getRatingTier(score) {
+      if (score < 35) {
+        return { name: "GOD-TIER PORCELAIN DEITY", color: "#FFD700", border: "#FFD700", bg: "rgba(255, 215, 0, 0.15)" };
+      } else if (score < 50) {
+        return { name: "ELITE SEWER TACTICIAN", color: "#38BDF8", border: "#38BDF8", bg: "rgba(56, 189, 248, 0.15)" };
+      } else if (score < 70) {
+        return { name: "CERTIFIED PURGER", color: "#39FF14", border: "#39FF14", bg: "rgba(57, 255, 20, 0.15)" };
+      } else {
+        return { name: "PERSISTENT BEAR SLAYER", color: "#A855F7", border: "#A855F7", bg: "rgba(168, 85, 247, 0.15)" };
+      }
+    }
+
+    let localFameBoard = [];
+
+    function loadLocalFameBoard() {
+      try {
+        const saved = localStorage.getItem("nara_fame_board_v1");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            localFameBoard = parsed;
+            return;
+          }
+        }
+      } catch (e) {}
+      localFameBoard = [...DEFAULT_FAME_BOARD];
+    }
+
+    function saveLocalFameBoard() {
+      try {
+        localStorage.setItem("nara_fame_board_v1", JSON.stringify(localFameBoard));
+      } catch (e) {}
+    }
+
+    function renderFameBoard(entries) {
+      const tbody = document.getElementById("fameBoardBody");
+      if (!tbody) return;
+      const list = Array.isArray(entries) && entries.length > 0 ? entries : localFameBoard;
+
+      tbody.innerHTML = "";
+      list.forEach((entry, idx) => {
+        const rank = idx + 1;
+        const tier = getRatingTier(entry.score);
+        let rankBadge = `#${rank}`;
+        let rankClass = "text-white/40 font-mono";
+
+        if (rank === 1) {
+          rankBadge = "🥇 1ST";
+          rankClass = "text-amber-300 font-bold font-mono";
+        } else if (rank === 2) {
+          rankBadge = "🥈 2ND";
+          rankClass = "text-slate-300 font-bold font-mono";
+        } else if (rank === 3) {
+          rankBadge = "🥉 3RD";
+          rankClass = "text-amber-500 font-bold font-mono";
+        }
+
+        const tr = document.createElement("tr");
+        tr.className = rank === 1 ? "bg-amber-500/[0.04] hover:bg-amber-500/[0.08] transition-colors" : "hover:bg-white/[0.02] transition-colors";
+        tr.innerHTML = `
+          <td class="py-2.5 px-3 sm:px-4 text-center ${rankClass}">${rankBadge}</td>
+          <td class="py-2.5 px-3 sm:px-4 font-mono font-bold text-white tracking-wide">
+            ${escapeHTML(entry.handle)}
+          </td>
+          <td class="py-2.5 px-3 sm:px-4 text-center font-mono font-extrabold text-amber-300">
+            ${entry.score} <span class="text-[8px] text-white/40 font-normal">CLICKS</span>
+          </td>
+          <td class="py-2.5 px-3 sm:px-4 hidden sm:table-cell">
+            <span class="px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider border" style="color:${tier.color}; border-color:${tier.border}; background:${tier.bg};">
+              ${tier.name}
+            </span>
+          </td>
+          <td class="py-2.5 px-3 sm:px-4 text-right hidden md:table-cell text-white/40 font-mono text-[9px]">
+            ${escapeHTML(entry.date || "RECENT")}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function syncFameBoardFromAPI() {
+      try {
+        const res = await fetch("/api/leaderboard", { method: "GET" });
+        if (res.ok) {
+          const remoteData = await res.json();
+          if (Array.isArray(remoteData) && remoteData.length > 0) {
+            // Merge with any offline submissions in localFameBoard
+            const merged = [...remoteData];
+            localFameBoard.forEach(localItem => {
+              if (!merged.some(m => m.handle.toLowerCase() === localItem.handle.toLowerCase() && m.score === localItem.score)) {
+                merged.push(localItem);
+              }
+            });
+            merged.sort((a, b) => a.score - b.score);
+            localFameBoard = merged.slice(0, 50).map((item, idx) => ({ ...item, rank: idx + 1 }));
+            saveLocalFameBoard();
+            renderFameBoard(localFameBoard);
+            return;
+          }
+        }
+      } catch (err) {
+        // Functions API not available (e.g. running on Vite or static file)
+      }
+      renderFameBoard(localFameBoard);
+    }
+
+    function refreshLeaderboardUI() {
+      playMechanicalClick();
+      syncFameBoardFromAPI();
+      injectSewerEvent("[FAME BOARD] Leaderboard telemetry refreshed.");
+    }
+
+    function triggerVictoryFlow() {
+      playVictoryFanfare();
+
+      // Explosive Gold & Emerald Candlestick shower
+      const originX = window.innerWidth / 2;
+      const originY = window.innerHeight * 0.35;
+      for (let i = 0; i < 110; i++) {
+        const c = new Candlestick(
+          originX + (Math.random() - 0.5) * 350,
+          originY + (Math.random() - 0.5) * 160
+        );
+        c.isGreen = true;
+        c.color = Math.random() > 0.4 ? "#FFD700" : "#39FF14";
+        c.glow = Math.random() > 0.4 ? "rgba(255, 215, 0, 0.7)" : "rgba(57, 255, 20, 0.7)";
+        c.vx = (Math.random() - 0.5) * 30;
+        c.vy = (Math.random() * -18) - 5;
+        candles.push(c);
+      }
+
+      // Update personal best record
+      if (bestRunRecord === null || runFlushes < bestRunRecord) {
+        bestRunRecord = runFlushes;
+        saveFlushProgress();
+        updateRunDisplayUI();
+      }
+
+      const rating = getRatingTier(runFlushes);
+      const scoreEl = document.getElementById("victoryScoreNumber");
+      const tierEl = document.getElementById("victoryTierBadge");
+      const handleInput = document.getElementById("victoryHandleInput");
+      const notice = document.getElementById("victorySubmitNotice");
+
+      if (scoreEl) scoreEl.innerText = runFlushes;
+      if (tierEl) {
+        tierEl.innerText = rating.name;
+        tierEl.style.color = rating.color;
+        tierEl.style.borderColor = rating.border;
+        tierEl.style.background = rating.bg;
+      }
+      if (notice) notice.classList.add("hidden");
+
+      // Remember last used handle if available
+      try {
+        const savedHandle = localStorage.getItem("nara_operator_handle_v1");
+        if (savedHandle && handleInput && !handleInput.value) {
+          handleInput.value = savedHandle;
+        }
+      } catch (e) {}
+
+      const modal = document.getElementById("victoryModal");
+      if (modal) modal.classList.remove("hidden");
+
+      injectSewerEvent(`👑 [VICTORY] 12/12 VAULT CONQUERED IN ${runFlushes} CLICKS! Rating: ${rating.name}`);
+    }
+
+    function closeVictoryModal(e) {
+      if (e) e.stopPropagation();
+      playMechanicalClick();
+      const modal = document.getElementById("victoryModal");
+      if (modal) modal.classList.add("hidden");
+    }
+
+    async function submitVictoryToFameBoard() {
+      playMechanicalClick();
+      const handleInput = document.getElementById("victoryHandleInput");
+      const btnText = document.getElementById("victorySubmitBtnText");
+      const notice = document.getElementById("victorySubmitNotice");
+
+      const rawHandle = handleInput ? handleInput.value.trim() : "";
+      const cleanHandle = (rawHandle.startsWith("@") ? rawHandle : `@${rawHandle}`)
+        .replace(/[^a-zA-Z0-9_@.-]/g, "")
+        .slice(0, 20);
+
+      if (!cleanHandle || cleanHandle.length < 2) {
+        alert("Please enter a valid operator handle (e.g. @YourName)");
+        return;
+      }
+
+      // Save handle preference
+      try {
+        localStorage.setItem("nara_operator_handle_v1", cleanHandle);
+      } catch (e) {}
+
+      const rating = getRatingTier(runFlushes);
+      const newEntry = {
+        handle: cleanHandle,
+        score: runFlushes,
+        tier: rating.name,
+        date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+        timestamp: Date.now()
+      };
+
+      // Add to local list
+      const existingIdx = localFameBoard.findIndex(e => e.handle.toLowerCase() === cleanHandle.toLowerCase());
+      if (existingIdx !== -1) {
+        if (runFlushes < localFameBoard[existingIdx].score) {
+          localFameBoard[existingIdx] = newEntry;
+        }
+      } else {
+        localFameBoard.push(newEntry);
+      }
+
+      localFameBoard.sort((a, b) => a.score - b.score);
+      localFameBoard = localFameBoard.slice(0, 50).map((item, idx) => ({ ...item, rank: idx + 1 }));
+      saveLocalFameBoard();
+      renderFameBoard(localFameBoard);
+
+      // Attempt remote sync via API
+      try {
+        if (btnText) btnText.innerText = "SUBMITTING...";
+        const res = await fetch("/api/leaderboard", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            handle: cleanHandle,
+            score: runFlushes,
+            cards: 12,
+            tier: rating.name
+          })
+        });
+        if (res.ok) {
+          const remoteData = await res.json();
+          if (Array.isArray(remoteData)) {
+            localFameBoard = remoteData;
+            saveLocalFameBoard();
+            renderFameBoard(localFameBoard);
+          }
+        }
+      } catch (err) {
+        // Fallback to local storage succeeded
+      }
+
+      if (btnText) btnText.innerText = "✓ SUBMITTED";
+      if (notice) notice.classList.remove("hidden");
+      injectSewerEvent(`👑 [FAME BOARD] ${cleanHandle} entered the All-Time Fame Board with ${runFlushes} clicks!`);
+    }
+
+    function handleVictoryTweet(e) {
+      if (e) e.preventDefault();
+      playMechanicalClick();
+      const rating = getRatingTier(runFlushes);
+      const text = `👑 [12/12 SEWER VAULT CONQUERED] 🐸🚽💩\n\nI just dredged all 12 rare onchain poop collectibles in ${runFlushes} clicks on @NARA_protocol!\n\nRank: ${rating.name}\nHydraulic Cooldown: 1.0s enforced\n\nCan you beat my record on the All-Time Fame Board? 👇\n\n⛓️ CA: 0x91FB...Ae0f`;
+      const shareUrl = getShareUrl();
+      const xUrl = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`;
+      openSafeWindow(xUrl);
+    }
+
+    function resetAndStartNewRun() {
+      playMechanicalClick();
+      // Reset unlocked cards and run flushes for new attempt
+      userStash.unlocked = {};
+      userStash.activeStickerId = 1;
+      saveUserStash();
+
+      runFlushes = 0;
+      runWon = false;
+      saveFlushProgress();
+      updateRunDisplayUI();
+      updateVaultUI();
+
+      closeVictoryModal();
+      injectSewerEvent("🔄 [SYSTEM] Fresh run initialized! All 12 cards locked. Race for fewer clicks!");
+    }
+
+    function confirmResetRun() {
+      playMechanicalClick();
+      const unlockedCount = Object.keys(userStash.unlocked).length;
+      const msg = `Are you sure you want to reset your current run (${unlockedCount}/12 cards unlocked in ${runFlushes} clicks) to start fresh from 0?\n\n(Your lifetime flushes and personal best are preserved!)`;
+      if (confirm(msg)) {
+        resetAndStartNewRun();
+      }
+    }
+
+    // --- BULLETPROOF IN-APP BROWSER CLIPBOARD COPY ---
+    function copyTextFallback(text) {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try {
+        document.execCommand("copy");
+      } catch (err) {
+        console.error("Fallback copy failed", err);
+      }
+      document.body.removeChild(ta);
+    }
+
+    // --- CONTRACT & METAMASK WITH BASE CHAIN CHECK ---
+    function copyCA() {
+      playMechanicalClick();
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(NARA_CONTRACT).catch(() => copyTextFallback(NARA_CONTRACT));
+      } else {
+        copyTextFallback(NARA_CONTRACT);
+      }
+      const btnText = document.getElementById("copyBtnText");
+      if (btnText) {
+        btnText.innerText = "COPIED";
+        btnText.classList.add("text-naraGreen");
+        setTimeout(() => {
+          btnText.innerText = "COPY";
+          btnText.classList.remove("text-naraGreen");
+        }, 2500);
+      }
+    }
+
+    async function addNaraToMetaMask() {
+      playMechanicalClick();
+      const label = document.getElementById("mmBtnLabel");
+      if (typeof window.ethereum !== "undefined") {
+        try {
+          // 1. Ensure user is on Base Mainnet (0x2105 / 8453)
+          try {
+            await window.ethereum.request({
+              method: 'wallet_switchEthereumChain',
+              params: [{ chainId: BASE_CHAIN_ID_HEX }],
+            });
+          } catch (switchError) {
+            // 4902 indicates chain has not been added to wallet
+            if (switchError.code === 4902) {
+              await window.ethereum.request({
+                method: 'wallet_addEthereumChain',
+                params: [{
+                  chainId: BASE_CHAIN_ID_HEX,
+                  chainName: 'Base',
+                  nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+                  rpcUrls: ['https://mainnet.base.org'],
+                  blockExplorerUrls: ['https://basescan.org']
+                }],
+              });
+            }
+          }
+
+          // 2. Add $NARA asset to wallet
+          const wasAdded = await window.ethereum.request({
+            method: "wallet_watchAsset",
+            params: {
+              type: "ERC20",
+              options: {
+                address: NARA_CONTRACT,
+                symbol: NARA_SYMBOL,
+                decimals: NARA_DECIMALS,
+                image: NARA_IMAGE,
+              },
+            },
+          });
+          if (wasAdded) {
+            if (label) {
+              label.innerText = "TOKEN ADDED";
+              label.classList.add("text-naraGreen");
+              setTimeout(() => {
+                label.innerText = "ADD $NARA TO METAMASK";
+                label.classList.remove("text-naraGreen");
+              }, 3000);
+            }
+          }
+        } catch (err) {
+          console.warn("Wallet interaction fallback to copy", err);
+          copyCA();
+          if (label) {
+            label.innerText = "CA COPIED TO CLIPBOARD";
+            setTimeout(() => {
+              label.innerText = "ADD $NARA TO METAMASK";
+            }, 3000);
+          }
+        }
+      } else {
+        copyCA();
+        if (label) {
+          label.innerText = "CA COPIED TO CLIPBOARD";
+          setTimeout(() => {
+            label.innerText = "ADD $NARA TO METAMASK";
+          }, 3000);
+        }
+      }
+    }
+
+    // --- SYSTEM INITIALIZATION ---
+    loadUserStash();
+    loadFlushProgress();
+    loadLocalFameBoard();
+    renderFameBoard(localFameBoard);
+    syncFameBoardFromAPI();
+    updateVaultUI();
+    rollNewDegenMessage(flushCount);
+    updateForgeUI();
+
+    // Restore flush counter display from persisted state
+    const _counterEl = document.getElementById("flushCounter");
+    if (_counterEl && flushCount > 0) _counterEl.innerText = flushCount;
+    const _quickLabel = document.getElementById("quickTweetLabel");
+    if (_quickLabel && flushCount > 0) _quickLabel.innerText = `POST [${flushCount}]`;
+
+    // --- KEYBOARD SHORTCUTS ---
+    document.addEventListener("keydown", (e) => {
+      // Don't trigger when typing in an input
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+      if (e.key === " " || e.key === "f" || e.key === "F") {
+        e.preventDefault();
+        triggerHydraulicFlush();
+      }
+      if (e.key === "Escape") {
+        const modal = document.getElementById("lootModal");
+        if (modal && !modal.classList.contains("hidden")) {
+          closeLootModal();
+        }
+        const swapModal = document.getElementById("swapPrelaunchModal");
+        if (swapModal && !swapModal.classList.contains("hidden")) {
+          closeSwapModal();
+        }
+        const vicModal = document.getElementById("victoryModal");
+        if (vicModal && !vicModal.classList.contains("hidden")) {
+          closeVictoryModal();
+        }
+        dismissMilestone();
+      }
+    });
+  </script>
+</body>
+</html>

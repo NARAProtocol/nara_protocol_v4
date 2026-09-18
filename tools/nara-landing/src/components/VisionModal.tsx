@@ -403,7 +403,7 @@ export default function VisionModal({ onClose }: VisionModalProps) {
           <div className="flex items-center gap-2 text-dim text-[11px]">
             <span>VERIFIED BASE CONTRACTS</span>
             <span className="text-white/20">•</span>
-            <span className="text-silver">CA: 0xB633...19c1</span>
+            <span className="text-silver">CA: 0x91FB...Ae0f</span>
           </div>
 
           <div className="flex items-center gap-3 w-full sm:w-auto">

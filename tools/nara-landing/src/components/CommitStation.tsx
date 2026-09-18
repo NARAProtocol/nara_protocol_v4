@@ -95,15 +95,18 @@ export default function CommitStation() {
   };
 
   const triggerPreviewUnboxing = (tokenId: number = 10) => {
+    const baseAmt = parsedLockAmount.gt(0) ? parsedLockAmount : ethers.utils.parseEther("1000");
+    const weightMultiplier = parseFloat(selectedHorizon.multiplier) || 4.0;
+    const weightCalc = baseAmt.mul(Math.round(weightMultiplier * 10000)).div(10000);
     setMintRevealItem({
       tokenId: ethers.BigNumber.from(tokenId),
       positionId: ethers.BigNumber.from(tokenId),
       owner: connectedAddress || "0x0000000000000000000000000000000000000000",
       account: connectedAddress || "0x0000000000000000000000000000000000000000",
-      amount: parsedLockAmount.gt(0) ? parsedLockAmount : ethers.utils.parseEther("1000"),
+      amount: baseAmt,
       createdEpoch: 35000,
       unlockEpoch: 35000 + selectedHorizon.epochs,
-      weight: ethers.utils.parseEther("4000"),
+      weight: weightCalc,
       claimableEth: ethers.utils.parseEther("0.125"),
       claimableNara: ethers.utils.parseEther("85.00"),
       claimableUsdc: ethers.BigNumber.from(0),
@@ -111,7 +114,11 @@ export default function CommitStation() {
       name: `NARA Position #${tokenId}`,
       description: "Live Base Mainnet On-Chain Position Plate",
       imageSvg: "",
-      attributes: [],
+      attributes: [
+        { trait_type: "Chassis Alloy", value: "24K Gilded Gold" },
+        { trait_type: "Core", value: "Apex" },
+        { trait_type: "Realized Tier", value: "Apex Bloom" },
+      ],
       isSample: true,
     });
   };
@@ -121,24 +128,19 @@ export default function CommitStation() {
   const calculatedPower = Math.round(amountNumeric * multiplierVal);
 
   const buttonLabel = useMemo(() => {
+    if (!connectedAddress) return "CONNECT WALLET TO ACTIVATE →";
+    if (isWrongChain) return "SWITCH TO BASE NETWORK →";
+    if (hasZeroBalance || isInsufficientBalance) return "INSUFFICIENT NARA (SWAP →)";
     if (actionBusy === "approve") return "APPROVING NARA...";
-    if (actionBusy === "commit") return "DEPLOYING NARA...";
-    return `DEPLOY ${amountNumeric ? amountNumeric.toLocaleString() : "1,000"} NARA →`;
-  }, [actionBusy, amountNumeric]);
-
-  // Optical match for reference screenshot: at default 1,000 NARA & 365D, show 55% to match user reference crop exactly
-  const displayedEmeraldPercent = useMemo(() => {
-    if (selectedHorizonIdx === 4 && amountNumeric === 1000) {
-      return "55%";
-    }
-    return `${pullOdds.emerald}%`;
-  }, [selectedHorizonIdx, amountNumeric, pullOdds.emerald]);
+    if (actionBusy === "commit") return "ACTIVATING NARA...";
+    return `ACTIVATE ${amountNumeric ? amountNumeric.toLocaleString() : "1,000"} NARA →`;
+  }, [connectedAddress, isWrongChain, hasZeroBalance, isInsufficientBalance, actionBusy, amountNumeric]);
 
   return (
-    <main className="w-full flex-1 flex flex-col items-center justify-center px-2 sm:px-4 py-2 sm:py-3 font-sans select-none">
-      {/* TOP LIGHTWEIGHT NAVIGATION PILL (SEPARATE, AIRY GAP, ZERO HEAVY WEIGHT) */}
-      <div className="w-full flex justify-center mb-3.5 sm:mb-5">
-        <StepProgressTracker activeStep="commit" />
+    <main className="w-full flex-1 flex flex-col items-center justify-start md:justify-center px-2 sm:px-4 py-3 sm:py-4 pb-28 md:pb-6 font-sans select-none">
+      {/* TOP LIGHTWEIGHT NAVIGATION PILL (DESKTOP ONLY — ON MOBILE THE BOTTOM DOCK IS USED) */}
+      <div className="hidden md:flex w-full justify-center mb-3.5 sm:mb-5">
+        <StepProgressTracker activeStep="activate" />
       </div>
 
       {/* UNIFIED HERO MISSION CONSOLE CHASSIS */}
@@ -254,19 +256,13 @@ export default function CommitStation() {
 
             {/* 5 Chips: 1D, 30D, 90D, 180D, 365D (74px x 70px each) */}
             <div className="grid grid-cols-5 gap-[6px] items-center">
-              {[
-                { label: "1D", mult: "1.00x", idx: 0 },
-                { label: "30D", mult: "1.00x", idx: 1 },
-                { label: "90D", mult: "1.20x", idx: 2 },
-                { label: "180D", mult: "1.85x", idx: 3 },
-                { label: "365D", mult: "4.00x", idx: 4 },
-              ].map((item) => {
-                const isSelected = selectedHorizonIdx === item.idx;
+              {DURATION_HORIZONS.map((item, idx) => {
+                const isSelected = selectedHorizonIdx === idx;
                 return (
                   <button
                     key={item.label}
                     type="button"
-                    onClick={() => setSelectedHorizonIdx(item.idx)}
+                    onClick={() => setSelectedHorizonIdx(idx)}
                     className={`h-[70px] rounded-[10px] flex flex-col items-center justify-center transition-all cursor-pointer select-none ${
                       isSelected
                         ? "bg-[#00F0FF] text-[#022428] border border-[#80f9ff] shadow-[0_0_20px_rgba(0,240,255,0.65)]"
@@ -274,10 +270,10 @@ export default function CommitStation() {
                     }`}
                   >
                     <span className={`text-[16.5px] font-sans leading-tight ${isSelected ? "font-bold text-[#022428]" : "font-semibold text-white"}`}>
-                      {item.label}
+                      {item.shortLabel}
                     </span>
                     <span className={`text-[11.5px] font-sans mt-0.5 ${isSelected ? "font-semibold text-[#022428]" : "font-normal text-[#8899ac]"}`}>
-                      ({item.mult})
+                      ({item.multiplier.toLowerCase()})
                     </span>
                   </button>
                 );
@@ -285,18 +281,18 @@ export default function CommitStation() {
             </div>
           </div>
 
-          {/* STEP 3: INSTANT DEPLOY (265px x 134px) */}
+          {/* STEP 3: INSTANT ACTIVATE (265px x 134px) */}
           <div className="h-[134px] rounded-xl bg-[#050c1e] border border-[#142948] p-[13px] px-[16px] flex flex-col justify-between shadow-sm">
             <div className="flex items-center gap-2">
               <span className="flex items-center justify-center w-4 h-4 rounded bg-[#00F0FF]/20 text-[#00F0FF] border border-[#00F0FF]/50 text-[10px] font-sans font-black shadow-[0_0_6px_rgba(0,240,255,0.3)]">
                 3
               </span>
               <span className="text-[13px] font-sans font-semibold tracking-wider text-white uppercase select-none">
-                INSTANT DEPLOY
+                INSTANT ACTIVATE
               </span>
             </div>
 
-            {/* Radiant Hero Deploy Button (43px height) */}
+            {/* Radiant Hero Activate Button (43px height) */}
             <button
               type="button"
               onClick={onDeployClick}
@@ -367,7 +363,7 @@ export default function CommitStation() {
           </div>
 
           {/* 5 Alloy Rarity Cards in a Row (69px height each) */}
-          <div className="grid grid-cols-1 sm:grid-cols-5 gap-[7px]">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-[7px]">
             {/* 1. 24K Gold Apex */}
             <div className="h-[69px] px-3.5 py-2 rounded-xl bg-gradient-to-tr from-[#241a05] to-[#1a1202] border border-[#d97706] shadow-[0_0_12px_rgba(217,119,6,0.2)] select-none flex flex-col justify-center">
               <span className="text-[13.5px] font-sans font-bold text-[#fde047] block leading-snug truncate">
@@ -404,12 +400,12 @@ export default function CommitStation() {
                 Emerald
               </span>
               <span className="text-[12.5px] font-sans font-normal text-[#6ee7b7] block mt-0.5">
-                {displayedEmeraldPercent}
+                {pullOdds.emerald}%
               </span>
             </div>
 
             {/* 5. Slate */}
-            <div className="h-[69px] px-3.5 py-2 rounded-xl bg-gradient-to-tr from-[#0e1624] to-[#070b12] border border-[#334155] select-none flex flex-col justify-center">
+            <div className="col-span-2 sm:col-span-1 h-[69px] px-3.5 py-2 rounded-xl bg-gradient-to-tr from-[#0e1624] to-[#070b12] border border-[#334155] select-none flex flex-col justify-center">
               <span className="text-[13.5px] font-sans font-bold text-[#cbd5e1] block leading-snug truncate">
                 Slate
               </span>
