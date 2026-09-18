@@ -193,7 +193,7 @@
         <button 
           id="copyBtn"
           onclick="copyCA()"
-          class="px-3 py-1.5 min-h-[36px] text-[10px] font-bold tracking-widest uppercase bg-white/[0.04] hover:bg-white/[0.1] active:bg-white/[0.15] focus-visible:ring-1 focus-visible:ring-white/50 outline-none border border-white/[0.12] hover:border-white/30 text-white transition-all cursor-pointer flex items-center gap-1.5 select-none"
+          class="hidden sm:flex px-3 py-1.5 min-h-[36px] text-[10px] font-bold tracking-widest uppercase bg-white/[0.04] hover:bg-white/[0.1] active:bg-white/[0.15] focus-visible:ring-1 focus-visible:ring-white/50 outline-none border border-white/[0.12] hover:border-white/30 text-white transition-all cursor-pointer items-center gap-1.5 select-none"
           title="Copy token contract address"
           aria-label="Copy token contract address"
         >
@@ -253,8 +253,9 @@
               target="_blank"
               rel="noopener noreferrer"
               onclick="handleShareClick(event, 'x')"
-              class="px-2.5 py-1 bg-black/85 hover:bg-white/[0.1] border border-white/20 hover:border-emerald-400/50 text-[9px] font-bold text-white hover:text-naraGreen transition-all flex items-center gap-1.5 cursor-pointer font-mono no-underline shadow-[0_0_10px_rgba(0,0,0,0.5)]"
+              class="px-3 py-1.5 min-h-[36px] bg-black/85 hover:bg-white/[0.1] active:bg-white/[0.2] border border-white/20 hover:border-emerald-400/50 text-[10px] font-bold text-white hover:text-naraGreen transition-all flex items-center gap-1.5 cursor-pointer font-mono no-underline shadow-[0_0_10px_rgba(0,0,0,0.5)] focus-visible:ring-1 focus-visible:ring-naraGreen outline-none select-none"
               title="Post your unique degen score to X"
+              aria-label="Post your score to X"
             >
               <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 256 256">
                 <path d="M214.75,211.71l-62.6-98.38,61.77-67.95a8,8,0,0,0-11.84-10.76L143.24,99.9,94.06,22.69A8,8,0,0,0,87.27,19H40a8,8,0,0,0-6.75,12.29l62.6,98.37L34.08,197.62a8,8,0,1,0,11.84,10.76l58.84-64.72,49.18,77.21A8,8,0,0,0,160.73,225H208a8,8,0,0,0,6.75-12.29ZM165.23,209,68.88,41h21.89l96.35,168Z"/>
@@ -590,8 +591,9 @@
             <button 
               id="resetRunBtn"
               onclick="confirmResetRun()" 
-              class="px-2 py-0.5 min-h-[26px] bg-hazardRed/15 hover:bg-hazardRed/30 active:bg-hazardRed/50 border border-hazardRed/30 hover:border-hazardRed text-red-300 hover:text-white text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer select-none"
+              class="px-2.5 py-1 min-h-[36px] bg-hazardRed/15 hover:bg-hazardRed/30 active:bg-hazardRed/50 focus-visible:ring-1 focus-visible:ring-hazardRed outline-none border border-hazardRed/30 hover:border-hazardRed text-red-300 hover:text-white text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer select-none flex items-center justify-center"
               title="Reset current 12-card attempt to start a fresh run from 0 clicks"
+              aria-label="Reset current run"
             >
               RESET RUN
             </button>
@@ -611,10 +613,12 @@
           </div>
           <button 
             onclick="shareFullStashTweet()"
-            class="hover:text-naraGreen transition-colors cursor-pointer text-white/60 underline uppercase font-bold"
+            class="px-3 py-1.5 min-h-[36px] bg-white/[0.04] hover:bg-white/[0.08] active:bg-white/[0.12] border border-white/10 hover:border-naraGreen/40 text-white/70 hover:text-naraGreen transition-all cursor-pointer uppercase font-bold text-[10px] flex items-center gap-1.5 focus-visible:ring-1 focus-visible:ring-naraGreen outline-none select-none"
             title="Post your full sticker discovery progress to X"
+            aria-label="Share full sticker stash on X"
           >
-            SHARE STASH ON X
+            <svg class="w-3 h-3 fill-current" viewBox="0 0 256 256"><path d="M214.75,211.71l-62.6-98.38,61.77-67.95a8,8,0,0,0-11.84-10.76L143.24,99.9,94.06,22.69A8,8,0,0,0,87.27,19H40a8,8,0,0,0-6.75,12.29l62.6,98.37L34.08,197.62a8,8,0,1,0,11.84,10.76l58.84-64.72,49.18,77.21A8,8,0,0,0,160.73,225H208a8,8,0,0,0,6.75-12.29ZM165.23,209,68.88,41h21.89l96.35,168Z"/></svg>
+            <span>SHARE STASH ON X</span>
           </button>
         </div>
 
@@ -635,8 +639,13 @@
           </div>
           <div class="flex items-center gap-2 font-mono text-[9px] text-white/50">
             <span>SORT: FEWEST CLICKS</span>
-            <button onclick="refreshLeaderboardUI()" class="px-2 py-0.5 bg-white/[0.05] hover:bg-white/[0.1] text-white/70 hover:text-white border border-white/10 uppercase cursor-pointer transition-all">
-              🔄 REFRESH
+            <button 
+              onclick="refreshLeaderboardUI()" 
+              class="px-2.5 py-1 min-h-[36px] bg-white/[0.05] hover:bg-white/[0.1] active:bg-white/[0.15] text-white/70 hover:text-white border border-white/10 hover:border-white/25 uppercase cursor-pointer transition-all flex items-center gap-1 text-[10px] focus-visible:ring-1 focus-visible:ring-white/50 outline-none select-none"
+              title="Refresh All-Time Fame Board records"
+              aria-label="Refresh Leaderboard"
+            >
+              <span>🔄</span> <span>REFRESH</span>
             </button>
           </div>
         </div>
@@ -695,10 +704,10 @@
   <footer class="relative z-30 w-full pb-4 sm:pb-6 px-3 sm:px-8 max-w-6xl mx-auto">
     <div class="w-full bg-[#0D0F14]/95 border border-white/[0.1] specular-top shadow-[0_20px_50px_rgba(0,0,0,0.8)] backdrop-blur-xl">
       
-      <div class="grid grid-cols-1 md:grid-cols-12 divide-y md:divide-y-0 md:divide-x divide-white/[0.08] items-stretch">
+      <div class="grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-white/[0.08] items-stretch">
         
         <!-- Column 1: MetaMask Add Action -->
-        <div class="md:col-span-4 p-2 sm:p-2.5 flex items-center justify-between gap-2">
+        <div class="lg:col-span-4 p-2 sm:p-2.5 flex items-center justify-between gap-2">
           <button
             id="mmBtn"
             onclick="addNaraToMetaMask()"
@@ -728,7 +737,7 @@
         </div>
 
         <!-- Column 2: Hard Base Telemetry -->
-        <div class="md:col-span-3 p-2 sm:p-2.5 flex items-center">
+        <div class="lg:col-span-3 p-2 sm:p-2.5 flex items-center">
           <a 
             href="https://base.org" 
             target="_blank" 
@@ -750,7 +759,7 @@
         </div>
 
         <!-- Column 3: Social & Analytics Terminal Dispatches -->
-        <div class="md:col-span-5 p-2 sm:p-2.5 flex items-center justify-between gap-1 sm:gap-1.5 select-none">
+        <div class="lg:col-span-5 p-2 sm:p-2.5 flex items-center justify-between gap-1 sm:gap-1.5 select-none">
           <a 
             href="https://t.me/NARAProtocol" 
             target="_blank" 
@@ -1086,12 +1095,15 @@
             type="text" 
             maxlength="20" 
             placeholder="@anon_operator"
-            class="flex-1 px-2.5 py-1.5 bg-black/80 border border-white/20 text-white font-mono text-[11px] focus:border-amber-400 outline-none placeholder:text-white/30"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();submitVictoryToFameBoard();}"
+            class="flex-1 px-3 py-2 min-h-[38px] bg-black/80 border border-white/20 text-white font-mono text-[11px] focus:border-amber-400 outline-none placeholder:text-white/30"
           />
           <button 
             id="victorySubmitBtn"
             onclick="submitVictoryToFameBoard()"
-            class="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 active:bg-amber-300 text-black font-bold text-[10px] font-mono uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap shadow-[0_0_12px_rgba(245,158,11,0.3)]"
+            class="px-3.5 py-2 min-h-[38px] bg-amber-500 hover:bg-amber-400 active:bg-amber-300 text-black font-bold text-[10px] font-mono uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap shadow-[0_0_12px_rgba(245,158,11,0.3)] focus-visible:ring-1 focus-visible:ring-white outline-none select-none flex items-center justify-center"
+            title="Submit record to All-Time Fame Board"
+            aria-label="Submit score"
           >
             <span id="victorySubmitBtnText">SUBMIT SCORE</span>
           </button>

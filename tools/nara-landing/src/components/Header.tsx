@@ -38,6 +38,11 @@ export default function Header({
   };
 
   const handleNav = (e: React.MouseEvent, path: string) => {
+    if (path === "/" || path === "/meme.html" || path === "/index.html") {
+      // Direct navigation to root Sewer Meme Terminal & Game
+      window.location.href = "/";
+      return;
+    }
     if (onNavigate) {
       e.preventDefault();
       onNavigate(path);
@@ -83,6 +88,16 @@ export default function Header({
 
           {/* Right Navigation & Wallet HUD */}
           <nav className="flex items-center gap-2 sm:gap-3 md:gap-4 font-mono text-[10px] sm:text-xs">
+            {/* Back to Sewer Terminal & Game Link */}
+            <a
+              href="/"
+              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-emerald-400 hover:text-white bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-400/30 transition-all text-[10px] sm:text-[11px] tracking-wider focus:outline-none shadow-[0_0_10px_rgba(52,211,153,0.15)] no-underline"
+              title="Return to primary Sewer Meme Terminal & Card Dredge Game"
+            >
+              <span className="text-xs">🚽</span>
+              <span className="hidden sm:inline">SEWER TERMINAL</span>
+              <span className="sm:hidden">GAME</span>
+            </a>
 
 
             {/* External Chart Link */}
