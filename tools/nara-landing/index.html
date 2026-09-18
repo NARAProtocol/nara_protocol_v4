@@ -828,12 +828,18 @@
   <div 
     id="lootModal" 
     class="hidden fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-black/90 backdrop-blur-md"
-    onclick="closeLootModal(event)"
+    onclick="handleLootBackdropClick(event)"
   >
     <div 
+      id="lootModalBox"
       class="relative w-full max-w-[340px] sm:max-w-md max-h-[90dvh] sm:max-h-[88vh] bg-[#0D0F14] border border-white/20 specular-top shadow-[0_20px_70px_rgba(0,0,0,0.98)] p-3 sm:p-5 flex flex-col items-center text-center font-mono overflow-y-auto overscroll-contain"
       onclick="event.stopPropagation()"
+      onmouseenter="pauseLootAutoDismiss()"
+      ontouchstart="pauseLootAutoDismiss()"
     >
+      <!-- Cooldown Auto-Dismiss Progress Bar (Quick preview during 1.0s hydraulic recharge) -->
+      <div id="modalAutoDismissBar" class="absolute top-0 left-0 right-0 h-[2.5px] bg-naraGreen transition-none pointer-events-none opacity-90 shadow-[0_0_8px_#39FF14]"></div>
+
       <!-- Corner Reticles -->
       <div class="absolute top-2 left-2 w-2 h-2 border-t border-l border-white/40 pointer-events-none"></div>
       <div class="absolute top-2 right-2 w-2 h-2 border-t border-r border-white/40 pointer-events-none"></div>
@@ -902,12 +908,13 @@
             <span>💾</span> <span>DOWNLOAD</span>
           </button>
 
-          <!-- Dismiss -->
+          <!-- Dismiss & Flush -->
           <button 
-            onclick="closeLootModal()"
+            onclick="handleKeepFlushingClick(event)"
             class="w-full min-h-[34px] sm:min-h-[36px] py-1 sm:py-1.5 bg-white/[0.02] hover:bg-white/[0.06] border border-white/10 text-white/50 hover:text-white font-mono text-[9px] sm:text-[10px] uppercase tracking-wider transition-all cursor-pointer focus-visible:ring-1 focus-visible:ring-white/50 outline-none"
+            title="Dismiss and continue flushing"
           >
-            <span>KEEP FLUSHING</span>
+            <span>KEEP FLUSHING ⚡</span>
           </button>
         </div>
       </div>
@@ -1438,10 +1445,10 @@
         const t = ctx.currentTime;
         const target = masterLimiter || ctx.destination;
         const notes = [
-          { freq: 587.33, start: t, dur: 0.12, vol: 0.09 },        // D5
-          { freq: 739.99, start: t + 0.07, dur: 0.12, vol: 0.11 }, // F#5
-          { freq: 880.00, start: t + 0.14, dur: 0.14, vol: 0.13 }, // A5
-          { freq: 1174.66, start: t + 0.22, dur: 0.32, vol: 0.16 } // D6
+          { freq: 587.33, start: t, dur: 0.12, vol: 0.05 },        // D5
+          { freq: 739.99, start: t + 0.07, dur: 0.12, vol: 0.06 }, // F#5
+          { freq: 880.00, start: t + 0.14, dur: 0.14, vol: 0.07 }, // A5
+          { freq: 1174.66, start: t + 0.22, dur: 0.26, vol: 0.08 } // D6
         ];
         notes.forEach(({ freq, start, dur, vol }) => {
           const osc = ctx.createOscillator();
@@ -2232,6 +2239,39 @@
       c.fillText("naraprotocol.com/meme.html", W - 42, 545);
     }
 
+    function pauseLootAutoDismiss() {
+      const modal = document.getElementById("lootModal");
+      const dismissBar = document.getElementById("modalAutoDismissBar");
+      const statusText = document.getElementById("modalStatusText");
+      if (modal && modal._autoDismiss) {
+        clearTimeout(modal._autoDismiss);
+        modal._autoDismiss = null;
+      }
+      if (dismissBar) {
+        dismissBar.style.display = "none";
+      }
+      if (statusText && !statusText.innerText.includes("INSPECTING")) {
+        statusText.innerText = "⭐ CARD STASHED IN VAULT (INSPECTING)";
+      }
+    }
+
+    function handleLootBackdropClick(e) {
+      if (e) e.stopPropagation();
+      closeLootModal(e);
+      // Fast non-blocking flush: if player clicked outside card while gameplay was active, flush immediately if ready
+      if (!isFlushingCooldown) {
+        triggerHydraulicFlush();
+      }
+    }
+
+    function handleKeepFlushingClick(e) {
+      if (e) e.stopPropagation();
+      closeLootModal(e);
+      if (!isFlushingCooldown) {
+        triggerHydraulicFlush();
+      }
+    }
+
     function showLootModal(sticker, serial, isNew, flushNum, isExplicitInspect = false) {
       const modal = document.getElementById("lootModal");
       const statusText = document.getElementById("modalStatusText");
@@ -2240,11 +2280,16 @@
       const serialEl = document.getElementById("modalCardSerial");
       const perkEl = document.getElementById("modalCardPerk");
       const copyOverlay = document.getElementById("cardCopyOverlay");
+      const dismissBar = document.getElementById("modalAutoDismissBar");
 
       if (copyOverlay) copyOverlay.classList.add("hidden");
 
       if (statusText) {
-        statusText.innerText = isNew ? "⭐ NEW SEWER STICKER DISCOVERED!" : "🔥 DUPLICATE STICKER DREDGED!";
+        if (isExplicitInspect) {
+          statusText.innerText = "👁️ INSPECTING SEWER VAULT CARD";
+        } else {
+          statusText.innerText = isNew ? "⭐ NEW SEWER STICKER DISCOVERED!" : "🔥 DUPLICATE STICKER DREDGED!";
+        }
       }
       if (nameEl) nameEl.innerText = sticker.name.toUpperCase();
       if (rarityEl) {
@@ -2265,11 +2310,27 @@
       if (modal) {
         modal.classList.remove("hidden");
         clearTimeout(modal._autoDismiss);
-        // Only auto-dismiss random loot drops so it doesn't block fast flushing; keep open if user explicitly inspected
+        modal._autoDismiss = null;
+
+        // Auto-dismiss fast (1100ms) for random dredge drops so it matches the 1.0s hydraulic recharge
+        // Keeps user flow fast and unblocked. If user explicitly inspected in vault, keep open indefinitely.
         if (!isExplicitInspect) {
+          if (dismissBar) {
+            dismissBar.style.display = "block";
+            dismissBar.style.transition = "none";
+            dismissBar.style.width = "100%";
+            void dismissBar.offsetWidth; // force layout reflow
+            dismissBar.style.transition = "width 1100ms linear";
+            dismissBar.style.width = "0%";
+          }
           modal._autoDismiss = setTimeout(() => {
             modal.classList.add("hidden");
-          }, 4000);
+            modal._autoDismiss = null;
+          }, 1100);
+        } else {
+          if (dismissBar) {
+            dismissBar.style.display = "none";
+          }
         }
       }
     }
@@ -2286,11 +2347,11 @@
 
     function closeLootModal(e) {
       if (e) e.stopPropagation();
-      // Only play click sound when closed via button, not backdrop tap
       if (!e) playMechanicalClick();
       const modal = document.getElementById("lootModal");
       if (modal) {
         clearTimeout(modal._autoDismiss);
+        modal._autoDismiss = null;
         modal.classList.add("hidden");
       }
     }
@@ -2547,6 +2608,12 @@
     const FLUSH_RATE_LIMIT_MS = 1000; // Strict 1.0-second hydraulic cooldown
 
     function triggerHydraulicFlush() {
+      // If loot modal is showing from a dredge auto-drop, immediately dismiss it so it never blocks flushing
+      const lootModal = document.getElementById("lootModal");
+      if (lootModal && !lootModal.classList.contains("hidden") && lootModal._autoDismiss) {
+        closeLootModal();
+      }
+
       const now = Date.now();
       if (isFlushingCooldown || (now - lastFlushTimestamp < FLUSH_RATE_LIMIT_MS)) {
         // Visual shake feedback on header button if user tries to spam before 1.0s
@@ -3142,6 +3209,10 @@
       if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
       if (e.key === " " || e.key === "f" || e.key === "F") {
         e.preventDefault();
+        const lootModal = document.getElementById("lootModal");
+        if (lootModal && !lootModal.classList.contains("hidden") && lootModal._autoDismiss) {
+          closeLootModal();
+        }
         triggerHydraulicFlush();
       }
       if (e.key === "Escape") {
