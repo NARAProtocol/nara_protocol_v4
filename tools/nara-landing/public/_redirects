@@ -1,6 +1,9 @@
-/swap.html  /swap             301
-/swap/*     /swap/index.html  200
-/app.html   /app              301
-/app/*      /app/index.html   200
-/meme       /                 301
-/*          /index.html       200
+# Exact rules first, splats last (Cloudflare Pages evaluates top to bottom).
+/swap        https://cryptoslip.eth.limo/  302
+/swap.html   https://cryptoslip.eth.limo/  302
+/app         /  301
+/app.html    /  301
+/meme        /  301
+/meme.html   /  301
+/swap/*      https://cryptoslip.eth.limo/  302
+/app/*       /  301
