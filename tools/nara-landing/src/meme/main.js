@@ -10,6 +10,8 @@ import {
 function handleSwapButtonClick(e) {
   playMechanicalClick();
   if (SWAP_PUBLIC_LAUNCHED) {
+    // The control is a real <a href=CRYPTOSLIP_URL target=_blank rel=noopener> (see initSwapControl);
+    // the browser follows it. Non-anchor callers open it safely.
     const isAnchor = !!(e && e.currentTarget && e.currentTarget.tagName === "A");
     if (!isAnchor) openSafeWindow(CRYPTOSLIP_URL);
     return;
@@ -17,6 +19,30 @@ function handleSwapButtonClick(e) {
   if (e && e.preventDefault) e.preventDefault();
   const modal = document.getElementById("swapPrelaunchModal");
   if (modal) modal.classList.remove("hidden");
+}
+
+// While gated, the header SWAP control is a <button> without an href, so middle-click,
+// "open link in new tab", long-press and link previews cannot reach CryptoSLIP. Once
+// launched it becomes a real link before any user interaction (popup-blocker proof).
+function initSwapControl() {
+  const el = document.getElementById("headerSwapBtn");
+  if (!el || !SWAP_PUBLIC_LAUNCHED) return;
+  const a = document.createElement("a");
+  a.id = el.id;
+  a.className = `${el.className} no-underline`;
+  a.href = CRYPTOSLIP_URL;
+  a.target = "_blank";
+  a.rel = "noopener noreferrer";
+  a.title = "Swap on CryptoSLIP, the NARA swap app (opens in a new tab)";
+  a.setAttribute("aria-label", "Swap on CryptoSLIP, opens in a new tab");
+  a.setAttribute("data-on-click", "handleSwapButtonClick");
+  while (el.firstChild) a.appendChild(el.firstChild);
+  const mark = document.createElement("span");
+  mark.setAttribute("aria-hidden", "true");
+  mark.className = "hidden sm:inline text-[9px] opacity-70";
+  mark.textContent = "↗";
+  a.appendChild(mark);
+  el.replaceWith(a);
 }
 
 function closeSwapModal(e) {
@@ -409,8 +435,8 @@ let flushCount = 0;
 let dpr = 1;
 
 // --- XSS PROTECTION & INPUT SANITIZATION ---
-function escapeHTML(str) {
-  if (typeof str !== 'string') return String(str ?? '');
+function escapeHTML(value) {
+  const str = typeof value === 'string' ? value : String(value ?? '');
   return str
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -569,7 +595,7 @@ const OPERATOR_LEVELS = [
   { minFlushes: 50, level: 5, rank: "Base Sewer Tactician", title: "Tactical Plunger Master", color: "#FBBF24" },
   { minFlushes: 75, level: 6, rank: "Hydraulic Warlord", title: "Commanding Flush General", color: "#F87171" },
   { minFlushes: 100, level: 7, rank: "Porcelain Warlord", title: "100+ Bear Purger", color: "#39FF14" },
-  { minFlushes: 200, level: 8, rank: "Uniswap Hook Master", title: "15M Epoch Purger", color: "#38BDF8" },
+  { minFlushes: 200, level: 8, rank: "Uniswap Hook Master", title: "Pipe Pressure Veteran", color: "#38BDF8" },
   { minFlushes: 420, level: 9, rank: "GOD CANDLE DEITY", title: "Sovereign Porcelain Overlord", color: "#FFD700" }
 ];
 
@@ -659,13 +685,8 @@ function rollNewDegenMessage(count) {
 }
 
 // --- VIRAL SOCIAL POSTING ENGINE (RFC-3986 STRICT & POPUP-PROOF) ---
+// Share links always point at the canonical origin, never at a preview host or a query/hash.
 function getShareUrl() {
-  if (typeof window !== "undefined" && window.location) {
-    const origin = window.location.origin;
-    if (origin && !origin.includes("localhost") && !origin.includes("127.0.0.1") && origin.startsWith("http")) {
-      return window.location.href.split("?")[0].split("#")[0];
-    }
-  }
   return CANONICAL_URL;
 }
 
@@ -961,8 +982,10 @@ function loadUserStash() {
             };
           }
         }
+        const activeId = Number(parsed.activeStickerId);
         userStash = {
           unlocked: sanitizedUnlocked,
+          activeStickerId: STICKER_COLLECTION.some(s => s.id === activeId) ? activeId : 1,
           totalDrops: Math.max(0, Math.min(1000000, Math.floor(Number(parsed.totalDrops) || 0)))
         };
       }
@@ -1751,13 +1774,27 @@ function isLegacyMockSeed(handle) {
   );
 }
 
+// Normalize any board row (API JSON or localStorage) to known types before it reaches the DOM.
+function sanitizeBoardEntry(item) {
+  if (!item || typeof item !== "object" || typeof item.handle !== "string") return null;
+  const score = Number(item.score);
+  if (!Number.isFinite(score) || score < 1) return null;
+  return {
+    handle: item.handle.slice(0, 24),
+    score: Math.floor(score),
+    tier: typeof item.tier === "string" ? item.tier.slice(0, 40) : getRatingTier(Math.floor(score)).name,
+    date: typeof item.date === "string" ? item.date.slice(0, 24) : "RECENT",
+    timestamp: Number(item.timestamp) || 0,
+  };
+}
+
 function loadLocalFameBoard() {
   try {
     const saved = localStorage.getItem("nara_fame_board_v1");
     if (saved) {
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed)) {
-        localFameBoard = parsed.filter(item => item && !isLegacyMockSeed(item.handle));
+        localFameBoard = parsed.map(sanitizeBoardEntry).filter(item => item && !isLegacyMockSeed(item.handle));
         return;
       }
     }
@@ -1774,7 +1811,7 @@ function saveLocalFameBoard() {
 function renderFameBoard(entries) {
   const tbody = document.getElementById("fameBoardBody");
   if (!tbody) return;
-  const list = (Array.isArray(entries) ? entries : localFameBoard).filter(item => item && !isLegacyMockSeed(item.handle));
+  const list = (Array.isArray(entries) ? entries : localFameBoard).map(sanitizeBoardEntry).filter(item => item && !isLegacyMockSeed(item.handle));
 
   tbody.innerHTML = "";
   if (list.length === 0) {
@@ -1843,7 +1880,7 @@ async function syncFameBoardFromAPI() {
     if (res.ok) {
       const remoteData = await res.json();
       if (Array.isArray(remoteData)) {
-        const cleanRemote = remoteData.filter(item => item && !isLegacyMockSeed(item.handle));
+        const cleanRemote = remoteData.map(sanitizeBoardEntry).filter(item => item && !isLegacyMockSeed(item.handle));
         // Merge with any offline submissions in localFameBoard
         const merged = [...cleanRemote];
         localFameBoard.forEach(localItem => {
@@ -1872,6 +1909,7 @@ function refreshLeaderboardUI() {
 
 // --- CLOUDFLARE TURNSTILE (only loaded when the victory modal opens and a site key exists) ---
 let turnstileWidgetId = null;
+let turnstileFailed = false;
 
 function ensureTurnstile() {
   if (!TURNSTILE_SITE_KEY) return;
@@ -1880,10 +1918,14 @@ function ensureTurnstile() {
   mount.classList.remove("hidden");
   const render = () => {
     if (!window.turnstile) return;
-    if (turnstileWidgetId === null) {
-      turnstileWidgetId = window.turnstile.render(mount, { sitekey: TURNSTILE_SITE_KEY, theme: "dark", size: "flexible" });
-    } else {
-      window.turnstile.reset(turnstileWidgetId);
+    try {
+      if (turnstileWidgetId === null) {
+        turnstileWidgetId = window.turnstile.render(mount, { sitekey: TURNSTILE_SITE_KEY, theme: "dark", size: "flexible" });
+      } else {
+        window.turnstile.reset(turnstileWidgetId);
+      }
+    } catch (err) {
+      turnstileFailed = true;
     }
   };
   if (window.turnstile) { render(); return; }
@@ -1895,12 +1937,15 @@ function ensureTurnstile() {
   s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?onload=naraTurnstileReady&render=explicit";
   s.async = true;
   s.defer = true;
+  s.onerror = () => { turnstileFailed = true; };
   document.head.appendChild(s);
 }
 
 const SUBMIT_STATES = {
   idle:       { btn: "SUBMIT SCORE",      note: "", cls: "text-white/60" },
   verify:     { btn: "SUBMIT SCORE",      note: "Complete the check above first.", cls: "text-amber-300" },
+  loading:    { btn: "SUBMIT SCORE",      note: "Verification is still loading. Try again in a moment.", cls: "text-amber-300" },
+  blocked:    { btn: "✓ SAVED ON DEVICE", note: "The verification widget could not load (blocked by your browser?). Saved in this browser only.", cls: "text-amber-300" },
   submitting: { btn: "SUBMITTING...",     note: "", cls: "text-white/60" },
   posted:     { btn: "✓ POSTED TO BOARD", note: "✓ Posted to the global Fame Board and saved in this browser.", cls: "text-naraGreen" },
   local:      { btn: "✓ SAVED ON DEVICE", note: "Global board is offline. Your record is saved in this browser only.", cls: "text-amber-300" },
@@ -2020,8 +2065,20 @@ async function submitVictoryToFameBoard() {
     injectSewerEvent(`[FAME BOARD] ${cleanHandle} saved ${runFlushes} clicks on this device.`);
     return;
   }
-  const token = window.turnstile && turnstileWidgetId !== null ? window.turnstile.getResponse(turnstileWidgetId) : "";
-  if (!token) { setSubmitState("verify"); return; }
+  let token = "";
+  try {
+    if (window.turnstile && turnstileWidgetId !== null) token = window.turnstile.getResponse(turnstileWidgetId) || "";
+  } catch (e) {}
+  if (!token) {
+    if (turnstileFailed || (!window.turnstile && !document.getElementById("turnstileScript"))) {
+      setSubmitState("blocked");
+    } else if (!window.turnstile || turnstileWidgetId === null) {
+      setSubmitState("loading");
+    } else {
+      setSubmitState("verify");
+    }
+    return;
+  }
 
   setSubmitState("submitting");
   try {
@@ -2033,7 +2090,7 @@ async function submitVictoryToFameBoard() {
     if (res.ok) {
       const data = await res.json();
       if (data && Array.isArray(data.board)) {
-        localFameBoard = data.board;
+        localFameBoard = data.board.map(sanitizeBoardEntry).filter(Boolean);
         saveLocalFameBoard();
         renderFameBoard(localFameBoard);
       }
@@ -2281,6 +2338,7 @@ const BOUND_EVENTS = ["click", "keydown", "mouseenter", "touchstart"];
 
 function bindActions(root = document) {
   const selector = BOUND_EVENTS.map((evt) => `[data-on-${evt}]`).join(",");
+  const unknown = [];
   root.querySelectorAll(selector).forEach((el) => {
     BOUND_EVENTS.forEach((evt) => {
       const spec = el.getAttribute(`data-on-${evt}`);
@@ -2288,13 +2346,21 @@ function bindActions(root = document) {
       const [name, arg] = spec.split(":");
       const action = ACTIONS[name];
       if (!action) {
-        console.error(`[nara] unknown action "${name}" on`, el);
+        unknown.push(`${evt}:${name}`);
         return;
       }
       const options = evt === "touchstart" ? { passive: true } : undefined;
       el.addEventListener(evt, (e) => action(e, arg), options);
     });
   });
+  if (unknown.length) {
+    // console.error survives the production build (see vite.config.ts) and the attribute is
+    // asserted by tests/smoke.mjs, so a typo in a data-on-* attribute cannot ship silently.
+    document.documentElement.setAttribute("data-nara-bind-error", unknown.join(","));
+    console.error(`[nara] unknown actions: ${unknown.join(", ")}`);
+    throw new Error(`[nara] unknown actions: ${unknown.join(", ")}`);
+  }
 }
 
+initSwapControl();
 bindActions();

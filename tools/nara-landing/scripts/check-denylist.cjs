@@ -24,6 +24,7 @@ const RULES = [
   { re: /\son(click|dblclick|keydown|keyup|keypress|mouseenter|mouseleave|mouseover|mouseout|touchstart|touchend|load|error|submit|change|input|focus|blur)=/i, why: "inline event handler (breaks CSP)", onlyHtml: true },
   { re: /<script(?![^>]*\btype="module")(?![^>]*\bsrc=)/i, why: "inline <script> (breaks CSP)", onlyHtml: true },
   { re: /\b(NFT|on-?chain (poop|collectible|sticker)|Royal Dividend)\b/i, why: "stickers are device-local cards, not tokens", onlyHtml: true },
+  { re: /Live Base telemetry|15M Epoch|VERIFIED ON BASE|CONTRACT: VERIFIED|OFFICIAL RUN SCORE|VICTORY PROOF/i, why: "unbacked authority/protocol claim", onlyHtml: true },
 ];
 
 let hits = 0;

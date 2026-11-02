@@ -56,24 +56,32 @@ only work on Pages.
 
 | Setting | Value |
 |---|---|
+| Root directory | `tools/nara-landing` (monorepo: without it the build finds neither `functions/` nor `dist`) |
 | Build command | `npm run check` (or `npm run build`) |
 | Output directory | `dist` |
 | KV binding | `NARA_LEADERBOARD_KV` → a KV namespace |
 | Secret | `TURNSTILE_SECRET_KEY` (Turnstile widget secret). Absent → `POST /api/leaderboard` returns 503 `board_disabled`, UI says "SAVED ON DEVICE". |
 | Build variable | `VITE_TURNSTILE_SITE_KEY` (public site key). Absent → the page never calls the API for posting. |
 
-Deploy: `npm run deploy:cf:preview` (branch `preview`) or `npm run deploy:cf:prod`.
+Deploy: `npm run deploy:cf:preview` (branch `preview`) or `npm run deploy:cf:prod`. A
+production deploy is a production switch under the root `AGENTS.md`: it needs explicit owner
+authorization for that action, not just a green check.
 Verify on the `*.pages.dev` URL before pointing DNS: `curl -I` for CSP/HSTS/XFO,
 `/swap` → 302 to CryptoSLIP, `/meme.html` → 301 `/`, `/api/leaderboard` → JSON,
 `/flush.mp3` → `audio/mpeg`, then run `tests/smoke.mjs` against it.
 
 ## Launch switch
 
-`SWAP_PUBLIC_LAUNCHED` in `src/meme/config.js` is `false`. The header SWAP element is a
-real link to `https://cryptoslip.eth.limo/` (`target=_blank rel=noopener`), but while the
-flag is false the click opens the "SWAPS OPEN SOON" modal instead. Flip it to `true` in a
-reviewed commit only after Safe nonce 8 (`Hook.setTradingPaused(false)`) executed and the
-V5 launch verification passed. `_redirects` already sends old `/swap` links to CryptoSLIP.
+`SWAP_PUBLIC_LAUNCHED` in `src/meme/config.js` is `false`. While false, the header SWAP
+control is a plain `<button>` with no href (so middle-click, "open in new tab", long-press
+and link previews cannot reach a swap) and opens the "SWAPS OPEN SOON" modal; `_redirects`
+sends old `/swap*` links to `/`. When true, `initSwapControl()` turns the button into a real
+link to `https://cryptoslip.eth.limo/` (`target=_blank rel=noopener`) before any interaction.
+
+Launch commit (one reviewed commit, only after Safe nonce 8 `Hook.setTradingPaused(false)`
+executed and the V5 launch verification passed): set the flag to `true` AND change the four
+`/swap*` targets in `public/_redirects` to `https://cryptoslip.eth.limo/`. Verify with
+`SMOKE_SWAP_LAUNCHED=1 npm run test:smoke`.
 
 ## Security posture
 
@@ -81,12 +89,23 @@ V5 launch verification passed. `_redirects` already sends old `/swap` links to C
   (Turnstile, loaded only when the victory modal opens) and `static.cloudflareinsights.com`
   (only if Web Analytics is enabled in the dashboard). No `unsafe-inline`/`unsafe-eval` for
   scripts. Styles allow `'unsafe-inline'` for the inline `style=` attributes the game sets.
-- HSTS preload, `X-Frame-Options: DENY`, `frame-ancestors 'none'`, nosniff, strict referrer,
-  restrictive Permissions-Policy, COOP same-origin. No `Cross-Origin-Resource-Policy` so
-  wallets can load `/nara_token_256.png` for `wallet_watchAsset`.
+- HSTS (1 year, `includeSubDomains`; the `preload` directive is deliberately left out until the
+  owner confirms every `*.naraprotocol.com` subdomain is HTTPS-only, since preload-list entry
+  is effectively irreversible), `X-Frame-Options: DENY`, `frame-ancestors 'none'`, nosniff,
+  strict referrer, restrictive Permissions-Policy, COOP same-origin. No
+  `Cross-Origin-Resource-Policy` so wallets can load `/nara_token_256.png` for `wallet_watchAsset`.
+- `_headers` applies to static files only. `/api/leaderboard` sets its own headers: GET is
+  publicly cacheable for 15 s (30 s at the edge), POST is `no-store`, JSON responses carry
+  nosniff, XFO DENY and a `default-src 'none'` CSP. HEAD is supported for uptime monitors.
+- Build keeps `console.error` (other console calls are stripped) so a broken `data-on-*`
+  binding is reported in production and caught by the smoke test (`data-nara-bind-error`).
 - Browser storage holds game progress only. The board API never trusts the client: handle
-  is normalized server-side, scores must be integers 12..50000 with 12 cards, Turnstile is
-  verified, 5 posts per IP per hour, 2 KB body cap, same-origin only.
+  is normalized server-side, scores must be JSON integers 12..50000 with 12 cards, Turnstile is
+  verified, 5 accepted posts per IP per hour (failed attempts do not consume budget), 2 KB
+  body cap, same-origin only. Stored rows are re-validated and re-typed on every read. Two
+  simultaneous posts can still race on the KV read-modify-write (last writer wins; KV is
+  eventually consistent); acceptable for a game board.
+- Share links always use the canonical origin, never a preview host.
 - Wallet interaction is limited to `wallet_switchEthereumChain`, `wallet_addEthereumChain`
   (Base) and `wallet_watchAsset` for the canonical token. No signing, no transactions.
 

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { onRequestGet, onRequestPost, onRequestOptions } from "../functions/api/leaderboard.js";
+import { onRequestGet, onRequestHead, onRequestPost, onRequestOptions } from "../functions/api/leaderboard.js";
 
 const ORIGIN = "https://naraprotocol.com";
 
@@ -46,17 +46,30 @@ test("GET returns [] when KV empty and never sets CORS *", async () => {
   assert.equal(res.headers.get("Access-Control-Allow-Origin"), null);
 });
 
-test("GET filters legacy seeds and malformed rows", async () => {
+test("GET filters legacy seeds and malformed rows and re-types every field", async () => {
   const kv = makeKV({ fame_board_v1: JSON.stringify([
     { handle: "@Satoshi_Plunger", score: 12 },
     { handle: 42, score: 12 },
     { handle: "@real", score: "nope" },
-    { handle: "@real", score: 20, tier: "x", date: "d", timestamp: 1 },
+    { handle: "@real", score: 20, tier: "<b>x</b>", date: ["<img src=x onerror=alert(1)>"], timestamp: "1" },
+    { handle: "@other<svg>", score: 30, date: "Nov 2, 2026", timestamp: 2 },
   ]) });
   const res = await onRequestGet(makeContext({ env: { NARA_LEADERBOARD_KV: kv } }));
   const data = await res.json();
-  assert.equal(data.length, 1);
+  assert.equal(data.length, 2);
   assert.equal(data[0].handle, "@real");
+  assert.equal(data[0].rank, 1);
+  assert.equal(data[0].tier, "GOD-TIER PORCELAIN DEITY", "tier is recomputed, stored value ignored");
+  assert.equal(data[0].date, "", "non-string date dropped");
+  assert.equal(data[1].handle, "@othersvg", "handle re-normalized");
+  assert.equal(res.headers.get("Content-Security-Policy"), "default-src 'none'; frame-ancestors 'none'");
+});
+
+test("HEAD mirrors GET headers with no body", async () => {
+  const res = await onRequestHead(makeContext({ method: "HEAD", env: { NARA_LEADERBOARD_KV: makeKV() } }));
+  assert.equal(res.status, 200);
+  assert.equal(await res.text(), "");
+  assert.match(res.headers.get("Cache-Control"), /max-age=15/);
 });
 
 test("OPTIONS is 405 (no CORS preflight support)", async () => {
@@ -181,7 +194,29 @@ test("POST rate limits the 6th submission from one IP within the window", async 
       last = await onRequestPost(makeContext({ method: "POST", body: { ...GOOD, handle: `@op_${i}` }, headers: GOOD_HEADERS, env }));
     }
     assert.equal(last.status, 429);
-    assert.equal(last.headers.get("Retry-After"), "600");
+    assert.equal(last.headers.get("Retry-After"), "3600");
+  } finally { restore(); }
+});
+
+test("failed verification and invalid payloads do not consume rate budget", async () => {
+  const kv = makeKV();
+  const env = { NARA_LEADERBOARD_KV: kv, TURNSTILE_SECRET_KEY: "s" };
+  let restore = withTurnstile({ success: false });
+  try {
+    for (let i = 0; i < 6; i++) {
+      const res = await onRequestPost(makeContext({ method: "POST", body: GOOD, headers: GOOD_HEADERS, env }));
+      assert.equal(res.status, 403);
+    }
+    for (let i = 0; i < 6; i++) {
+      const res = await onRequestPost(makeContext({ method: "POST", body: { ...GOOD, score: 1 }, headers: GOOD_HEADERS, env }));
+      assert.equal(res.status, 400);
+    }
+  } finally { restore(); }
+  restore = withTurnstile({ success: true });
+  try {
+    const res = await onRequestPost(makeContext({ method: "POST", body: GOOD, headers: GOOD_HEADERS, env }));
+    assert.equal(res.status, 200, "a valid submission after 12 failures still succeeds");
+    assert.equal(kv.store.get("rl:203.0.113.7"), "1");
   } finally { restore(); }
 });
 

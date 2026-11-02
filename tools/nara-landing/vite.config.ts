@@ -38,7 +38,9 @@ export default defineConfig(({ mode }) => ({
     target: "es2020",
   },
   esbuild: {
-    drop: mode === "production" ? ["console", "debugger"] : [],
+    // Keep console.error in production: bindActions() uses it to report broken data-on-* bindings.
+    drop: ["debugger"],
+    pure: mode === "production" ? ["console.log", "console.debug", "console.info", "console.warn"] : [],
   },
   server: { port: 5180, host: "127.0.0.1" },
   preview: { port: 4173, host: "127.0.0.1", strictPort: true },

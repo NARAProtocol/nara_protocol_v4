@@ -107,11 +107,27 @@ if (!xHref?.startsWith("https://x.com/intent/post?text=")) fail(`forge X href ${
 const castHref = await page.locator("#forgeCastBtn").getAttribute("href");
 if (!castHref?.startsWith("https://warpcast.com/~/compose?text=")) fail(`forge cast href ${castHref}`);
 
-// SWAP gate
+// Binding integrity: every data-on-* attribute resolved to a known action
+if (await page.evaluate(() => document.documentElement.hasAttribute("data-nara-bind-error"))) {
+  fail(`unknown data-on-* action: ${await page.evaluate(() => document.documentElement.getAttribute("data-nara-bind-error"))}`);
+}
+
+// SWAP gate. Gated: a <button> with no href, so middle-click / open-in-new-tab cannot reach
+// CryptoSLIP. Launched: a real <a href> with noopener.
+const swapTag = await page.locator("#headerSwapBtn").evaluate((el) => el.tagName);
 const swapHref = await page.locator("#headerSwapBtn").getAttribute("href");
-if (swapHref !== "https://cryptoslip.eth.limo/") fail(`swap href ${swapHref}`);
-const swapRel = await page.locator("#headerSwapBtn").getAttribute("rel");
-if (!/noopener/.test(swapRel || "")) fail("swap link lacks rel=noopener");
+if (EXPECT_SWAP_GATED) {
+  if (swapTag !== "BUTTON" || swapHref !== null) fail(`gated swap must be a <button> without href, got <${swapTag} href=${swapHref}>`);
+  const popupsBefore = popups.length;
+  await page.click("#headerSwapBtn", { button: "middle" });
+  await sleep(500);
+  if (popups.length !== popupsBefore) fail("middle-click on gated SWAP opened a new tab");
+  await page.keyboard.press("Escape");
+} else {
+  if (swapTag !== "A" || swapHref !== "https://cryptoslip.eth.limo/") fail(`launched swap must link to CryptoSLIP, got <${swapTag} href=${swapHref}>`);
+  const swapRel = await page.locator("#headerSwapBtn").getAttribute("rel");
+  if (!/noopener/.test(swapRel || "")) fail("swap link lacks rel=noopener");
+}
 await page.click("#headerSwapBtn");
 await sleep(400);
 const modalVisible = await page.locator("#swapPrelaunchModal").isVisible();
@@ -176,9 +192,9 @@ else {
   await page.keyboard.press("Escape");
 }
 
-// Banned wording anywhere on the page
-const bodyText = await page.locator("body").innerText();
-for (const bad of [/\bNFTs?\b/i, /on-?chain (poop|collectible|sticker)/i, /Dividend/i, /Live Base telemetry/i, /VERIFIED ON BASE/i, /CONTRACT: VERIFIED/i]) {
+// Banned wording anywhere on the page, including closed modals (textContent, not innerText)
+const bodyText = await page.evaluate(() => document.body.textContent || "");
+for (const bad of [/\bNFTs?\b/i, /on-?chain (poop|collectible|sticker)/i, /Dividend/i, /Live Base telemetry/i, /VERIFIED ON BASE/i, /CONTRACT: VERIFIED/i, /15M EPOCH/i, /OFFICIAL RUN SCORE/i, /VICTORY PROOF/i]) {
   if (bad.test(bodyText)) fail(`banned wording on page: ${bad}`);
 }
 if (!/financial advice/i.test(bodyText)) fail("disclaimer line missing");

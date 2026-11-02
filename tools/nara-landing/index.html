@@ -80,20 +80,17 @@
       <div class="flex items-center gap-2 sm:gap-3">
         
         <!-- Swap Button Link -->
-        <a
+        <button
           id="headerSwapBtn"
-          href="https://cryptoslip.eth.limo/"
-          target="_blank"
-          rel="noopener noreferrer"
+          type="button"
           data-on-click="handleSwapButtonClick"
-          class="px-2.5 sm:px-3 py-2 min-h-[42px] sm:min-h-[38px] bg-emerald-500/15 hover:bg-emerald-500/25 active:bg-emerald-500/40 focus-visible:ring-1 focus-visible:ring-emerald-400 outline-none border border-emerald-500/40 hover:border-emerald-400 text-emerald-300 hover:text-white text-[10px] font-bold tracking-[0.14em] uppercase transition-all duration-150 flex items-center gap-1.5 cursor-pointer shadow-[0_0_12px_rgba(16,185,129,0.2)] select-none no-underline"
-          title="Swap on CryptoSLIP, the NARA swap app (opens in a new tab)"
-          aria-label="Swap on CryptoSLIP, opens in a new tab"
+          class="px-2.5 sm:px-3 py-2 min-h-[42px] sm:min-h-[38px] bg-emerald-500/15 hover:bg-emerald-500/25 active:bg-emerald-500/40 focus-visible:ring-1 focus-visible:ring-emerald-400 outline-none border border-emerald-500/40 hover:border-emerald-400 text-emerald-300 hover:text-white text-[10px] font-bold tracking-[0.14em] uppercase transition-all duration-150 flex items-center gap-1.5 cursor-pointer shadow-[0_0_12px_rgba(16,185,129,0.2)] select-none"
+          title="Swaps open at launch on CryptoSLIP. Click for details."
+          aria-label="Swap: opens at launch on CryptoSLIP, click for details"
         >
           <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
           <span>SWAP</span>
-          <span aria-hidden="true" class="text-[9px] opacity-70">↗</span>
-        </a>
+        </button>
 
         <!-- Flush Button with 1.0s Hydraulic Cooldown Gauge -->
         <button
@@ -1017,7 +1014,7 @@
       <!-- Score Banner -->
       <div class="w-full bg-black/70 border border-amber-400/40 p-3 mb-3 text-center">
         <div class="text-[9px] text-white/50 uppercase tracking-widest mb-1 font-mono">
-          OFFICIAL RUN SCORE
+          RUN SCORE
         </div>
         <div class="text-2xl sm:text-3xl font-extrabold text-amber-300 font-mono tracking-tight flex items-center justify-center gap-1.5">
           <span id="victoryScoreNumber">0</span>
@@ -1074,7 +1071,7 @@
           <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 256 256">
             <path d="M214.75,211.71l-62.6-98.38,61.77-67.95a8,8,0,0,0-11.84-10.76L143.24,99.9,94.06,22.69A8,8,0,0,0,87.27,19H40a8,8,0,0,0-6.75,12.29l62.6,98.37L34.08,197.62a8,8,0,1,0,11.84,10.76l58.84-64.72,49.18,77.21A8,8,0,0,0,160.73,225H208a8,8,0,0,0,6.75-12.29ZM165.23,209,68.88,41h21.89l96.35,168Z"/>
           </svg>
-          <span>POST VICTORY PROOF ON X</span>
+          <span>POST VICTORY ON X</span>
         </a>
 
         <!-- Reset Vault & Start New Run -->
