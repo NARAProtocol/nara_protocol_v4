@@ -122,10 +122,40 @@ export default function Header({
               <span>EXPLORER</span>
             </a>
 
+            {/* Swap Link */}
+            <a
+              href="/swap"
+              onClick={(e) => handleNav(e, "/swap")}
+              className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full transition-all text-[10px] sm:text-[11px] tracking-wider focus:outline-none no-underline cursor-pointer ${
+                _currentPath === "/swap" || _currentPath === "/"
+                  ? "text-cyan-300 bg-cyan-500/15 border border-cyan-400/40 shadow-[0_0_10px_rgba(0,240,255,0.2)] font-bold"
+                  : "text-slate-400 hover:text-white hover:bg-white/5 border border-white/10"
+              }`}
+              title="Trade ETH for NARA"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+              <span>SWAP</span>
+            </a>
+
+            {/* Visit the App Link */}
+            <a
+              href="/app"
+              onClick={(e) => handleNav(e, "/app")}
+              className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full transition-all text-[10px] sm:text-[11px] tracking-wider focus:outline-none no-underline cursor-pointer ${
+                _currentPath === "/app"
+                  ? "text-amber-300 bg-amber-500/20 border border-amber-400/50 shadow-[0_0_10px_rgba(245,158,11,0.25)] font-bold"
+                  : "text-amber-300 hover:text-white bg-amber-500/10 hover:bg-amber-500/20 border border-amber-400/30 shadow-[0_0_10px_rgba(245,158,11,0.15)]"
+              }`}
+              title="Visit the NARA App (Coming Soon)"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+              <span>APP</span>
+            </a>
+
             {/* Vision Modal Trigger */}
             <button
               onClick={handleVisionClick}
-              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-cyan-300 hover:text-white bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-400/30 transition-all text-[10px] sm:text-[11px] tracking-wider focus:outline-none shadow-[0_0_10px_rgba(6,182,212,0.15)]"
+              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-cyan-300 hover:text-white bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-400/30 transition-all text-[10px] sm:text-[11px] tracking-wider focus:outline-none shadow-[0_0_10px_rgba(6,182,212,0.15)] cursor-pointer"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_6px_#00f0ff]" />
               <span>VISION</span>
@@ -240,7 +270,10 @@ export default function Header({
 
       {/* Internal Vision Modal if not delegated to parent */}
       {!onOpenVision && internalShowVision && (
-        <VisionModal onClose={() => setInternalShowVision(false)} />
+        <VisionModal 
+          onClose={() => setInternalShowVision(false)} 
+          onNavigate={onNavigate}
+        />
       )}
     </>
   );

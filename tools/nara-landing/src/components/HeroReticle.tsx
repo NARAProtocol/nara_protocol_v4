@@ -32,11 +32,9 @@ export default function HeroReticle() {
       <div className="shell max-w-xl mx-auto mt-6 z-10 flex flex-wrap items-center justify-center gap-3 font-mono text-xs">
         <a
           href={SOCIAL_LINKS.swapApp}
-          target="_blank"
-          rel="noopener noreferrer"
           className="inline-flex items-center gap-2 px-6 py-3 rounded bg-base-blue hover:bg-base-blue/90 text-white font-bold tracking-wider transition-all duration-200 shadow-glow"
         >
-          <span>ENTER APP // SWAP</span>
+          <span>VISIT THE APP</span>
           <ArrowUpRight size={16} weight="bold" />
         </a>
 

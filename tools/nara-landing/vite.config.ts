@@ -21,8 +21,8 @@ export default defineConfig(({ mode }) => {
               return;
             }
             if (req.url === "/swap" || req.url === "/swap/") {
-              res.writeHead(302, { Location: "/swap.html" });
-              res.end();
+              req.url = "/swap.html";
+              next();
               return;
             }
             const devLeaderboard: any[] = [];

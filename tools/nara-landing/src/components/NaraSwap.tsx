@@ -19,6 +19,7 @@ import {
   SlidersHorizontal,
 } from "@phosphor-icons/react";
 import { useGrid } from "../context/GridContext";
+import VisionModal from "./VisionModal";
 import {
   NARA_BASE_TOKENS,
   NARA_TOKEN_ADDRESS,
@@ -80,26 +81,27 @@ export default function NaraSwap() {
     handleSwitchToBase,
     fetchState,
     naraBalance,
+    navigate,
   } = useGrid();
 
   // Active Network
   const [selectedChain, setSelectedChain] = useState<SupportedChain>(SUPPORTED_CHAINS[0]);
   const [showChainModal, setShowChainModal] = useState<boolean>(false);
 
-  // Selected Tokens: Default USDC -> NARA on Base (canonical hook pair)
+  // Selected Tokens: Default ETH -> NARA on Base (1-Click Atomic Route)
   const [fromToken, setFromToken] = useState<TokenInfo>(() =>
-    NARA_BASE_TOKENS.find((t) => t.symbol === "USDC") || NARA_BASE_TOKENS[2]
+    NARA_BASE_TOKENS.find((t) => t.symbol === "ETH") || NARA_BASE_TOKENS[1]
   );
   const [toToken, setToToken] = useState<TokenInfo>(() =>
     NARA_BASE_TOKENS.find((t) => t.symbol === "NARA") || NARA_BASE_TOKENS[0]
   );
 
-  // Input Amounts (Default 35.06 or clean input)
-  const [fromAmountInput, setFromAmountInput] = useState<string>("35.06");
-  const [toAmountOutput, setToAmountOutput] = useState<string>("291.045914");
-  const [fromUsd, setFromUsd] = useState<number>(35.06);
-  const [toUsd, setToUsd] = useState<number>(35.06);
-  const [exchangeRate, setExchangeRate] = useState<string>("8.301366");
+  // Input Amounts (Default 0.01 ETH for immediate loaded state)
+  const [fromAmountInput, setFromAmountInput] = useState<string>("0.01");
+  const [toAmountOutput, setToAmountOutput] = useState<string>("228.215");
+  const [fromUsd, setFromUsd] = useState<number>(27.49);
+  const [toUsd, setToUsd] = useState<number>(27.49);
+  const [exchangeRate, setExchangeRate] = useState<string>("22821.50");
 
   // Balances
   const [ethBalance, setEthBalance] = useState<ethers.BigNumber>(ethers.BigNumber.from(0));
@@ -120,6 +122,7 @@ export default function NaraSwap() {
   const [swapSuccess, setSwapSuccess] = useState<string | null>(null);
   const [copiedContract, setCopiedContract] = useState<boolean>(false);
   const [metamaskStatus, setMetamaskStatus] = useState<"idle" | "added" | "copied">("idle");
+  const [showVisionModal, setShowVisionModal] = useState<boolean>(false);
 
   const handleAddToMetaMask = async () => {
     if (typeof window !== "undefined" && (window as any).ethereum) {
@@ -255,11 +258,12 @@ export default function NaraSwap() {
         console.warn("Unified quote error:", err);
         // Realistic fallback matching current spot
         const isUsdcNara = tokenIn.symbol === "USDC" && tokenOut.symbol === "NARA";
-        const fallbackRate = isUsdcNara ? 8.301366 : (tokenIn.symbol === "ETH" && tokenOut.symbol === "NARA" ? 17343.2 : 1);
+        const isEthNara = tokenIn.symbol === "ETH" && tokenOut.symbol === "NARA";
+        const fallbackRate = isUsdcNara ? 8.301366 : (isEthNara ? 22821.50 : 1);
         const outVal = num * fallbackRate;
         setToAmountOutput(outVal > 1000 ? outVal.toLocaleString(undefined, { maximumFractionDigits: 6 }) : outVal.toFixed(6));
-        setFromUsd(num * (tokenIn.symbol === "USDC" ? 1 : 2550));
-        setToUsd(outVal * 0.1147);
+        setFromUsd(num * (tokenIn.symbol === "USDC" ? 1 : 2749.12));
+        setToUsd(outVal * 0.1205);
         setExchangeRate(fallbackRate.toFixed(6));
       } finally {
         setIsLoadingQuote(false);
@@ -535,7 +539,7 @@ export default function NaraSwap() {
     setShowChainModal(false);
     const chainTokens = getTokensForChain(chain.id);
     if (chain.id === 8453) {
-      setFromToken(chainTokens.find((t) => t.symbol === "USDC") || chainTokens[2] || chainTokens[0]);
+      setFromToken(chainTokens.find((t) => t.symbol === "ETH") || chainTokens[1] || chainTokens[0]);
       setToToken(chainTokens.find((t) => t.symbol === "NARA") || chainTokens[0]);
     } else {
       setFromToken(chainTokens[0]);
@@ -895,8 +899,8 @@ export default function NaraSwap() {
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_#34d399]" />
                 BASE MAINNET (8453)
               </span>
-              <span className="text-[10px] font-mono text-[#5c6d84]">
-                HOOK v4 NATIVE
+              <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold uppercase tracking-wider bg-[#00F0FF]/10 text-[#00F0FF] border border-[#00F0FF]/30">
+                PHASE 1 // TRADING & COMMUNITY
               </span>
             </div>
             <div className="flex items-center gap-2.5 pt-1">
@@ -910,7 +914,7 @@ export default function NaraSwap() {
               </h3>
             </div>
             <p className="text-[12px] text-[#8fa1b8] leading-relaxed">
-              Canonical ERC-20 contract for the NARA Sovereign Grid with 100% ETH fee-routing Uniswap v4 Hook.
+              Canonical ERC-20 contract. Phase 1 trading features an ultra-thin 40 NARA circulating float (&gt;99.99% contract-locked) preparing for Phase 2 Sovereign Tile Game distribution.
             </p>
           </div>
 
@@ -974,20 +978,20 @@ export default function NaraSwap() {
           {/* Token Specification Grid */}
           <div className="grid grid-cols-2 gap-2 text-xs font-mono">
             <div className="p-2 sm:p-2.5 rounded-xl bg-[#020612]/70 border border-[#132640]/70">
-              <span className="text-[10px] text-[#5c6d84] block">TOTAL SUPPLY</span>
-              <span className="text-white font-bold text-xs sm:text-[12.5px] mt-0.5 block">1,000,000 NARA</span>
+              <span className="text-[10px] text-[#5c6d84] block">CIRCULATING FLOAT</span>
+              <span className="text-[#00F0FF] font-bold text-xs sm:text-[12.5px] mt-0.5 block">40 NARA (0.004%)</span>
             </div>
             <div className="p-2 sm:p-2.5 rounded-xl bg-[#020612]/70 border border-[#132640]/70">
-              <span className="text-[10px] text-[#5c6d84] block">DECIMALS</span>
-              <span className="text-white font-bold text-xs sm:text-[12.5px] mt-0.5 block">18 (Standard)</span>
+              <span className="text-[10px] text-[#5c6d84] block">CONTRACT-LOCKED</span>
+              <span className="text-white font-bold text-xs sm:text-[12.5px] mt-0.5 block">999,960 (&gt;99.99%)</span>
             </div>
             <div className="p-2 sm:p-2.5 rounded-xl bg-[#020612]/70 border border-[#132640]/70">
-              <span className="text-[10px] text-[#5c6d84] block">POOL PAIR</span>
-              <span className="text-[#00F0FF] font-bold text-xs sm:text-[12.5px] mt-0.5 block">USDC / NARA</span>
+              <span className="text-[10px] text-[#5c6d84] block">VC &amp; INSIDERS</span>
+              <span className="text-emerald-400 font-bold text-xs sm:text-[12.5px] mt-0.5 block">0% (Zero Dumps)</span>
             </div>
             <div className="p-2 sm:p-2.5 rounded-xl bg-[#020612]/70 border border-[#132640]/70">
-              <span className="text-[10px] text-[#5c6d84] block">ROUTING FEE</span>
-              <span className="text-emerald-400 font-bold text-xs sm:text-[12.5px] mt-0.5 block">0% Direct</span>
+              <span className="text-[10px] text-[#5c6d84] block">PHASE 2 TARGET</span>
+              <span className="text-amber-400 font-bold text-xs sm:text-[12.5px] mt-0.5 block">Engine &amp; 1M Tiles</span>
             </div>
           </div>
 
@@ -1019,6 +1023,41 @@ export default function NaraSwap() {
               <ArrowSquareOut size={12} className="opacity-60 group-hover:opacity-100" />
             </a>
           </div>
+
+          {/* Explore Vision Blueprint */}
+          <button
+            type="button"
+            onClick={() => setShowVisionModal(true)}
+            className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-[#00F0FF]/15 via-indigo-500/10 to-[#00F0FF]/15 hover:from-[#00F0FF]/25 hover:to-[#00F0FF]/25 border border-[#00F0FF]/40 text-[#00F0FF] hover:text-white flex items-center justify-center gap-2 text-xs font-mono font-bold tracking-wider uppercase transition-all shadow-[0_0_15px_rgba(0,240,255,0.15)] hover:shadow-[0_0_20px_rgba(0,240,255,0.3)] cursor-pointer"
+          >
+            <span>Explore Vision Blueprint</span>
+            <ArrowSquareOut size={13} className="text-[#00F0FF]" />
+          </button>
+
+          {/* Visit the App (Coming Soon) Callout Banner */}
+          <a
+            href="/app"
+            onClick={(e) => {
+              e.preventDefault();
+              if (navigate) navigate("/app");
+              else window.location.href = "/app";
+            }}
+            className="w-full rounded-xl bg-gradient-to-r from-[#020612] via-[#0d182e] to-[#020612] hover:from-[#11203d] hover:to-[#11203d] border border-amber-500/30 hover:border-amber-400/60 p-2.5 px-3 flex items-center justify-between text-left transition-all cursor-pointer group shadow-sm no-underline"
+          >
+            <div className="flex items-center gap-2.5">
+              <span className="text-base group-hover:scale-110 transition-transform">🚀</span>
+              <div>
+                <div className="text-white font-semibold text-[11.5px] leading-tight group-hover:text-amber-300 transition-colors flex items-center gap-2">
+                  <span>Visit the App</span>
+                  <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-400/30">COMING SOON</span>
+                </div>
+                <div className="text-[#8fa1b8] text-[10px] leading-tight group-hover:text-slate-300 mt-0.5">
+                  Sovereign Grid World Engine & Fleet Stations
+                </div>
+              </div>
+            </div>
+            <CaretRight size={13} weight="bold" className="text-[#6b7c93] group-hover:text-amber-300 transition-colors shrink-0" />
+          </a>
 
           {/* Sewer Terminal Callout Banner */}
           <a
@@ -1366,6 +1405,21 @@ export default function NaraSwap() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Vision Blueprint Modal */}
+      {showVisionModal && (
+        <VisionModal
+          onClose={() => setShowVisionModal(false)}
+          onNavigate={(target) => {
+            setShowVisionModal(false);
+            if (target === "swap") {
+              // already on swap
+            } else if (target === "game") {
+              window.open("https://naraprotocol.io/app", "_blank");
+            }
+          }}
+        />
       )}
     </main>
   );

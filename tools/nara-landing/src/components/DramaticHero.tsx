@@ -115,7 +115,7 @@ export default function DramaticHero() {
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
               </span>
               <span className="font-mono text-[11px] font-semibold text-silver tracking-widest uppercase">
-                PHASE ONE // SOVEREIGN GRID
+                PHASE 1 // TRADING &amp; COMMUNITY
               </span>
               <span className="text-white/20">|</span>
               <span className="font-mono text-[10px] text-muted">
@@ -133,7 +133,7 @@ export default function DramaticHero() {
               </h1>
               
               <p className="text-dim font-sans text-sm sm:text-base leading-relaxed max-w-xl pt-2">
-                Fixed 1,000,000 supply. Zero inflation. An autonomous onchain game where impatience permanently surrenders yield to time.
+                Phase 1 trading with an ultra-thin 40 NARA circulating float (&gt;99.99% contract-locked, zero VC cliffs). Phase 2 delivers the Autonomous Sovereign Tile Game engine.
               </p>
             </div>
 
@@ -202,16 +202,16 @@ export default function DramaticHero() {
                 {/* Quick Sub-Stats Strip */}
                 <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-white/5 font-mono text-[10px]">
                   <div>
-                    <span className="text-muted block">FIXED CAP</span>
-                    <span className="text-silver font-bold">1,000,000 NARA</span>
+                    <span className="text-muted block">UNLOCKED FLOAT</span>
+                    <span className="text-[#00F0FF] font-bold">40 NARA (&gt;99.99% LOCKED)</span>
                   </div>
                   <div>
-                    <span className="text-muted block">V4 HOOK</span>
-                    <span className="text-emerald-400 font-bold">ACTIVE #2088</span>
+                    <span className="text-muted block">VC CLIFFS</span>
+                    <span className="text-emerald-400 font-bold">0.00% (ZERO DUMPS)</span>
                   </div>
                   <div>
-                    <span className="text-muted block">GAME MECHANIC</span>
-                    <span className="text-silver font-bold">SACRIFICIAL YIELD</span>
+                    <span className="text-muted block">PHASE 2</span>
+                    <span className="text-amber-400 font-bold">ENGINE &amp; 1M TILES</span>
                   </div>
                 </div>
               </div>
@@ -220,14 +220,12 @@ export default function DramaticHero() {
             {/* Tactile Button-in-Button Action Rail */}
             <div className="flex flex-wrap items-center gap-3 pt-2 w-full max-w-xl font-mono text-xs">
               
-              {/* Primary CTA: Enter App with Nested Button-in-Button Disc */}
+              {/* Primary CTA: Visit the App */}
               <a
                 href={SOCIAL_LINKS.swapApp}
-                target="_blank"
-                rel="noopener noreferrer"
                 className="group inline-flex items-center justify-between gap-3 pl-5 pr-2 py-2 rounded-full bg-base-blue hover:bg-base-blue/90 text-white font-bold tracking-wider transition-all duration-300 shadow-glow active:scale-[0.98]"
               >
-                <span>ENTER APP // SWAP</span>
+                <span>VISIT THE APP</span>
                 <span className="w-8 h-8 rounded-full bg-white/15 flex items-center justify-center transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:bg-white/25">
                   <ArrowUpRight size={14} weight="bold" />
                 </span>

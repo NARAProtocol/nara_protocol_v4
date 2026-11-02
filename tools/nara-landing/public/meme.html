@@ -125,6 +125,9 @@
     <div class="absolute top-0 inset-x-0 h-32 slime-drips pointer-events-none"></div>
   </div>
 
+  <!-- Application Content Shell (Receives screen-flush-active shake so body stays transform-free) -->
+  <div id="appShell" class="w-full flex-1 flex flex-col justify-between min-h-[100dvh]">
+
   <!-- Top Instrument Rail -->
   <header class="relative z-30 w-full pt-3 sm:pt-4 px-3 sm:px-8 max-w-6xl mx-auto">
     <div class="w-full flex items-center justify-between py-2 px-3 sm:px-4 bg-[#0D0F14]/90 border border-white/[0.08] specular-top backdrop-blur-md">
@@ -159,16 +162,16 @@
       <!-- Right Controls: Flush Trigger & Copy CA -->
       <div class="flex items-center gap-2 sm:gap-3">
         
-        <!-- Swap Button Link / Pre-Launch Trigger -->
+        <!-- Swap Button Link -->
         <button
           id="headerSwapBtn"
           onclick="handleSwapButtonClick()"
-          class="px-2.5 sm:px-3 py-1.5 min-h-[36px] bg-amber-500/15 hover:bg-amber-500/25 active:bg-amber-500/40 focus-visible:ring-1 focus-visible:ring-amber-400 outline-none border border-amber-500/40 hover:border-amber-400 text-amber-300 hover:text-white text-[10px] font-bold tracking-[0.14em] uppercase transition-all duration-150 flex items-center gap-1.5 cursor-pointer shadow-[0_0_12px_rgba(245,158,11,0.2)] select-none"
-          title="NARA Swaps Activating at Launch"
-          aria-label="NARA Swaps Pre-Launch Information"
+          class="px-2.5 sm:px-3 py-1.5 min-h-[36px] bg-emerald-500/15 hover:bg-emerald-500/25 active:bg-emerald-500/40 focus-visible:ring-1 focus-visible:ring-emerald-400 outline-none border border-emerald-500/40 hover:border-emerald-400 text-emerald-300 hover:text-white text-[10px] font-bold tracking-[0.14em] uppercase transition-all duration-150 flex items-center gap-1.5 cursor-pointer shadow-[0_0_12px_rgba(16,185,129,0.2)] select-none"
+          title="Swap ETH for NARA on Base Mainnet"
+          aria-label="Swap ETH for NARA"
         >
-          <span class="text-xs">🔒</span>
-          <span>SWAP <span class="text-[8px] sm:text-[9px] px-1 py-0.5 bg-amber-500/20 text-amber-200 border border-amber-500/40">SOON</span></span>
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>SWAP</span>
         </button>
 
         <!-- Flush Button with 1.0s Hydraulic Cooldown Gauge -->
@@ -844,16 +847,18 @@
 
     </div>
   </footer>
+  </div> <!-- /appShell -->
 
   <!-- SEWER LOOT REVEAL MODAL (POPS ON DISCOVERY OR CARD INSPECT) -->
   <div 
     id="lootModal" 
-    class="hidden fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-black/90 backdrop-blur-md"
+    class="hidden fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-black/90 backdrop-blur-md overflow-hidden"
+    style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100vw; height: 100dvh; z-index: 9999;"
     onclick="handleLootBackdropClick(event)"
   >
     <div 
       id="lootModalBox"
-      class="relative w-full max-w-[340px] sm:max-w-md max-h-[90dvh] sm:max-h-[88vh] bg-[#0D0F14] border border-white/20 specular-top shadow-[0_20px_70px_rgba(0,0,0,0.98)] p-3 sm:p-5 flex flex-col items-center text-center font-mono overflow-y-auto overscroll-contain"
+      class="relative w-full max-w-[340px] sm:max-w-md max-h-[92dvh] sm:max-h-[88vh] bg-[#0D0F14] border border-white/20 specular-top shadow-[0_20px_70px_rgba(0,0,0,0.98)] p-3 sm:p-5 flex flex-col items-center text-center font-mono overflow-y-auto overscroll-contain my-auto"
       onclick="event.stopPropagation()"
       onmouseenter="pauseLootAutoDismiss()"
       ontouchstart="pauseLootAutoDismiss()"
@@ -1171,7 +1176,7 @@
 
     // --- PRE-LAUNCH SWAP GATE (ONE-CLICK LAUNCH SWITCH) ---
     // Change to `true` when swaps are officially open to the public!
-    const SWAP_PUBLIC_LAUNCHED = false;
+    const SWAP_PUBLIC_LAUNCHED = true;
 
     function handleSwapButtonClick() {
       playMechanicalClick();
@@ -1181,7 +1186,7 @@
       );
       const hasPreviewParam = isLocalDev && window.location.search.includes("preview=true");
       if (SWAP_PUBLIC_LAUNCHED || hasPreviewParam) {
-        window.location.href = "/swap.html";
+        window.location.href = "/swap";
       } else {
         const modal = document.getElementById("swapPrelaunchModal");
         if (modal) modal.classList.remove("hidden");
@@ -2333,24 +2338,26 @@
 
       if (modal) {
         modal.classList.remove("hidden");
+        document.body.classList.add("overflow-hidden");
+        const modalBox = document.getElementById("lootModalBox");
+        if (modalBox) modalBox.scrollTop = 0;
         clearTimeout(modal._autoDismiss);
         modal._autoDismiss = null;
 
-        // Auto-dismiss fast (1100ms) for random dredge drops so it matches the 1.0s hydraulic recharge
-        // Keeps user flow fast and unblocked. If user explicitly inspected in vault, keep open indefinitely.
+        // Auto-dismiss after 4.5s for random dredge drops so user has time to inspect the card
+        // If user flushes again or closes, it closes immediately
         if (!isExplicitInspect) {
           if (dismissBar) {
             dismissBar.style.display = "block";
             dismissBar.style.transition = "none";
             dismissBar.style.width = "100%";
             void dismissBar.offsetWidth; // force layout reflow
-            dismissBar.style.transition = "width 1100ms linear";
+            dismissBar.style.transition = "width 4500ms linear";
             dismissBar.style.width = "0%";
           }
           modal._autoDismiss = setTimeout(() => {
-            modal.classList.add("hidden");
-            modal._autoDismiss = null;
-          }, 1100);
+            closeLootModal();
+          }, 4500);
         } else {
           if (dismissBar) {
             dismissBar.style.display = "none";
@@ -2377,6 +2384,7 @@
         clearTimeout(modal._autoDismiss);
         modal._autoDismiss = null;
         modal.classList.add("hidden");
+        document.body.classList.remove("overflow-hidden");
       }
     }
 
@@ -2683,10 +2691,10 @@
 
       playHydraulicFlushSound();
 
-      const body = document.getElementById("pageBody");
-      body.classList.remove("screen-flush-active");
-      void body.offsetWidth;
-      body.classList.add("screen-flush-active");
+      const shell = document.getElementById("appShell") || document.getElementById("pageBody");
+      shell.classList.remove("screen-flush-active");
+      void shell.offsetWidth;
+      shell.classList.add("screen-flush-active");
 
       // Visual flash
       const ambient = document.getElementById("ambientGreen");

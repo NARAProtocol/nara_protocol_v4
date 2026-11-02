@@ -6,11 +6,12 @@ import GridDeckStation from "./components/GridDeckStation";
 import VaultStation from "./components/VaultStation";
 import TacticalDock from "./components/TacticalDock";
 import MintRevealModal from "./components/MintRevealModal";
+import ComingSoonApp from "./components/ComingSoonApp";
 import { GridProvider } from "./context/GridContext";
 
 // --- PUBLIC LAUNCH SWITCH ---
 // Set to `true` when swaps are officially open to the public!
-export const SWAP_PUBLIC_LAUNCHED = false;
+export const SWAP_PUBLIC_LAUNCHED = true;
 
 function PrelaunchLockout() {
   return (
@@ -93,8 +94,11 @@ export default function App() {
       window.location.replace("/meme.html");
       return "/";
     }
-    if (path === "/swap" || hash === "#/swap" || hash === "#swap") {
-      return "/";
+    if (path === "/swap" || path === "/swap/" || hash === "#/swap" || hash === "#swap" || hash === "#/swap/") {
+      return "/swap";
+    }
+    if (path === "/app" || path === "/app/" || hash === "#/app" || hash === "#app" || hash === "#/app/") {
+      return "/app";
     }
     if (
       path === "/activate" ||
@@ -170,7 +174,9 @@ export default function App() {
           onNavigate: navigate,
         }}
       >
-        {currentRoute === "/activate" || currentRoute === "/commit" ? (
+        {currentRoute === "/app" ? (
+          <ComingSoonApp onNavigate={navigate} />
+        ) : currentRoute === "/activate" || currentRoute === "/commit" ? (
           <CommitStation />
         ) : currentRoute === "/grid" ? (
           <GridDeckStation />

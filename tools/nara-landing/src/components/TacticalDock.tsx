@@ -5,7 +5,7 @@ import { SOCIAL_LINKS } from "../lib/content";
 export default function TacticalDock() {
   const { currentRoute, navigate } = useGrid();
 
-  const isSwapActive = currentRoute === "/" || currentRoute === "/swap";
+  const isSwapActive = currentRoute === "/" || currentRoute === "/swap" || currentRoute === "/swap/";
 
   const tabs = [
     {

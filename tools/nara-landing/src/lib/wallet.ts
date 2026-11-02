@@ -16,7 +16,7 @@ const wc = walletConnectModule({
   projectId: WC_PROJECT_ID,
   requiredChains: [8453],
   optionalChains: [1],
-  dappUrl: "https://naraprotocol.pro",
+  dappUrl: "https://naraprotocol.io",
 });
 
 export const BASE_CHAIN_ID_DECIMAL = 8453;

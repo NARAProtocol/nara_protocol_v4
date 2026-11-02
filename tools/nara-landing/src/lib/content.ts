@@ -17,7 +17,7 @@ export const PROTOCOL_CONSTANTS = {
   hookBitmask: "0x2088",
   vaultContract: "0xD7f7b44BF65EBa3E90fDe0642687ed22A323084D",
   compounderContract: "0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF",
-  poolId: "0x83edced1f39e6adf7469cd718eeb409824d948959263408d4cfb6e745c8db464",
+  poolId: "0x1e30584545a5b9e461ad72ff9c631c99039d30e1167932aa5eca5c734e297b2a",
   rangeManagerContract: "0xd58afa5eaB20B0ED287851Cf98f359AdEd58a69C",
   treasurySafe: "0x5050BC6dc3E07313D52D05cecD53f727D6CDa245",
   custodySafe: "0xd65c0e390Dc187A22c52c03816591CC736C0D755",
@@ -31,8 +31,8 @@ export const PROTOCOL_CONSTANTS = {
 };
 
 export const SOCIAL_LINKS = {
-  website: "https://naraprotocol.pro",
-  swapApp: "https://swap.naraprotocol.pro",
+  website: "https://naraprotocol.io",
+  swapApp: "https://naraprotocol.io/app",
   telegram: "https://t.me/NARAProtocol",
   twitter: "https://x.com/NARA_protocol",
   farcaster: "https://warpcast.com/naraprotocol",
@@ -79,19 +79,19 @@ export const BRAND_ASSETS = {
 export const TELEMETRY_NODES = [
   {
     id: "scarcity",
-    label: "01 // FIXED SCARCITY",
-    headline: "1,000,000 Cap Forever",
-    spec: "Non-Mintable · Zero Inflation",
+    label: "01 // PHASE 1: TRADING & COMMUNITY",
+    headline: "Ultra-Thin Unlocked Float",
+    spec: "40 NARA Float · >99.99% Contract-Locked",
     contract: PROTOCOL_CONSTANTS.tokenContract,
-    desc: "Most tokens print endless supply to dump on you. NARA is mathematically capped at 1,000,000 tokens forever. There is no mint button.",
+    desc: "Phase 1 is Trading & Community. The unlocked supply is super thin: strictly 40 NARA in circulating float at launch with 999,960 NARA contract-locked. Zero VC dumps, pure organic price discovery.",
   },
   {
     id: "epochs",
-    label: "02 // 15-MIN REWARDS",
-    headline: "96 Payouts Every Day",
-    spec: "Every 900 Seconds · Time-Weighted",
+    label: "02 // PHASE 2: ENGINE & TILES",
+    headline: "The Machine & Tile Distribution",
+    spec: "1M Sovereign Tiles · 900s Pulse Engine",
     contract: PROTOCOL_CONSTANTS.engineContract,
-    desc: "Time is money. The network calculates and streams real rewards directly to committed participants every 15 minutes around the clock.",
+    desc: "The machine follows. Phase 2 unlocks the Sovereign Tile Game (1 Token = 1 Tile) and autonomous 900-second pulse engine, routing 100% of ETH protocol fees to anchored coordinate custodians.",
   },
   {
     id: "moat",

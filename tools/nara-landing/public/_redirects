@@ -1,5 +1,6 @@
-/swap    /swap.html    200
-/swap/*  /swap.html    200
-/meme    /             301
-/*       /index.html   200
-
+/swap.html  /swap             301
+/swap/*     /swap/index.html  200
+/app.html   /app              301
+/app/*      /app/index.html   200
+/meme       /                 301
+/*          /index.html       200
