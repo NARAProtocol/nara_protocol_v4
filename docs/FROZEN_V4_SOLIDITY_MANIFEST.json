@@ -1,0 +1,540 @@
+{
+  "timestamp": "2026-09-13T14:34:58.566Z",
+  "totalFiles": 89,
+  "contracts": [
+    {
+      "file": "contracts/v4/NARAArtCollectionBannerV4.sol",
+      "lines": 176,
+      "bytes": 17485,
+      "sha256": "f9986bfbdeb853baa67284758bda832c3bd9fe8a8537067482e92bbcca638390"
+    },
+    {
+      "file": "contracts/v4/NARAArtCorePlateV1.sol",
+      "lines": 366,
+      "bytes": 18345,
+      "sha256": "c0be9b8d9a1525c8488caf0351f08c03a45c2672377cc643ac544f4589707a6f"
+    },
+    {
+      "file": "contracts/v4/NARAArtCorePlateV2.sol",
+      "lines": 249,
+      "bytes": 12342,
+      "sha256": "e387afa8cb673edb9ac17fe64687a54d986705e4fbbad37a3434ca1d4817e60d"
+    },
+    {
+      "file": "contracts/v4/NARAArtCorePlateV3.sol",
+      "lines": 360,
+      "bytes": 17949,
+      "sha256": "4596caeb06e6a177c4ae915b133c9663b314d6fd99d717888bc037e462477fac"
+    },
+    {
+      "file": "contracts/v4/NARAArtCorePlateV4.sol",
+      "lines": 553,
+      "bytes": 29158,
+      "sha256": "fa2e112e552cdea3b8c6f293a62d42a244772ad8ef473b595304ccbbb079c05d"
+    },
+    {
+      "file": "contracts/v4/NARAArtCorePlateV5.sol",
+      "lines": 521,
+      "bytes": 27081,
+      "sha256": "44ccf0b49129e0ce093235aa8ff48550a933e2304b75a187f336a66e125db9d3"
+    },
+    {
+      "file": "contracts/v4/NARAArtDefsPlateV5.sol",
+      "lines": 44,
+      "bytes": 3357,
+      "sha256": "fa04a4802207c84a129e17e52d8e75690e918640a4402a6dc47f9018729ec307"
+    },
+    {
+      "file": "contracts/v4/NARAArtGenesisPlateV1.sol",
+      "lines": 361,
+      "bytes": 16314,
+      "sha256": "96d0da5a55ac79cab3c51bece85d6849edf9b82e9e36238ae3cea79a40812338"
+    },
+    {
+      "file": "contracts/v4/NARAArtGenesisPlateV2.sol",
+      "lines": 146,
+      "bytes": 7900,
+      "sha256": "70e9b1121510a44c3465c49eb08b553626ce59496e9cdefda62a2f3f9a7a10dc"
+    },
+    {
+      "file": "contracts/v4/NARAArtMetadataV1.sol",
+      "lines": 150,
+      "bytes": 6338,
+      "sha256": "1df7fd7ec35c849145e590cb7ebeb1d28ea5b3478cb8a77bd54188164b25caee"
+    },
+    {
+      "file": "contracts/v4/NARAArtMetadataV2.sol",
+      "lines": 120,
+      "bytes": 4949,
+      "sha256": "3087811b94d03eeaa98916c085cfad3bb60b2b611138cc4846e4613b4a9e325c"
+    },
+    {
+      "file": "contracts/v4/NARAArtMetadataV3.sol",
+      "lines": 159,
+      "bytes": 6550,
+      "sha256": "c39cecf86d81e226e90352dd1791d84da0887762aba4f90be2ac1278292e5406"
+    },
+    {
+      "file": "contracts/v4/NARAArtMetadataV4.sol",
+      "lines": 184,
+      "bytes": 8542,
+      "sha256": "e0071e32cb09d30cb7905f59d697c313f2a916dcd71ce672a90cf49e9cc7e23c"
+    },
+    {
+      "file": "contracts/v4/NARAArtMetadataV5.sol",
+      "lines": 206,
+      "bytes": 10101,
+      "sha256": "9924d1c8d94843e1d7e61e4345191939d28d9ba6b3a899c51941b78457f1a088"
+    },
+    {
+      "file": "contracts/v4/NARAArtSecurityPrintV1.sol",
+      "lines": 208,
+      "bytes": 9349,
+      "sha256": "5d4ec7e658db9b6caec64984f49e20255f618d9e04a12069d36b0ca553f0f39f"
+    },
+    {
+      "file": "contracts/v4/NARAArtSecurityPrintV2.sol",
+      "lines": 57,
+      "bytes": 2859,
+      "sha256": "4b16e8260016a8c50b1d5f43b7c463ddd99ec8428624bd0b8d13ee08f0b025f3"
+    },
+    {
+      "file": "contracts/v4/NARABondDepositoryV4.sol",
+      "lines": 511,
+      "bytes": 22588,
+      "sha256": "564fd52616578daddb11bc2deacfec0d96dc8369b57175e0768332df1ce1247e"
+    },
+    {
+      "file": "contracts/v4/NARABondDepositoryV4NFT.sol",
+      "lines": 630,
+      "bytes": 22843,
+      "sha256": "b0668049ace049f4ef7772285ce9bf1c8f3a16beb0eeb674fdc30bf7d6c24953"
+    },
+    {
+      "file": "contracts/v4/NARABondVaultV4.sol",
+      "lines": 295,
+      "bytes": 15063,
+      "sha256": "2d557aff0b211ab5f11c2516ef2493e77c65520a04d413e69f454449ec99b1fa"
+    },
+    {
+      "file": "contracts/v4/NARAEngine.sol",
+      "lines": 999,
+      "bytes": 41934,
+      "sha256": "72f0c54ba026e48e09e45e3cdeae927e365199afbecfbf485b71995850e9d9e5"
+    },
+    {
+      "file": "contracts/v4/NARAEngineTypes.sol",
+      "lines": 120,
+      "bytes": 3796,
+      "sha256": "3104abb1e5df874c16d60cfa20bcacd3879d7a4f777d2db4112e0a95d2c34255"
+    },
+    {
+      "file": "contracts/v4/NARAFleetDeckLensV1.sol",
+      "lines": 313,
+      "bytes": 14332,
+      "sha256": "a086268d2221b02a65e34cd668a600722a5240ec256b4a37e95bae9eda45f0ec"
+    },
+    {
+      "file": "contracts/v4/NARAGenesisRewardDistributorV4.sol",
+      "lines": 315,
+      "bytes": 12421,
+      "sha256": "ef95f5cb8e06de7dd48315502837605cf1cd8d9fd232d0e0896cffbb97dac3eb"
+    },
+    {
+      "file": "contracts/v4/NARALauncher.sol",
+      "lines": 131,
+      "bytes": 5947,
+      "sha256": "a5c784e97604e4b079e952b80c139af83e4cbcfba7c91e3e42cb1d32076210a2"
+    },
+    {
+      "file": "contracts/v4/NARALiquidityCompounderV4.sol",
+      "lines": 590,
+      "bytes": 28658,
+      "sha256": "b4f217dc0a8236d894d48cf9bd30ee24df0e0911a3f2ade03677b5a2ee10f837"
+    },
+    {
+      "file": "contracts/v4/NARALiquidityGrowthHook.sol",
+      "lines": 536,
+      "bytes": 22931,
+      "sha256": "a628046a1896ad6d25d52d0fc668c9b9905e4e4e8fdcb248ddb86018a07b74a9"
+    },
+    {
+      "file": "contracts/v4/NARALiquidityGrowthVault.sol",
+      "lines": 634,
+      "bytes": 25494,
+      "sha256": "e17577b971d3df88854706dd641270dab729423fc91286a17d6a7c31415f30c0"
+    },
+    {
+      "file": "contracts/v4/NARAOpsVaultV4.sol",
+      "lines": 173,
+      "bytes": 8399,
+      "sha256": "b4ff208e739061029bc3c6a4f29d2d5d2ea7a1db9f51d7a9bf77528604ef5f7b"
+    },
+    {
+      "file": "contracts/v4/NARAPositionAccountV4.sol",
+      "lines": 176,
+      "bytes": 6090,
+      "sha256": "906092df9ae3a00aa62c157aaac5cce141c1a50a49e13cb26a138430ee824123"
+    },
+    {
+      "file": "contracts/v4/NARAPositionNFTV4.sol",
+      "lines": 877,
+      "bytes": 39328,
+      "sha256": "be385f5fc290426e91cb14cc33894dedb06aecf02173c06e0eb00dd0c094c024"
+    },
+    {
+      "file": "contracts/v4/NARAPositionRendererV4.sol",
+      "lines": 129,
+      "bytes": 6638,
+      "sha256": "7e902dc68674b569ba46f6dd7b06d3821ced4901a01c0ebda736c944e2a8f8ed"
+    },
+    {
+      "file": "contracts/v4/NARAPositionRendererV5.sol",
+      "lines": 259,
+      "bytes": 9514,
+      "sha256": "e9438926ced99b1ddcf6c3cbf171de58f1b9eb3287da9cf743ac26e5843d06ff"
+    },
+    {
+      "file": "contracts/v4/NARAPositionRendererV6.sol",
+      "lines": 269,
+      "bytes": 9126,
+      "sha256": "ad30d7a2ca19169d44ed29b14fbfe84fb3a90cecb1e4e9e25be6b265571bd8a3"
+    },
+    {
+      "file": "contracts/v4/NARAPositionRendererV7.sol",
+      "lines": 248,
+      "bytes": 8762,
+      "sha256": "5a9976978425243983d8295f2f0a6c8634aae4417a7a9433bc1f40e35b0aa8fc"
+    },
+    {
+      "file": "contracts/v4/NARAPositionRendererV8.sol",
+      "lines": 207,
+      "bytes": 7911,
+      "sha256": "230136d4c27baa3d684ff774cea60dbe37f5d44132a1a007c962adf8d6b70acc"
+    },
+    {
+      "file": "contracts/v4/NARAPositionRendererV9.sol",
+      "lines": 207,
+      "bytes": 8167,
+      "sha256": "f9f4deb58b71ba45e70144a386c5fb038fdfde8b6d99d2cbe95b4eb44c3c77ac"
+    },
+    {
+      "file": "contracts/v4/NARARewardReserve.sol",
+      "lines": 138,
+      "bytes": 5668,
+      "sha256": "813eb1ee22dceda404ddef7d03ce1d4a610c19d6072331088de6b1b9a5322c74"
+    },
+    {
+      "file": "contracts/v4/NARAToken.sol",
+      "lines": 135,
+      "bytes": 5862,
+      "sha256": "36ffe7bbe844b85e16c8a3831fb3d965bb16df08eefc708dea0e41a1306fe317"
+    },
+    {
+      "file": "contracts/v4/NARATreasuryRangeManagerV1.sol",
+      "lines": 855,
+      "bytes": 37613,
+      "sha256": "248ab420b68aefcc5a5e3d3c51ec3e0985fdecd9e00f198566ab58b5f6bb9cb5"
+    },
+    {
+      "file": "contracts/v4/composability/NARAFractionalPositionFactoryV4.sol",
+      "lines": 69,
+      "bytes": 2648,
+      "sha256": "493cd43da8605b067be077f6904c2448eed58ab7619dbc00541540f2960f707f"
+    },
+    {
+      "file": "contracts/v4/composability/NARAFractionalPositionV4.sol",
+      "lines": 441,
+      "bytes": 19269,
+      "sha256": "e7fa9f5142e503dedf7d4ee0c639fc21e71e4333f336ac7fd8c3ca6e5e2c00f7"
+    },
+    {
+      "file": "contracts/v4/composability/NARAStakingPoolSYV4.sol",
+      "lines": 337,
+      "bytes": 13905,
+      "sha256": "3b476af332814bcc9e32e5b2a941a22e9b2c6c369dfc686017aba0e76dd1ec9e"
+    },
+    {
+      "file": "contracts/v4/composability/NARAStakingPoolV4.sol",
+      "lines": 630,
+      "bytes": 27015,
+      "sha256": "37f9be167d8f7c35343d4127197a32c40ac7934aa7fd0bf9aac7ed14326fe058"
+    },
+    {
+      "file": "contracts/v4/interfaces/INARAEngine.sol",
+      "lines": 104,
+      "bytes": 4631,
+      "sha256": "ab2bb6405984990e7e480f5e53cc0aad7502f1f2fc53495db32923cf2bd48046"
+    },
+    {
+      "file": "contracts/v4/interfaces/INARAPositionRendererV4.sol",
+      "lines": 13,
+      "bytes": 703,
+      "sha256": "1a71a1ea052a18256489bb1cc344982a1e00106d64107350636c9c2618fc3af8"
+    },
+    {
+      "file": "contracts/v4/libraries/NARAEngineAccountingLib.sol",
+      "lines": 157,
+      "bytes": 6632,
+      "sha256": "d37db5713e9ae997476e74d34979fe8e68c3e432f94a5ae814d2f407f1197439"
+    },
+    {
+      "file": "contracts/v4/libraries/NARAEngineModelLib.sol",
+      "lines": 126,
+      "bytes": 5780,
+      "sha256": "670532104593e33481327c16bafe0fa2e9952a43fd2cb9dd92c82580b3056f01"
+    },
+    {
+      "file": "contracts/v4/libraries/NARAPositionArtV1.sol",
+      "lines": 471,
+      "bytes": 27518,
+      "sha256": "824a46bf5edece5dfba6d80145c56f65edc9396fdb064cf27a3703b32a0d7b98"
+    },
+    {
+      "file": "contracts/v4/mocks/MockBondMarket.sol",
+      "lines": 45,
+      "bytes": 1441,
+      "sha256": "aeae5d9c77d69eec65855f3da24108dfb8806ef8804cc027235d1519b99bc6ba"
+    },
+    {
+      "file": "contracts/v4/mocks/MockEIP1271Signer.sol",
+      "lines": 27,
+      "bytes": 794,
+      "sha256": "5b9bb0c8d52baa3826d4988e6661f6254f4ed848a5dc0c9e955e898f0cdeb3dd"
+    },
+    {
+      "file": "contracts/v4/mocks/MockERC1363Receiver.sol",
+      "lines": 54,
+      "bytes": 1715,
+      "sha256": "426876f60fa17035af99cd6e457d8a828e71cf7c7efd64467045abd74ce7f2ce"
+    },
+    {
+      "file": "contracts/v4/mocks/MockERC20.sol",
+      "lines": 20,
+      "bytes": 524,
+      "sha256": "094ad6afdd698906a062766ea91dfe65d2e39a0d1afae24fad6ad91ade34dc98"
+    },
+    {
+      "file": "contracts/v4/mocks/MockERC20Permit.sol",
+      "lines": 18,
+      "bytes": 563,
+      "sha256": "794d67c0a8ec852813678ad2d8454d48aab6f934b0ab3b8376029569ba57646a"
+    },
+    {
+      "file": "contracts/v4/mocks/MockEngine.sol",
+      "lines": 36,
+      "bytes": 1221,
+      "sha256": "85449c1b5dc7726ea79768ffc67b36423884000b6da6c583aebeaaae4802b7df"
+    },
+    {
+      "file": "contracts/v4/mocks/MockEngineForBribe.sol",
+      "lines": 43,
+      "bytes": 1394,
+      "sha256": "78ec12ae0876156ca3f34316f4822b38e1852949ed5b5abfc54cdcfd07eb9718"
+    },
+    {
+      "file": "contracts/v4/mocks/MockEngineForRouter.sol",
+      "lines": 171,
+      "bytes": 6689,
+      "sha256": "878afd83327778ced84597aaadf9ec634beafb259d9608cc2344cf8ea3ae39c4"
+    },
+    {
+      "file": "contracts/v4/mocks/MockEthRejectingNftOwnerV4.sol",
+      "lines": 28,
+      "bytes": 963,
+      "sha256": "7b17f4fd8e974ae5aed86d6031879f2576d2f77de2a1b02978c68445723c3bae"
+    },
+    {
+      "file": "contracts/v4/mocks/MockEthRejectingPositionOwner.sol",
+      "lines": 22,
+      "bytes": 648,
+      "sha256": "002d2baaa949b48f965623cef9f6029082903b80544af86ac71740a3f71378eb"
+    },
+    {
+      "file": "contracts/v4/mocks/MockExcludedMarketHolder.sol",
+      "lines": 18,
+      "bytes": 572,
+      "sha256": "a3fe945261583b2fd98b454ae19840e6d628a97594d6a758c4b72b973fd4616e"
+    },
+    {
+      "file": "contracts/v4/mocks/MockFeeOnTransferERC20.sol",
+      "lines": 31,
+      "bytes": 868,
+      "sha256": "eff50545110691d7435685cf2ed214c92fce5a8dd7265f7e14e4fd0720f48e2a"
+    },
+    {
+      "file": "contracts/v4/mocks/MockFlashAdvanceBorrower.sol",
+      "lines": 37,
+      "bytes": 1312,
+      "sha256": "49366fdc2d6af163425c6ad841b8f64b51583ba6cea1590dbb231f74d061b1f2"
+    },
+    {
+      "file": "contracts/v4/mocks/MockFlashBorrower.sol",
+      "lines": 52,
+      "bytes": 1727,
+      "sha256": "6b8305171eb937d4d98d275b2d8d33467ea69e516bff7c72906dbbbf54cd5653"
+    },
+    {
+      "file": "contracts/v4/mocks/MockGenesisMetadataReceiverV4.sol",
+      "lines": 42,
+      "bytes": 1090,
+      "sha256": "62c54bc316267e1561b8e9382402ce0073b385acdbb54547d12282f33600d26f"
+    },
+    {
+      "file": "contracts/v4/mocks/MockHookUpdateSequencer.sol",
+      "lines": 43,
+      "bytes": 1476,
+      "sha256": "a019cb0122f58018b1862d69f098ae9a0fd87b42d6ef6cab7cfce1172aa1f963"
+    },
+    {
+      "file": "contracts/v4/mocks/MockLiquidityCompounder.sol",
+      "lines": 71,
+      "bytes": 2188,
+      "sha256": "aa602cabed5b6e8ef62ecf6981648a3542ece8d8b4f8c12bb4665e550b420721"
+    },
+    {
+      "file": "contracts/v4/mocks/MockLiquidityHookBinding.sol",
+      "lines": 15,
+      "bytes": 358,
+      "sha256": "9ab018da47c741bfa5f29d9ec2d77821ba97e0ce42286a2783a83c565a69af53"
+    },
+    {
+      "file": "contracts/v4/mocks/MockMaliciousRewardReserve.sol",
+      "lines": 51,
+      "bytes": 1529,
+      "sha256": "1e9b1b67d257226e3d399ef87f802757cef9d2ad4a3590d92e88ed2ec15ae48e"
+    },
+    {
+      "file": "contracts/v4/mocks/MockNARAEngineRouting.sol",
+      "lines": 32,
+      "bytes": 1052,
+      "sha256": "826bfcf3b1d200c42c4c2c798f923cb7215dd74b50a6fd2d8a86d12750307bd6"
+    },
+    {
+      "file": "contracts/v4/mocks/MockNARAEngineV4.sol",
+      "lines": 263,
+      "bytes": 8472,
+      "sha256": "eced61d40b20198ed8f792fc9133ebc88ba69efa27fe7ad2b13b924dec1927f4"
+    },
+    {
+      "file": "contracts/v4/mocks/MockNFTForRouter.sol",
+      "lines": 106,
+      "bytes": 3920,
+      "sha256": "32f11838e8e977ef94919f4755980a2a4d7e4d5fbcbdccd785dffd9923500fe3"
+    },
+    {
+      "file": "contracts/v4/mocks/MockPermit2.sol",
+      "lines": 17,
+      "bytes": 763,
+      "sha256": "6c12c4de069a7e2e3dddf6b057aa4e9df1a8bc0228bec4623be689fe2f6a7b80"
+    },
+    {
+      "file": "contracts/v4/mocks/MockPositionRendererV4.sol",
+      "lines": 27,
+      "bytes": 872,
+      "sha256": "eee0b25ddf4ccf59e6af66ed4c06163c762e19d2d84642781c5bdb65948efa50"
+    },
+    {
+      "file": "contracts/v4/mocks/MockRecursiveFlashBorrower.sol",
+      "lines": 47,
+      "bytes": 1697,
+      "sha256": "2491ede2d46349c1470178f8b7f4734c5a5943ae535ceaf126896a1265031a31"
+    },
+    {
+      "file": "contracts/v4/mocks/MockRevertingERC20.sol",
+      "lines": 24,
+      "bytes": 632,
+      "sha256": "8b855de8b54c393d6459568baf7d0179f05aec1637a5c5c5fa8f83c76c05cec7"
+    },
+    {
+      "file": "contracts/v4/mocks/MockRevertingGenesisRewardDistributorV4.sol",
+      "lines": 39,
+      "bytes": 1063,
+      "sha256": "58271cec51df5d09213fff91b00c36c8e696ae77ef94c4fb5f14ea114efc89b3"
+    },
+    {
+      "file": "contracts/v4/mocks/MockStatsEngineV1.sol",
+      "lines": 75,
+      "bytes": 2507,
+      "sha256": "a69ead691873d6135aea1f0838f4ee871a8b935766a7340e527f5923ab39f925"
+    },
+    {
+      "file": "contracts/v4/mocks/MockTreasuryRangeAtomicTrader.sol",
+      "lines": 205,
+      "bytes": 9363,
+      "sha256": "865ba184f8812dcbab737d3c8c1b86eaef5cc61934a082a7655255c4bc74d644"
+    },
+    {
+      "file": "contracts/v4/mocks/MockTreasuryRangePositionStack.sol",
+      "lines": 337,
+      "bytes": 13211,
+      "sha256": "233f3aa799b436296ae0c72b1e46aeb7df2367c9550448d010f14716aad4b9de"
+    },
+    {
+      "file": "contracts/v4/mocks/MockV4PoolManager.sol",
+      "lines": 105,
+      "bytes": 4365,
+      "sha256": "3a8cbdd87f06fb0ac858625d3eb35c06986b87d8137698c724470227421131a7"
+    },
+    {
+      "file": "contracts/v4/mocks/MockV4PositionStack.sol",
+      "lines": 91,
+      "bytes": 3538,
+      "sha256": "af1203f70e5221a7a703829f3ebdf63c9f44eca41236cfb4b7697fe6f34e8d7b"
+    },
+    {
+      "file": "contracts/v4/mocks/TestNARALiquidityGrowthHook.sol",
+      "lines": 20,
+      "bytes": 771,
+      "sha256": "f7868e26a6d6962929bb942b5ae4a41b53d708439da7ad34d8f447e3a90d6e69"
+    },
+    {
+      "file": "contracts/v4/router/BribeRouterV4.sol",
+      "lines": 90,
+      "bytes": 4473,
+      "sha256": "39caaed17c2a14670742687a6efafb9f0f608dce9bbd75d5136037ec354a2f27"
+    },
+    {
+      "file": "contracts/v4/router/NARACirculatingSupplyV1.sol",
+      "lines": 307,
+      "bytes": 17684,
+      "sha256": "c34612b23e5fde24278849bf4989ea55ec5e89d9a35429ece5fa65da1ceccfb4"
+    },
+    {
+      "file": "contracts/v4/router/NARADashboardLens.sol",
+      "lines": 328,
+      "bytes": 13132,
+      "sha256": "9e0754278a729346764c855bd6fc478b312048a03fc32b792850c71332be0cc9"
+    },
+    {
+      "file": "contracts/v4/router/NARAEngineOpsRouterV1.sol",
+      "lines": 141,
+      "bytes": 5881,
+      "sha256": "9f34c1d34dec102219053c286a93a92498cdcb11a6bbe0c932fd5b3f05d39298"
+    },
+    {
+      "file": "contracts/v4/router/NARAPositionDataLensV1.sol",
+      "lines": 254,
+      "bytes": 10814,
+      "sha256": "8fc56337ee9efcec4fc9c6ecfeae432a4747e0a7afe7c0254f04907f86891f50"
+    },
+    {
+      "file": "contracts/v4/router/NARAProtocolStatsLensV1.sol",
+      "lines": 114,
+      "bytes": 5567,
+      "sha256": "1554a1bd2e93cb1f92c9cb36433483676b4cdcdddccb15ba95ffac88ffdf6a7b"
+    },
+    {
+      "file": "contracts/v4/router/NARARouter.sol",
+      "lines": 202,
+      "bytes": 9038,
+      "sha256": "625a2fa039fee0475306766f0fb6e119f155284cda30f908bb8ff7063ff0d4ff"
+    },
+    {
+      "file": "contracts/v4/utils/Create2HookDeployer.sol",
+      "lines": 42,
+      "bytes": 1659,
+      "sha256": "99942e99ecfe54fb442e3204403a0c2fb4c70593c78486d7f7207d871bbaa606"
+    }
+  ]
+}

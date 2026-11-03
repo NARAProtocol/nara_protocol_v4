@@ -29,7 +29,7 @@ Every downstream handoff records a change ID, this repository's full commit,
 artifact or ABI source, evidence state, deployment manifest and verification
 block when applicable, test results, and unresolved risks.
 
-## 🚨 v4 STACK ONLY — FIXED PRODUCTION RELEASE
+## 🚨 v4 RETIRED & FROZEN (READ-ONLY) / v5 ACTIVE MODULAR STACK
 
 > **Technical live testing on Base mainnet — not public product availability.**
 > The canonical v4 contracts and NARA/USDC pool use real assets. This is an
@@ -42,7 +42,18 @@ block when applicable, test results, and unresolved risks.
 > educational, not an invitation, inducement, or recommendation to acquire,
 > hold, sell, lock, stake, or provide liquidity for NARA.
 
-- **Active release stack:** `contracts/v4/` is the **only** maintained and authoritative contract source. Historical Base deployments are incident/recovery evidence, not the fresh release manifest. All experimental protocol V5 files and folders have been completely eliminated.
+- **v4 Retired & Strictly Read-Only:** `contracts/v4/` is permanently RETIRED, frozen, and strictly READ-ONLY. Zero fixes, zero edits, zero mutations across any file in `contracts/v4/`. It serves exclusively as a cryptographically locked reference baseline verified by `scripts/check-frozen-v4-contracts.cjs` against `docs/FROZEN_V4_SOLIDITY_MANIFEST.json`.
+- **v5 Active Modular Stack:** V5 is the exclusive authorized development stack. **Its source of truth is `../.worktrees/nara-v5-engine-production-20260923/contracts/v5/`, not this checkout's `contracts/v5/`,** which is a stale partial snapshot. Read that worktree's `docs/v5/LAUNCH_WIRING_STATUS.md` first.
+  - **Deployed & Verified on Base Mainnet (Block `53,422,831`, 34 contracts):** `NARATokenV5` (`0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f`), `NARAEmissionReserveV5` (`0xf932178F24b0813C82093985F0Af6Db27Ae25930`, bound, sealed, funded with `949,987 NARA` at `fundingSequence = 2`), `NARAEpochEngineV5` (`0xd93FbEbFb33FAc9288125074625D4750573B1a53`), `NARAPrincipalLedgerV5` (`0x7F866a9fbe41D54F0d9C35b6892fcf27Ea766DB2`), `NARARewardLedgerV5` (`0xC72671D9438388638547444524F6542b650C9264`), `NARARewardIngressV5` (`0x7b98fC9192638690eb878b915429211bd1585513`), `NARAEmissionModelV5` (`0x57B2378102202636ab890C5b0E69fbE61a7eF30c`), `NARAPositionNFTV5` (`0x5c36A16d30adAfeC4E37117025fc27DF0C445D6d`), `NARAForgeV5` (`0x84225aBaBbE7433c736925f9c0ba6f6CcB51551a`, commits paused under Variant A), `NARAPositionSaleV5` (`0x04Ac83045d26259D46400Ce6beb9bBd0641df225`, `FEE_BPS = 500`), `NARALiquidityHookV5` (`0x201fBD2839bEc513040024b37dAe97B401E96acC`, `poolId = 0x3bd8b60dc9eb37f00afa57585232e4018ae661b2dbd5318562183a67a07ac758`, `tradingPaused = true`), `NARAFeeVaultV5` (`0xe63b4BaAF873FC57859bfe13e0e8cFccAaB6AddE`), `NARAPoolOracleV5` (`0xA2151333BDD77DF2E058f9cE274F63D2e48A5553`), `NARAPOLPositionV5` (`0x01EF9de9f4e9197F2A3944b5B34A90eA2f558b64`), `NARACapitalBudgetV5` (`0x6f5f586Bd4F14e47F432264D88Fe9A6A6A80552B`), `NARACapitalPolicyV5` (`0xC6b5471ADadcf66c2375EC8600bb7a3D85C73e45`), and `NARATreasuryRangeManagerV5` (`0xa72557fcBE56B3eC739dF3aF7b6b893B6Db4D288`, holding `49,997 NARA`). `999,984 NARA` (`99.9984%` of total supply) is locked inside V5 contracts; public pool seeding (`Safe nonce 9`) and opening trading (`Safe nonce 10`) remain held back per owner decision.
+  - Actual modules:
+    - financial graph: `NARAEpochEngineV5`, `NARAPrincipalLedgerV5`, `NARARewardLedgerV5`, `NARARewardIngressV5`, `NARAEmissionModelV5`, `NARAEmissionReserveV5`;
+    - receipt: `NARAPositionNFTV5`;
+    - fee layer: `NARAFeeVaultV5`, `NARALiquidityHookV5`, `NARAPoolOracleV5`, `NARAPOLPositionV5`, `NARACapitalBudgetV5`, `NARACapitalPolicyV5`.
+  - Economics per the user's 2026-09-23 decisions:
+    - 80/20 base/rarity rewards;
+    - 100X rarity maximum, with `NARAForgeV5` (`0x84225aBaBbE7433c736925f9c0ba6f6CcB51551a`, commits paused on-chain under Variant A) and `NARAPositionSaleV5` (`0x04Ac83045d26259D46400Ce6beb9bBd0641df225`, `FEE_BPS = 500`) deployed on Base Mainnet;
+    - Hook and LP fees start **100% POL** (holder share 0%, governed later).
+  - `NARAEngineCore` / `NARACardForge` / `NARAFleetDeckLens` do not exist in V5 source.
 - **NARALiquidityGrowthHook:** Hardened with 7-day governance timelocks (`FEE_UPDATE_DELAY = 7 days`), 20% max default operational fee caps, aligned floor rounding, and direct vault fee recording.
 - **Sniper Liquidity Bootstrapping:** The pressure accumulator is explicitly
   per-block. Same-block Block-0 flow aggregates across callers and can reach the
@@ -52,8 +63,9 @@ block when applicable, test results, and unresolved risks.
   Do not claim persistent cross-block split resistance or instant POL from
   one-sided fees.
 - **Archived:** `archive/legacy-v3/` — frozen v3 legacy code.
-- **Fresh v4 activation:** the canonical Base `NARAToken` is
-  `0xB6333F5D4cEd8dffA80F3F13697D6aA3BB3f19c1`, Engine is
+- **Fresh v4 activation (retired stack):** the v4 stack's `NARAToken` is the
+  retired v4-era token (see the workspace `AGENTS.md` retired list; the
+  canonical token is now V5 `0x91FB…ae0f`). The v4 Engine is
   `0x98ab6406D6B548F37dEF7110961bb45A399e5aFC`, Vault is
   `0xD7f7b44BF65EBa3E90fDe0642687ed22A323084D`, Hook is
   `0x59AEf9799DEA01A7FB7dA73BEA10dfB08858A088`, and wired Compounder is
@@ -83,8 +95,8 @@ block when applicable, test results, and unresolved risks.
   `docs/releases/NARA-20260828-v4-epoch-maintainer-resilience.md`,
   `docs/NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md`,
   `docs/UNISWAP_V4_HOOK.md`, and `docs/V4_LAUNCH_CHECKLIST.md` before pool,
-  fee, liquidity, recovery, or basket-activation work. Do not use deleted V5
-  plans or sources as instructions.
+  fee, liquidity, recovery, or basket-activation work. For active modular v5
+  specifications, consult `contracts/v5/PRD.md` and `contracts/v5/README.md`.
 - **Treasury range candidate boundary:** before any tactical range work, read
   `docs/releases/NARA-20260828-v4-treasury-range-manager.md`,
   `docs/releases/NARA-20260831-v4-treasury-range-500-usdc-canary.md`,
@@ -135,8 +147,10 @@ block when applicable, test results, and unresolved risks.
 
 ## Rules of engagement
 
-1. When the user asks about NARA contracts, use only the active v4 source and
-   verified v4 manifests. Deleted V5 plans are not an implementation source.
+1. **COLD AI START INVARIANT — ALWAYS START IN `contracts/v5/`**:
+   Whenever the user asks to do any contract work, feature additions, token, gacha forge, or engine tasks, Cold AI MUST ALWAYS start and build in the **modular v5 stack**. That stack lives at **`../.worktrees/nara-v5-engine-production-20260923/contracts/v5/`**; this checkout's `contracts/v5/` is a stale snapshot. Start by reading that worktree's `docs/v5/LAUNCH_WIRING_STATUS.md`.
+   - `contracts/v4/` is permanently FROZEN, read-only baseline, cryptographically locked against `docs/FROZEN_V4_SOLIDITY_MANIFEST.json`. Never edit any `.sol` file in `contracts/v4/`. Run `npm run verify:frozen-v4` to verify.
+   - All new modular architecture lives exclusively in the V5 worktree. That includes the approved but not yet implemented rarity awards (100X maximum), paid rolls and fusion. Hook and LP fees start 100% POL, not 100% to holders.
 2. Do not import anything from `archive/legacy-v3/` into active code paths.
 3. Do not modify files in `archive/legacy-v3/` without explicit user direction.
 4. Do not redeploy any archived contract. The archive is reference material, not deployable code.
@@ -147,10 +161,13 @@ block when applicable, test results, and unresolved risks.
 - Do not reintroduce mining.
 - Do not reintroduce jackpot/lotto behavior.
 - Do not reintroduce old keeper/cron assumptions.
-- Do not edit `contracts/v4/NARAEngine.sol` unless the user explicitly orders
-  that exact core edit.
-- Do not edit `contracts/v4/NARAPositionNFTV4.sol` unless the user explicitly
-  orders that exact core edit.
+- **IMMUTABLE EXISTING SOLIDITY RULE — ZERO MUTATION OF EXISTING .SOL CODE**:
+  Do NOT alter, edit, mutate, or overwrite any existing Solidity contracts (`contracts/v4/*.sol`).
+  Existing Solidity code is strictly frozen to protect the verified project state from breaking.
+  All future modular contracts, new architectures, or redeployment candidates MUST be created in separate,
+  isolated files/directories without modifying or breaking existing `.sol` files.
+- Do not edit `contracts/v4/NARAEngine.sol` under any circumstance.
+- Do not edit `contracts/v4/NARAPositionNFTV4.sol` under any circumstance.
 - Prefer periphery, routers, lenses, monitors, views, and docs over frozen core
   edits.
 - AI agents are read/report only unless the user explicitly changes that scope.
@@ -160,6 +177,15 @@ block when applicable, test results, and unresolved risks.
 - Do not deploy contracts without explicit human approval.
 - Use generated active-v4 Hardhat artifacts from an immutable reviewed origin
   commit and verified v4 manifest as the ABI source of truth.
+
+## Market conduct (replaces the retired "Mandatory Fleet Invariants", 2026-09-24)
+
+The owner retired the former fleet-invariants section on 2026-09-24 (workspace audit `../audit-runs/2026-09-24-range-manager/REPORT.md`, finding GOV-01). Do not follow, restore or implement it; git history keeps the old text. The workspace `AGENTS.md` holds the same rules.
+
+- Do not build, run, tune or document wallet fleets that generate trading volume, hide links between wallets, add timing jitter to avoid clustering detection, create holders to pass sniper or DEX filters, or time buys and liquidity to move the price.
+- Project-controlled wallets (treasury, deployer, relayer, fleet and bot keys) must not trade in any pool where the treasury quotes. A key that signs for a treasury Safe must not also run a bot, keeper, relayer or trading wallet.
+- `NARATreasuryRangeManagerV1`, the Range Ranger automation and their Safe packets are retired and must never be used with V5.
+
 
 ## UI/UX rule for financial surfaces
 
@@ -192,7 +218,9 @@ buying`, `Confirm Buy`, `Confirm Exit`.
 
 | Concern                                | Path                                                              |
 | -------------------------------------- | ----------------------------------------------------------------- |
-| v4 contract sources                    | `contracts/v4/`                                                   |
+| v5 active modular sources              | `contracts/v5/`                                                   |
+| v5 PRD & architecture specification    | `contracts/v5/PRD.md` and `contracts/v5/README.md`               |
+| v4 contract sources (frozen, read-only)| `contracts/v4/`                                                   |
 | v4 test suite                          | `test/` (root) + `test/composability/`                            |
 | v4 deploy/verify/sync scripts          | `scripts/` (root)                                                 |
 | v4 ops, product, audit docs            | `docs/`                                                           |

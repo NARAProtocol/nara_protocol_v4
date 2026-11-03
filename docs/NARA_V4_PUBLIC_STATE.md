@@ -98,7 +98,7 @@ were not active LP. Later balances require a fresh onchain readback.
 
 | Feature | v3 | v4 |
 |---|---|---|
-| Token | `0xE444de61752b...` retired | `0xB6333F5D4cEd8dffA80F3F13697D6aA3BB3f19c1` |
+| Token | `0xE444de61752b...` retired | `0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f` |
 | Epoch advance | Off-chain Railway cron (private key, 15-min cadence) | Engine JIT plus active bounded maintenance; `router.syncEpochs()` is undeployed source design and unavailable |
 | Lock path | Approve → lock (two txs) | Direct Engine source exists; permit + sync + lock via `NARARouter` is undeployed source design and unavailable |
 | LP pair | NARA/WETH on Uniswap v3 | NARA/USDC on Uniswap v4 |
@@ -173,7 +173,7 @@ below. Pending entries have not been deployed as part of those releases.
 | Contract | Address |
 |---|---|
 | NARALauncher | `0xb8CF0274d0Fb2dB2Ba5dC58b0Ab378F3b8f35BA2` |
-| NARAToken | `0xB6333F5D4cEd8dffA80F3F13697D6aA3BB3f19c1` |
+| NARAToken | `0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f` |
 | NARAEngine | `0x98ab6406D6B548F37dEF7110961bb45A399e5aFC` |
 | NARARewardReserve | `0x8369CEf28128A4B24Bc5ed52aA6196D92D563F2f` |
 | NARAPositionNFTV4 | `0xCcBD8c59664958636369F8fe24B927aEBc3DF7cC` (`integrationReady: false`) |

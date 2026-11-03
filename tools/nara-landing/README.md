@@ -1,119 +1,119 @@
-# NARA Landing Page & DEX Architecture
+# NARA landing (naraprotocol.com)
 
-Production landing page and DEX swap meta-aggregator built with React 18, Vite, Tailwind CSS, `@kyberswap/widgets`, and `@web3-onboard`.
+Single static page: the NARA toilet/frog meme landing with the flush game, post forge,
+sticker cards and the self-reported Fame Board. Built with Vite 5 and Tailwind 3 (compiled
+at build time), served by Cloudflare Pages with one Pages Function (`/api/leaderboard`).
 
----
+This directory is the canonical landing source. The public mirror repo
+`NARAProtocol/nara-landing` is updated from an immutable commit here, following
+`docs/NARA_CROSS_REPOSITORY_RELEASE_PROTOCOL.md`.
 
-## 🚨 Permanent Rules & Brand Standards (MANDATORY FOR ALL AGENTS)
+## Layout
 
-### 1. Zero Functional Duplication
-- **The Header is an architectural framework + primary wayfinding rail:**
-  - Left: Official NARA emblem + `NARA PROTOCOL` title (always navigates back to Home `/`).
-  - Right: Step navigation `SWAP / COMMIT / GRID / VAULT` (wayfinding only — plain links, never transaction CTAs), then `CHART` (DexScreener), `EXPLORER` (BaseScan), `VISION` (Architecture modal), and `CONNECT` / Connected wallet account pill.
-- **Never add transaction action buttons to the Header that duplicate page CTAs:**
-  - Do **NOT** add `BUY`, `APPROVE`, `COMMIT & JOIN`, `HARVEST`, or other functional/transaction action buttons to the Header.
-  - The step links (`SWAP / COMMIT / GRID / VAULT`) are route navigation mirroring `StepProgressTracker` and `TacticalDock` — they perform no wallet action and trigger no transaction.
-  - On the Landing page, the hero buttons (`JOIN THE GRID` / `ENTER APP`) serve as the primary entry point to the DEX.
-  - On the DEX page, the swap widget is already on the screen; the Header `SWAP` link is wayfinding, not a swap action.
-  - Header remains clean, minimal, and non-repetitive across all views.
+| Path | Purpose |
+|---|---|
+| `index.html` | Markup only. No inline scripts, no inline `on*=` handlers (`data-on-<event>="action[:arg]"` instead). |
+| `src/meme/config.js` | Public constants: token address, chain, canonical URL, CryptoSLIP URL, `SWAP_PUBLIC_LAUNCHED`, Turnstile site key. |
+| `src/meme/main.js` | Game, audio, share, sticker and board logic. `ACTIONS` + `bindActions()` at the bottom wire the markup. |
+| `src/meme/styles.css` | Tailwind directives, self-hosted `@font-face`, page CSS. |
+| `public/_headers` | Security headers incl. the CSP (`script-src 'self' https://challenges.cloudflare.com …`). |
+| `public/_redirects` | `/swap*` → CryptoSLIP (302); `/app*`, `/meme*` → `/` (301). |
+| `public/404.html` | Static not-found page (no scripts). |
+| `public/fonts/` | JetBrains Mono + Space Grotesk, latin variable subsets (SIL OFL). |
+| `functions/api/leaderboard.js` | Fame Board API: same-origin check, Turnstile verify, KV rate limit, strict validation. |
+| `scripts/check-denylist.cjs` | Fails on retired addresses, Tailwind CDN, `unsafe-eval`, dead URLs, inline scripts/handlers, "NFT" wording. |
+| `tests/leaderboard.test.mjs` | `node --test` unit tests for the Function (mocked KV and Turnstile). |
+| `tests/smoke.mjs` | Playwright smoke: every control, console/page errors, banned wording, screenshots. |
 
-### 2. Official Brand Logo Standards (NO PLACEHOLDER LOGOS EVER)
-- **The canonical brand emblem consists strictly of:**
-  1. Dual concentric radar rings.
-  2. 15 precision notches representing the 15-minute epoch dial.
-  3. The sovereign monolithic architectural **N**.
-  4. Solid `#000000` black background for all listings, avatars, cards, and wallet modals.
-- **Never substitute the official logo with generic letters, simplified "N" SVGs, or ad-hoc shapes.**
-- **Authoritative Assets in `public/` and `src/lib/content.ts`:**
-  - `NARA_MASTER_LOGO_SVG` (exported in `src/lib/content.ts` for inline SVG usage, modals, and Web3-Onboard).
-  - `BRAND_ASSETS` (exported in `src/lib/content.ts`).
-  - `public/nara-logo-white.png` (1024×1024 solid black master).
-  - `public/nara-logo.svg` (canonical vector master).
-  - `public/nara-logo-transparent.png` (alpha=0, web headers and overlays only).
-  - `public/nara_token_512.png`, `public/nara_token_256.png`, `public/nara_token_200.png`, `public/nara_token_128.png`.
+Archived (read-only): the former React "Sovereign Grid" app and v4-wired swap live in
+`../nara-landing-archive/sovereign-grid-2026-11/`. Never redeploy or import from it.
 
-### 3. Pleasant Transaction Ergonomics & Symmetrical Centering Mandate
-- **Single Unified Chassis**: Never fragment the swap flow into stacked floating boxes. All micro-telemetry and inputs live in `.nara-dex-chassis`.
-- **Token Freedom**: Support the entire Base token space. Never place arbitrary 2-3 token preset buttons.
-- **Color Comfort**: Obsidian slate (`#080C16`) substrate, neutral hairlines, dark slate wells. Banned: neon cyan borders and high-contrast saturation.
-- **Child Component Symmetrical Centering**: In `@kyberswap/widgets`, pass explicit width `<Widget width={432} />` and CSS full-width overrides so internal styled-components never default to `375px` and create lopsided margins.
-- **Automated Centering Verification**: Run `npm run verify:ui` to test all viewports (1920, 1440, 1280, 1024, 768, 390) for 0px centering drift.
+## Commands
 
----
-
-## Reusable Page Components
-
-All pages in this application (and future pages) share the standardized header, footer dock, and layout components from `src/components/`:
-
-### 1. `Layout` (`src/components/Layout.tsx`)
-The standard page wrapper. Includes the high-definition Sovereign Grid background vignette, the architectural `Header`, the page content (`children`), and the floating telemetry glass dock `Footer`.
-
-```tsx
-import { Layout } from "./components";
-
-export default function MyNewPage() {
-  return (
-    <Layout>
-      <main className="relative z-10 w-full max-w-7xl mx-auto px-5 sm:px-10 flex-1 flex flex-col justify-center">
-        {/* Page Content */}
-      </main>
-    </Layout>
-  );
-}
+```bash
+npm ci                 # install (Node 20)
+npm run dev            # Vite dev server on http://127.0.0.1:5180 (API stubbed: GET [] / POST 503)
+npm run check          # denylist + API unit tests + production build
+npm run preview        # serve dist on http://127.0.0.1:4173
+npm run test:smoke     # Playwright smoke against SMOKE_URL (default: the preview)
+npm run pages:dev      # Wrangler Pages dev on :8788 with a local KV (real _headers/_redirects/Function)
 ```
 
-Props:
-- `children: React.ReactNode`: Content rendered in the main area between header and footer.
-- `showBackground?: boolean` (default `true`): Renders the 3D Sovereign Grid background with depth vignette.
-- `headerProps?: HeaderProps`: Customization for the header.
-- `footerProps?: FooterProps`: Customization for the footer.
-- `className?: string`: Additional wrapper classes.
+Turnstile end-to-end locally (Cloudflare's documented always-pass test keys):
 
----
+```bash
+VITE_TURNSTILE_SITE_KEY=1x00000000000000000000AA npm run build
+npx wrangler pages dev dist --port 8788 --kv NARA_LEADERBOARD_KV --binding TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
+SMOKE_URL=http://127.0.0.1:8788 SMOKE_EXPECT_SUBMIT="POSTED TO BOARD" npm run test:smoke
+```
 
-### 2. `Header` (`src/components/Header.tsx`)
-Edge-to-edge architectural header navigation bar.
-- **Left**: Official NARA emblem (`/nara-logo-transparent.png`) + `NARA PROTOCOL` link to `/`.
-- **Right Nav**:
-  - `CHART`: Direct link to DexScreener analytics.
-  - `EXPLORER`: Direct link to BaseScan verified token contract.
-  - `VISION`: Triggers the sovereign protocol vision & architecture modal.
-  - `CONNECT`: Web3-Onboard wallet connect / account status pill.
-- Fully self-contained: manages VisionModal and Web3-Onboard connection state.
+## Hosting (Cloudflare Pages)
 
----
+Project name: `naraprotocol-site` (`wrangler.jsonc`). The old `nara-landing` Pages name
+belongs to an unrelated third party. Static catch-all hosts (4everland/IPFS) ignore
+`_headers`, `_redirects` and `functions/`, so the security headers and the global board
+only work on Pages.
 
-### 3. `Footer` (`src/components/Footer.tsx`)
-Floating glass telemetry dock and legal copyright bar.
-- **Left**:
-  - `ADD $NARA`: 1-tap MetaMask `wallet_watchAsset` token integration (with automatic address copy fallback).
-  - `Built with ❤️ on Base` link.
-- **Center**: Official community & documentation links:
-  - `Telegram`: Official Telegram portal.
-  - `X`: Official X/Twitter profile.
-  - `GitHub`: Direct link to verified public documentation repository.
-  - `LEGALS`: Opens the autonomous software terms modal.
-- **Right**: Real-time 15-minute engine pulse clock `PULSE mm:ss (EPOCH X/96)` with spinning indicator.
-- **Bottom**: Centered legal copyright notice: `© 2026 NARA PROTOCOL. ALL RIGHTS RESERVED.`
-- Fully self-contained: manages pulse clock timer and legal modal internally.
+| Setting | Value |
+|---|---|
+| Root directory | `tools/nara-landing` (monorepo: without it the build finds neither `functions/` nor `dist`) |
+| Build command | `npm run check` (or `npm run build`) |
+| Output directory | `dist` |
+| KV binding | `NARA_LEADERBOARD_KV` → a KV namespace |
+| Secret | `TURNSTILE_SECRET_KEY` (Turnstile widget secret). Absent → `POST /api/leaderboard` returns 503 `board_disabled`, UI says "SAVED ON DEVICE". |
+| Build variable | `VITE_TURNSTILE_SITE_KEY` (public site key). Absent → the page never calls the API for posting. |
 
----
+Deploy: `npm run deploy:cf:preview` (branch `preview`) or `npm run deploy:cf:prod`. A
+production deploy is a production switch under the root `AGENTS.md`: it needs explicit owner
+authorization for that action, not just a green check.
+Verify on the `*.pages.dev` URL before pointing DNS: `curl -I` for CSP/HSTS/XFO,
+`/swap` → 302 to CryptoSLIP, `/meme.html` → 301 `/`, `/api/leaderboard` → JSON,
+`/flush.mp3` → `audio/mpeg`, then run `tests/smoke.mjs` against it.
 
-### 4. `NaraSwapWidget` (`src/components/NaraSwapWidget.tsx`)
-The production NARA DEX interface powered by KyberSwap meta-aggregator infrastructure:
-- **Token Freedom**: Full Base token ecosystem support without arbitrary 2-3 button gates. Curated token list includes `$NARA`, `ETH`, `USDC`, `WETH`, `cbBTC`, `AERO`, `DAI`, `DEGEN`, `VIRTUAL` + arbitrary address search.
-- **Single Unified Chassis**: Dual-bezel hardware enclosure (`bg-[#080C16]/95`, `rounded-[24px]`, `border-white/[0.08]`) with integrated micro-telemetry (`NARA DEX • BASE 8453` and `0% PROTOCOL FEE`).
-- **Ergonomically Calibrated Palette**: Whisper-quiet borders, recessed dark slate wells, and calm Base Blue/Emerald accents for pleasant, zero-eye-strain transactions.
-- **Zero Redundant Feedback**: Clean internal transaction receipts with direct BaseScan verification without duplicate external banners.
-- Zero added integrator fee (0.00%).
-- Connected wallet signing via ethers.js with BaseScan broadcast feedback.
+## Launch switch
 
----
+`SWAP_PUBLIC_LAUNCHED` in `src/meme/config.js` is `false`. While false, the header SWAP
+control is a plain `<button>` with no href (so middle-click, "open in new tab", long-press
+and link previews cannot reach a swap) and opens the "SWAPS OPEN SOON" modal; `_redirects`
+sends old `/swap*` links to `/`. When true, `initSwapControl()` turns the button into a real
+link to `https://cryptoslip.eth.limo/` (`target=_blank rel=noopener`) before any interaction.
 
-### 5. `LegalModal` (`src/components/LegalModal.tsx`)
-Clean non-custodial legal notices and protocol terms modal with verified contract addresses and ESC/backdrop click dismissals.
+Launch commit (one reviewed commit, only after Safe nonce 8 `Hook.setTradingPaused(false)`
+executed and the V5 launch verification passed): set the flag to `true` AND change the four
+`/swap*` targets in `public/_redirects` to `https://cryptoslip.eth.limo/`. Verify with
+`SMOKE_SWAP_LAUNCHED=1 npm run test:smoke`.
 
----
+## Security posture
 
-### 6. `VisionModal` (`src/components/VisionModal.tsx`)
-Comprehensive architectural overview detailing the 4 core pillars (Scarcity, Cadence, Yield Routing, Game-Theoretic Moat).
+- CSP: `default-src 'self'`; scripts only from this origin plus `challenges.cloudflare.com`
+  (Turnstile, loaded only when the victory modal opens) and `static.cloudflareinsights.com`
+  (only if Web Analytics is enabled in the dashboard). No `unsafe-inline`/`unsafe-eval` for
+  scripts. Styles allow `'unsafe-inline'` for the inline `style=` attributes the game sets.
+- HSTS (1 year, `includeSubDomains`; the `preload` directive is deliberately left out until the
+  owner confirms every `*.naraprotocol.com` subdomain is HTTPS-only, since preload-list entry
+  is effectively irreversible), `X-Frame-Options: DENY`, `frame-ancestors 'none'`, nosniff,
+  strict referrer, restrictive Permissions-Policy, COOP same-origin. No
+  `Cross-Origin-Resource-Policy` so wallets can load `/nara_token_256.png` for `wallet_watchAsset`.
+- `_headers` applies to static files only. `/api/leaderboard` sets its own headers: GET is
+  publicly cacheable for 15 s (30 s at the edge), POST is `no-store`, JSON responses carry
+  nosniff, XFO DENY and a `default-src 'none'` CSP. HEAD is supported for uptime monitors.
+- Build keeps `console.error` (other console calls are stripped) so a broken `data-on-*`
+  binding is reported in production and caught by the smoke test (`data-nara-bind-error`).
+- Browser storage holds game progress only. The board API never trusts the client: handle
+  is normalized server-side, scores must be JSON integers 12..50000 with 12 cards, Turnstile is
+  verified, 5 accepted posts per IP per hour (failed attempts do not consume budget), 2 KB
+  body cap, same-origin only. Stored rows are re-validated and re-typed on every read. Two
+  simultaneous posts can still race on the KV read-modify-write (last writer wins; KV is
+  eventually consistent); acceptable for a game board.
+- Share links always use the canonical origin, never a preview host.
+- Wallet interaction is limited to `wallet_switchEthereumChain`, `wallet_addEthereumChain`
+  (Base) and `wallet_watchAsset` for the canonical token. No signing, no transactions.
+
+## Honesty rules (enforced by `check-denylist.cjs` and `tests/smoke.mjs`)
+
+- Stickers are device-local cards. Never call them NFTs, on-chain or collectibles with value.
+- The Fame Board is self-reported. Never label it verified.
+- The grid log shows only this browser's events and true tips. No invented users or feeds.
+- No "verified" or "15M epoch" protocol claims on this page; the token line shows the address.
+- The disclaimer line in the footer stays.
+- The flush SFX path (`/flush.mp3` with procedural fallback, three modes) is a keep-as-is feature.

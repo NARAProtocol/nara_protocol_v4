@@ -27,7 +27,7 @@ what the local console now supports, and what remains unproved.
 - Production activation manifest:
   `deployments/v4-production-activation-2026-08-09.json`
 - Production Engine: `0x98ab6406D6B548F37dEF7110961bb45A399e5aFC`
-- Production NARA: `0xB6333F5D4cEd8dffA80F3F13697D6aA3BB3f19c1`
+- Production NARA: `0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f`
 - Production Hook: `0x59AEf9799DEA01A7FB7dA73BEA10dfB08858A088`
 - Production Safe: `0xd65c0e390Dc187A22c52c03816591CC736C0D755`
 

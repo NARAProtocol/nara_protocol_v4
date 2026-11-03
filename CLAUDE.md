@@ -1,40 +1,40 @@
 # NARA Protocol AI Context
 
-This repository is the active NARA v4 contracts and operations workspace.
+This repository hosts the retired/frozen v4 contracts (read-only baseline) and the active modular v5 development stack.
 
-> **Production Stack Notice:** The NARA protocol strictly operates on the **fixed v4 production stack**.
-> All experimental v5 files, directories, candidates, and test suites have been completely eliminated.
-> All AI assistants must work exclusively within `contracts/v4/`.
+> **Architecture & Development Directive:**
+> 1. **v4 is RETIRED and strictly READ-ONLY:** `contracts/v4/` is permanently frozen and cryptographically locked against `docs/FROZEN_V4_SOLIDITY_MANIFEST.json`. Zero edits, zero fixes, zero mutations across any file in `contracts/v4/`.
+> 2. **v5 is the EXCLUSIVE ACTIVE development stack:** all new contracts, tokenomics, rarity/roll/fusion work (100X maximum, not yet implemented) and fee distribution belong in `../.worktrees/nara-v5-engine-production-20260923/contracts/v5/`. This checkout's `contracts/v5/` is a stale snapshot. Status: that worktree's `docs/v5/LAUNCH_WIRING_STATUS.md`.
 
-## 🚨 FIXED v4 PRODUCTION STACK — READ FIRST
+## 🚨 v4 RETIRED (READ-ONLY) & v5 ACTIVE MODULAR STACK — READ FIRST
 
-- **Authoritative Contract Codebase:** `contracts/v4/`.
+- **v5 Active Modular Stack:** the authoritative source is `../.worktrees/nara-v5-engine-production-20260923/contracts/v5/`; this checkout's `contracts/v5/` is a stale snapshot. Read that worktree's `docs/v5/LAUNCH_WIRING_STATUS.md` first.
+  - **Deployed & Verified on Base Mainnet (Block `53,422,831`, 34 contracts):** `NARATokenV5` (`0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f`), `NARAEmissionReserveV5` (`0xf932178F24b0813C82093985F0Af6Db27Ae25930`, bound, sealed, funded with `949,987 NARA` at `fundingSequence = 2`), `NARAEpochEngineV5` (`0xd93FbEbFb33FAc9288125074625D4750573B1a53`), `NARAPrincipalLedgerV5` (`0x7F866a9fbe41D54F0d9C35b6892fcf27Ea766DB2`), `NARARewardLedgerV5` (`0xC72671D9438388638547444524F6542b650C9264`), `NARARewardIngressV5` (`0x7b98fC9192638690eb878b915429211bd1585513`), `NARAEmissionModelV5` (`0x57B2378102202636ab890C5b0E69fbE61a7eF30c`), `NARAPositionNFTV5` (`0x5c36A16d30adAfeC4E37117025fc27DF0C445D6d`), `NARAForgeV5` (`0x84225aBaBbE7433c736925f9c0ba6f6CcB51551a`, commits paused under Variant A), `NARAPositionSaleV5` (`0x04Ac83045d26259D46400Ce6beb9bBd0641df225`, `FEE_BPS = 500`), `NARALiquidityHookV5` (`0x201fBD2839bEc513040024b37dAe97B401E96acC`, `poolId = 0x3bd8b60dc9eb37f00afa57585232e4018ae661b2dbd5318562183a67a07ac758`, `tradingPaused = true`), `NARAFeeVaultV5` (`0xe63b4BaAF873FC57859bfe13e0e8cFccAaB6AddE`), `NARAPoolOracleV5` (`0xA2151333BDD77DF2E058f9cE274F63D2e48A5553`), `NARAPOLPositionV5` (`0x01EF9de9f4e9197F2A3944b5B34A90eA2f558b64`), `NARACapitalBudgetV5` (`0x6f5f586Bd4F14e47F432264D88Fe9A6A6A80552B`), `NARACapitalPolicyV5` (`0xC6b5471ADadcf66c2375EC8600bb7a3D85C73e45`), and `NARATreasuryRangeManagerV5` (`0xa72557fcBE56B3eC739dF3aF7b6b893B6Db4D288`, holding `49,997 NARA`). `999,984 NARA` (`99.9984%` of total supply) is locked inside V5 contracts; public pool seeding (`Safe nonce 9`) and opening trading (`Safe nonce 10`) remain held back per owner decision.
+  - Modules: `NARAEpochEngineV5`, `NARAPrincipalLedgerV5`, `NARARewardLedgerV5`, `NARARewardIngressV5`, `NARAEmissionModelV5`, `NARAEmissionReserveV5`, `NARAPositionNFTV5`, plus the fee layer (`NARAFeeVaultV5`, `NARALiquidityHookV5`, `NARAPoolOracleV5`, `NARAPOLPositionV5`, `NARACapitalBudgetV5`, `NARACapitalPolicyV5`).
+  - Hook and LP fees start 100% POL.
+  - Rarity (`100X` maximum), `NARAForgeV5` (`0x84225aBaBbE7433c736925f9c0ba6f6CcB51551a`, commits paused under Variant A) and `NARAPositionSaleV5` (`0x04Ac83045d26259D46400Ce6beb9bBd0641df225`, `FEE_BPS = 500`) are deployed on Base Mainnet.
+- **v4 Retired Baseline (`contracts/v4/`):** Permanently frozen and cryptographically verified (`scripts/check-frozen-v4-contracts.cjs`). Strict read-only reference baseline.
 - **NARALiquidityGrowthHook (`contracts/v4/NARALiquidityGrowthHook.sol`):** Hardened with:
   - **7-day governance update timelocks** (`FEE_UPDATE_DELAY = 7 days`).
   - Default operational max fee caps set to **20.00%** (`2_000 BPS`) both ways (buy & sell curves).
   - Aligned floor rounding between `_feeBps` and `_cumulativeFee`.
   - Direct `vault.recordPoolFee(...)` call execution.
 - **Archived v3:** Legacy v3 code remains archived under `archive/legacy-v3/` and is frozen.
-- **Atomic redeploy:** a fresh-v4 release must pass the local test/audit gates,
-  use an immutable reviewed origin commit, and produce a verified deployment
-  manifest before any downstream integration. Never send transactions without
-  explicit human approval.
 
 **Active code paths:**
 
-- `contracts/v4/` — the only active Solidity sources
-- `test/` — active v4 unit, integration, invariant, and fork suites
-- `scripts/` — v4 deployment, verification, and operations tooling
-- `docs/` — v4 design, state, audit, and release evidence
-- `package.json` scripts — v4 build and verification commands
+- `contracts/v5/` — active modular v5 Solidity sources and architecture specifications
+- `test/` — unit, integration, invariant, and fork suites
+- `scripts/` — deployment, verification, and operations tooling
+- `docs/` — design, state, audit, and release evidence
+- `package.json` scripts — build and verification commands
 
-**Archived (do not modify, do not import from `contracts/v4/`, do not redeploy):**
+**Retired / Frozen (do not modify, do not redeploy):**
 
+- `contracts/v4/` — retired v4 contract sources (strictly read-only baseline)
 - `archive/legacy-v3/` — frozen v3 stack with its own README, CLAUDE.md, AGENTS.md, and PORTING_ROADMAP.md
-- The four satellites with **no v4 equivalent yet** (Arena, Lotto, MisterMint, Sponsor Hub) are listed in `archive/legacy-v3/PORTING_ROADMAP.md`
 
-When the user asks about deployed state, use only verified v4 evidence. Never
-surface a retired v3 address as live or use deleted V5 material as authority.
+When the user asks about deployed state, use verified manifests and evidence. For active modular v5 specifications, consult `contracts/v5/PRD.md` and `contracts/v5/README.md`.
 
 ## Active Paths
 
