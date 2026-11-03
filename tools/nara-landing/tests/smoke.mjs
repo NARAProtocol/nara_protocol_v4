@@ -35,7 +35,7 @@ const page = await context.newPage();
 page.on("console", (msg) => { if (msg.type() === "error") fail(`console.error: ${msg.text()}`); });
 page.on("pageerror", (err) => fail(`pageerror: ${err.message}`));
 page.on("requestfailed", (req) => {
-  if (req.url().startsWith(BASE)) fail(`request failed: ${req.url()} ${req.failure()?.errorText}`);
+  if (req.url().startsWith(BASE) && !req.url().includes("/cdn-cgi/rum")) fail(`request failed: ${req.url()} ${req.failure()?.errorText}`);
 });
 page.on("response", (res) => {
   const u = res.url();
@@ -51,7 +51,7 @@ await page.goto("/", { waitUntil: "networkidle" });
 
 // Boot state
 if ((await page.locator("#flushCounter").innerText()).trim() !== "0") fail("flush counter not 0 on fresh load");
-if (!(await page.locator("#tweetPreviewDisplay").innerText()).includes("0x91FB...Ae0f")) fail("tweet preview missing CA");
+if (!(await page.locator("#tweetPreviewDisplay").innerText()).includes("0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f")) fail("tweet preview missing full CA");
 const ticker = await page.locator("#sewerTickerText").innerText();
 if (!/Local game ready/.test(ticker)) fail(`boot log line unexpected: ${ticker}`);
 
@@ -94,11 +94,15 @@ for (const mode of ["receipt", "lore", "unhinged", "sticker", "flex"]) {
   await page.click(`#tabBtn-${mode}`);
   const text = await page.locator("#tweetPreviewDisplay").innerText();
   if (!text.trim()) fail(`empty preview for ${mode}`);
+  if (!text.includes("0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f")) fail(`missing full CA in ${mode} preview`);
+  if (/0x91FB\.\.\.Ae0f|Card image|naraprotocol\.com/i.test(text)) fail(`truncated CA, fake image notice, or duplicate URL in ${mode} preview: ${text.slice(0, 120)}`);
   if (/NFT|on-chain|onchain|meme\.html/i.test(text)) fail(`banned wording in ${mode} preview: ${text.slice(0, 80)}`);
 }
 await page.click('[data-on-click="rerollActiveMode"]');
 await page.click('[data-on-click="copyForgeTweetText"]');
-if (!(await page.evaluate(() => navigator.clipboard.readText())).includes("naraprotocol.com")) fail("copied tweet lacks share url");
+const copiedTweet = await page.evaluate(() => navigator.clipboard.readText());
+const copiedUrlMatch = copiedTweet.match(/https:\/\/[^\s]+/);
+if (!copiedUrlMatch || new URL(copiedUrlMatch[0]).hostname !== "naraprotocol.com") fail("copied tweet lacks share url");
 note("forge ok");
 
 // Share anchors carry encoded intent URLs
