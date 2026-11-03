@@ -1,1 +1,13 @@
-/*    /index.html   200
+# Exact rules first, splats last (Cloudflare Pages evaluates top to bottom).
+# LAUNCH SWITCH: while SWAP_PUBLIC_LAUNCHED is false, old /swap links go home (302, temporary)
+# so nothing on this domain sends a visitor to a swap while trading is paused. At launch,
+# change the four /swap targets to https://cryptoslip.eth.limo/ in the same commit that flips
+# SWAP_PUBLIC_LAUNCHED in src/meme/config.js.
+/swap        /  302
+/swap.html   /  302
+/app         /  301
+/app.html    /  301
+/meme        /  301
+/meme.html   /  301
+/swap/*      /  302
+/app/*       /  301

@@ -1,9 +1,11 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "snowy-wood-5075",
-  "compatibility_date": "2026-09-01",
-  "assets": {
-    "directory": "./dist",
-    "not_found_handling": "single-page-application"
-  }
+  // Cloudflare Pages project. Create once with: npx wrangler pages project create naraprotocol-site
+  // Bindings are configured in the Pages dashboard (Settings > Bindings / Variables), not here:
+  //   KV namespace binding   NARA_LEADERBOARD_KV   (fame board + rate-limit counters)
+  //   Secret                 TURNSTILE_SECRET_KEY  (Turnstile secret; absent => board posting disabled)
+  //   Build variable         VITE_TURNSTILE_SITE_KEY (public Turnstile site key; absent => device-only scores)
+  "name": "naraprotocol-site",
+  "compatibility_date": "2026-05-03",
+  "pages_build_output_dir": "./dist"
 }
