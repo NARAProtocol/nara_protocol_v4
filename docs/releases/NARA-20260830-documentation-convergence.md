@@ -23,7 +23,7 @@ liquidity, or onchain state.
   `docs/releases/NARA-20260827-v4-full-inventory-compound.md`
 
 The canonical Base NARA token is
-`0xB6333F5D4cEd8dffA80F3F13697D6aA3BB3f19c1`. The earlier `0x65E...`
+`0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f`. The earlier `0x65E...`
 controlled Stage A token remains historical incident/recovery evidence only
 and must not be used by consumers.
 

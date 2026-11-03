@@ -12,9 +12,10 @@ Last updated: 2026-09-11.
 > educational, not an invitation, inducement, or recommendation to transact in
 > NARA.
 
-This repository is v4-only. `contracts/v4/` is the sole active Solidity source.
-The experimental V5 stack, tests, scripts, and release plans have been deleted
-and must not be restored or used as deployment authority.
+This document records the **retired, frozen v4 stack**. It is bound on-chain to a retired v4-era token, not to the canonical V5 token `0x91FB…ae0f`.
+- The July/August *experimental* V5 stack was deleted and must not be restored.
+- The current modular V5 candidate is separate and authorized. Its only deployed contracts are the token and the emission Reserve `0xf932…5930`. Its source is in `../.worktrees/nara-v5-engine-production-20260923/`; this checkout's `contracts/v5/` is a stale snapshot.
+- Its canonical status, audit verdict (NO-GO as-is, 2026-09-24) and launch gates are in that worktree's `docs/v5/LAUNCH_WIRING_STATUS.md`.
 
 The fresh v4 core contracts were deployed and source-verified on Base from
 immutable protected origin commit
@@ -49,27 +50,29 @@ local operator tooling and is not a protocol repository component.
 The documentation state and downstream handoff boundary are recorded in
 [`NARA-20260830-documentation-convergence.md`](releases/NARA-20260830-documentation-convergence.md).
 
-## DEPLOYED AND ACTIVATED — Treasury Range Manager V1
+## RETIRED — Treasury Range Manager V1 and Range Ranger
 
-`NARATreasuryRangeManagerV1.sol` is **DEPLOYED, FUNDED, AND ACTIVATED ON BASE MAINNET**:
+`NARATreasuryRangeManagerV1.sol` was deployed, funded and activated on Base mainnet and is now **RETIRED**. The facts below were verified on-chain on 2026-09-24; details are in workspace `audit-runs/2026-09-24-range-manager/REPORT.md`.
 - **Contract Address:** [`0xd58afa5eaB20B0ED287851Cf98f359AdEd58a69C`](https://basescan.org/address/0xd58afa5eaB20B0ED287851Cf98f359AdEd58a69C)
-- **Dedicated Treasury Range Safe:** [`0x5050BC6dc3E07313D52D05cecD53f727D6CDa245`](https://basescan.org/address/0x5050BC6dc3E07313D52D05cecD53f727D6CDa245) (1-of-1 threshold, owned by `0xfe3A8678A9c729438BB11718bD1391E7Ab491E8e`). Holds exclusive custody of order inventory and receives all cancellation and settlement proceeds.
-- **Protocol 2-of-3 Safe:** `0xd65c0e390Dc187A22c52c03816591CC736C0D755` executed the CREATE2 deployment packet only; it holds zero operational range custody.
-- **Autonomous Settler Daemon:** Active on Railway (`services/v4-treasury-range-settler`, keeper `0xa4B4B00f067cB4f5607c9a7298827fa1C1315aB7`), executing 15-second polling sweeps to return terminal profits to the Safe.
-- **Autonomous Range Ranger Engine:** Cloud 24/7 rebalancer active on Railway (`zealous-generosity`), synthesizing dynamic volume- and pressure-responsive 5-tier adaptive brackets around live spot, protecting Safe reserves, and capturing taker volume.
+- **Status:** activated at block 50,738,288 (2026-09-01). Order creation has been paused on-chain since block 51,294,195 (2026-09-14). 0 active orders; 70 orders created in its lifetime. It is bound to the retired v4 token and cannot bind to the V5 hook, so it must not be reused (audit TRM-02).
+- **Dedicated Treasury Range Safe:** [`0x5050BC6dc3E07313D52D05cecD53f727D6CDa245`](https://basescan.org/address/0x5050BC6dc3E07313D52D05cecD53f727D6CDa245) (1-of-1 threshold, owned by `0xfe3A8678A9c729438BB11718bD1391E7Ab491E8e`). Holds exclusive custody of order inventory and receives all cancellation and settlement proceeds. **The owner key `0xfe3A…` is exposed:** bots used it, and rotating it (out of this Safe and out of the Protocol 2-of-3 Safe, where it is one of three owners) is a pending owner action. Balances on 2026-09-24: 15,023.04 retired v4 NARA and 2.67 USDC. Transfers: at block 50,794,297 it sent 1,000 USDC to `0xfe3A…`; at block 51,285,210 it sent 73,311.81 retired v4 NARA and 535.37 USDC to the Protocol 2-of-3 Safe `0xd65c…D755`.
+- **Protocol 2-of-3 Safe:** `0xd65c0e390Dc187A22c52c03816591CC736C0D755` executed the CREATE2 deployment packet only. The earlier note that it holds zero operational range custody is outdated: at block 51,285,210 it received 73,311.81 retired v4 NARA and 535.37 USDC from the Range Safe.
+- **Settler Daemon:** documented as one Railway instance (`services/v4-treasury-range-settler`, keeper `0xa4B4B00f067cB4f5607c9a7298827fa1C1315aB7`, 15-second polling sweeps); the settler runbook requires two independent instances (audit OFF-010). With no active orders there is nothing left to settle. Its Railway state was not re-verified on 2026-09-24.
+- **Range Ranger automation: RETIRED, must stay disabled.** The owner has retired it and its code is being disabled. It must not run against any pool, including V5. `TREASURY_PRIVATE_KEY` and `RANGE_RANGER_AUTO_EXECUTE` must not be set in any environment. It formerly ran on Railway (`zealous-generosity`), re-pricing ladders around instantaneous spot and operating with the Range Safe owner key (audit OFF-001, OFF-002). The audit did not observe its current Railway state.
+- **Activation provenance:** orders 1–12 were built from commit `9126f8d` on branch `feat/v4-treasury-range-activation-and-settler-fix`, which is not in `main` or `origin/main`. Orders 13–70 were built by the Range Ranger or by CLI tools that exist only on branch `feat/plan-range-rebalance-cli`; the reviewed packet safeguards recorded below (simulation, human review, canary caps) did not govern them. The canonical cancellation builder on `main` cannot operate against the live manager (audit OFF-004).
 
 **On-chain 2026-09-01 Deployment Facts:**
 
 | Fact | Value |
 |---|---|
 | Manager | `0xd58afa5eaB20B0ED287851Cf98f359AdEd58a69C` |
-| Class | CONFIRMED LIVE on Base 8453 for technical testing & tactical range management. |
+| Class | Deployed on Base 8453; **retired**. Order creation paused since block 51,294,195; 0 active orders; 70 orders created in its lifetime. |
 | Creation tx | `0xa657e0be76f040195fddb791e030b2fa0275f6ed989e2c17e2d1256bb95cb869` (Success) |
 | Block / time | `50736510` / 2026-09-01 11:32:47 UTC |
 | Path | Protocol Safe `0xd65c0e390Dc187A22c52c03816591CC736C0D755` `execTransaction` → CREATE2 deployer `0xDE9E3Cac08b7a31Db18c7432d4C45DF4584Fd646` |
 | Runtime | 23620 bytes; keccak256 `0xbd53ab49bd70983a352c5fc3c638f8df2d527e42011671218461aa5fb5b83a09` (QA independent `eth_getCode`) |
-| Dedicated TR Safe | `0x5050BC6dc3E07313D52D05cecD53f727D6CDa245` (1-of-1; owner `0xfe3A8678A9c729438BB11718bD1391E7Ab491E8e`). |
-| Ladder | implemented / tested / merged / **deployed** YES; configured/activated YES; indexed PARTIAL; available INTERNAL/TACTICAL |
+| Dedicated TR Safe | `0x5050BC6dc3E07313D52D05cecD53f727D6CDa245` (1-of-1; owner `0xfe3A8678A9c729438BB11718bD1391E7Ab491E8e`). Owner key exposed; rotation is a pending owner action. Holds 15,023.04 retired v4 NARA and 2.67 USDC (2026-09-24). |
+| Ladder | implemented / tested / merged / **deployed** YES; activated YES (block 50,738,288; orders 1–12 built from unmerged commit `9126f8d`); indexed PARTIAL; order creation paused since block 51,294,195; available NO (retired) |
 
 Prior CURRENT_STATE language dated 2026-08-31 that the manager was undeployed was **stale document lag**, not a second chain.
 
@@ -446,7 +449,7 @@ verification readback was pinned at Base block `49719008`.
 | Component | Address | Current state |
 |---|---|---|
 | `NARALauncher` | `0xb8CF0274d0Fb2dB2Ba5dC58b0Ab378F3b8f35BA2` | Deployed and source-verified |
-| `NARAToken` | `0xB6333F5D4cEd8dffA80F3F13697D6aA3BB3f19c1` | Deployed and source-verified; name/symbol `NARA` / `NARA` |
+| `NARAToken` (v4-era, **retired**) | see the retired list in workspace `AGENTS.md` | The v4 Engine, Hook, Vault and NFT are bound to this retired token on-chain. It is **not** the canonical V5 token `0x91FB…ae0f`. |
 | `NARAEngine` | `0x98ab6406D6B548F37dEF7110961bb45A399e5aFC` | Deployed and source-verified |
 | `NARARewardReserve` | `0x8369CEf28128A4B24Bc5ed52aA6196D92D563F2f` | Deployed, source-verified, and funded with `650,000 NARA` |
 | `NARALiquidityGrowthVault` | `0xD7f7b44BF65EBa3E90fDe0642687ed22A323084D` | Source-verified; Safe-owned; Compounder binding permanently frozen; balance zero at freeze block |

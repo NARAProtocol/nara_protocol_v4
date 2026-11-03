@@ -87,12 +87,31 @@ Review every range orientation: currency0=USDC, currency1=NARA; higher human NAR
 
 Create `/etc/nara/v4-range-settler-a.env` and `...-b.env` with mode `0600`, owned by the service administrator. Do not paste their contents into tickets, shell history, logs, or evidence. Required keys are listed in the service README. Each file needs a different `SETTLER_PRIVATE_KEY`, `SETTLER_EXPECTED_ADDRESS`, `SETTLER_INSTANCE_ID`, and independent provider set.
 
+### Provision each instance's state volume
+
+Every instance needs a pending-state directory and a reconciliation directory on persistent storage. Each must contain an empty, operator-created sentinel file named `.nara-settler-state-volume`. The service never creates these directories or the sentinel. At startup, before opening any RPC connection, it exits with a `settler_fatal` reason code if either is missing, lacks the sentinel, or is not writable: `PENDING_STATE_DIRECTORY_MISSING`, `PENDING_STATE_VOLUME_SENTINEL_MISSING`, `PENDING_STATE_DIRECTORY_NOT_WRITABLE`, or the matching `RECONCILIATION_STATE_` code. It re-checks the sentinel on every durable write. Because the sentinel lives on the volume, an unmounted, mis-pathed, or ephemeral directory cannot pass for the journal. The service README section "Durable state volume" explains the design and gives the Railway steps.
+
+On a systemd host with the default paths, provision once per instance, as root. For instance `a`:
+
+```bash
+sudo install -d -m 0700 -o nara-settler -g nara-settler /var/lib/nara-v4-range-settler
+sudo install -d -m 0700 -o nara-settler -g nara-settler /var/lib/nara-v4-range-settler/reconciled-a
+sudo install -m 0600 -o nara-settler -g nara-settler /dev/null /var/lib/nara-v4-range-settler/.nara-settler-state-volume
+sudo install -m 0600 -o nara-settler -g nara-settler /dev/null /var/lib/nara-v4-range-settler/reconciled-a/.nara-settler-state-volume
+sudo ls -la /var/lib/nara-v4-range-settler /var/lib/nara-v4-range-settler/reconciled-a
+```
+
+For an instance `b` on the same host, repeat the two `reconciled-a` commands with `reconciled-b`; the shared pending-state directory needs only one sentinel. The pending journal (`pending-a.json`), the nonce high-water file (`nonce-high-water-` plus the lowercase wallet address plus `.json`), and the `reconciled-a` records then all live under `/var/lib/nara-v4-range-settler`, which must be on persistent disk. The unit uses `ProtectSystem=strict`. If you point `SETTLER_PENDING_STATE_PATH` or `SETTLER_RECONCILIATION_DIRECTORY` at another mount, grant that path with a `ReadWritePaths=` drop-in and provision it the same way.
+
+Never provision fresh state for a key that has already signed. If a state volume is lost or replaced, retire that gas key and start the instance with a new dedicated gas-only key on a newly provisioned volume, because a lost journal may have held a signed transaction that is still valid.
+
 Before activation:
 
 1. Confirm each key controls an address with gas only and zero NARA/USDC.
 2. Set conservative gas caps and fund only a bounded amount of ETH.
 3. Run `npm run typecheck:treasury-range-settler:v4` and
    `npm run test:treasury-range-settler:v4`, then a read-only startup rehearsal.
+   In that rehearsal, confirm each instance logs `settler_starting` only with both sentinels present on its persistent volume, and that a supervised restart keeps the same pending journal, high-water file, and reconciliation records.
 4. Confirm the RPC request timeout is below the whole-sweep timeout and the supervisor restarts a deliberately terminated rehearsal instance with fresh provider connections.
 5. Confirm heartbeat/alert receivers show only allowlisted fields.
 6. Confirm the other v4 maintainer services, schedules, roles, keys, and bindings are unchanged.
@@ -106,11 +125,13 @@ sudo systemctl status nara-v4-range-settler@a.service nara-v4-range-settler@b.se
 
 Healthy evidence includes recent `sweep_complete`, successful heartbeats for both distinct instance IDs, independent block agreement, gas above minimum, and no runtime/binding/ownership alerts. A quiet pool is not an error because polling and full sweeps continue.
 
-Each instance signs the exact EIP-1559 settlement transaction, computes its hash, and durably persists the raw transaction, hash, nonce, and order intent with mode `0600` before broadcast. It holds at most one pending transaction under `/var/lib/nara-v4-range-settler` (or its exact configured state path) and submits with an explicit nonce only when all three providers agree latest and pending nonce are equal. If a crash occurs after persistence but before broadcast, the instance may rebroadcast only that identical signed raw transaction and hash after all-three absence/nonce checks, a fresh three-provider binding/USDC dependency preflight, and all-three simulation of the exact persisted calldata; it never blindly replaces or submits a nonce chain. Sweeps, heartbeats, and alerts remain live while pending. It pages after `SETTLER_PENDING_ALERT_AFTER_MS` and reports a drop only after `SETTLER_PENDING_DROP_AFTER_MS`, but a drop or terminal order race does not delete the signed nonce lineage. Only a canonical confirmed receipt for that exact hash clears it. A successful receipt's complete reconciled order/accounting evidence is durably appended before pending state is cleared. Preserve both state and reconciliation files through every restart.
+Each instance signs the exact EIP-1559 settlement transaction, computes its hash, and durably persists the raw transaction, hash, nonce, and order intent with mode `0600` before broadcast. It holds at most one pending transaction in its provisioned pending-state directory (default `/var/lib/nara-v4-range-settler`) and submits with an explicit nonce only when all three providers agree latest and pending nonce are equal and that nonce is strictly above the durable nonce high-water mark. If a crash occurs after persistence but before broadcast, the instance may rebroadcast only that identical signed raw transaction and hash after all-three absence/nonce checks, a fresh three-provider binding/USDC dependency preflight, and all-three simulation of the exact persisted calldata; it never blindly replaces or submits a nonce chain. Sweeps, heartbeats, and alerts remain live while pending. It pages after `SETTLER_PENDING_ALERT_AFTER_MS` and reports a drop only after `SETTLER_PENDING_DROP_AFTER_MS`, but a drop or terminal order race does not delete the signed nonce lineage. Only a canonical confirmed receipt for that exact hash clears it. A successful receipt's complete reconciled order/accounting evidence is durably appended before pending state is cleared. The high-water mark is raised to each signed transaction after its journal is written and before its broadcast, and from any existing journal before it is reconciled, cleared, or rebroadcast. No new settlement can therefore be signed at or below a nonce this wallet already signed, and only the exact persisted raw transaction the mark names may be broadcast again. Preserve the pending journal, the high-water file, both sentinels, and the reconciliation records through every restart and redeploy.
 
 Alert webhook delivery is non-blocking: an unavailable webhook must not prevent terminal settlement. Independently monitor `alert_delivery_failed` logs and missing heartbeat deliveries so notification failure itself pages through a separate channel.
 
 ## Alert response
+
+Configure the alert receiver to page on the first occurrence of every reason code listed under "Blocked nonce lineage recovery" and "State volume and high-water refusals" below. The service suppresses repeats of one reason code from one trigger source for five minutes and never waits for delivery, so paging on the first alert is the receiver's job. Heartbeats stay `healthy` while an instance is blocked or has a dropped transaction, so missing-heartbeat monitoring alone will not catch those states.
 
 ### Low gas
 
@@ -142,6 +163,85 @@ Anyone can donate NARA/USDC directly to the manager, so a nonzero manager balanc
 
 Stop both settlers. `HOOK_CONFIGURATION_CHANGED` covers active curves/depths and every pending fee/depth governance record even when Hook bytecode is unchanged. Runtime checks cover manager, NARA, USDC, Hook, Vault, Compounder, Safe, PoolManager, PositionManager, Permit2, and the code-hash-bound dependency reader on all three providers. USDC checks also cover proxy implementation/admin slots, implementation hash, admin/owner/pauser/blacklister, pause state, and blacklist state for every monitored actor. Compare the current typed read set to immutable receipt/strategy evidence and the hash-pinned production core manifest. Treat any mismatch as a production incident; never update an expected value merely to silence an alert. Monitoring cannot repair incompatible token behavior, so size tactical exposure for this external liveness risk.
 
+### Blocked nonce lineage recovery
+
+This procedure covers three reason codes:
+
+- `SETTLEMENT_NONCE_LINEAGE_BLOCKED`: no provider has a receipt for the retained transaction, and a racing settle or cancel has already made all of its orders terminal.
+- `SETTLEMENT_TRANSACTION_DROPPED`: the retained transaction is unknown to all three providers, its nonce is unconsumed, its orders are still active, and it is older than `SETTLER_PENDING_DROP_AFTER_MS`.
+- `PENDING_NONCE_CONSUMED_UNKNOWN_TRANSACTION`: the orders are still active and all three providers report the wallet nonce above the retained nonce, but none of them knows the retained transaction or has a receipt for it. If the orders are already terminal, the same situation is reported as `SETTLEMENT_NONCE_LINEAGE_BLOCKED`, which step 5 catches.
+
+In each case the instance keeps exactly one signed settlement in its pending journal. It will not sign anything else until a canonical receipt for that exact hash has `CONFIRMATIONS` confirmations on all three providers. It keeps sweeping and re-alerting, but its automated settlement is halted and nothing clears on its own.
+
+Page and keep redundancy:
+
+1. Page the on-call operator on the first occurrence.
+2. Keep the second, independent instance running throughout. It has its own key, state volume, and nonce lineage, and it can settle every order because settlement is permissionless. Before touching the blocked instance, confirm the other instance's recent heartbeats and `sweep_complete` logs. If both instances are blocked, or the second instance does not exist, automated settlement is down: escalate, and use the manual path under "Disaster recovery and decommissioning" for any order that must be crystallized.
+3. Do not redeploy onto fresh storage, wipe the volume, or edit, move, or delete the pending journal or the high-water file. Never sign a replacement, cancellation, or nonce-burn transaction with the settler key; a new signature at the retained nonce recreates the replay risk this state exists to prevent.
+
+Identify the retained transaction:
+
+4. Take `transactionHash`, `nonce`, `orderIds`, and `terminalStatus` from the latest `settlement_nonce_lineage_retained` log (blocked) or `settlement_dropped_nonce_retained` log (dropped). For a consumed nonce, read the same fields from the pending journal on the volume. Never copy the journal's `rawTransaction` field into tickets, chat, or evidence stores.
+5. On an independently administered explorer or RPC, confirm that no transaction with that hash is mined and that the wallet's mined-transaction count equals the retained nonce. For a blocked lineage, also confirm every listed order is terminal (status 2 settled or 3 cancelled). If the wallet's count is already above the retained nonce, go to "Consumed nonce" below.
+
+What the exact rebroadcast does: it re-submits the journal's signed bytes unchanged. For a blocked lineage the orders are already terminal, so the transaction is mined and reverts. That consumes the nonce at a gas cost bounded by the signed gas limit and maximum fee, which `SETTLER_MAX_GAS_LIMIT` and `SETTLER_MAX_FEE_PER_GAS_WEI` capped at signing. For a dropped transaction whose orders are still active, it settles them, or reverts the same way if they are no longer settleable. Either receipt unblocks the lineage.
+
+Rebroadcast the exact persisted raw bytes:
+
+6. Run the helper with the affected instance's own environment, on its own provisioned volume, passing the hash from step 4. On Railway, open a shell in the running service with `railway ssh` and run these two commands (`/app` is the image's working directory):
+
+   ```bash
+   cd /app
+   node_modules/.bin/tsx services/v4-treasury-range-settler/src/rebroadcastPendingCli.ts --transaction-hash=0xHASH_FROM_STEP_4
+   ```
+
+   On a systemd host, for instance `a`:
+
+   ```bash
+   sudo systemd-run --uid=nara-settler --gid=nara-settler --property=EnvironmentFile=/etc/nara/v4-range-settler-a.env --working-directory=/opt/nara/nara-protocol-hardhat --wait --pipe --quiet /opt/nara/nara-protocol-hardhat/node_modules/.bin/tsx services/v4-treasury-range-settler/src/rebroadcastPendingCli.ts --transaction-hash=0xHASH_FROM_STEP_4
+   ```
+
+   The helper never signs and never edits, raises, or clears local state. On success it logs `operator_exact_rebroadcast_submitted`. Otherwise it exits with status 1 and logs `operator_exact_rebroadcast_refused` with one of these reason codes:
+   - `PENDING_RECEIPT_ALREADY_PRESENT`: a receipt already exists. Go to step 8.
+   - `PENDING_TRANSACTION_STILL_PENDING`: a provider still holds the transaction, or the nonce is still pending. Wait, then retry the same command.
+   - `PENDING_NONCE_CONSUMED_UNKNOWN_TRANSACTION`: go to "Consumed nonce" below.
+   - `PENDING_STATE_ABSENT`, `PENDING_STATE_HASH_MISMATCH`, `PENDING_STATE_BINDING_MISMATCH`, `PENDING_STATE_MALFORMED`, or any `NONCE_HIGH_WATER_MARK_` or state-volume code: the journal is not the one that was reviewed. Stop and escalate.
+   - A runtime, binding, Hook, or USDC dependency code: follow "Hook/runtime/USDC dependency change". Never bypass it.
+   - A provider error, for example a signed maximum fee below the current Base base fee: record the code, wait, and retry the same command. Never re-price by re-signing.
+7. Manual equivalent, only if the helper cannot run: submit the journal's `rawTransaction` value unchanged through `eth_sendRawTransaction` on one independent Base RPC, and confirm the returned hash equals the journal's `transactionHash`. Never decode, edit, re-sign, or re-price it.
+
+Verify, reconcile, and clear:
+
+8. Leave the affected instance running; it re-checks on every sweep. Until the receipt is mined, a blocked lineage keeps reporting `SETTLEMENT_NONCE_LINEAGE_BLOCKED` and a rebroadcast dropped transaction reports `SETTLEMENT_TRANSACTION_PENDING`. Once the receipt has `CONFIRMATIONS` confirmations on all three providers, the instance verifies the exact transaction and then does one of three things:
+   - For a successful receipt, it logs `settlement_reconciled` and writes a durable record to the reconciliation directory.
+   - For a revert against terminal orders, it logs `settlement_terminal_race`.
+   - For a revert while the orders are still active, it raises `SETTLEMENT_TRANSACTION_REVERTED`. The lineage is still cleared; investigate the revert under "Settlement simulation/revert".
+
+   The pending journal is deleted only after that verification. The high-water file keeps the retained nonce and hash.
+9. Independently confirm on an explorer the receipt for the exact hash, its block and status, and that the wallet's mined-transaction count is now one above the retained nonce.
+10. Confirm recovery: the pending journal is gone, the high-water file still names the retained nonce, `sweep_complete` continues, and any next settlement is signed at a strictly higher nonce. Record the hash, receipt, and gas spent in the incident record.
+
+Consumed nonce (`PENDING_NONCE_CONSUMED_UNKNOWN_TRANSACTION`): some other transaction consumed the retained nonce, so the retained bytes can never be mined. The instance stays blocked and the helper refuses.
+
+1. Page, keep the second instance running, and stop the affected instance before changing anything on its volume. For systemd, run `sudo systemctl stop nara-v4-range-settler@a.service`; on Railway, stop the service's active deployment.
+2. Treat the event as a possible key compromise or shared key until proven otherwise. On an explorer, find the mined transaction from the settler wallet at the retained nonce, and establish who sent it and why. Possible causes are another instance configured with the same key, manual key use, or an unknown party.
+3. If the explorer shows the retained hash itself mined, the providers are failing to serve its receipt. Treat that as an RPC fault under "Stale RPC or disagreement", restart the instance on its unchanged volume, and let it reconcile once all three providers serve the receipt. Do not archive anything.
+4. Unless the consuming transaction is positively identified as an authorized action, rotate the key. Create a new dedicated gas-only key and `SETTLER_EXPECTED_ADDRESS`, fund only bounded gas, and retire the old wallet; sweep its residual ETH only through an approved process.
+5. Only after the consuming transaction has `CONFIRMATIONS` confirmations and is recorded as evidence, archive the retained journal by moving it off the active path. Never delete it. For systemd instance `a`, replace `NONCE` with the retained nonce:
+
+   ```bash
+   sudo mv /var/lib/nara-v4-range-settler/pending-a.json /var/lib/nara-v4-range-settler/archived-consumed-pending-a-nonce-NONCE.json
+   ```
+
+   On Railway, do the same move on the volume from a shell opened with the temporary start-command method in the service README. Leave the high-water file in place: it keeps the wallet from ever signing at or below that nonce again. After a key rotation, the new wallet gets its own high-water file, and the old one stays as evidence.
+6. Restart the instance and confirm `settler_starting`, clean sweeps, and that any next settlement is signed at a nonce above the retained one.
+
+### State volume and high-water refusals
+
+- `PENDING_STATE_DIRECTORY_MISSING`, `PENDING_STATE_VOLUME_SENTINEL_MISSING`, `PENDING_STATE_DIRECTORY_NOT_WRITABLE`, or the matching `RECONCILIATION_STATE_` code, logged at startup as `settler_fatal` or at runtime as `sweep_failed`. The related runtime events are `pending_state_persist_failed` (alert `PENDING_STATE_PERSIST_FAILED`) and `nonce_high_water_persist_failed`. The durable volume is not mounted where configured, or it changed underneath the service. Never create directories or sentinels to get the service running. Verify the mount and the configured paths, and verify that the existing pending journal, high-water file, and reconciliation records are present. If the original volume is intact, fix the mount and restart. If the volume is lost, or its continuity cannot be proven, retire the gas key as described under "Provision each instance's state volume".
+- `NONCE_AT_OR_BELOW_HIGH_WATER_MARK`, with a `settlement_nonce_high_water_refusal` log. All three providers offered a nonce at or below one this wallet already signed. Possible causes are a reorg deeper than `CONFIRMATIONS`, a provider regression, or a pending journal removed by hand. Never lower, edit, or delete the high-water file. Look up the transaction the log names (`transactionHash`, `highWaterNonce`). If it is pending or being re-included, wait for it to be mined. If a journal was removed by hand, restore it unchanged from its archive so the normal lineage path resumes. If the named transaction cannot be accounted for, retire the gas key.
+- `NONCE_HIGH_WATER_MARK_CONFLICT`, `NONCE_HIGH_WATER_MARK_MALFORMED`, `NONCE_HIGH_WATER_MARK_BINDING_MISMATCH`, `PENDING_STATE_MALFORMED`, or `PENDING_STATE_BINDING_MISMATCH`. The durable state contradicts itself or belongs to another wallet or manager. Stop the instance, preserve every file as evidence, and escalate. Never hand-edit these files.
+
 ## Cancellation and creation pause
 
 Cancellation is Safe-only and is not an incident shortcut. Specify raw minimums for both assets and a concrete review reason:
@@ -171,10 +271,10 @@ Never use the PoolManager's global ERC-20 balances as this pool's reserves.
 
 ## Disaster recovery and decommissioning
 
-If both settlers fail, keep the manager unchanged. Anyone can manually call `settle`/`settleMany` after independent simulation because settlement authority is permissionless and the recipient is immutable. A manual sender needs gas only. Do not share service private keys or grant admin roles.
+If an instance's state volume is lost or replaced, do not restart its gas key on fresh state; see "State volume and high-water refusals". If both settlers fail, keep the manager unchanged. Anyone can manually call `settle`/`settleMany` after independent simulation because settlement authority is permissionless and the recipient is immutable. A manual sender needs gas only. Do not share service private keys or grant admin roles.
 
 For decommissioning: pause creation by an approved Safe action, cancel or settle every active order with reviewed minimums, require `activeOrderCount()==0`, reconcile all registered/unregistered NFT ownership, directly require every allowance amount to be zero, record any forceable manager NARA/USDC dust without treating it as a decommissioning blocker, stop/disable both units, revoke the secret-manager entries, sweep only residual ETH from gas wallets using an approved operational process, and archive final evidence. There is no manager upgrade or arbitrary asset-recovery path.
 
 ## Evidence preservation
 
-Retain immutable copies of the origin commit and live upstream attestation, strategy manifest/hash, exact USDC proxy/implementation/reader and control-state evidence, Safe JSON/review, pre-signing block/hash/timestamp/slot0/Hook reads, Safe nonce/hash, human approvals, pre-broadcast signed-transaction intent record, transaction/receipt hashes, durable reconciled accounting, deployed runtime/bindings, service version/config key names (never values), heartbeat/alert history, and every settlement reconciliation. Treat pending raw-transaction files as sensitive operational material even though they cannot spend outside their exact signed call. Never delete a retained signed nonce lineage merely because configured providers report it dropped or its orders became terminal. Mark unsigned, expired, superseded, failed, or crash-leftover artifacts explicitly `DO-NOT-IMPORT`.
+Retain immutable copies of the origin commit and live upstream attestation, strategy manifest/hash, exact USDC proxy/implementation/reader and control-state evidence, Safe JSON/review, pre-signing block/hash/timestamp/slot0/Hook reads, Safe nonce/hash, human approvals, pre-broadcast signed-transaction intent record, transaction/receipt hashes, durable reconciled accounting, deployed runtime/bindings, service version/config key names (never values), heartbeat/alert history, and every settlement reconciliation. Treat pending raw-transaction files as sensitive operational material even though they cannot spend outside their exact signed call. Never delete a retained signed nonce lineage merely because configured providers report it dropped or its orders became terminal; a journal may only be archived by moving it, and only through the consumed-nonce procedure. Never edit, lower, or delete a nonce high-water file, and never create a state-volume sentinel except when provisioning the intended persistent volume. Mark unsigned, expired, superseded, failed, or crash-leftover artifacts explicitly `DO-NOT-IMPORT`.

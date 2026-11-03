@@ -23,21 +23,24 @@ documentation use `NARA`. Public market-oriented copy may use `$NARA`.
 Name and symbol are not unique identifiers. The fresh v4 contract address is
 the canonical token identity:
 
-- fresh v4 token: `0xB6333F5D4cEd8dffA80F3F13697D6aA3BB3f19c1`;
+- canonical v5 token: `0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f`;
 - immutable origin commit:
   `027af3f06bbe6dea2c187dfd8062e50c228f1c35`; and
 - manifest: `deployments/v4-base-usdc-latest.json`.
 
-Earlier Base deployments remain retired and
+Earlier Base deployments remain permanently retired and
 must never be used as fallbacks:
 
-- v3 token: `0xE444de61752bD13D1D37Ee59c31ef4e489bd727C`
+- retired August 2026 token:
+  `0xB6333F5D4cEd8dffA80F3F13697D6aA3BB3f19c1`
 - retired incident-stack v4 token:
   `0x58c209B95350aFBEFa17137CEd209f8c4b7D896D`
 - retired controlled Stage A token:
   `0x65E247AA3aa9C0131b2984b894c3D24c41341D7A`
+- v3 token: `0xE444de61752bD13D1D37Ee59c31ef4e489bd727C`
 
-The fresh address is recorded in `docs/CURRENT_STATE.md` and the protocol
+The fresh address `0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f` is the SOLE, EXCLUSIVE
+canonical token recorded in `docs/CURRENT_STATE.md` and the protocol
 deployment manifests. Each downstream consumer must trace its configuration to
 an immutable handoff and exact protocol origin; no planned, local, or
 conversation-derived address may replace it.

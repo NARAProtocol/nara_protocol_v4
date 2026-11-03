@@ -27,7 +27,7 @@ executed the reviewed atomic `60,000 NARA` / `300 USDC` pool activation.
 | Component | Address |
 |---|---|
 | `NARALauncher` | `0xb8CF0274d0Fb2dB2Ba5dC58b0Ab378F3b8f35BA2` |
-| `NARAToken` | `0xB6333F5D4cEd8dffA80F3F13697D6aA3BB3f19c1` |
+| `NARAToken` | `0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f` |
 | `NARAEngine` | `0x98ab6406D6B548F37dEF7110961bb45A399e5aFC` |
 | `NARARewardReserve` | `0x8369CEf28128A4B24Bc5ed52aA6196D92D563F2f` |
 | `NARALiquidityGrowthVault` | `0xD7f7b44BF65EBa3E90fDe0642687ed22A323084D` |

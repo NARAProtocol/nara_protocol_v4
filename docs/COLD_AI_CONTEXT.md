@@ -10,13 +10,21 @@ This is a context-loss-safe summary for agents entering the NARA workspace.
 
 ## Non-negotiable state
 
-- NARA is v4-only. `contracts/v4/` is the sole active Solidity source.
-- The experimental V5 stack, tests, scripts, and release plans are deleted.
+- **v4 is RETIRED and strictly READ-ONLY:** `contracts/v4/` is permanently frozen and cryptographically locked (`npm run verify:frozen-v4`). Zero fixes, zero edits, zero mutations across any file in `contracts/v4/`.
+- **v5 is the EXCLUSIVE ACTIVE development stack. Only the token `0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f` and the emission Reserve `0xf932178F24b0813C82093985F0Af6Db27Ae25930` are deployed.**
+  - The candidate source is **not** this checkout's `contracts/v5/`, which is a stale partial snapshot. It is `../.worktrees/nara-v5-engine-production-20260923/contracts/v5/`.
+  - Read that worktree's `docs/v5/LAUNCH_WIRING_STATUS.md` first. The 2026-09-24 audit verdict is NO-GO as-is.
+  - Actual modules:
+    - financial graph: `NARAEpochEngineV5`, `NARAPrincipalLedgerV5`, `NARARewardLedgerV5`, `NARARewardIngressV5`, `NARAEmissionModelV5`, `NARAEmissionReserveV5`;
+    - receipt: `NARAPositionNFTV5`;
+    - fee layer: `NARAFeeVaultV5`, `NARALiquidityHookV5`, `NARAPoolOracleV5`, `NARAPOLPositionV5`, `NARACapitalBudgetV5`, `NARACapitalPolicyV5`.
+  - Approved but **not yet implemented**: 100X rarity awards, paid rolls, 5-input fusion.
+  - Hook and LP fees start 100% POL.
+  - `NARAEngineCore` / `NARACardForge` / `NARAFleetDeckLens` do not exist in V5 source.
+- v4's deployed contracts are bound on-chain to a retired v4-era token, not to the V5 token.
 - v3 is retired and frozen under `archive/legacy-v3/`.
-- Do not edit `NARAEngine.sol` or `NARAPositionNFTV4.sol` without an explicit
-  user instruction naming that core contract.
 - Do not deploy, send transactions, perform production writes, or request
-  private keys.
+  private keys without explicit human approval.
 - Use generated v4 artifacts from an immutable reviewed commit and a verified
   manifest for integrations.
 - The basket frontend remains preview-only until its own verified deployment
@@ -74,6 +82,12 @@ This is a context-loss-safe summary for agents entering the NARA workspace.
   - Read Lens: `NARAFleetDeckLensV1` (`0x4B097067106623185aE32Cd9c2463Bb4143Fb516`) computing deck synergy tiers, formation bonuses, and genesis aura.
   - On-Chain State: `nextTokenId = 60` (tokens #1–#59 minted; Gen-0 grandfathering for #1–#47, calibrated 5-alloy lottery for #48+). Over `13,412 NARA` is actively committed in `NARAEngine`.
   - Canonical Frontend: `tools/nara-landing` is integrated and active (`CommitStation`, `GridStation`, `GridDeckStation`, `VaultStation`).
+- **Matrix Multi-Wallet Fleet & Capital Management (ACTIVE & CAPITAL-CRITICAL):**
+  - 100 wallets (`#0` to `#99`) hold real funds on Base Mainnet: **$1,989.36 USDC + 0.0216 ETH** across 71 funded wallets (Wallet `#99` holds **$813.83 USDC**).
+  - Keystore: `scripts/wallet-fleet/.fleet-wallets.json`.
+  - Management UI: `apps/locked-eth-ui/server.mjs` (`http://127.0.0.1:5173/?tab=fleet`).
+  - 1-Click Launcher: `RUN-NARA-100-BUY-MATRIX.cmd`.
+  - Non-Negotiable Fund Invariant: Sweep USDC/NARA first, auto-sponsor gas if needed from Relayer `0x9d71...`, sweep ETH last. Real funds must NEVER get trapped.
 
 `NARAPositionRendererV5` is the historical name of the modular renderer revision
 inside the v4 contract family. It is not a protocol V5 stack.
@@ -124,7 +138,7 @@ inside the v4 contract family. It is not a protocol V5 stack.
 
 - Core addresses:
   - Launcher: `0xb8CF0274d0Fb2dB2Ba5dC58b0Ab378F3b8f35BA2`
-  - Token: `0xB6333F5D4cEd8dffA80F3F13697D6aA3BB3f19c1`
+  - Token: the retired v4-era token (listed as retired in workspace `AGENTS.md`). The v4 Engine, Hook, Vault and NFT are bound to it on-chain (checked at Base block about 51.7M). It is **not** the canonical V5 token `0x91FB…ae0f`.
   - Engine: `0x98ab6406D6B548F37dEF7110961bb45A399e5aFC`
   - Reward reserve: `0x8369CEf28128A4B24Bc5ed52aA6196D92D563F2f`
   - Vault: `0xD7f7b44BF65EBa3E90fDe0642687ed22A323084D`

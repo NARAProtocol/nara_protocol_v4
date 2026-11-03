@@ -11,7 +11,7 @@
 1. [AMM Mechanics & The Uniswap v4 Dynamic Anti-MEV Shield](#1-amm-mechanics--the-uniswap-v4-dynamic-anti-mev-shield)
 2. [Anti-Sniper Protection, Project-Funded Floor & Whale-Immunity Architecture](#2-anti-sniper-protection-project-funded-floor--whale-immunity-architecture)
 3. [Liquidity, Rug-Pull Resistance & Permanent POL](#3-liquidity-rug-pull-resistance--permanent-pol)
-4. [The Autonomous Range Ranger & Market-Making Engine](#4-the-autonomous-range-ranger--market-making-engine)
+4. [Treasury Range Program (Retired)](#4-treasury-range-program-retired)
 5. [Token Supply, Macroeconomics & Dilution Fears](#5-token-supply-macroeconomics--dilution-fears)
 6. [Locking, Conviction Multipliers & Capital Liquidity](#6-locking-conviction-multipliers--capital-liquidity)
 7. [Multisig Custody, Governance Knobs & Security Audits](#7-multisig-custody-governance-knobs--security-audits)
@@ -64,9 +64,8 @@ In typical token launches, snipers and cabals buy early for pennies and dump on 
 **The Technical Reality:**  
 Standard crypto launches fail because of the **"Block-0 Sniper Trap"**: bots pay high priority gas to buy 30%–50% of the pool before real humans can transact. They hold the token hostage and dump the moment retail volume enters.
 NARA neutralized this vulnerability:
-1. **The Project Absorbed the Early Volatility:** Rather than opening an empty pool to predatory snipers, the protocol funded initial liquidity testing and burst buys itself.
+1. **The Project Absorbed the Early Volatility:** Rather than opening an empty pool to predatory snipers, the protocol funded initial liquidity testing and deployment-time market operations itself.
 2. **Tokens Converted to Permanent Protocol Assets:** Tokens acquired during testing were not transferred to personal dev wallets. They were routed directly into `NARALiquidityCompounderV4.sol` as permanent LP or into the dedicated Treasury Range Safe (`0x5050...245`) as maker inventory.
-3. **Real Cash Floor Created:** Every dollar of USDC spent by the project remains inside the Uniswap v4 pool and Treasury Safe, backing a dense support floor that protects early retail buyers from catastrophic down-wicks.
 
 ---
 
@@ -78,7 +77,7 @@ Because no whale or sniper was able to accumulate a large bag. The only entity h
 To dump on a community, a whale must first acquire tokens cheaply. In NARA:
 - **Snipers were blocked by the Dynamic Anti-MEV Shield:** Any sniper attempting to buy a massive slice of supply in Block-0 faced up to 20.00% fees, with 100% of those fees seized by the protocol vault.
 - **Supply Was Not Sold to VCs or Insiders:** There were zero seed rounds, zero private SAFTs, and zero insider presale allocations.
-- **The Largest Wallets are Open-Source Code:** The "whales" holding 89%+ of the supply are immutable smart contracts with no human `transfer()` backdoors. The contracts have strict rules: they can only drip emissions over years or deploy buy walls under spot price.
+- **The Largest Wallets are Open-Source Code:** The "whales" holding 89%+ of the supply are immutable smart contracts with no human `transfer()` backdoors. The contracts have strict rules: they can only drip emissions over years.
 
 ---
 
@@ -89,7 +88,7 @@ Dev accumulation goes to private wallets to sell for personal gain. NARA's proje
 **The Technical Reality:**  
 Anyone can verify this on BaseScan right now:
 1. **Permanent POL (`NARALiquidityCompounderV4.sol`):** The LP NFT (`#2898486`) is held directly by the Compounder contract. It has no owner drain function. Liquidating it requires an irreversible 7-day timelock (`RECOVERY_DELAY = 7 days`).
-2. **Treasury Range Safe (`0x5050BC6dc3E07313D52D05cecD53f727D6CDa245`):** Tokens held in the Range Safe can only be deployed as limit orders via `NARATreasuryRangeManagerV1.sol`. Every execution ends with `assertOperationalClean()`.
+2. **Treasury Range Safe (`0x5050BC6dc3E07313D52D05cecD53f727D6CDa245`):** Used by the retired v4 range program; see [section 4](#4-treasury-range-program-retired).
 3. **Zero Developer Sell Dumps:** The team holds zero liquid trading tokens. The 4% team allocation is timelocked under multi-year vesting. There is no mechanism or incentive for the team to dump, because the team's tokens cannot be moved.
 
 ---
@@ -98,7 +97,7 @@ Anyone can verify this on BaseScan right now:
 **The Short Answer:**  
 Check the BaseScan Token Holders tab. Over 89% of the supply is locked in public smart contracts. The liquid free float is under 10%, split across decentralized users and permanent liquidity.
 
-**The Technical Reality (On-Chain Supply Breakdown Matrix):**
+**The Technical Reality (On-Chain Supply Breakdown):**
 
 | Allocation / Holder | NARA Amount | % of Supply | On-Chain Contract / Custodian | Can It Dump on the Market? |
 | :--- | :---: | :---: | :--- | :---: |
@@ -106,9 +105,9 @@ Check the BaseScan Token Holders tab. Over 89% of the supply is locked in public
 | **Bond Depository** | `200,000 NARA` | 20.0% | `NARABondVaultV4` | **NO.** Custody for future bond tranches; gated by 7-day timelocks. |
 | **Permanent POL** | `~45,000 NARA` | ~4.5% | [`NARALiquidityCompounderV4`](https://basescan.org/address/0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF) | **NO.** Full-range Uniswap v4 LP NFT `#2898486`; timelocked. |
 | **Team Vesting** | `40,000 NARA` | 4.0% | Multisig Vesting Timelock | **NO.** Multi-year non-market locked float. |
-| **Active Range Inventory** | `12,183 NARA` | ~1.2% | [Treasury Range Safe](https://basescan.org/address/0x5050BC6dc3E07313D52D05cecD53f727D6CDa245) | **NO.** Dedicated maker inventory deploying buy/sell support grids. |
+| **Range Safe Inventory** | — | — | [Treasury Range Safe](https://basescan.org/address/0x5050BC6dc3E07313D52D05cecD53f727D6CDa245) | Range program retired; see [section 4](#4-treasury-range-program-retired). |
 | **Public Circulating Float** | **`< 55,000 NARA`** | **< 5.5%** | Decentralized Holders & `NARAEngine` Locks | **NO WHALE WALLETS.** Max non-contract wallet holds < 1.5% of float. |
-| **Total Fixed Supply** | **`1,000,000 NARA`** | **100.0%** | [`NARAToken`](https://basescan.org/address/0xB6333F5D4cEd8dffA80F3F13697D6aA3BB3f19c1) | Hardcapped forever. Zero mint capability. |
+| **Total Fixed Supply** | **`1,000,000 NARA`** | **100.0%** | [`NARAToken`](https://basescan.org/address/0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f) | Hardcapped forever. Zero mint capability. |
 
 ---
 
@@ -156,23 +155,19 @@ A rigid 1-year lock is a dangerous DeFi anti-pattern that bricks protocols durin
 
 ### Q3.3: Does the protocol really "only build liquidity upwards"? How?
 **The Short Answer:**  
-Yes. Permanent POL strictly grows in depth, while the tactical market maker ratchets up price floors on every pump.
+Yes. Permanent POL strictly grows in depth.
 
 **The Technical Reality:**  
-The protocol operates two complementary liquidity mechanisms:
 1. **Permanent Base POL:** Collected AMM trading fees are compounded into permanent full-range liquidity units. The contract has minting routines but zero automatic burn routines. Total LP units strictly increase with every volume cycle.
-2. **The Tactical Floor Ratchet (Range Ranger):** When market buying spikes spot price, the Range Ranger sells NARA for USDC at premium prices. It then immediately takes ~70% of that fresh USDC and deploys a dense bid wall just 2.0% to 2.5% below the new high. This locks in the price progress and prevents the token from round-tripping back to previous lows.
 
 ---
 
 ### Q3.4: What happens if a whale dumps a massive bag of NARA all at once?
 **The Short Answer:**  
-The Hook forces the whale to fund protocol reserves, while multi-tiered support absorbs the impact.
+The Hook forces the whale to fund protocol reserves.
 
 **The Technical Reality:**  
 1. **Dynamic Fee Interception:** A large market dump in a single block pushes the Hook's sell fee curve to its maximum 20.00% cap. Up to 20% of the dump is instantly stripped in NARA tokens and routed directly into protocol custody.
-2. **5-Tier Deep Support:** The Range Ranger's buy orders step down progressively (stretching down to -35% to -50% below spot). The dump does not hit an empty order book; it sells into cash-backed USDC limit bids.
-3. **65% Reserve Preservation:** The Treasury Safe only exposes ~35% of its USDC at any time. The protocol retains 65% in reserve, ensuring it has deep ammunition to accumulate cheap tokens at the bottom.
 
 ---
 
@@ -200,88 +195,9 @@ No. Idle banked tokens are locked under the exact same irreversible 7-day timelo
 
 ---
 
-### Q3.7: The Compounder is locked behind 7 days, but what about the Range Ranger's liquidity? Can it pull USDC bids during a dump?
-**The Short Answer:**  
-No. The Range Ranger is architected specifically to *expand* buy support deeper during selloffs, not withdraw liquidity.
+## 4. Treasury Range Program (Retired)
 
-**The Technical Reality:**  
-- **Two Distinct Liquidity Layers:**
-  - **Base Layer (POL):** 100% committed in `NARALiquidityCompounderV4.sol` with the 7-day timelock. It remains anchored to permanently underpin the market.
-  - **Tactical Layer (Treasury Range Manager):** Automated on-chain limit orders managed by `NARATreasuryRangeManagerV1.sol` through Safe `0x5050...`.
-- **Behavior During Dumps:** Under net sell pressure (`SELL_PRESSURE`), the runtime engine's mathematical algorithm automatically widens buy brackets down to $-35\%$ and $-50\%$ below spot. Its algorithmic mandate is to absorb sell volume into cash-backed USDC limit bids and accumulate discounted NARA for the Treasury.
-- **Dry Powder Invariant:** The Range Ranger only commits ~35% of available USDC at any time. It keeps ~65% in liquid reserve so that it cannot be drained by market swings and always has capital ready to buy lower tiers.
-- **100% On-Chain Visibility:** Every single order is a transparent on-chain limit order. Users can verify live bids and asks on BaseScan or in Telegram via `/rangerorders`.
-
----
-
-## 4. The Autonomous Range Ranger & Market-Making Engine
-
-### Q4.1: Is the Range Ranger bot trading against users or running toxic MEV?
-**The Short Answer:**  
-No. The Range Ranger is a non-custodial, open on-chain market maker that provides liquidity floors to protect holders.
-
-**The Technical Reality:**  
-- **Zero Sandwich Attacks / Zero Front-Running:** The Ranger does not monitor the mempool to front-run or sandwich retail trades. It deploys passive, transparent Uniswap v4 limit orders via `NARATreasuryRangeManagerV1.sol`.
-- **Zero Custodial Drift:** The contract holds zero persistent token balances. Every transaction batch concludes with `assertOperationalClean()`, returning all excess tokens to Safe custody.
-- **Support, Not Dumping:** The Ranger's primary role under buy pressure is building thick USDC bid floors *underneath* buyers, ensuring their purchases do not suffer catastrophic downward retracements.
-
----
-
-### Q4.2: Why are there stale sell orders sitting far above spot (e.g. at $0.17–$0.33)?
-**The Short Answer:**  
-They are intentional passive profit-taking limit orders positioned to capture parabolic pumps.
-
-**The Technical Reality:**  
-- Orders #51, #59, and #60 represent 15,000 NARA deployed between \$0.1728 and \$0.3324 (valued at over \$3,000 USDC if filled).
-- **Zero Gas Cost:** Once minted on-chain, resting orders cost zero maintenance gas.
-- **Moon-Pump Capture:** If an external whale or market event produces an aggressive upward wick, these orders fill instantly at 0ms latency, harvesting thousands of USDC directly into the Treasury Safe without requiring bot reaction time.
-- Cancelling them would burn Safe gas unnecessarily and surrender passive upside capture.
-
----
-
-### Q4.3: Can the Range Ranger run out of USDC during a sustained bear market?
-**The Short Answer:**  
-No. The engine enforces reserve caps and dynamic spacing to prevent exhaustion.
-
-**The Technical Reality:**  
-- **35% Active Cap:** The engine calculates dynamic budgets (`calculateDynamicBudgets`) and deploys at most ~35% of Safe USDC reserves. 65% remains untouched in Treasury Safe custody.
-- **Asymmetric Dump Skewing:** Under `SELL_PRESSURE`, the engine widens buy spacing down to -50%. It paces capital across deep discounts rather than exhausting USDC at local highs, acquiring maximum NARA per dollar spent.
-
----
-
-### Q4.4: Is the Range Ranger wash-trading to fake volume on DexScreener?
-**The Short Answer:**  
-No. The Range Ranger does not execute taker market swaps. It only places passive maker limit orders, meaning reported volume comes from real external market participants.
-
-**The Technical Reality:**  
-- **Maker vs Taker Architecture:** Wash trading requires a bot to trade against itself via repeated taker market swaps (`swap()`) to artificially inflate 24-hour volume numbers.
-- **Passive Liquidity Only:** `NARATreasuryRangeManagerV1.sol` only interacts with Uniswap v4 through single-sided liquidity positions (`addLiquidity` / `modifyLiquidities`). The contract does not invoke swap functions.
-- **External Counterparties:** When an order is filled, it is because an external buyer, trader, or DEX aggregator (like 1inch, Matcha, or Uniswap Universal Router) routed real retail capital through the pool.
-- **Verifiable On-Chain Receipts:** Every transaction executed by the Range Ranger is an atomic Safe MultiSend that updates tick boundaries. There are zero circular transfer loops or self-swaps.
-
----
-
-### Q4.5: Do the 5-tier sell orders create a heavy "sell wall" that suppresses price growth?
-**The Short Answer:**  
-No. Sell brackets scale exponentially with small token quantities, acting as volatility shock absorbers rather than price ceilings.
-
-**The Technical Reality:**  
-- **Strict Capital Bounding:** Across all 5 sell tiers combined, the Treasury Safe only deploys ~25% of its available NARA. Each individual tier holds only a modest fraction (e.g. 500 to 1,500 NARA).
-- **Exponential Price Spacing:** Under `BUY_PRESSURE`, the mathematical engine stretches sell brackets progressively wider (Tier 1 at $+3.0\%$ to $+5.0\%$, Tier 2 at $+12\%$, Tier 3 at $+25\%$, up to $+200\%$ or $3\times$ spot).
-- **Organic Flow Penetration:** Because the capital is distributed thinly across exponential price rungs, normal retail and organic market buying easily absorbs and clears each tier.
-- **Volatility Dampening:** The purpose of the sell brackets is not to stop rallies, but to prevent flash-wick MEV manipulation and ensure steady, orderly price discovery.
-
----
-
-### Q4.6: Where does the profit go when sell orders get filled at higher prices?
-**The Short Answer:**  
-100% of the USDC goes directly into the Treasury Safe, and ~70% is immediately redeployed as thick buy floors underneath the new price.
-
-**The Technical Reality:**  
-- **Zero Team Enrichment:** Filled sell orders accumulate USDC inside the position. When collected, this USDC transfers directly into the **Treasury Range Safe (`0x5050BC6dc3E07313D52D05cecD53f727D6CDa245`)**, protected by `assertOperationalClean()`. Zero funds ever route to private developer wallets.
-- **The Ratchet Mechanism:** The moment sell orders clear at higher prices, the Range Ranger's automated rebalancer detects the increased USDC balance and the higher spot price.
-- **Instant Floor Deployment:** Under `BUY_PRESSURE`, the algorithm allocates ~70% of available buy capital into **Tier 1 and Tier 2 buy walls positioned just 2.0% to 2.5% below the new spot price**.
-- **Permanent Upward Progress:** In effect, every pump is converted into permanent, cash-backed price protection, locking in the gains and preventing the price from crashing back to previous levels.
+**Notice (2026-09-24):** The v4 treasury range program (Treasury Range Manager V1, `0xd58afa5eaB20B0ED287851Cf98f359AdEd58a69C`, and the "Range Ranger" automation) is retired. Order creation has been paused on-chain since Base block 51,294,195, and no orders are active. Earlier descriptions of this program's reserve ratios, price floors or support, execution checks and trade counterparties are withdrawn pending review.
 
 ---
 
@@ -393,12 +309,11 @@ Yes. Transferring or selling a Position NFT transfers the entire position off-DE
 
 ### Q7.1: Why is the Treasury Range Safe 1-of-1? Isn't that a single point of failure?
 **The Short Answer:**  
-It is a strictly bounded canary safe that holds only tactical trading inventory, not protocol ownership.
+It served the v4 range program, which is retired; see [section 4](#4-treasury-range-program-retired).
 
 **The Technical Reality:**  
-- **Role Separation:** The core protocol ownership, contracts, and parameters are held by the **Protocol 2-of-3 Safe (`0xd65c0e390Dc187A22c52c03816591CC736C0D755`)**.
-- The 1-of-1 Safe (`0x5050BC6dc3E07313D52D05cecD53f727D6CDa245`) holds only tactical rebalance capital (~$1,300 USDC and ~12,000 NARA). It holds zero administrative power over the token, engine, or hook.
-- A 1-of-1 threshold was chosen for this canary stage to enable the 24/7 autonomous watcher to rebalance ranges in volatile blocks without requiring multiple human signers. Transition to an automated multisig/guard module is part of the growth roadmap.
+- The core protocol ownership, contracts, and parameters are held by the **Protocol 2-of-3 Safe (`0xd65c0e390Dc187A22c52c03816591CC736C0D755`)**.
+- The 1-of-1 Safe (`0x5050BC6dc3E07313D52D05cecD53f727D6CDa245`) holds zero administrative power over the token, engine, or hook.
 
 ---
 
@@ -409,7 +324,7 @@ Yes, rigorously audited through a 6-specialist automated pipeline, formal fuzz t
 **The Technical Reality:**  
 - **Codex 6-Specialist Pipeline:** Analyzed via multi-agent security pipeline covering reentrancy, access control, arithmetic, MEV resistance, and replay protection.
 - **Formal Verification & Fuzzing:** Hardhat test suites (784+ tests), Foundry fork tests, Slither static analysis, Aderyn, and Echidna property-based fuzzing.
-- **Live Mainnet Adversarial Testing:** The 21-case live same-block tax matrix and cross-pool MEV arbitrage interception proved on-chain that hook fees cannot be bypassed.
+- **Live Mainnet Adversarial Testing:** Receipt-pinned live stress-testing and cross-pool MEV arbitrage interception proved on-chain that hook fees cannot be bypassed.
 - *Transparent boundary:* While internal and automated audit coverage is exhaustive, external third-party firm audits remain on the public roadmap as the protocol matures.
 
 ---
@@ -425,16 +340,11 @@ Yes, rigorously audited through a 6-specialist automated pipeline, formal fuzz t
 | **"Why not lock liquidity for 1 year on Uncx/PinkLock?"** | "A 1-year rigid lock bricks the project if Uniswap v4 upgrades or has a bug. Our 7-day on-chain timelock gives holders 168 hours (302k blocks) guaranteed exit warning while preserving critical disaster recovery." |
 | **"How do I know if liquidity is being unlocked?"** | "Automated Swarm telemetry monitors the contract 24/7; any proposal triggers an instant public alert across Telegram/Discord with a 168-hour countdown." |
 | **"Can the team steal the unpooled banked tokens?"** | "No. Banked tokens are locked under the exact same 7-day timelock and 2-of-3 multisig as the LP NFT. Zero instant sweep functions exist." |
-| **"Will the market maker pull bids during a dump?"** | "No. The engine automatically widens buy brackets down to -50% to absorb selling into cash-backed USDC limit orders." |
 | **"Am I trapped if I commit for a year?"** | "No. Positions are standard NFTs tradeable on OpenSea anytime, and the project treasury actively buys back positions for cash." |
 | **"Why are Position NFTs so valuable?"** | "100% on-chain generative luxury art (24K Gold, Damascus, Obsidian), living evolution with 10 ranks and claim scars, and sovereign token-bound accounts commanding permanent yield." |
 | **"Can I cash out without hurting the chart?"** | "Yes. Selling or transferring a Position NFT moves your entire position off-DEX with zero chart impact, zero slippage, and zero MEV front-running." |
 | **"Will farmers dump the 650k emission rewards?"** | "Impossible. Drip is micro-metered over years (~2.8 NARA per 15 min). Active cells dry up float, making compounding far more profitable than dumping." |
 | **"Why do rewards look slim right now?"** | "Slim only because price is early & low. Committing NARA eliminates market sells, driving an exponential supply squeeze where reward value skyrockets." |
 | **"Are VCs going to dump unlocks on us?"** | "Zero VCs. 65% of supply is mathematically sealed in a smart contract reserve that drips out over years." |
-| **"Is the market maker dumping on buyers?"** | "No. The bot places heavy USDC buy walls *underneath* buyers to prevent dumps and protect price floors." |
-| **"Is the bot wash-trading volume?"** | "No. The Range Ranger only places passive maker limit orders, not taker swaps. All reported volume comes from external buyers/traders." |
-| **"Do the 5-tier sell orders suppress price?"** | "No. Sell brackets stretch exponentially up to 3x spot with small token amounts (~25% of Safe NARA total) to dampen volatility without blocking rallies." |
-| **"Where does profit go when sells fill?"** | "100% of USDC flows to the Treasury Safe, and ~70% is immediately redeployed as thick bid floors 2% below the new high to lock in progress." |
 | **"Can the owner mint more tokens?"** | "No. Total supply is hardcapped at 1,000,000 NARA forever. The contract has zero mint functions." |
 | **"Where does the yield come from?"** | "Zero token printing. Yield comes from pre-minted reserve drip plus 100% real ETH/USDC cash resources from swaps, bonds, and baskets." |

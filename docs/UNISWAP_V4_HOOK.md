@@ -52,7 +52,7 @@ evidence, and remaining limitations.
 
 | Item | Value |
 |---|---|
-| NARA | `0xB6333F5D4cEd8dffA80F3F13697D6aA3BB3f19c1` |
+| NARA | `0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f` |
 | Vault | `0xD7f7b44BF65EBa3E90fDe0642687ed22A323084D` |
 | Hook | `0x59AEf9799DEA01A7FB7dA73BEA10dfB08858A088` |
 | Compounder | `0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF` |
