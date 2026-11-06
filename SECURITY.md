@@ -29,7 +29,7 @@ qualified legal review. Canonical state and addresses are maintained in
 Do not open a public issue, pull request, discussion, or social-media post for a
 suspected exploitable vulnerability.
 
-Email: **security@naraprotocol.pro**
+Email: **security@naraprotocol.io**
 
 Include, when possible:
 

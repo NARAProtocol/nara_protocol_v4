@@ -19,7 +19,7 @@ unresolved vulnerability, or sustained disruption of project spaces.
 
 ## Enforcement
 
-Report conduct concerns privately to **security@naraprotocol.pro**. Include links
+Report conduct concerns privately to **security@naraprotocol.io**. Include links
 or screenshots when useful, but do not send unnecessary personal data.
 
 Maintainers may edit or remove contributions, comments, issues, or other

@@ -70,7 +70,7 @@ export default function Footer({ onOpenLegal, className = "" }: FooterProps) {
               address: PROTOCOL_CONSTANTS.tokenContract,
               symbol: "NARA",
               decimals: 18,
-              image: "https://naraprotocol.com/nara_token_256.png",
+              image: "https://naraprotocol.io/nara_token_256.png",
             },
           },
         });

@@ -11,7 +11,7 @@ async function run() {
   await page.locator("nav.tabs button:has-text('NFTs')").click();
   await page.waitForTimeout(3000);
   
-  const screenshotPath = "c:/Users/linas/.gemini/antigravity/brain/734e74a5-802d-4d9d-b67b-b10590ac951c/live_console_nft_tab.png";
+  const screenshotPath = "./live_console_nft_tab.png";
   await page.screenshot({ path: screenshotPath, fullPage: true });
   console.log(`Saved screenshot to ${screenshotPath}`);
   
