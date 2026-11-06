@@ -135,7 +135,7 @@ export default function NaraSwap() {
               address: NARA_TOKEN_ADDRESS,
               symbol: "NARA",
               decimals: 18,
-              image: "https://naraprotocol.com/nara_token_256.png",
+              image: "https://naraprotocol.io/nara_token_256.png",
             },
           },
         });

@@ -1,36 +1,34 @@
-# NARA Protocol — Investor & Community Q&A Reference (Objections & Defenses)
+# NARA Protocol — Investor & Community Q&A Reference (V5 Canonical Objections & Defenses)
 
-> **Authoritative Q&A and Objection-Handling Manual**  
-> **Target Audience:** Investors, Whales, Community Members, Moderators, and AI Agents.  
+> **Authoritative Q&A and Objection-Handling Manual (V5 Launch Configuration — Equal-Footing Launch Mode)**  
+> **Target Audience:** Investors, Community Members, Moderators, and AI Agents.  
 > **Guiding Principle:** Total technical transparency, mathematical honesty, and zero promotional hyperbole.
 
 ---
 
 ## Quick Navigation
 
-1. [AMM Mechanics & The Uniswap v4 Dynamic Anti-MEV Shield](#1-amm-mechanics--the-uniswap-v4-dynamic-anti-mev-shield)
-2. [Anti-Sniper Protection, Project-Funded Floor & Whale-Immunity Architecture](#2-anti-sniper-protection-project-funded-floor--whale-immunity-architecture)
-3. [Liquidity, Rug-Pull Resistance & Permanent POL](#3-liquidity-rug-pull-resistance--permanent-pol)
-4. [Treasury Range Program (Retired)](#4-treasury-range-program-retired)
-5. [Token Supply, Macroeconomics & Dilution Fears](#5-token-supply-macroeconomics--dilution-fears)
-6. [Locking, Conviction Multipliers & Capital Liquidity](#6-locking-conviction-multipliers--capital-liquidity)
-7. [Multisig Custody, Governance Knobs & Security Audits](#7-multisig-custody-governance-knobs--security-audits)
-8. [Community Battlecards (5-Second Rapid FUD Dismantlers)](#8-community-battlecards-5-second-rapid-fud-dismantlers)
+1. [AMM Mechanics & Two-Phase Uniswap v4 Hook Fee Routing](#1-amm-mechanics--two-phase-uniswap-v4-hook-fee-routing)
+2. [Anti-Sniper Protection & Supply Custody (`99.9984%` Sealed)](#2-anti-sniper-protection--supply-custody-999984-sealed)
+3. [Liquidity, Rug-Pull Resistance & Two-Way Range Manager](#3-liquidity-rug-pull-resistance--two-way-range-manager)
+4. [Token Supply, Macroeconomics & Dilution Fears](#4-token-supply-macroeconomics--dilution-fears)
+5. [Committing NARA, CryptoSLIP `0.1 NARA` Grid & `5%` Secondary NFT Market](#5-committing-nara-cryptoslip-01-nara-grid--5-secondary-nft-market)
+6. [Multisig Custody, Governance Safeguards & Security Audits](#6-multisig-custody-governance-safeguards--security-audits)
+7. [Community Battlecards (5-Second Rapid FUD Dismantlers)](#7-community-battlecards-5-second-rapid-fud-dismantlers)
 
 ---
 
-## 1. AMM Mechanics & The Uniswap v4 Dynamic Anti-MEV Shield
+## 1. AMM Mechanics & Two-Phase Uniswap v4 Hook Fee Routing
 
-### Q1.1: Is NARA a "tax token"? Why are the Uniswap DEX swap fees higher than 0.30%?
+### Q1.1: Is NARA a "tax token"? Why are the Uniswap v4 pool swap fees ~`4.92%`?
 **The Short Answer:**  
-No. NARA has **zero transfer taxes** at the ERC-20 token contract layer. Wallet-to-wallet transfers, CEX deposits, and peer-to-peer sends are 100% fee-free (0% tax). 
+No. `NARATokenV5` (`0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f`) has **zero transfer taxes (`0%`)** at the ERC-20 token contract layer. Wallet-to-wallet transfers, CryptoSLIP off-DEX slip sends, and peer-to-peer transfers are 100% fee-free.
 
 **The Technical Reality:**  
-Fee dynamics exist exclusively inside the **Uniswap v4 AMM pool** via the canonical hook (`NARALiquidityGrowthHook.sol`). Standard AMMs allow predatory MEV bots and sandwich searchers to extract millions from retail traders. NARA's Uniswap v4 Hook implements **volume-responsive dynamic fees**:
-- Base swap fees: 3.00% Buy / 5.00% Sell.
-- If aggressive trading aggregates within the same 2-second block, fees scale dynamically up to an operational cap (12% buy / 20% sell).
-- **Block-0 Reset:** As soon as the next block arrives (every 2 seconds on Base), the fee resets to base levels.
-- Unlike scam tax tokens where fees go into private dev wallets, **100% of collected fees route into protocol custody** (`NARALiquidityGrowthVault.sol`) to compound permanent liquidity or pay direct cash dividends.
+Fee dynamics exist exclusively inside the **Uniswap v4 `USDC/NARA` pool** via `NARALiquidityHookV5` (`0x201fBD2839bEc513040024b37dAe97B401E96acC`):
+- **Base Swap Fee (Both Ways):** `4.63%` (`463 bps`) Hook fee + `0.30%` (`3000 pips`) Uniswap v4 LP fee = **`4.9161%` total each way** at the base tier.
+- **Same-Block Volume Tiers:** If large trading volume aggregates within the same 2-second Base block, fees step up progressively (`5% / 8% / 12% / 20%` on buys and `5% / 7% / 10% / 15%` up to `20%` max on sells) to deter single-block sandwiching and sniper sweeps.
+- **Block Reset:** As soon as the next block arrives, the fee resets to the base tier.
 
 ---
 
@@ -39,312 +37,124 @@ Fee dynamics exist exclusively inside the **Uniswap v4 AMM pool** via the canoni
 No. The smart contracts make a 100% fee mathematically and architecturally impossible.
 
 **The Technical Reality:**  
-1. **Hardcoded Bytecode Ceiling:** The Uniswap v4 Hook enforces a hardcoded bytecode cap of **20.00% (2,000 BPS)**. Any transaction attempting to set a fee above 20% reverts at the EVM opcode level.
-2. **7-Day Governance Timelock:** Any parameter change or fee curve update is governed by `FEE_UPDATE_DELAY = 7 days`. Even the administrative multisig must propose a change and wait a full 7 days before execution, giving the public full visibility and time to react.
+1. **Hardcoded Bytecode Ceiling:** `NARALiquidityHookV5` enforces an immutable maximum fee ceiling of **`20.00%` (`2,000 bps`)**. Any attempt to set a tier above `20%` reverts on-chain.
+2. **7-Day Governance Delay:** Any update to Hook fee parameters or routing splits is governed by a mandatory **7-day delay**, giving all participants 168 hours of public on-chain visibility before any parameter change can take effect.
 
 ---
 
-### Q1.3: Where do swap fees actually go? Does the team take a cut?
+### Q1.3: Where do swap fees actually go?
 **The Short Answer:**  
-Zero percent goes to team pockets. 100% of trading fees are captured by the protocol vault.
+Zero percent goes to private team pockets. **100% of Hook fees** route through verified protocol contracts in a two-phase lifecycle: first building permanent pool liquidity, and then streaming directly to committed `NARA` positions.
 
 **The Technical Reality:**  
-Trading fees are captured in input currency (USDC on buys, NARA on sells) directly into `NARALiquidityGrowthVault.sol`. The Vault has distinct immutable routes:
-1. **Permanent Protocol-Owned Liquidity (POL):** Drains into `NARALiquidityCompounderV4.sol` and is permanently added to full-range Uniswap v4 LP NFT `#2898486`.
-2. **Real-Yield Cash Dividends:** Routes USDC directly to `NARAGenesisRewardDistributorV4.sol`, streaming dividends in native USDC/ETH to conviction NFT lockers.
+1. **Phase 1 (Launch — 100% Protocol-Owned Liquidity):** At launch, **100% of Hook swap fees** (`USDC` on buys, `NARA` on sells) flow into `NARAFeeVaultV5` (`0xe63b4BaAF873FC57859bfe13e0e8cFccAaB6AddE`) to grow permanent Protocol-Owned Liquidity (`NARAPOLPositionV5` `0x01EF9de9f4e9197F2A3944b5B34A90eA2f558b64`).
+2. **Phase 2 (Once Liquidity Is Built — Direct Engine Rewards):** Once pool liquidity is established, the `Treasury Safe` shifts the Hook fee split (via a 7-day governance delay) through `NARAFeeIngressBindingV5` (`0x8f41d6427B25525fB863203c78FF9050B3bd0DBC`) into `NARARewardIngressV5` → `NARARewardLedgerV5`, distributing swap fees (`USDC` and `NARA`) to committed `NARA` positions every 15 minutes.
 
 ---
 
-## 2. Anti-Sniper Protection, Project-Funded Floor & Whale-Immunity Architecture
+## 2. Anti-Sniper Protection & Supply Custody (`99.9984%` Sealed)
 
-### Q2.1: Why was the initial liquidity floor bought by the project, and how does that protect early investors from bad actors?
+### Q2.1: How do we know no whale or insider can dump on the pool?
 **The Short Answer:**  
-In typical token launches, snipers and cabals buy early for pennies and dump on community buyers. NARA used project-funded capital to anchor a thick, cash-backed floor and lock every acquired token into immutable smart contracts, leaving zero cheap supply for predatory snipers to exploit.
+Check the BaseScan Token Holders tab. **`99.9984%` (`999,984 NARA`)** of the entire `1,000,000 NARA` fixed supply is held inside verified smart contracts on Base Mainnet.
 
-**The Technical Reality:**  
-Standard crypto launches fail because of the **"Block-0 Sniper Trap"**: bots pay high priority gas to buy 30%–50% of the pool before real humans can transact. They hold the token hostage and dump the moment retail volume enters.
-NARA neutralized this vulnerability:
-1. **The Project Absorbed the Early Volatility:** Rather than opening an empty pool to predatory snipers, the protocol funded initial liquidity testing and deployment-time market operations itself.
-2. **Tokens Converted to Permanent Protocol Assets:** Tokens acquired during testing were not transferred to personal dev wallets. They were routed directly into `NARALiquidityCompounderV4.sol` as permanent LP or into the dedicated Treasury Range Safe (`0x5050...245`) as maker inventory.
-
----
-
-### Q2.2: How do early project-funded buys guarantee that no whale or sniper can dump on us?
-**The Short Answer:**  
-Because no whale or sniper was able to accumulate a large bag. The only entity holding substantial tokens is the protocol's own smart contracts, which mathematically cannot dump on the market.
-
-**The Technical Reality:**  
-To dump on a community, a whale must first acquire tokens cheaply. In NARA:
-- **Snipers were blocked by the Dynamic Anti-MEV Shield:** Any sniper attempting to buy a massive slice of supply in Block-0 faced up to 20.00% fees, with 100% of those fees seized by the protocol vault.
-- **Supply Was Not Sold to VCs or Insiders:** There were zero seed rounds, zero private SAFTs, and zero insider presale allocations.
-- **The Largest Wallets are Open-Source Code:** The "whales" holding 89%+ of the supply are immutable smart contracts with no human `transfer()` backdoors. The contracts have strict rules: they can only drip emissions over years.
-
----
-
-### Q2.3: Isn't project-funded buying just "dev accumulation"? How do we know the team won't dump those tokens later?
-**The Short Answer:**  
-Dev accumulation goes to private wallets to sell for personal gain. NARA's project buys went into verified smart contracts with zero withdrawal functions, permanently locking in the floor.
-
-**The Technical Reality:**  
-Anyone can verify this on BaseScan right now:
-1. **Permanent POL (`NARALiquidityCompounderV4.sol`):** The LP NFT (`#2898486`) is held directly by the Compounder contract. It has no owner drain function. Liquidating it requires an irreversible 7-day timelock (`RECOVERY_DELAY = 7 days`).
-2. **Treasury Range Safe (`0x5050BC6dc3E07313D52D05cecD53f727D6CDa245`):** Used by the retired v4 range program; see [section 4](#4-treasury-range-program-retired).
-3. **Zero Developer Sell Dumps:** The team holds zero liquid trading tokens. The 4% team allocation is timelocked under multi-year vesting. There is no mechanism or incentive for the team to dump, because the team's tokens cannot be moved.
-
----
-
-### Q2.4: Show me the on-chain proof. How do I verify on BaseScan right now that no whale wallets exist?
-**The Short Answer:**  
-Check the BaseScan Token Holders tab. Over 89% of the supply is locked in public smart contracts. The liquid free float is under 10%, split across decentralized users and permanent liquidity.
-
-**The Technical Reality (On-Chain Supply Breakdown):**
+**The Technical Reality (Verified On-Chain Supply Breakdown):**
 
 | Allocation / Holder | NARA Amount | % of Supply | On-Chain Contract / Custodian | Can It Dump on the Market? |
 | :--- | :---: | :---: | :--- | :---: |
-| **Emission Reserve** | `650,000 NARA` | 65.0% | [`NARARewardReserve`](https://basescan.org/address/0x8369CEf28128A4B24Bc5ed52aA6196D92D563F2f) | **NO.** Sealed with `NaraSweepForbidden()`. Emits strictly via 15-min clock to lockers. |
-| **Bond Depository** | `200,000 NARA` | 20.0% | `NARABondVaultV4` | **NO.** Custody for future bond tranches; gated by 7-day timelocks. |
-| **Permanent POL** | `~45,000 NARA` | ~4.5% | [`NARALiquidityCompounderV4`](https://basescan.org/address/0xfeFcc45C0454D022586eaA8a5c51BD25DCe713DF) | **NO.** Full-range Uniswap v4 LP NFT `#2898486`; timelocked. |
-| **Team Vesting** | `40,000 NARA` | 4.0% | Multisig Vesting Timelock | **NO.** Multi-year non-market locked float. |
-| **Range Safe Inventory** | — | — | [Treasury Range Safe](https://basescan.org/address/0x5050BC6dc3E07313D52D05cecD53f727D6CDa245) | Range program retired; see [section 4](#4-treasury-range-program-retired). |
-| **Public Circulating Float** | **`< 55,000 NARA`** | **< 5.5%** | Decentralized Holders & `NARAEngine` Locks | **NO WHALE WALLETS.** Max non-contract wallet holds < 1.5% of float. |
-| **Total Fixed Supply** | **`1,000,000 NARA`** | **100.0%** | [`NARAToken`](https://basescan.org/address/0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f) | Hardcapped forever. Zero mint capability. |
+| **Emission Reserve** | `949,987.0 NARA` | `94.9987%` | [`NARAEmissionReserveV5`](https://basescan.org/address/0xf932178F24b0813C82093985F0Af6Db27Ae25930) | **NO.** Sealed (`coreBound = true`). Releases strictly via 15-minute epoch pulses to active positions. |
+| **Two-Way Range Manager** | `49,997.0 NARA` | `4.9997%` | [`NARATreasuryRangeManagerV5`](https://basescan.org/address/0xa72557fcBE56B3eC739dF3aF7b6b893B6Db4D288) | **NO.** Supplies two-way range liquidity (`NARA -> USDC` sell rungs & `USDC -> NARA` buy-back rungs); raw `NARA` withdrawals require a `7-day` delay (extendable to `1 year`). |
+| **Initial Seed LP** | `3.0 NARA` | `0.0003%` | [`Treasury Safe (2-of-3)`](https://basescan.org/address/0xe320C281c86079eA85f2Bc67864E873A61D551E3) | Paired with `300 USDC` at `100 USDC / NARA` to seed the Uniswap v4 pool. |
+| **Live E2E Verification** | `13.0 NARA` | `0.0013%` | `NARAPrincipalLedgerV5` & E2E verification wallets | **NO.** Zero VC, presale, or whale bags exist. |
+| **Total Fixed Supply** | **`1,000,000.0 NARA`** | **`100.0000%`** | [`NARATokenV5`](https://basescan.org/address/0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f) | Hardcapped forever (`0` owner, `0` mint capability). |
 
 ---
 
-### Q2.5: Why do you call the fee the "Uniswap v4 Dynamic Anti-MEV Shield" instead of a "token tax"?
+## 3. Liquidity, Rug-Pull Resistance & Two-Way Range Manager
+
+### Q3.1: How does `NARATreasuryRangeManagerV5` (`49,997 NARA`) work?
 **The Short Answer:**  
-Because it is not a token tax. Token taxes exist inside ERC-20 contracts and tax everyday transfers. NARA's shield is an advanced Uniswap v4 Hook that operates strictly on DEX swaps to penalize toxic MEV bots and reward long-term holders.
+`NARATreasuryRangeManagerV5` (`0xa72557fcBE56B3eC739dF3aF7b6b893B6Db4D288`) is a **two-way active range liquidity manager** holding `49,997 NARA`. It places `NARA` sell rungs above spot price to provide upside depth as price rises, and uses the collected `USDC` to place buy-back rungs below spot price on dips.
 
 **The Technical Reality:**  
-1. **Standard Transfers are 0% Tax:** Moving NARA between wallets, depositing to hardware cold storage, or transferring to a friend incurs exactly **0% fee**.
-2. **Uniswap v4 Native Hook:** The fee is computed and collected by `NARALiquidityGrowthHook.sol` inside Uniswap v4's pool lifecycle (`beforeSwap`).
-3. **Dynamic Same-Block Pressure:** Retail traders buying at normal intervals pay the standard low base fee (3% buy / 5% sell). Only aggressive, multi-transaction MEV bot runs or massive block-0 snipers pay the higher rate (up to 20%).
-4. **All Captured Value Builds the Floor:** Unlike scam tokens where taxes enrich the creator, 100% of the Anti-MEV Shield fees flow to the Vault to deepen permanent POL or pay real cash dividends to Genesis lockers.
+1. **Two-Way Range Liquidity:** Unlike static one-way walls, `NARATreasuryRangeManagerV5` supports both `NARA -> USDC` upside range bands and `USDC -> NARA` buy-back range bands inside the canonical Uniswap v4 pool.
+2. **7-Day `NARA` Withdrawal Delay (Extendable to 1 Year):** Any raw `NARA` withdrawal to the `Treasury Safe` is gated by a mandatory **`7-day` on-chain withdrawal delay** at launch so live operation can be verified cleanly. Once verified, this delay can be extended up to **`1 year` (`365 days`)** on-chain.
+3. **Instant Reserve Replenishment (`0-Delay`) & Surplus Recycling:** Returning `NARA` from the Range Manager directly into `NARAEmissionReserveV5` (`0xf932178F24b0813C82093985F0Af6Db27Ae25930`) has `0` delay. Any net trading surplus and LP proceeds generated by the Range Manager — alongside swap fees — may be used to acquire `NARA` from the market and send it to `NARAEmissionReserveV5`, routed into the 15-minute reward pool, or deployed into higher-impact ecosystem mechanisms as we build — so that swap taxes and range liquidity proceeds are used in one way or another to benefit committed `NARA` positions *(discretionary, activity-dependent, and never promised or guaranteed)*.
 
 ---
 
-## 3. Liquidity, Rug-Pull Resistance & Permanent POL
+## 4. Token Supply, Macroeconomics & Dilution Fears
 
-### Q3.1: Can the team rug-pull the pool liquidity?
+### Q4.1: Can the owner or deployer mint more NARA tokens?
 **The Short Answer:**  
-No. The primary liquidity is protocol-owned (POL) and held in verified contracts protected by irreversible timelocks.
+No. `NARATokenV5` has zero mint functions and zero owner. `1,000,000 NARA` is the permanent, immutable ceiling.
 
 **The Technical Reality:**  
-- The core protocol LP NFT (`tokenId: 2898486`) is owned directly by `NARALiquidityCompounderV4.sol`, not by a personal developer wallet.
-- Any liquidity removal or migration function (`WindDown`, `MigratePosition`, `RecoverPoolTokens`) is gated by a **mandatory 7-day timelock (`RECOVERY_DELAY = 7 days`)**.
-- The Vault's binding to the Compounder is permanently frozen (`compounderFrozen = true`). The team cannot redirect collected fees to an arbitrary external address.
+- `NARATokenV5` (`0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f`) minted `1,000,000 NARA` (`1e24` wei) once in its constructor and has no `mint()`, no owner key, no blacklist, and no upgrade proxy.
+- Bounded ERC-3156 flash minting (`MAX_FLASH_LOAN = 100,000 NARA`, `0.10%` / `10 bps` fee) must be repaid within the exact same transaction or the transaction reverts.
 
 ---
 
-### Q3.2: Why is liquidity protected by a 7-day timelock instead of a 1-year hard lock? Doesn't a 1-year lock look safer?
+## 5. Committing NARA, CryptoSLIP `0.1 NARA` Grid & `5%` Secondary NFT Market
+
+### Q5.1: How do commitments and duration multipliers work in V5?
 **The Short Answer:**  
-A rigid 1-year lock is a dangerous DeFi anti-pattern that bricks protocols during upgrades or emergencies. A 7-day on-chain timelock gives investors 168 hours (~302,400 Base blocks) of guaranteed exit warning while preserving protocol adaptability and disaster recovery.
-
-**The Technical Reality & Fact-Check:**
-1. **Why 1-Year Rigid Locks Kill Projects:**
-   - **Protocol Bricking on Upgrades:** Uniswap v4 is a brand-new, modular AMM architecture. Periphery contracts, hook standards, router infrastructure, and Base L2 sequencing evolve rapidly. If an immutable third-party lock (like Uncx, PinkLock, or TeamFinance) locks liquidity for 1–5 years with zero migration ability, the protocol cannot adapt to newer pool optimizations or Uniswap upgrades. The liquidity is permanently stranded in an obsolete pool, killing protocol growth.
-   - **Disaster Recovery Vulnerability:** If a critical zero-day exploit, dependency bug, or fee-hook edge case is ever discovered, a rigid lock makes it mathematically impossible to rescue user capital. It turns a manageable patch into an unrecoverable total loss.
-   - **Third-Party Custody Risk:** Traditional lock platforms introduce third-party smart contract risks. NARA's POL is governed directly by native, verified NARA contracts on Base.
-2. **Why a 7-Day Timelock is the DeFi Security Gold Standard:**
-   - **168 Hours / ~302,400 Base Blocks Notice:** A rug-pull requires instantaneous execution (0 seconds). In `NARALiquidityCompounderV4.sol` (line 100), `RECOVERY_DELAY` is hardcoded to `7 days`. Any proposal to touch liquidity emits the on-chain event `RecoveryProposed` and registers public state `pendingRecovery`.
-   - **Guaranteed Autonomous Exit Window:** Every holder, DEX tracker, and automated monitor receives an immediate alert. If the community disagrees with a proposed migration, every investor has a full 7 days to sell, swap, or exit *before a single wei of liquidity can ever be moved*.
-   - **2-of-3 Multisig Governance:** Initiating a proposal requires multi-signature approval from the Protocol 2-of-3 Safe (`0xd65c0e390Dc187A22c52c03816591CC736C0D755`). A rogue dev or compromised key cannot start the countdown.
-   - **Cancellable / Extendable:** If an issue is resolved without migration, or if the community requests more review time, governance can call `cancelRecovery()` to abort the action or re-propose to push the timer back another 7 days.
-
----
-
-### Q3.3: Does the protocol really "only build liquidity upwards"? How?
-**The Short Answer:**  
-Yes. Permanent POL strictly grows in depth.
+Users commit `NARA` (`1 NARA` minimum per Position NFT, or `0.1 NARA` per slot via the CryptoSLIP `NARA Grid`) for **`1 day` (`96` epochs)** up to **`365 days` (`35,040` epochs)** to receive a weight multiplier from **`1.00x` to `4.00x`**.
 
 **The Technical Reality:**  
-1. **Permanent Base POL:** Collected AMM trading fees are compounded into permanent full-range liquidity units. The contract has minting routines but zero automatic burn routines. Total LP units strictly increase with every volume cycle.
+- **Quadratic Duration Curve (`V4Quadratic`):**
+  $$\text{Multiplier}(r) = 1 + 0.5r + 2.5r^2, \quad r = \frac{\text{durationEpochs}}{35040}$$
+  - **1 Day (`96` epochs):** `1.00x`
+  - **30 Days (`2,880` epochs):** `1.06x`
+  - **90 Days (`8,640` epochs):** `1.28x`
+  - **180 Days (`17,280` epochs):** `1.85x`
+  - **365 Days (`35,040` epochs):** **`4.00x`**
+- **Equal-Footing Launch Mode:** Paid VRF rarity rolls and 5-input fusion in `NARAForgeV5` are switched off at launch (`commitsPaused = true`), so every participant enters on equal mathematical footing with zero roll/fusion fees.
 
 ---
 
-### Q3.4: What happens if a whale dumps a massive bag of NARA all at once?
+### Q5.2: What if a user has less than `1.0 NARA` or holds multiple `0.1 NARA` slips?
 **The Short Answer:**  
-The Hook forces the whale to fund protocol reserves.
+The companion [**CryptoSLIP App**](https://cryptoslip-g29s.4everland.app/?v=cs-1793645949345) supports fractional **`0.1 NARA` slips**, **atomic 10-slip merging**, and the shared **10-slot `0.1 NARA` `NARA Grid`**.
 
 **The Technical Reality:**  
-1. **Dynamic Fee Interception:** A large market dump in a single block pushes the Hook's sell fee curve to its maximum 20.00% cap. Up to 20% of the dump is instantly stripped in NARA tokens and routed directly into protocol custody.
+1. **Split `NARA` into `0.1 NARA` Slips:** Because `1,000,000 NARA` is scarce and `NARAPrincipalLedgerV5` requires `1.0 NARA` minimum per Position NFT, CryptoSLIP lets users split `NARA` into `0.1 NARA` bearer slips.
+2. **Merge Up to 10 Slips Atomically (`rearrangeAndPayWithPermits`):** Anyone holding multiple small slips (for example, ten `0.1 NARA` slips) can merge up to 10 slips into `1.0 NARA` in a single atomic transaction via `CryptoSlipV2.rearrangeAndPayWithPermits` (`0x26C2A39df510bcAbD02aa918442f5acdbD4390a4`).
+3. **Join the 10-Slot `0.1 NARA` `NARA Grid`:** Users with `0.1 NARA` can take 1 or more slots (`0.1 NARA` per slot) in the shared **NARA Grid**. Once all 10 slots fill (`1.0 NARA` total), the Grid commits `1.0 NARA` into a V5 Position NFT and credits each slot **10% of the position's 15-minute rewards and principal**.
 
 ---
 
-### Q3.5: How do investors find out if a recovery is proposed? Do I have to monitor BaseScan 24/7?
+### Q5.3: What if I commit my `NARA` and want to exit before my commitment timer finishes?
 **The Short Answer:**  
-No. You are protected by autonomous multi-agent monitoring that broadcasts any recovery proposal instantly across public channels.
+When your commitment expires, you withdraw **100% of your `NARA` back 1-for-1** (`withdrawPrincipal`) with zero fee. If you want to exit early before expiration, you can list and sell your live **Position NFT (`NARAP`)** anytime for **`ETH`** on the built-in **`NARAPositionSaleV5`** marketplace (`0x04Ac83045d26259D46400Ce6beb9bBd0641df225`).
 
 **The Technical Reality:**  
-1. **P0 Critical Alert Rule (`severity: 5`):** The open-source `nara-swarm-monitor` indexing node monitors `NARALiquidityCompounderV4` on every block. Its rule engine flags `RecoveryProposed` as a top-priority alert (`ruleId: pol_recovery_proposed`).
-2. **Instant Broadcast:** The moment a proposal transaction is mined, telemetry bots broadcast the event, recipient address, and exact 168-hour countdown timestamp directly into the public Telegram and Discord channels.
-3. **Zero-Gas Public Verification:** The `pendingRecovery` mapping is a public Solidity getter. Any investor, wallet, or third-party DEX tracker can inspect the live status at any time on BaseScan or via RPC with zero gas cost.
-4. **Autonomous Watchdogs:** Anyone can set a free automated BaseScan or Tenderly alert on the `RecoveryProposed(uint8,address,uint64)` topic hash.
+- **Zero Chart Impact:** Selling a committed Position NFT on `NARAPositionSaleV5` transfers the ERC-721 NFT (`0x8C5F088D9d09dBB90aB6F3aaA049a8FD5D5FfFDA`) and its underlying principal/weight directly peer-to-peer for `ETH` without touching the Uniswap v4 pool.
+- **`5%` Marketplace Royalty to Rewards (`95%` to Seller):** Every Position NFT sale on `NARAPositionSaleV5` (`0x04Ac83045d26259D46400Ce6beb9bBd0641df225`) sends **`95%` (`9,500 bps`)** of the `ETH` sale price directly to the seller and routes the **`5%` (`500 bps`)** royalty fee into `NARARewardIngressV5` (`0x44130CC47b886D8488041F5eaE271477D1aFA909`) for 15-minute `ETH` reward distributions to active positions.
 
 ---
 
-### Q3.6: What about the un-pooled "banked inventory" in the Compounder (~16,000 NARA)? Can that be swept immediately?
+## 6. Multisig Custody, Governance Safeguards & Security Audits
+
+### Q6.1: How is governance structured on Base Mainnet?
 **The Short Answer:**  
-No. Idle banked tokens are locked under the exact same irreversible 7-day timelock as the LP NFT.
+All governance Roles are separated across three independent **2-of-3 Gnosis Safes** on Base Mainnet, with `1:1` segregated user principal custody that has zero admin sweep or rescue functions.
 
 **The Technical Reality:**  
-- When trading fees enter `NARALiquidityCompounderV4.sol`, they are compounded into Uniswap v4 LP units in balanced ratios (e.g. at the current price, $1\text{ USDC} \approx 8.7\text{ NARA}$).
-- Any unmatched token remainder (e.g. surplus NARA from sell-heavy volume) remains temporarily banked in contract storage until matching USDC arrives.
-- **Strict Code Enclosure:** The sweeping routine `_recoverPoolTokens(address to)` is `internal`. It can **only** be executed via `executeRecovery()`, which requires `kind == RecoveryKind.RecoverPoolTokens` and reverts if `block.timestamp < p.eta`.
-- There is **zero backdoor or instant transfer function** for banked tokens. Sweeping even 1 wei of banked inventory requires the full 7-day public on-chain notice.
+- **`Treasury Safe (2-of-3)`:** `0xe320C281c86079eA85f2Bc67864E873A61D551E3`
+- **`OA-3 VRF Governance Safe (2-of-3)`:** `0x9d415e070AF8e93890dcCaE27755C66E3A313f0F`
+- **`C1 Presentation Governor Safe (2-of-3)`:** `0x0939BE9a5359764C2334a70A13eC567C7e38E017`
+- **Segregated Principal Custody (`NARAPrincipalLedgerV5` `0x7F866a9fbe41D54F0d9C35b6892fcf27Ea766DB2`):** Holds user-committed `NARA` 1-for-1 and has no admin withdrawal, sweep, or upgrade function.
 
 ---
 
-## 4. Treasury Range Program (Retired)
+## 7. Community Battlecards (5-Second Rapid FUD Dismantlers)
 
-**Notice (2026-09-24):** The v4 treasury range program (Treasury Range Manager V1, `0xd58afa5eaB20B0ED287851Cf98f359AdEd58a69C`, and the "Range Ranger" automation) is retired. Order creation has been paused on-chain since Base block 51,294,195, and no orders are active. Earlier descriptions of this program's reserve ratios, price floors or support, execution checks and trade counterparties are withdrawn pending review.
-
----
-
-## 5. Token Supply, Macroeconomics & Dilution Fears
-
-### Q5.1: Total supply is 1,000,000, but the initial float was ~110,000. Are VCs waiting to dump?
-**The Short Answer:**  
-There are zero VCs. 65% of the total supply is mathematically sealed in a smart contract emission reserve.
-
-**The Technical Reality:**  
-- **Zero Private Investors / Zero SAFTs:** NARA had no venture capital seed rounds, no private presales, and no discounted insider allocations.
-- **650,000 NARA Sealed in Reserve:** 65.0% of total supply sits in `NARARewardReserve.sol` under immutable `NaraSweepForbidden()` rules. It can only drip out on the 15-minute engine clock to long-term conviction lockers over several years.
-- **Team Allocation:** Limited to 4.0% (40,000 NARA) subject to long-term vesting.
-- **Real Liquid Float is Tiny:** Once subtracting tokens locked in `NARAEngine` and tokens in permanent POL, the liquid free float is frequently **under 30,000 NARA**.
-
----
-
-### Q5.2: Can the owner or deployer mint more NARA tokens?
-**The Short Answer:**  
-No. The token contract has zero mint functions. 1,000,000 NARA is the permanent, immutable ceiling.
-
-**The Technical Reality:**  
-- `NARAToken.sol` minted exactly 1,000,000 NARA (`1e24` wei) in its constructor and closed all minting capabilities forever.
-- There is no `mint()`, no `burn()`, no owner key, no blacklist, and no upgradeable proxy at the ERC-20 token layer.
-- Flash minting is supported via ERC-3156 with a strict 10% ceiling (`MAX_FLASH_LOAN = 100,000 NARA`) and 0.10% fee routed to the Engine sink, preserving supply invariants.
-
----
-
-### Q5.3: Will reward farmers dump the 650,000 reserve emissions on the market?
-**The Short Answer:**  
-No. Drips are micro-metered over years, and game theory strongly favors compounding over selling.
-
-**The Technical Reality:**  
-- **Micro-Paced Drips:** Emissions release in tiny fractions every 15-minute pulse (~2.8 NARA divided across all active Grid cells), making it mathematically impossible to flood the market.
-- **Supply Squeeze Mechanism:** Every token committed to the Grid is locked away, eliminating open market sell pressure. With float drying up, buy pressure drives exponential price growth, making compounding ("Deploying") far more lucrative than dumping micro-emissions.
-
----
-
-## 6. Joining the Grid, Active Cells & Sovereign Position NFTs
-
-### Q6.1: Am I forced to commit my NARA for a year to participate?
-**The Short Answer:**  
-No. Joining the Grid is 100% voluntary, and commit durations start at just ~2 hours 15 minutes.
-
-**The Technical Reality:**  
-- **Liquid Holding:** Anyone can hold NARA in their wallet without committing to the Grid.
-- **Flexible Commit Windows:** The NARA Engine supports durations from **9 epochs (~2 hours 15 minutes)** up to **35,040 epochs (1 year)**.
-- Conviction multipliers scale smoothly from $1.01\times$ for short commits up to $4.00\times$ (max cap $10.00\times$) for 1-year commits, commanding more power in every 15-minute pulse.
-
----
-
-### Q6.2: What if I commit my NARA and need emergency cash tomorrow?
-**The Short Answer:**  
-You retain flexible liquidity options. Your position is a liquid ERC-721 NFT tradeable on OpenSea, and the project treasury actively buys back positions for cash.
-
-**The Technical Reality:**  
-- **Instant Secondary Liquidity:** Every commit wraps into a standard ERC-721 Position NFT (`NARAPositionNFTV4.sol`) tradeable on OpenSea or Seaport.
-- **Protocol NFT Buybacks:** The project treasury actively purchases Position NFTs from the secondary market. This provides immediate cash exits for sellers while enabling the protocol to repurpose acquired positions to incentivize new participants or deploy them for strategic project needs.
-
----
-
-### Q6.3: Why are NARA Position NFTs called "priceless living artifacts"?
-**The Short Answer:**  
-Because they are 100% on-chain living financial organisms rendered in pure code with generative luxury art, procedural evolution, and sovereign account custody.
-
-**The Technical Reality:**  
-- **100% On-Chain Generative SVG Art:** Zero IPFS, zero centralized AWS servers. Rendered permanently by Base smart contracts across 5 rare chassis alloys: 👑 **24K Gilded Gold**, 🌌 **Damascus Meteorite**, 🔮 **Obsidian Void**, 🟢 **Cybernetic Emerald**, and 🪙 **Titanium Slate**.
-- **Living Procedural Evolution:** The NFT visually levels up on-chain across 4 live vectors:
-  1. *10 Micro-Ranks:* Evolves from Rank 0 *Dormant* to Rank 10 *Apex Celestial Supernova* as you harvest ETH.
-  2. *Capacitor HUD:* Visual LED power bars illuminate on the art.
-  3. *Claim Scars:* Physical laser conduit notches etch into the outer frame rails with every harvest.
-  4. *Armor Reinforcements:* Hydraulic corner brackets thicken with every extension.
-- **Token-Bound Account (EIP-1167 / ERC-6551):** The NFT owns its own dedicated clone account (`NARAPositionAccountV4.sol`). Transferring the NFT atomically transfers the underlying NARA principal, active cells, and all future 15-minute resource streams.
-
----
-
-### Q6.4: How does the Proportional Law make my active cells more powerful over time?
-**The Short Answer:**  
-The Grid is mathematically capped at 1,000,000 cells forever. When other players disconnect, your proportional share of every future 15-minute pulse automatically increases.
-
-**The Technical Reality:**  
-- **1 NARA = 1 Active Cell:** Total global cells are hardcapped at 1,000,000.
-- **Automatic Expansion:** Every 15 minutes, the Engine distributes scheduled NARA emissions and collected ecosystem resources (ETH, USDC). When other players harvest and disconnect, the count of active cells shrinks, instantly expanding the slice of all future distributions flowing to remaining committed cells—without you spending an extra cent.
-
----
-
-### Q6.5: Why do current rewards look slim in dollar terms?
-**The Short Answer:**  
-Rewards only look small today because NARA's token price is early and cheap. As the supply squeeze kicks in, the exact same token rewards multiply exponentially in dollar value.
-
-**The Technical Reality:**  
-- **Designed to Eliminate Market Sells:** Every player who commits NARA pulls tokens off DEX liquidity pools. As the floating supply evaporates, buy pressure accelerates price discovery exponentially.
-- **The Price Flywheel:** 10 NARA in rewards might be worth $1.00 today at $0.10, but becomes $10.00 at $1.00 and $100.00 at $10.00—with zero token inflation.
-- **Incoming Multi-Asset Flow:** Baseline emissions are only the foundation. As Bonds, Category Baskets, and ecosystem games launch, heavy streams of real ETH and USDC flow directly into active cells.
-
----
-
-### Q6.6: Can I sell or transfer my position without dumping on the chart?
-**The Short Answer:**  
-Yes. Transferring or selling a Position NFT transfers the entire position off-DEX with zero chart impact, zero slippage, and zero MEV front-running.
-
-**The Technical Reality:**  
-- **Zero DEX Footprint:** Traditional token sales hit Uniswap pools, causing price slippage and alerting copy-traders. Selling a Position NFT on OpenSea/Seaport emits a single `Transfer` event—leaving pool liquidity and spot price completely unaffected.
-- **Off-DEX Self-Funding:** A recipient wallet can immediately call `claimRewards()` to receive native ETH for gas and NARA for operations directly from contract reserves without ever buying on an exchange.
-
----
-
-## 7. Multisig Custody, Governance Knobs & Security Audits
-
-### Q7.1: Why is the Treasury Range Safe 1-of-1? Isn't that a single point of failure?
-**The Short Answer:**  
-It served the v4 range program, which is retired; see [section 4](#4-treasury-range-program-retired).
-
-**The Technical Reality:**  
-- The core protocol ownership, contracts, and parameters are held by the **Protocol 2-of-3 Safe (`0xd65c0e390Dc187A22c52c03816591CC736C0D755`)**.
-- The 1-of-1 Safe (`0x5050BC6dc3E07313D52D05cecD53f727D6CDa245`) holds zero administrative power over the token, engine, or hook.
-
----
-
-### Q7.2: Is NARA audited?
-**The Short Answer:**  
-Yes, rigorously audited through a 6-specialist automated pipeline, formal fuzz testing, and live adversarial stress-testing.
-
-**The Technical Reality:**  
-- **Codex 6-Specialist Pipeline:** Analyzed via multi-agent security pipeline covering reentrancy, access control, arithmetic, MEV resistance, and replay protection.
-- **Formal Verification & Fuzzing:** Hardhat test suites (784+ tests), Foundry fork tests, Slither static analysis, Aderyn, and Echidna property-based fuzzing.
-- **Live Mainnet Adversarial Testing:** Receipt-pinned live stress-testing and cross-pool MEV arbitrage interception proved on-chain that hook fees cannot be bypassed.
-- *Transparent boundary:* While internal and automated audit coverage is exhaustive, external third-party firm audits remain on the public roadmap as the protocol matures.
-
----
-
-## 8. Community Battlecards (5-Second Rapid FUD Dismantlers)
-
-| FUD / Objection | Instant 5-Second Response |
+| Objection | Instant Response |
 | :--- | :--- |
-| **"Is this a honeypot / tax token?"** | "Zero tax on transfers (0%). Only Uniswap swaps pay the Uniswap v4 Dynamic Anti-MEV Shield fee that funds permanent liquidity and dividends." |
-| **"Why did the project buy tokens early?"** | "The project bought tokens to seed the liquidity pool and lock in a cash-backed USDC floor. Every token acquired is locked in smart contracts, not private wallets." |
-| **"Can an early sniper or whale dump on us?"** | "Impossible. Over 89% of supply is locked in verified smart contracts. No whale wallets exist on BaseScan." |
-| **"Can the dev rug liquidity?"** | "No. POL is owned by an immutable smart contract locked behind a mandatory 7-day timelock." |
-| **"Why not lock liquidity for 1 year on Uncx/PinkLock?"** | "A 1-year rigid lock bricks the project if Uniswap v4 upgrades or has a bug. Our 7-day on-chain timelock gives holders 168 hours (302k blocks) guaranteed exit warning while preserving critical disaster recovery." |
-| **"How do I know if liquidity is being unlocked?"** | "Automated Swarm telemetry monitors the contract 24/7; any proposal triggers an instant public alert across Telegram/Discord with a 168-hour countdown." |
-| **"Can the team steal the unpooled banked tokens?"** | "No. Banked tokens are locked under the exact same 7-day timelock and 2-of-3 multisig as the LP NFT. Zero instant sweep functions exist." |
-| **"Am I trapped if I commit for a year?"** | "No. Positions are standard NFTs tradeable on OpenSea anytime, and the project treasury actively buys back positions for cash." |
-| **"Why are Position NFTs so valuable?"** | "100% on-chain generative luxury art (24K Gold, Damascus, Obsidian), living evolution with 10 ranks and claim scars, and sovereign token-bound accounts commanding permanent yield." |
-| **"Can I cash out without hurting the chart?"** | "Yes. Selling or transferring a Position NFT moves your entire position off-DEX with zero chart impact, zero slippage, and zero MEV front-running." |
-| **"Will farmers dump the 650k emission rewards?"** | "Impossible. Drip is micro-metered over years (~2.8 NARA per 15 min). Active cells dry up float, making compounding far more profitable than dumping." |
-| **"Why do rewards look slim right now?"** | "Slim only because price is early & low. Committing NARA eliminates market sells, driving an exponential supply squeeze where reward value skyrockets." |
-| **"Are VCs going to dump unlocks on us?"** | "Zero VCs. 65% of supply is mathematically sealed in a smart contract reserve that drips out over years." |
-| **"Can the owner mint more tokens?"** | "No. Total supply is hardcapped at 1,000,000 NARA forever. The contract has zero mint functions." |
-| **"Where does the yield come from?"** | "Zero token printing. Yield comes from pre-minted reserve drip plus 100% real ETH/USDC cash resources from swaps, bonds, and baskets." |
+| **"Is this a tax token?"** | "Zero tax on ERC-20 transfers (`0%`). Only Uniswap v4 pool swaps pay the ~`4.92%` base fee (`4.63%` Hook + `0.30%` LP) that builds permanent pool liquidity first and then streams to committed positions." |
+| **"Can a whale or VC dump on us?"** | "`99.9984%` (`999,984 NARA`) of the `1,000,000` fixed supply is sealed in verified smart contracts (`949,987 NARA` in `NARAEmissionReserveV5` + `49,997 NARA` in `NARATreasuryRangeManagerV5`). Zero VCs or presales exist." |
+| **"How does the Range Manager work?"** | "It is a two-way range liquidity manager (`49,997 NARA`): it sells `NARA` for `USDC` on upside rungs and uses collected `USDC` to buy `NARA` back on dips, with a `7-day` `NARA` withdrawal delay extendable to `1 year`." |
+| **"What if I have less than `1 NARA`?"** | "Use CryptoSLIP (`cryptoslip.app`) to hold or merge `0.1 NARA` slips atomically (`rearrangeAndPayWithPermits`), or commit `0.1 NARA` per slot in the 10-slot `NARA Grid`." |
+| **"What if I want to exit before my commitment ends?"** | "List your Position NFT (`NARAP`) for `ETH` on `NARAPositionSaleV5` anytime: you receive `95%` of the `ETH` and `5%` routes into the 15-minute `ETH` reward pool." |
+| **"Can the owner mint more tokens?"** | "No. `NARATokenV5` is hardcapped at `1,000,000 NARA` forever with `0` owner and `0` mint functions." |

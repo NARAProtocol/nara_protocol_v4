@@ -86,7 +86,7 @@ import {
   walletErrorMessage,
 } from "./wallets";
 
-const MOBILE_PREVIEW_URL = "https://app.naraprotocol.com";
+const MOBILE_PREVIEW_URL = "https://app.naraprotocol.io";
 import {
   parseStoredPendingTransaction,
   pendingTransactionStorageKey,
@@ -2282,7 +2282,7 @@ export default function App() {
                 width="240"
                 height="240"
               />
-              <code className="mobile-handoff-url">app.naraprotocol.com</code>
+              <code className="mobile-handoff-url">app.naraprotocol.io</code>
               <a href={MOBILE_PREVIEW_URL} target="_blank" rel="noreferrer">Open site ↗</a>
             </div>
           </details>

@@ -87,3 +87,10 @@ output.txt
 roleGrantBatch.json
 roleRenounceBatch.json
 roleTransferBatch.json
+/scripts/wallet-fleet/
+docs/releases/NARA-20260827-v4-live-buy-matrix-3s.md
+.worktrees/
+
+docs/COLD_AI_CONTEXT.md
+scripts/runSingleWalletBurstBuys.ts
+scripts/runSingleWalletBurstSells.ts

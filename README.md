@@ -20,9 +20,9 @@
 
 ---
 
-> **Architecture & Development Notice:** All `contracts/v4/` Solidity is permanently retired, frozen, and cryptographically verified (`npm run verify:frozen-v4`). Zero edits, zero fixes. All new smart contracts, feature additions, Gacha Card Forge, and modular architecture belong exclusively in the V5 production worktree (`.worktrees/nara-v5-engine-production-20260923/contracts/v5/`).
+> **Architecture & Development Notice:** All `contracts/v4/` Solidity is permanently retired, frozen, and cryptographically verified (`npm run verify:frozen-v4`). Zero edits, zero fixes. All new smart contracts, feature additions, Gacha Card Forge, and modular architecture belong exclusively in the V5 modular stack.
 >
-> **V5 Base Mainnet Deployment Status (Verified at Block `53,422,831`):** All 34 NARA V5 modular contracts (`S1..S9` + `LPD 25..37` + `NARATreasuryRangeManagerV5`) are deployed and verified on Base Mainnet (`8453`): `NARATokenV5` (`0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f`), `NARAEmissionReserveV5` (`0xf932178F24b0813C82093985F0Af6Db27Ae25930`, bound, sealed, and funded with `949,987 NARA` at `fundingSequence = 2`), `NARAEpochEngineV5` (`0xd93FbEbFb33FAc9288125074625D4750573B1a53`), `NARAPositionNFTV5` (`0x5c36A16d30adAfeC4E37117025fc27DF0C445D6d`), `NARAForgeV5` (`0x84225aBaBbE7433c736925f9c0ba6f6CcB51551a`, commits paused under Variant A), `NARAPositionSaleV5` (`0x04Ac83045d26259D46400Ce6beb9bBd0641df225`, `FEE_BPS = 500`), `NARALiquidityHookV5` (`0x201fBD2839bEc513040024b37dAe97B401E96acC`, `poolId = 0x3bd8b60dc9eb37f00afa57585232e4018ae661b2dbd5318562183a67a07ac758`, `tradingPaused = true`), `NARAFeeVaultV5` (`0xe63b4BaAF873FC57859bfe13e0e8cFccAaB6AddE`), `NARAPOLPositionV5` (`0x01EF9de9f4e9197F2A3944b5B34A90eA2f558b64`), and `NARATreasuryRangeManagerV5` (`0xa72557fcBE56B3eC739dF3aF7b6b893B6Db4D288`, holding `49,997 NARA`). `999,984 NARA` (`99.9984%` of total supply) is locked inside V5 contracts; public pool seeding (`Safe nonce 9`) and opening trading (`Safe nonce 10`) remain held back per owner decision.
+> **V5 Base Mainnet Deployment Status (Verified at Block `53,422,831`):** All 34 NARA V5 modular contracts are deployed and verified on Base Mainnet (`8453`): `NARATokenV5` (`0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f`), `NARAEmissionReserveV5` (`0xf932178F24b0813C82093985F0Af6Db27Ae25930`, bound, sealed, and funded with `949,987 NARA` at `fundingSequence = 2`), `NARAEpochEngineV5` (`0xd93FbEbFb33FAc9288125074625D4750573B1a53`), `NARAPositionNFTV5` (`0x8C5F088D9d09dBB90aB6F3aaA049a8FD5D5FfFDA`), `NARAForgeV5` (`0x84225aBaBbE7433c736925f9c0ba6f6CcB51551a`, commits paused in Equal-Footing Launch Mode), `NARAPositionSaleV5` (`0x04Ac83045d26259D46400Ce6beb9bBd0641df225`, `FEE_BPS = 500`), `NARALiquidityHookV5` (`0x201fBD2839bEc513040024b37dAe97B401E96acC`, `poolId = 0x3bd8b60dc9eb37f00afa57585232e4018ae661b2dbd5318562183a67a07ac758`), `NARAFeeVaultV5` (`0xe63b4BaAF873FC57859bfe13e0e8cFccAaB6AddE`), `NARAPOLPositionV5` (`0x01EF9de9f4e9197F2A3944b5B34A90eA2f558b64`), and `NARATreasuryRangeManagerV5` (`0xa72557fcBE56B3eC739dF3aF7b6b893B6Db4D288`, holding `49,997 NARA`). `999,984 NARA` (`99.9984%` of total supply) is sealed inside V5 contracts (`949,987 NARA` in `NARAEmissionReserveV5` + `49,997 NARA` in `NARATreasuryRangeManagerV5`), with `3.0 NARA + 300.0 USDC` held in the `2-of-3` Treasury Safe (`0xe320C281c86079eA85f2Bc67864E873A61D551E3`) for the initial pool seed.
 
 > **Technical live testing on Base mainnet — not public product availability.**
 > The canonical v4 contracts and NARA/USDC pool use real assets. This repository
@@ -413,10 +413,10 @@ production-ready.
 
 ## Community & contact
 
-- 🌐 Website: **[naraprotocol.pro](https://naraprotocol.pro)**
+- 🌐 Website: **[naraprotocol.io](https://naraprotocol.io)**
 - 🟣 Farcaster: **@naraprotocol**
 - 𝕏 Twitter/X: **[@NARA_protocol](https://x.com/NARA_protocol)**
-- 🔐 Security: **security@naraprotocol.pro** (see [SECURITY.md](SECURITY.md))
+- 🔐 Security: **security@naraprotocol.io** (see [SECURITY.md](SECURITY.md))
 
 ---
 

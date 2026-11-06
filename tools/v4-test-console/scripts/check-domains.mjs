@@ -8,11 +8,11 @@ async function checkDomain(domain) {
 }
 
 async function run() {
-  await checkDomain("naraprotocol.com");
-  await checkDomain("www.naraprotocol.com");
-  await checkDomain("app.naraprotocol.com");
-  await checkDomain("console.naraprotocol.com");
-  await checkDomain("preview.naraprotocol.com");
+  await checkDomain("naraprotocol.io");
+  await checkDomain("www.naraprotocol.io");
+  await checkDomain("app.naraprotocol.io");
+  await checkDomain("console.naraprotocol.io");
+  await checkDomain("preview.naraprotocol.io");
 }
 
 run();

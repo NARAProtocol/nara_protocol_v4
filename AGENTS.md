@@ -1,6 +1,6 @@
 # NARA Protocol — Universal Agent Context
 
-This file is read by AI coding assistants that look for `AGENTS.md` on entry (OpenAI Codex, Cursor, DeepSeek, Gemini, and others). The companion file [CLAUDE.md](CLAUDE.md) carries the same context framed for Claude / Anthropic models.
+This file is read by AI coding assistants that look for `AGENTS.md` on entry (OpenAI Codex, Cursor, DeepSeek, Gemini, and others). 
 
 Last updated: 2026-08-30.
 
@@ -44,14 +44,14 @@ block when applicable, test results, and unresolved risks.
 
 - **v4 Retired & Strictly Read-Only:** `contracts/v4/` is permanently RETIRED, frozen, and strictly READ-ONLY. Zero fixes, zero edits, zero mutations across any file in `contracts/v4/`. It serves exclusively as a cryptographically locked reference baseline verified by `scripts/check-frozen-v4-contracts.cjs` against `docs/FROZEN_V4_SOLIDITY_MANIFEST.json`.
 - **v5 Active Modular Stack:** V5 is the exclusive authorized development stack. **Its source of truth is `../.worktrees/nara-v5-engine-production-20260923/contracts/v5/`, not this checkout's `contracts/v5/`,** which is a stale partial snapshot. Read that worktree's `docs/v5/LAUNCH_WIRING_STATUS.md` first.
-  - **Deployed & Verified on Base Mainnet (Block `53,422,831`, 34 contracts):** `NARATokenV5` (`0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f`), `NARAEmissionReserveV5` (`0xf932178F24b0813C82093985F0Af6Db27Ae25930`, bound, sealed, funded with `949,987 NARA` at `fundingSequence = 2`), `NARAEpochEngineV5` (`0xd93FbEbFb33FAc9288125074625D4750573B1a53`), `NARAPrincipalLedgerV5` (`0x7F866a9fbe41D54F0d9C35b6892fcf27Ea766DB2`), `NARARewardLedgerV5` (`0xC72671D9438388638547444524F6542b650C9264`), `NARARewardIngressV5` (`0x7b98fC9192638690eb878b915429211bd1585513`), `NARAEmissionModelV5` (`0x57B2378102202636ab890C5b0E69fbE61a7eF30c`), `NARAPositionNFTV5` (`0x5c36A16d30adAfeC4E37117025fc27DF0C445D6d`), `NARAForgeV5` (`0x84225aBaBbE7433c736925f9c0ba6f6CcB51551a`, commits paused under Variant A), `NARAPositionSaleV5` (`0x04Ac83045d26259D46400Ce6beb9bBd0641df225`, `FEE_BPS = 500`), `NARALiquidityHookV5` (`0x201fBD2839bEc513040024b37dAe97B401E96acC`, `poolId = 0x3bd8b60dc9eb37f00afa57585232e4018ae661b2dbd5318562183a67a07ac758`, `tradingPaused = true`), `NARAFeeVaultV5` (`0xe63b4BaAF873FC57859bfe13e0e8cFccAaB6AddE`), `NARAPoolOracleV5` (`0xA2151333BDD77DF2E058f9cE274F63D2e48A5553`), `NARAPOLPositionV5` (`0x01EF9de9f4e9197F2A3944b5B34A90eA2f558b64`), `NARACapitalBudgetV5` (`0x6f5f586Bd4F14e47F432264D88Fe9A6A6A80552B`), `NARACapitalPolicyV5` (`0xC6b5471ADadcf66c2375EC8600bb7a3D85C73e45`), and `NARATreasuryRangeManagerV5` (`0xa72557fcBE56B3eC739dF3aF7b6b893B6Db4D288`, holding `49,997 NARA`). `999,984 NARA` (`99.9984%` of total supply) is locked inside V5 contracts; public pool seeding (`Safe nonce 9`) and opening trading (`Safe nonce 10`) remain held back per owner decision.
+  - **Deployed & Verified on Base Mainnet (Block `53,422,831`, 34 contracts):** `NARATokenV5` (`0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f`), `NARAEmissionReserveV5` (`0xf932178F24b0813C82093985F0Af6Db27Ae25930`, bound, sealed, funded with `949,987 NARA` at `fundingSequence = 2`), `NARAEpochEngineV5` (`0xd93FbEbFb33FAc9288125074625D4750573B1a53`), `NARAPrincipalLedgerV5` (`0x7F866a9fbe41D54F0d9C35b6892fcf27Ea766DB2`), `NARARewardLedgerV5` (`0xC72671D9438388638547444524F6542b650C9264`), `NARARewardIngressV5` (`0x44130CC47b886D8488041F5eaE271477D1aFA909`), `NARAEmissionModelV5` (`0xd26b3c23d677b2DE82722DB5e687744600d4A231`), `NARAPositionNFTV5` (`0x8C5F088D9d09dBB90aB6F3aaA049a8FD5D5FfFDA`), `NARAForgeV5` (`0x84225aBaBbE7433c736925f9c0ba6f6CcB51551a`, commits paused under Equal-Footing Launch Mode), `NARAPositionSaleV5` (`0x04Ac83045d26259D46400Ce6beb9bBd0641df225`, `FEE_BPS = 500`), `NARALiquidityHookV5` (`0x201fBD2839bEc513040024b37dAe97B401E96acC`, `poolId = 0x3bd8b60dc9eb37f00afa57585232e4018ae661b2dbd5318562183a67a07ac758`, `tradingPaused = true`), `NARAFeeVaultV5` (`0xe63b4BaAF873FC57859bfe13e0e8cFccAaB6AddE`), `NARAPoolOracleV5` (`0xA2151333BDD77DF2E058f9cE274F63D2e48A5553`), `NARAPOLPositionV5` (`0x01EF9de9f4e9197F2A3944b5B34A90eA2f558b64`), `NARACapitalBudgetV5` (`0x6f5f586Bd4F14e47F432264D88Fe9A6A6A80552B`), `NARACapitalPolicyV5` (`0xC6b5471ADadcf66c2375EC8600bb7a3D85C73e45`), and `NARATreasuryRangeManagerV5` (`0xa72557fcBE56B3eC739dF3aF7b6b893B6Db4D288`, holding `49,997 NARA`). `999,984 NARA` (`99.9984%` of total supply) is locked inside V5 contracts; public pool seeding (`Safe nonce 9`) and opening trading (`Safe nonce 10`) remain held back per owner decision.
   - Actual modules:
     - financial graph: `NARAEpochEngineV5`, `NARAPrincipalLedgerV5`, `NARARewardLedgerV5`, `NARARewardIngressV5`, `NARAEmissionModelV5`, `NARAEmissionReserveV5`;
     - receipt: `NARAPositionNFTV5`;
     - fee layer: `NARAFeeVaultV5`, `NARALiquidityHookV5`, `NARAPoolOracleV5`, `NARAPOLPositionV5`, `NARACapitalBudgetV5`, `NARACapitalPolicyV5`.
   - Economics per the user's 2026-09-23 decisions:
     - 80/20 base/rarity rewards;
-    - 100X rarity maximum, with `NARAForgeV5` (`0x84225aBaBbE7433c736925f9c0ba6f6CcB51551a`, commits paused on-chain under Variant A) and `NARAPositionSaleV5` (`0x04Ac83045d26259D46400Ce6beb9bBd0641df225`, `FEE_BPS = 500`) deployed on Base Mainnet;
+    - 100X rarity maximum, with `NARAForgeV5` (`0x84225aBaBbE7433c736925f9c0ba6f6CcB51551a`, commits paused on-chain under Equal-Footing Launch Mode) and `NARAPositionSaleV5` (`0x04Ac83045d26259D46400Ce6beb9bBd0641df225`, `FEE_BPS = 500`) deployed on Base Mainnet;
     - Hook and LP fees start **100% POL** (holder share 0%, governed later).
   - `NARAEngineCore` / `NARACardForge` / `NARAFleetDeckLens` do not exist in V5 source.
 - **NARALiquidityGrowthHook:** Hardened with 7-day governance timelocks (`FEE_UPDATE_DELAY = 7 days`), 20% max default operational fee caps, aligned floor rounding, and direct vault fee recording.
@@ -148,7 +148,7 @@ block when applicable, test results, and unresolved risks.
 ## Rules of engagement
 
 1. **COLD AI START INVARIANT — ALWAYS START IN `contracts/v5/`**:
-   Whenever the user asks to do any contract work, feature additions, token, gacha forge, or engine tasks, Cold AI MUST ALWAYS start and build in the **modular v5 stack**. That stack lives at **`../.worktrees/nara-v5-engine-production-20260923/contracts/v5/`**; this checkout's `contracts/v5/` is a stale snapshot. Start by reading that worktree's `docs/v5/LAUNCH_WIRING_STATUS.md`.
+   Whenever the user asks to do any contract work, feature additions, token, gacha forge, or engine tasks, AI Agent MUST ALWAYS start and build in the **modular v5 stack**. That stack lives at **`../.worktrees/nara-v5-engine-production-20260923/contracts/v5/`**; this checkout's `contracts/v5/` is a stale snapshot. Start by reading that worktree's `docs/v5/LAUNCH_WIRING_STATUS.md`.
    - `contracts/v4/` is permanently FROZEN, read-only baseline, cryptographically locked against `docs/FROZEN_V4_SOLIDITY_MANIFEST.json`. Never edit any `.sol` file in `contracts/v4/`. Run `npm run verify:frozen-v4` to verify.
    - All new modular architecture lives exclusively in the V5 worktree. That includes the approved but not yet implemented rarity awards (100X maximum), paid rolls and fusion. Hook and LP fees start 100% POL, not 100% to holders.
 2. Do not import anything from `archive/legacy-v3/` into active code paths.
@@ -156,7 +156,7 @@ block when applicable, test results, and unresolved risks.
 4. Do not redeploy any archived contract. The archive is reference material, not deployable code.
 5. Satellites with **no v4 equivalent yet** (Arena, Lotto, MisterMint, Sponsor Hub) are documented in `archive/legacy-v3/PORTING_ROADMAP.md`. Porting produces a **new** file under `contracts/v4/`, not an edit to the archive.
 
-## Cold AI Guardrails
+## AI Agent Guardrails
 
 - Do not reintroduce mining.
 - Do not reintroduce jackpot/lotto behavior.
@@ -228,7 +228,6 @@ buying`, `Confirm Buy`, `Confirm Exit`.
 | v4 hook design and fee semantics       | `docs/UNISWAP_V4_HOOK.md`                                        |
 | v4 post-deployment findings            | `docs/NARA_V4_PRESEED_FINDINGS_REGISTER_2026-07-28.md`            |
 | v4 launch checklist                    | `docs/V4_LAUNCH_CHECKLIST.md`                                     |
-| v4 protocol safety standards           | `CLAUDE.md` (this folder) → "MANDATORY PROTOCOL SAFETY STANDARDS" |
 | v3 archived sources                    | `archive/legacy-v3/contracts/`                                    |
 | v3 archive policy + retired addresses  | `archive/legacy-v3/README.md`                                     |
 | v3 → v4 port roadmap                   | `archive/legacy-v3/PORTING_ROADMAP.md`                            |
@@ -306,7 +305,7 @@ copies of every expensive job.
 
 ## Mandatory protocol safety standards
 
-See [CLAUDE.md](CLAUDE.md) → "MANDATORY PROTOCOL SAFETY STANDARDS" for the full rules. The four cornerstones:
+The four cornerstones of protocol safety: The four cornerstones:
 
 1. Deployed-v4 ETH rewards may route through `NARAEngine.notifyEthRewards()`.
    Do not grant
@@ -330,11 +329,11 @@ See [CLAUDE.md](CLAUDE.md) → "MANDATORY PROTOCOL SAFETY STANDARDS" for the ful
 ## Official NARA Brand Logo & Token Icon Standards
 
 - **Canonical Insignia**: 15-Notch Epoch Radar Dial + Monolithic Architectural N on full-bleed solid `#000000` deep black canvas (`nara-logo-white.png`).
-- **Master Files**: `C:\Users\linas\Desktop\NARA_Branding_Package\` and repo path `tools/nara-landing/public/`.
+- **Master Files**: `tools/nara-landing/public/`.
 - **Solid Black Background Mandate**: All token icons and avatars MUST use a solid `#000000` background. Never export transparent corners for token listing icons to prevent Chromium and tracker white box/border defects.
 - **Hosted URLs**:
-  - BaseScan (`128x128`): `https://files.catbox.moe/snrc7s.png` / `https://naraprotocol.com/nara_token_128.png`
-  - CoinGecko/CMC (`200x200`): `https://files.catbox.moe/f9xge7.png` / `https://naraprotocol.com/nara_token_200.png`
-  - DexScreener/Uniswap (`256x256`): `https://files.catbox.moe/b16drt.png` / `https://naraprotocol.com/nara_token_256.png`
-  - Community/Telegram/Discord (`512x512`): `https://files.catbox.moe/f5tan3.png` / `https://naraprotocol.com/nara_token_512.png`
-  - Master Logo (`1024x1024`): `https://files.catbox.moe/4v6oup.png` / `https://naraprotocol.com/nara-logo-white.png`
+  - BaseScan (`128x128`): `https://files.catbox.moe/snrc7s.png` / `https://naraprotocol.io/nara_token_128.png`
+  - CoinGecko/CMC (`200x200`): `https://files.catbox.moe/f9xge7.png` / `https://naraprotocol.io/nara_token_200.png`
+  - DexScreener/Uniswap (`256x256`): `https://files.catbox.moe/b16drt.png` / `https://naraprotocol.io/nara_token_256.png`
+  - Community/Telegram/Discord (`512x512`): `https://files.catbox.moe/f5tan3.png` / `https://naraprotocol.io/nara_token_512.png`
+  - Master Logo (`1024x1024`): `https://files.catbox.moe/4v6oup.png` / `https://naraprotocol.io/nara-logo-white.png`
