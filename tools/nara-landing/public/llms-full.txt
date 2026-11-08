@@ -19,16 +19,17 @@
    - **`4.9997%` (`49,997.0 NARA`)** is held in `NARATreasuryRangeManagerV5` (`0xa72557fcBE56B3eC739dF3aF7b6b893B6Db4D288`, 7-day withdrawal queued at `Safe Nonce 9`, `readyAt = 1794666468` / `2026-11-14T14:27:48Z` to migrate into the active-pool `NARATreasuryRangeManagerV5` at `0x221c625d2BC416460C397035C1286C1f4A4D3A7C`, which is already pre-funded with `51.0149 NARA` at block `54,778,829`).
    - **`0.0003%` (`3.0 NARA`) + `300.0 USDC`** is held in the 2-of-3 `Treasury Safe` (`0xe320C281c86079eA85f2Bc67864E873A61D551E3`) for the `$600` (`$100.00 / NARA`) full-range Uniswap v4 Seed LP (`Safe Nonce 10`).
 
-2. **15-Minute (`900s`) Multi-Asset Epoch Engine (`NARA` + `ETH` + `USDC`):**
+2. **15-Minute (`900s`) Multi-Asset Epoch Engine (`NARA` + `ETH` + `USDC`) & Zero-Delay Fee Periphery:**
    - `NARAEpochEngineV5` (`0xd93FbEbFb33FAc9288125074625D4750573B1a53`) settles rewards every 15 minutes (`96 epochs/day`) pro-rata to active position weight $w_i = p_i \cdot (1 + 0.5 r + 2.5 r^2)$ across three reward tokens: `NARA` (from the adaptive Emission Reserve + swap fees), `ETH` (from the `5%` `NARAPositionSaleV5` marketplace fee), and `USDC` (from Uniswap v4 Hook swap fees).
+   - `NARAFeeVaultV5` (`0xF1f361F803895BF5cf67eC6C506dbFEf2f6E88Cf`) is sealed directly to the zero-delay `NARATreasuryFeeControllerV5` (`0xB6A436b48222C94fe427ecAfB263DF9cf42646b9`) and `NARAFeeIngressBindingV5` (`0x17cc74317AD75a170887F9E76e5fF09f2058d4BF`), allowing `USDC` and `NARA` swap fees to be routed with **`0-second delay` and zero permanent tie-up** (to active range liquidity, `NARARewardIngressV5` → `NARARewardLedgerV5` 15-minute rewards, or `NARAEmissionReserveV5`), alongside configurable on-chain `holderFeeBps` splits (`0%` to `100%`).
    - Two independent Cloudflare Workers (`nara-v5-pulse-keeper` on a 2-hour cadence and `nara-v5-pulse-keeper-backup` on a 3-hour failover cadence) plus the permissionless `Grid pulse` action keep epochs advancing automatically.
 
-3. **Zero-Fee Principal Custody & Built-In Secondary ETH Market:**
-   - `NARAPrincipalLedgerV5` (`0x7F866a9fbe41D54F0d9C35b6892fcf27Ea766DB2`) holds `1:1` user principal (`1 d` = `1.00x` up to `365 d` = `4.00x`, min `1.0 NARA`). Matured principal exits `100%` (`0%` fee) via `withdrawPrincipal`.
+3. **Zero-Fee Principal Custody (`1.0+ NARA` 1:1 Position NFTs, No NFT Splitting or Fusion) & Built-In Secondary ETH Market:**
+   - `NARAPrincipalLedgerV5` (`0x7F866a9fbe41D54F0d9C35b6892fcf27Ea766DB2`) holds `1:1` user principal (`1 d` = `1.00x` up to `365 d` = `4.00x`, min `1.0 NARA` per Position NFT; no NFT splitting or fusion). Matured principal exits `100%` (`0%` fee) via `withdrawPrincipal`.
    - Before maturity, any `NARAPositionNFTV5` (`0x8C5F088D9d09dBB90aB6F3aaA049a8FD5D5FfFDA`) can be sold for `ETH` on `NARAPositionSaleV5` (`0x04Ac83045d26259D46400Ce6beb9bBd0641df225`, `95%` to seller, `5%` to active position holders) without selling `NARA` on the DEX pool.
 
-4. **CryptoSLIP V3.2 Symbiosis (`0.1 NARA` 10-Slot Grid + Gasless Bearer Vouchers):**
-   - `CryptoSlipVaultV32` (`0x38BF0321FA7489576978353a6a8da4A3e85C2F18`) lets anyone send `USDC`, `cbBTC`, `ETH`, or `NARA` via URL `#` fragment links (`RFC 3986`) with `0 ETH` gas, split/combine/swap vouchers inside the vault (`CryptoSlipTradeRouterV32` `0x295E72cB3dc09582F32e0fEB7e0e650752219a7f`), and fill a 10-Slot `0.1 NARA` Grid (`10 × 0.1 = 1.0 NARA`) to mint a `NARAPositionNFTV5`.
+4. **CryptoSLIP V3.2 Symbiosis (`Commit NARA` + Gasless Bearer Vouchers from `0.001 NARA`):**
+   - `CryptoSlipVaultV32` (`0x38BF0321FA7489576978353a6a8da4A3e85C2F18`) lets anyone send `USDC`, `cbBTC`, `ETH`, or `NARA` (`>= 0.001 NARA`) via URL `#` fragment links (`RFC 3986`) with `0 ETH` gas, split/combine/swap vouchers inside the vault (`CryptoSlipTradeRouterV32` `0x295E72cB3dc09582F32e0fEB7e0e650752219a7f`), commit `1.0+ NARA` directly into `NARAPositionNFTV5` via the `Commit NARA` tab, and harvest 15-minute rewards directly into shareable payment links (`>= 0.1 NARA`).
 
 ---
 
@@ -59,12 +60,12 @@
 | `NARARewardLensV5` | `0x4a5e7ec22d34885334deA050679f01a030a635Bf` | Read-only reward projection lens |
 | `NARAPositionLensV5` | `0x4887303fba121a7B99A964B4e57903e688aD1e45` | Read-only position state lens |
 | `NARAPrincipalLensV5` | `0xDCf87e4ba3706E3ac94b10A7BD157Baf64fFE6d0` | Read-only principal accounting lens |
-| `NARAForgeV5` | `0x84225aBaBbE7433c736925f9c0ba6f6CcB51551a` | Phase 2 rarity/fusion module (`commitsPaused = true` at launch) |
+| `NARAForgeV5` | `0x84225aBaBbE7433c736925f9c0ba6f6CcB51551a` | Lifecycle module (`commitsPaused = true`; equal-footing `1X` duration-only mode) |
 | `NARAForgeQuoteLensV5` | `0x3fA5c60A9d7A2A1B09Ec40a20593D5Ad26022Bbb` | Forge quote helper |
-| `NARAEntropyAdapterV5` | `0x9fAf0606c62cA28d34d76e1710BF6E4f523fda5F` | Chainlink VRF v2.5 adapter (dormant in Phase 1) |
-| `NARANullEntropyAdapterV5` | `0x13b06070790C0A4Ed7f90B635b18E3FEF8ADa8ef` | Phase 1 deterministic null entropy adapter |
+| `NARAEntropyAdapterV5` | `0x9fAf0606c62cA28d34d76e1710BF6E4f523fda5F` | Chainlink VRF v2.5 adapter (dormant while `NARAForgeV5` is paused) |
+| `NARANullEntropyAdapterV5` | `0x13b06070790C0A4Ed7f90B635b18E3FEF8ADa8ef` | Deterministic null entropy adapter bound to `NARAForgeV5` |
 
-### 2.3 Uniswap v4 Hook, Zero-Delay Fee Periphery, POL, Range Manager & Secondary Market
+### 2.3 Uniswap v4 Hook, Zero-Delay Fee Periphery, Range Manager & Secondary Market
 | Contract | Base Mainnet Address | Role |
 | :--- | :--- | :--- |
 | `NARAPositionSaleV5` | `0x04Ac83045d26259D46400Ce6beb9bBd0641df225` | Secondary ETH marketplace (`5%` / `500 bps` fee to `NARARewardIngressV5`, `95%` to seller) |
@@ -72,14 +73,14 @@
 | `NARALiquidityHookV5` | `0x07d8F2Dfd121B10dE3176DeAb6A8C0eaa2646aCC` | Uniswap v4 Hook (`4.63%` base fee + same-block tiers up to `20%`) |
 | `NARAHookFeeCalculatorV5` | `0xeCc6bB347c615BD51E13dcAB670D0c34Df3375F8` | Hook fee tier calculator |
 | `Canonical Pool ID` | `0x4a475299ef674bcc3d2c87c3917cfbecd38cf7237646a3553e37daba67da6e5f` | Uniswap v4 `USDC/NARA` pool (`fee = 3000`, `tickSpacing = 60`) |
-| `NARAFeeVaultV5` | `0xF1f361F803895BF5cf67eC6C506dbFEf2f6E88Cf` | Swap fee vault (`maxHolderFeeBps = 10000`, `holderFeeBps = 0` at launch) |
+| `NARAFeeVaultV5` | `0xF1f361F803895BF5cf67eC6C506dbFEf2f6E88Cf` | Swap fee vault sealed to `NARATreasuryFeeControllerV5` (`maxHolderFeeBps = 10000`, `holderFeeBps = 0` at launch) |
 | `NARAFeeIngressBindingV5` | `0x17cc74317AD75a170887F9E76e5fF09f2058d4BF` | FeeVault to `NARARewardIngressV5` binding |
 | `NARATreasuryFeeControllerV5` | `0xB6A436b48222C94fe427ecAfB263DF9cf42646b9` | Zero-delay (`0s`) fee withdrawal controller for `USDC` and `NARA` swap fees |
 | `NARAPoolOracleV5` | `0xBCF29E9E37E62FBB996D5FF890FEd5280fC02e1A` | Observation oracle for Uniswap v4 pool |
-| `NARAPOLPositionV5` | `0x01EF9de9f4e9197F2A3944b5B34A90eA2f558b64` | Protocol-Owned Liquidity position manager |
-| `NARALiquiditySizerV5` | `0x46B486a300190df823C5f1E4D04c100813fB0843` | POL liquidity sizing helper |
-| `NARACapitalBudgetV5` | `0x6f5f586Bd4F14e47F432264D88Fe9A6A6A80552B` | POL compounding budget (`paused = true` at launch) |
-| `NARACapitalPolicyV5` | `0xC6b5471ADadcf66c2375EC8600bb7a3D85C73e45` | POL capital policy guardrails |
+| `NARAPOLPositionV5` | `0x01EF9de9f4e9197F2A3944b5B34A90eA2f558b64` | Deployed POL position contract (unbound / superseded by `NARATreasuryFeeControllerV5`) |
+| `NARALiquiditySizerV5` | `0x46B486a300190df823C5f1E4D04c100813fB0843` | Deployed POL sizing helper (unbound / superseded by zero-delay fee periphery) |
+| `NARACapitalBudgetV5` | `0x6f5f586Bd4F14e47F432264D88Fe9A6A6A80552B` | Deployed POL budget contract (`paused = true`; superseded by zero-delay fee periphery) |
+| `NARACapitalPolicyV5` | `0xC6b5471ADadcf66c2375EC8600bb7a3D85C73e45` | Deployed POL policy contract (unbound / superseded by zero-delay fee periphery) |
 | `NARATreasuryRangeManagerV5` (Active) | `0x221c625d2BC416460C397035C1286C1f4A4D3A7C` | Active-pool range manager bound to `0x4a4752...` (pre-funded with `51.0149 NARA`) |
 | `NARATreasuryRangeManagerV5` (Legacy) | `0xa72557fcBE56B3eC739dF3aF7b6b893B6Db4D288` | Holds `49,997.0 NARA` (`queueNaraWithdrawal` executed at `Safe Nonce 9`, `readyAt = 2026-11-14T14:27:48Z`) |
 

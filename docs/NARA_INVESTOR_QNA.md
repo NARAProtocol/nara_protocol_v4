@@ -8,17 +8,17 @@
 
 ## Quick Navigation
 
-1. [AMM Mechanics & Two-Phase Uniswap v4 Hook Fee Routing](#1-amm-mechanics--two-phase-uniswap-v4-hook-fee-routing)
+1. [AMM Mechanics & Zero-Delay Uniswap v4 Hook Fee Routing](#1-amm-mechanics--zero-delay-uniswap-v4-hook-fee-routing)
 2. [Anti-Sniper Protection & Supply Custody (`99.9984%` Sealed)](#2-anti-sniper-protection--supply-custody-999984-sealed)
 3. [Liquidity, Rug-Pull Resistance & Two-Way Range Manager](#3-liquidity-rug-pull-resistance--two-way-range-manager)
 4. [Token Supply, Macroeconomics & Dilution Fears](#4-token-supply-macroeconomics--dilution-fears)
-5. [Committing NARA, CryptoSLIP `0.1 NARA` Grid & `5%` Secondary NFT Market](#5-committing-nara-cryptoslip-01-nara-grid--5-secondary-nft-market)
+5. [Committing NARA, CryptoSLIP Companion & `5%` Secondary NFT Market](#5-committing-nara-cryptoslip-companion--5-secondary-nft-market)
 6. [Multisig Custody, Governance Safeguards & Security Audits](#6-multisig-custody-governance-safeguards--security-audits)
 7. [Community Battlecards (5-Second Rapid FUD Dismantlers)](#7-community-battlecards-5-second-rapid-fud-dismantlers)
 
 ---
 
-## 1. AMM Mechanics & Two-Phase Uniswap v4 Hook Fee Routing
+## 1. AMM Mechanics & Zero-Delay Uniswap v4 Hook Fee Routing
 
 ### Q1.1: Is NARA a "tax token"? Why are the Uniswap v4 pool swap fees ~`4.92%`?
 **The Short Answer:**  
@@ -38,17 +38,20 @@ No. The smart contracts make a 100% fee mathematically and architecturally impos
 
 **The Technical Reality:**  
 1. **Hardcoded Bytecode Ceiling:** `NARALiquidityHookV5` enforces an immutable maximum fee ceiling of **`20.00%` (`2,000 bps`)**. Any attempt to set a tier above `20%` reverts on-chain.
-2. **7-Day Governance Delay:** Any update to Hook fee parameters or routing splits is governed by a mandatory **7-day delay**, giving all participants 168 hours of public on-chain visibility before any parameter change can take effect.
+2. **7-Day Governance Delay:** Any update to Hook fee parameters or automatic holder fee splits is governed by a mandatory **7-day delay**, giving all participants 168 hours of public on-chain visibility before any parameter change can take effect.
 
 ---
 
 ### Q1.3: Where do swap fees actually go?
 **The Short Answer:**  
-Zero percent goes to private team pockets. **100% of Hook fees** route through verified protocol contracts in a two-phase lifecycle: first building permanent pool liquidity, and then streaming directly to committed `NARA` positions.
+100% of Hook swap fees (`USDC` on buys, `NARA` on sells) flow into the verified **`NARAFeeVaultV5`** (`0xF1f361F803895BF5cf67eC6C506dbFEf2f6E88Cf`), which is sealed directly to the zero-delay **`NARATreasuryFeeControllerV5`** (`0xB6A436b48222C94fe427ecAfB263DF9cf42646b9`) and **`NARAFeeIngressBindingV5`** (`0x17cc74317AD75a170887F9E76e5fF09f2058d4BF` → `NARARewardIngressV5`).
 
 **The Technical Reality:**  
-1. **Phase 1 (Launch — 100% Protocol-Owned Liquidity):** At launch, **100% of Hook swap fees** (`USDC` on buys, `NARA` on sells) flow into `NARAFeeVaultV5` (`0xF1f361F803895BF5cf67eC6C506dbFEf2f6E88Cf`, paired with zero-delay `NARATreasuryFeeControllerV5` `0xB6A436b48222C94fe427ecAfB263DF9cf42646b9`) to grow permanent Protocol-Owned Liquidity (`NARAPOLPositionV5` `0x01EF9de9f4e9197F2A3944b5B34A90eA2f558b64`).
-2. **Phase 2 (Once Liquidity Is Built — Direct Engine Rewards):** Once pool liquidity is established, the `Treasury Safe` shifts the Hook fee split (via a 7-day governance delay) through `NARAFeeIngressBindingV5` (`0x17cc74317AD75a170887F9E76e5fF09f2058d4BF`) into `NARARewardIngressV5` → `NARARewardLedgerV5`, distributing swap fees (`USDC` and `NARA`) to committed `NARA` positions every 15 minutes.
+1. **Zero-Delay Controller Routing (`NARATreasuryFeeControllerV5` — `0-Second Delay` & Zero Permanent Tie-Up):** Unlike legacy POL architectures (`NARAPOLPositionV5`) that permanently trap swap fees inside a one-way LP position, `NARAFeeVaultV5` is bound directly to `NARATreasuryFeeControllerV5` (`0xB6A436b48222C94fe427ecAfB263DF9cf42646b9`). With `holderFeeBps = 0` at launch, 100% of `USDC` and `NARA` Hook fees accrue to the controller bucket (`polClaims` / `polRaw`), allowing the `2-of-3` `Treasury Safe` (`0xe320C281c86079eA85f2Bc67864E873A61D551E3`) to redeem (`sweepToSafe()`, `withdrawAllTo(recipient)`, `withdrawTo(asset, amount, recipient)`) and route 100% or any custom split (`50/50`, `100%`, etc.) of `USDC` and `NARA` swap fees with **`0-second delay`**:
+   - To the **Treasury Safe** or **`NARATreasuryRangeManagerV5`** (`0x221c625d2BC416460C397035C1286C1f4A4D3A7C`) to deepen active two-way liquidity,
+   - Directly into **`NARARewardIngressV5`** (`0x44130CC47b886D8488041F5eaE271477D1aFA909`) → **`NARARewardLedgerV5`** (`0xC72671D9438388638547444524F6542b650C9264`) for 15-minute epoch rewards, or
+   - Into **`NARAEmissionReserveV5`** (`0xf932178F24b0813C82093985F0Af6Db27Ae25930`).
+2. **Configurable Direct Holder Split (`NARAFeeIngressBindingV5` → `NARARewardIngressV5`):** `NARAFeeVaultV5` also supports a direct on-chain `holderFeeBps` split (`0%` to `100%`, governed by a 7-day notice) that automatically forwards that percentage via `NARAFeeIngressBindingV5` (`0x17cc74317AD75a170887F9E76e5fF09f2058d4BF`) into `NARARewardIngressV5` → `NARARewardLedgerV5` for 15-minute epoch distributions.
 
 ---
 
@@ -95,11 +98,11 @@ No. `NARATokenV5` has zero mint functions and zero owner. `1,000,000 NARA` is th
 
 ---
 
-## 5. Committing NARA, CryptoSLIP `0.1 NARA` Grid & `5%` Secondary NFT Market
+## 5. Committing NARA, CryptoSLIP Companion & `5%` Secondary NFT Market
 
 ### Q5.1: How do commitments and duration multipliers work in V5?
 **The Short Answer:**  
-Users commit `NARA` (`1 NARA` minimum per Position NFT, or `0.1 NARA` per slot via the CryptoSLIP `NARA Grid`) for **`1 day` (`96` epochs)** up to **`365 days` (`35,040` epochs)** to receive a weight multiplier from **`1.00x` to `4.00x`**.
+Users commit `NARA` (`1.0 NARA` minimum per Position NFT) for **`1 day` (`96` epochs)** up to **`365 days` (`35,040` epochs)** to mint a 1:1 ERC-721 **Position NFT (`NARAP`)** with a weight multiplier from **`1.00x` to `4.00x`**.
 
 **The Technical Reality:**  
 - **Quadratic Duration Curve (`V4Quadratic`):**
@@ -109,18 +112,18 @@ Users commit `NARA` (`1 NARA` minimum per Position NFT, or `0.1 NARA` per slot v
   - **90 Days (`8,640` epochs):** `1.28x`
   - **180 Days (`17,280` epochs):** `1.85x`
   - **365 Days (`35,040` epochs):** **`4.00x`**
-- **Equal-Footing Launch Mode:** Paid VRF rarity rolls and 5-input fusion in `NARAForgeV5` are switched off at launch (`commitsPaused = true`), so every participant enters on equal mathematical footing with zero roll/fusion fees.
+- **Equal-Footing Duration-Only Launch Mode (No NFT Splitting or Fusion):** Position NFTs are individual 1:1 ERC-721 tokens (never split or fractionalized), and VRF rarity rolls and 5-NFT fusions in `NARAForgeV5` (`0x84225aBaBbE7433c736925f9c0ba6f6CcB51551a`) are disabled (`commitsPaused = true`, bound to deterministic `NARANullEntropyAdapterV5`). Every participant enters on equal mathematical footing with zero roll/fusion fees.
 
 ---
 
-### Q5.2: What if a user has less than `1.0 NARA` or holds multiple `0.1 NARA` slips?
+### Q5.2: How does the CryptoSLIP App work with NARA (`Commit NARA` & Fractional `NARA Slips`)?
 **The Short Answer:**  
-The companion [**CryptoSLIP App**](https://cryptoslip-g29s.4everland.app/?v=cs-1794113891779) supports fractional **`0.1 NARA` slips**, **atomic 10-slip merging**, and the shared **10-slot `0.1 NARA` `NARA Grid`**.
+The companion [**CryptoSLIP App**](https://cryptoslip-g29s.4everland.app/?v=cs-1794113891779) provides a dedicated **`Commit NARA`** tab for `1.0+ NARA` Position NFTs & 1-tap reward harvesting, alongside fractional **`NARA` payment slips (`>= 0.001 NARA`)**, **atomic 10-slip combining**, and **in-vault Slip-to-Slip swaps**.
 
 **The Technical Reality:**  
-1. **Split `NARA` into `0.1 NARA` Slips:** Because `1,000,000 NARA` is scarce and `NARAPrincipalLedgerV5` requires `1.0 NARA` minimum per Position NFT, CryptoSLIP lets users split `NARA` into `0.1 NARA` bearer slips.
-2. **Merge Up to 10 Slips Atomically (`rearrangeAndPayWithPermits`):** Anyone holding multiple small slips (for example, ten `0.1 NARA` slips) can merge up to 10 slips into `1.0 NARA` in a single atomic transaction via `CryptoSlipVaultV32.rearrangeAndPayWithPermits` (`0x38BF0321FA7489576978353a6a8da4A3e85C2F18`).
-3. **Join the 10-Slot `0.1 NARA` `NARA Grid`:** Users with `0.1 NARA` can take 1 or more slots (`0.1 NARA` per slot) in the shared **NARA Grid**. Once all 10 slots fill (`1.0 NARA` total), the Grid commits `1.0 NARA` into a V5 Position NFT and credits each slot **10% of the position's 15-minute rewards and principal**.
+1. **`Commit NARA` (`1.0+ NARA` Individual Position NFTs & 1-Tap Reward Harvesting):** Commit `1.0+ NARA` (`NARAPrincipalLedgerV5.create`) across canonical duration horizons (`1d` to `365d`) to mint your own `NARAP` Position NFT, track live 15-minute rewards (`NARA`, `ETH`, `USDC`), tap **`Collect`** to claim rewards to your wallet or wrap them directly into a shareable CryptoSLIP payment link (`>= 0.1 NARA`), and tap **`Get back`** at maturity to withdraw 100% of your `NARA` 1-for-1 (or as a slip to send).
+2. **Fractional `NARA` Payment Slips (`>= 0.001 NARA`), Split & 10-Slip Combine:** Because `1,000,000 NARA` is scarce and `NARAPrincipalLedgerV5` requires `1.0 NARA` minimum per Position NFT, CryptoSLIP (`CryptoSlipVaultV32` `0x38BF0321FA7489576978353a6a8da4A3e85C2F18`) lets anyone send, receive, or keep (`acceptWithPermit`, `0%` fee) fractional `NARA` bearer slips starting from **`0.001 NARA`**, split payment slips with automatic change (`splitAndPayWithPermit`), or combine up to **10 smaller `NARA` slips** into `1.0+ NARA` in a single atomic transaction (`rearrangeAndPayWithPermits`) to commit into a V5 Position NFT.
+3. **In-Vault Slip-to-Slip Swaps (`CryptoSlipTradeRouterV32`):** Swap `USDC`, `ETH`, `cbBTC`, and `NARA` directly inside slips (`0x295E72cB3dc09582F32e0fEB7e0e650752219a7f`) without exposing your personal wallet address on-chain.
 
 ---
 
@@ -138,7 +141,7 @@ When your commitment expires, you withdraw **100% of your `NARA` back 1-for-1** 
 
 ### Q6.1: How is governance structured on Base Mainnet?
 **The Short Answer:**  
-All governance Roles are separated across three independent **2-of-3 Gnosis Safes** on Base Mainnet, with `1:1` segregated user principal custody that has zero admin sweep or rescue functions.
+All governance roles are separated across three independent **2-of-3 Gnosis Safes** on Base Mainnet, with `1:1` segregated user principal custody that has zero admin sweep or rescue functions.
 
 **The Technical Reality:**  
 - **`Treasury Safe (2-of-3)`:** `0xe320C281c86079eA85f2Bc67864E873A61D551E3`
@@ -152,9 +155,9 @@ All governance Roles are separated across three independent **2-of-3 Gnosis Safe
 
 | Objection | Instant Response |
 | :--- | :--- |
-| **"Is this a tax token?"** | "Zero tax on ERC-20 transfers (`0%`). Only Uniswap v4 pool swaps pay the ~`4.92%` base fee (`4.63%` Hook + `0.30%` LP) that builds permanent pool liquidity first and then streams to committed positions." |
+| **"Is this a tax token?"** | "Zero tax on ERC-20 transfers (`0%`). Only Uniswap v4 pool swaps pay the ~`4.92%` base fee (`4.63%` Hook + `0.30%` LP) routed via `NARAFeeVaultV5` and zero-delay `NARATreasuryFeeControllerV5` to support active liquidity and committed position rewards." |
 | **"Can a whale or VC dump on us?"** | "`99.9984%` (`999,984 NARA`) of the `1,000,000` fixed supply is sealed in verified smart contracts (`949,987 NARA` in `NARAEmissionReserveV5` + `49,997 NARA` in `NARATreasuryRangeManagerV5`). Zero VCs or presales exist." |
 | **"How does the Range Manager work?"** | "It is a two-way range liquidity manager (`49,997 NARA`): it sells `NARA` for `USDC` on upside rungs and uses collected `USDC` to buy `NARA` back on dips, with a `7-day` `NARA` withdrawal delay extendable to `1 year`." |
-| **"What if I have less than `1 NARA`?"** | "Use CryptoSLIP (`cryptoslip.app`) to hold or merge `0.1 NARA` slips atomically (`rearrangeAndPayWithPermits`), or commit `0.1 NARA` per slot in the 10-slot `NARA Grid`." |
+| **"What if I have less than `1 NARA`?"** | "Use CryptoSLIP (`cryptoslip.eth.limo`) to hold, split, swap, or combine fractional `NARA` payment slips (`>= 0.001 NARA`, up to 10 slips combined atomically via `rearrangeAndPayWithPermits`), and once you hold `1.0+ NARA`, commit it in the `Commit NARA` tab to mint your own `NARAP` Position NFT." |
 | **"What if I want to exit before my commitment ends?"** | "List your Position NFT (`NARAP`) for `ETH` on `NARAPositionSaleV5` anytime: you receive `95%` of the `ETH` and `5%` routes into the 15-minute `ETH` reward pool." |
 | **"Can the owner mint more tokens?"** | "No. `NARATokenV5` is hardcapped at `1,000,000 NARA` forever with `0` owner and `0` mint functions." |
