@@ -10,7 +10,7 @@
 
 **Autonomous On-Chain Value & Resource Redistribution Engine on Base (`chainId: 8453`)**
 
-[![Buy on CryptoSLIP App](https://img.shields.io/badge/%F0%9F%9A%80_Launch_App-CryptoSLIP-0052FF?style=for-the-badge&logo=ethereum&logoColor=white&labelColor=080808)](https://cryptoslip-g29s.4everland.app/?v=cs-1793645949345)
+[![Buy on CryptoSLIP App](https://img.shields.io/badge/%F0%9F%9A%80_Launch_App-CryptoSLIP-0052FF?style=for-the-badge&logo=ethereum&logoColor=white&labelColor=080808)](https://cryptoslip-g29s.4everland.app/?v=cs-1794113891779)
 [![Website](https://img.shields.io/badge/Website-naraprotocol.io-080808?style=for-the-badge&logo=googlechrome&logoColor=white)](https://naraprotocol.io)
 [![BaseScan](https://img.shields.io/badge/BaseScan-Verified_V5-0052FF?style=for-the-badge&logo=ethereum&logoColor=white)](https://basescan.org/token/0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f)
 [![X](https://img.shields.io/badge/X-@NARA__protocol-080808?style=for-the-badge&logo=x&logoColor=white)](https://x.com/NARA_protocol)
@@ -18,7 +18,7 @@
 
 </div>
 
-> **Synchronization Stamp:** Verified against Base Mainnet (`chainId: 8453`) — Deployment Checkpoint Block `53,422,831` (synchronized through Block `53,443,166`, `2026-11-03`).
+> **Synchronization Stamp:** Verified against Base Mainnet (`chainId: 8453`) — Deployment Checkpoint Block `54,778,829` (`2026-11-08`).
 
 ---
 
@@ -76,7 +76,7 @@ $$\text{Multiplier}(r) = 1 + 0.5r + 2.5r^2, \quad r = \frac{\text{durationEpochs
 * **Equal-Footing Launch Mode:** Paid VRF rarity rolls and 5-input fusion in [`NARAForgeV5`](https://basescan.org/address/0x84225aBaBbE7433c736925f9c0ba6f6CcB51551a) are paused at launch (`commitsPaused = true`), so every participant enters as a standard `1X` Common position with zero roll or fusion fees.
 
 ### B. CryptoSLIP Companion (`0.1 NARA` Grid & Payment Slips)
-Because a direct Position NFT requires `1.0 NARA` minimum, the [**CryptoSLIP App**](https://cryptoslip-g29s.4everland.app/?v=cs-1793645949345) lets anyone participate starting from **`0.1 NARA`**:
+Because a direct Position NFT requires `1.0 NARA` minimum, the [**CryptoSLIP App**](https://cryptoslip-g29s.4everland.app/?v=cs-1794113891779) lets anyone participate starting from **`0.1 NARA`**:
 * **10-Slot `0.1 NARA` `NARA Grid`:** Commit `0.1 NARA` per slot into the shared 10-slot **NARA Grid** (`10 × 0.1 NARA = 1.0 NARA` Position NFT), where each slot receives **`10%`** of the position's 15-minute rewards and principal.
 * **Instant `NARA` Payment Slips:** Send, receive, or split fractional `NARA` off-DEX via shareable links or QR codes (`0%` transfer tax).
 * **Full CryptoSLIP Guide & 25-Question Legal FAQ:** Have questions about how CryptoSLIP V3.2 works, non-custodial security, or regulatory classification? Read [**CryptoSLIP Public Overview & Legal FAQ (`CRYPTOSLIP_PUBLIC_OVERVIEW_AND_LEGAL_FAQ.md`)**](CRYPTOSLIP_PUBLIC_OVERVIEW_AND_LEGAL_FAQ.md).
@@ -91,17 +91,17 @@ Because a direct Position NFT requires `1.0 NARA` minimum, the [**CryptoSLIP App
 
 ## 🌊 4. Uniswap v4 Hook, Two-Phase Fees & Two-Way Range Manager
 
-### A. Uniswap v4 Hook ([`NARALiquidityHookV5`](https://basescan.org/address/0x201fBD2839bEc513040024b37dAe97B401E96acC))
+### A. Uniswap v4 Hook ([`NARALiquidityHookV5`](https://basescan.org/address/0x07d8F2Dfd121B10dE3176DeAb6A8C0eaa2646aCC))
 * **Zero ERC-20 Transfer Tax (`0%`):** Standard wallet-to-wallet `NARA` transfers and CryptoSLIP slip operations pay **`0%` tax**.
-* **Base Pool Swap Fee (`4.9161%` Each Way):** Inside the canonical Uniswap v4 `USDC/NARA` pool (`Pool ID: 0x3bd8b60dc9eb37f00afa57585232e4018ae661b2dbd5318562183a67a07ac758`), normal swaps pay **`4.63%` (`463 bps`)** Hook fee + **`0.30%` (`3000 pips`)** LP fee = **`4.9161%` total each way**.
+* **Base Pool Swap Fee (`4.9161%` Each Way):** Inside the canonical Uniswap v4 `USDC/NARA` pool (`Pool ID: 0x4a475299ef674bcc3d2c87c3917cfbecd38cf7237646a3553e37daba67da6e5f`), normal swaps pay **`4.63%` (`463 bps`)** Hook fee + **`0.30%` (`3000 pips`)** LP fee = **`4.9161%` total each way**.
 * **Same-Block Anti-Bot Tiers:** Cumulative volume within the same 2-second Base block steps through progressive tiers (`5% / 8% / 12% / 20%` on buys; `5% / 7% / 10% / 15%` up to `20%` hard cap on sells) and resets on the next block.
 
 ### B. Two-Phase Hook Fee Routing (`100% POL` → `Engine Rewards`)
-1. **Phase 1 (Launch — Build Permanent Pool Liquidity):** At launch, **100% of Hook swap fees** route to [`NARAFeeVaultV5`](https://basescan.org/address/0xe63b4BaAF873FC57859bfe13e0e8cFccAaB6AddE) (`holderFeeBps = 0`) to compound permanent Protocol-Owned Liquidity ([`NARAPOLPositionV5`](https://basescan.org/address/0x01EF9de9f4e9197F2A3944b5B34A90eA2f558b64)).
-2. **Phase 2 (Once Liquidity Is Built — Direct 15-Minute Rewards):** Once pool depth is established, the `Treasury Safe` shifts the Hook fee split (up to `100%`, governed by a 7-day delay) via [`NARAFeeIngressBindingV5`](https://basescan.org/address/0x8f41d6427B25525fB863203c78FF9050B3bd0DBC) into [`NARARewardIngressV5`](https://basescan.org/address/0x44130CC47b886D8488041F5eaE271477D1aFA909) → [`NARARewardLedgerV5`](https://basescan.org/address/0xC72671D9438388638547444524F6542b650C9264), streaming swap fees (`USDC` and `NARA`) to committed `NARA` positions every 15 minutes.
+1. **Phase 1 (Launch — Build Permanent Pool Liquidity):** At launch, **100% of Hook swap fees** route to [`NARAFeeVaultV5`](https://basescan.org/address/0xF1f361F803895BF5cf67eC6C506dbFEf2f6E88Cf) (`holderFeeBps = 0`, paired with zero-delay [`NARATreasuryFeeControllerV5`](https://basescan.org/address/0xB6A436b48222C94fe427ecAfB263DF9cf42646b9)) to compound permanent Protocol-Owned Liquidity ([`NARAPOLPositionV5`](https://basescan.org/address/0x01EF9de9f4e9197F2A3944b5B34A90eA2f558b64)).
+2. **Phase 2 (Once Liquidity Is Built — Direct 15-Minute Rewards):** Once pool depth is established, the `Treasury Safe` shifts the Hook fee split (up to `100%`, governed by a 7-day delay) via [`NARAFeeIngressBindingV5`](https://basescan.org/address/0x17cc74317AD75a170887F9E76e5fF09f2058d4BF) into [`NARARewardIngressV5`](https://basescan.org/address/0x44130CC47b886D8488041F5eaE271477D1aFA909) → [`NARARewardLedgerV5`](https://basescan.org/address/0xC72671D9438388638547444524F6542b650C9264), streaming swap fees (`USDC` and `NARA`) to committed `NARA` positions every 15 minutes.
 
-### C. Two-Way Range Liquidity Manager ([`NARATreasuryRangeManagerV5`](https://basescan.org/address/0xa72557fcBE56B3eC739dF3aF7b6b893B6Db4D288))
-Holds **`49,997.0 NARA` (`4.9997%`)** for **two-way concentrated range liquidity**:
+### C. Two-Way Range Liquidity Manager ([`NARATreasuryRangeManagerV5`](https://basescan.org/address/0x221c625d2BC416460C397035C1286C1f4A4D3A7C))
+Bound to active Pool `0x4a4752...` (pre-funded with **`51.0149 NARA`**, with **`49,997.0 NARA` (`4.9997%`)** queued at `Safe Nonce 9` in legacy [`0xa72557fcBE56B3eC739dF3aF7b6b893B6Db4D288`](https://basescan.org/address/0xa72557fcBE56B3eC739dF3aF7b6b893B6Db4D288) maturing `2026-11-14T14:27:48Z` to migrate into `0x221c62...`) for **two-way concentrated range liquidity**:
 * **Upside Rungs (`NARA -> USDC`):** Supplies `NARA` across price bands above spot so the pool deepens and collects `USDC` as price rises.
 * **Dip Buy-Back Rungs (`USDC -> NARA`):** Uses collected `USDC` across lower price bands to buy `NARA` back on pullbacks.
 * **Surplus & Fee Recycling Toward Committed Positions:** Net trading surplus and LP proceeds generated by the Range Manager — alongside swap fees — may be used to acquire `NARA` from the market and send it into [`NARAEmissionReserveV5`](https://basescan.org/address/0xf932178F24b0813C82093985F0Af6Db27Ae25930), routed into the 15-minute reward pool, or deployed into higher-impact ecosystem mechanisms as we build — so that captured swap taxes and range liquidity proceeds are used in one way or another to benefit committed `NARA` positions *(discretionary, activity-dependent, and never promised or guaranteed)*.
@@ -109,7 +109,7 @@ Holds **`49,997.0 NARA` (`4.9997%`)** for **two-way concentrated range liquidity
 
 ---
 
-## 🔗 5. Verified Base Mainnet V5 Contract Registry (`34 Contracts` + `3 Safes`)
+## 🔗 5. Verified Base Mainnet V5 Contract Registry (`35 Contracts` + `3 Safes`)
 
 ### Immutable Base & 2-of-3 Multisig Safes
 | Role / Contract | Base Mainnet Address | Notes |
@@ -150,17 +150,19 @@ Holds **`49,997.0 NARA` (`4.9997%`)** for **two-way concentrated range liquidity
 | :--- | :--- | :--- |
 | **`NARAPositionSaleV5`** | [`0x04Ac83045d26259D46400Ce6beb9bBd0641df225`](https://basescan.org/address/0x04Ac83045d26259D46400Ce6beb9bBd0641df225) | Built-in `ETH` marketplace for active Position NFTs (**`5%` / `500 bps` fee** to `NARARewardIngressV5`, **`95%` to seller**, 30d max listing) |
 | **`NARASaleCreditLensV5`** | [`0x26b481f1545D9912D39693D7F8E589F82835e03d`](https://basescan.org/address/0x26b481f1545D9912D39693D7F8E589F82835e03d) | Sale credit verification lens (child of `NARAPositionSaleV5`) |
-| **`NARALiquidityHookV5`** | [`0x201fBD2839bEc513040024b37dAe97B401E96acC`](https://basescan.org/address/0x201fBD2839bEc513040024b37dAe97B401E96acC) | Uniswap v4 Hook (`4.63%` base fee both ways + same-block tiers up to `20%`) |
-| **`NARAHookFeeCalculatorV5`** | [`0x989aE21D79D9750A6528F1FCc4c2b331BF2D59d4`](https://basescan.org/address/0x989aE21D79D9750A6528F1FCc4c2b331BF2D59d4) | Hook fee tier calculator |
-| **`Canonical Pool ID`** | `0x3bd8b60dc9eb37f00afa57585232e4018ae661b2dbd5318562183a67a07ac758` | Uniswap v4 `USDC/NARA` pool (`fee = 3000`, `tickSpacing = 60`) |
-| **`NARAFeeVaultV5`** | [`0xe63b4BaAF873FC57859bfe13e0e8cFccAaB6AddE`](https://basescan.org/address/0xe63b4BaAF873FC57859bfe13e0e8cFccAaB6AddE) | Swap fee vault (`100%` POL at launch, shifts to Engine rewards once liquidity is built) |
-| **`NARAFeeIngressBindingV5`** | [`0x8f41d6427B25525fB863203c78FF9050B3bd0DBC`](https://basescan.org/address/0x8f41d6427B25525fB863203c78FF9050B3bd0DBC) | FeeVault to `NARARewardIngressV5` binding |
-| **`NARAPoolOracleV5`** | [`0xA2151333BDD77DF2E058f9cE274F63D2e48A5553`](https://basescan.org/address/0xA2151333BDD77DF2E058f9cE274F63D2e48A5553) | Observation oracle for Uniswap v4 pool |
+| **`NARALiquidityHookV5`** | [`0x07d8F2Dfd121B10dE3176DeAb6A8C0eaa2646aCC`](https://basescan.org/address/0x07d8F2Dfd121B10dE3176DeAb6A8C0eaa2646aCC) | Uniswap v4 Hook (`4.63%` base fee both ways + same-block tiers up to `20%`) |
+| **`NARAHookFeeCalculatorV5`** | [`0xeCc6bB347c615BD51E13dcAB670D0c34Df3375F8`](https://basescan.org/address/0xeCc6bB347c615BD51E13dcAB670D0c34Df3375F8) | Hook fee tier calculator |
+| **`Canonical Pool ID`** | `0x4a475299ef674bcc3d2c87c3917cfbecd38cf7237646a3553e37daba67da6e5f` | Uniswap v4 `USDC/NARA` pool (`fee = 3000`, `tickSpacing = 60`) |
+| **`NARAFeeVaultV5`** | [`0xF1f361F803895BF5cf67eC6C506dbFEf2f6E88Cf`](https://basescan.org/address/0xF1f361F803895BF5cf67eC6C506dbFEf2f6E88Cf) | Swap fee vault (`100%` POL at launch, shifts to Engine rewards once liquidity is built) |
+| **`NARAFeeIngressBindingV5`** | [`0x17cc74317AD75a170887F9E76e5fF09f2058d4BF`](https://basescan.org/address/0x17cc74317AD75a170887F9E76e5fF09f2058d4BF) | FeeVault to `NARARewardIngressV5` binding |
+| **`NARATreasuryFeeControllerV5`** | [`0xB6A436b48222C94fe427ecAfB263DF9cf42646b9`](https://basescan.org/address/0xB6A436b48222C94fe427ecAfB263DF9cf42646b9) | Zero-delay (`0s`) fee withdrawal & routing controller for `USDC` and `NARA` swap fees |
+| **`NARAPoolOracleV5`** | [`0xBCF29E9E37E62FBB996D5FF890FEd5280fC02e1A`](https://basescan.org/address/0xBCF29E9E37E62FBB996D5FF890FEd5280fC02e1A) | Observation oracle for Uniswap v4 pool |
 | **`NARAPOLPositionV5`** | [`0x01EF9de9f4e9197F2A3944b5B34A90eA2f558b64`](https://basescan.org/address/0x01EF9de9f4e9197F2A3944b5B34A90eA2f558b64) | Protocol-Owned Liquidity position manager |
 | **`NARALiquiditySizerV5`** | [`0x46B486a300190df823C5f1E4D04c100813fB0843`](https://basescan.org/address/0x46B486a300190df823C5f1E4D04c100813fB0843) | POL liquidity sizing helper |
 | **`NARACapitalBudgetV5`** | [`0x6f5f586Bd4F14e47F432264D88Fe9A6A6A80552B`](https://basescan.org/address/0x6f5f586Bd4F14e47F432264D88Fe9A6A6A80552B) | POL compounding budget (`paused = true` at launch) |
 | **`NARACapitalPolicyV5`** | [`0xC6b5471ADadcf66c2375EC8600bb7a3D85C73e45`](https://basescan.org/address/0xC6b5471ADadcf66c2375EC8600bb7a3D85C73e45) | Operator-only compounding policy |
-| **`NARATreasuryRangeManagerV5`**| [`0xa72557fcBE56B3eC739dF3aF7b6b893B6Db4D288`](https://basescan.org/address/0xa72557fcBE56B3eC739dF3aF7b6b893B6Db4D288) | Holds **`49,997.0 NARA`** for two-way range liquidity (`NARA -> USDC` sell rungs & `USDC -> NARA` buy-back rungs; `7-day` `NARA` withdrawal delay extendable to `1 year`) |
+| **`NARATreasuryRangeManagerV5` (Active Pool)**| [`0x221c625d2BC416460C397035C1286C1f4A4D3A7C`](https://basescan.org/address/0x221c625d2BC416460C397035C1286C1f4A4D3A7C) | Active two-way range manager bound to Pool `0x4a4752...` (pre-funded with **`51.0149 NARA`**) |
+| **`NARATreasuryRangeManagerV5` (Legacy Custody)**| [`0xa72557fcBE56B3eC739dF3aF7b6b893B6Db4D288`](https://basescan.org/address/0xa72557fcBE56B3eC739dF3aF7b6b893B6Db4D288) | Holds **`49,997.0 NARA`** (`7-day` withdrawal queued at `Safe Nonce 9`, maturing `2026-11-14T14:27:48Z` to migrate into `0x221c62...`) |
 
 ---
 
@@ -177,7 +179,7 @@ Holds **`49,997.0 NARA` (`4.9997%`)** for **two-way concentrated range liquidity
 
 ## 🌐 7. Official Links & Brand Assets
 
-* **CryptoSLIP App (Buy / Commit / Grid / Slips):** [cryptoslip-g29s.4everland.app/?v=cs-1793645949345](https://cryptoslip-g29s.4everland.app/?v=cs-1793645949345) · [Public Overview & Legal FAQ](CRYPTOSLIP_PUBLIC_OVERVIEW_AND_LEGAL_FAQ.md)
+* **CryptoSLIP App (Buy / Commit / Grid / Slips):** [cryptoslip-g29s.4everland.app/?v=cs-1794113891779](https://cryptoslip-g29s.4everland.app/?v=cs-1794113891779) · [Public Overview & Legal FAQ](CRYPTOSLIP_PUBLIC_OVERVIEW_AND_LEGAL_FAQ.md)
 * **Website:** [naraprotocol.io](https://naraprotocol.io)
 * **X (Twitter):** [@NARA_protocol](https://x.com/NARA_protocol) · **Telegram:** [@naraprotocol](https://t.me/naraprotocol)
 * **Official Brand Assets:** [Icon `256×256`](https://naraprotocol.io/nara_token_256.png) · [Icon `512×512`](https://naraprotocol.io/nara_token_512.png) · [Token `128×128`](https://naraprotocol.io/nara_token_128.png) · [Banner `1500×500`](https://naraprotocol.io/nara_dex_banner_1500x500.jpg)

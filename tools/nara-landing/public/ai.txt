@@ -1,0 +1,12 @@
+# NARA Protocol AI & LLM Discovery Policy (https://naraprotocol.io/ai.txt)
+
+User-Agent: *
+Allow: /llms.txt
+Allow: /llms-full.txt
+
+Canonical-Index: https://naraprotocol.io/llms.txt
+Canonical-Full-Context: https://naraprotocol.io/llms-full.txt
+Public-Documentation-Repo: https://github.com/NARAProtocol/nara_protocol
+CryptoSLIP-Repo: https://github.com/NARAProtocol/cryptoslip
+Canonical-Token-Base-Mainnet: 0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f
+CryptoSLIP-Vault-Base-Mainnet: 0x38BF0321FA7489576978353a6a8da4A3e85C2F18

@@ -1,17 +1,20 @@
-# NARA — V4 Documentation
+# NARA Protocol — Documentation Hub (V5 Canonical & Frozen V4 Reference)
 
-`contracts/v4/`, generated v4 artifacts, verified deployment evidence, and
-[CURRENT_STATE.md](CURRENT_STATE.md) are authoritative. The experimental V5
-stack and its release plans are deleted and must not be used as instructions.
+[CURRENT_STATE.md](CURRENT_STATE.md), [PROJECT_KNOWLEDGE_BASE.md](PROJECT_KNOWLEDGE_BASE.md), [ROADMAP.md](ROADMAP.md), [NARA_INVESTOR_QNA.md](NARA_INVESTOR_QNA.md), and [CRYPTOSLIP_PUBLIC_OVERVIEW_AND_LEGAL_FAQ.md](CRYPTOSLIP_PUBLIC_OVERVIEW_AND_LEGAL_FAQ.md) document the live **NARA V5** stack on Base Mainnet (`8453`, verified through Block `54,778,829`). `contracts/v4/` is permanently retired, frozen, and read-only (`npm run verify:frozen-v4`).
 
-> The canonical contracts and NARA/USDC pool are in technical live testing with
-> real assets on Base mainnet. This is not public product availability, an audit
-> or safety claim, legal approval, or a recommendation. This repository contains
-> no evidence of completed jurisdiction-specific
-> qualified legal review; baskets remain preview-only and Position NFT
-> consumers remain disabled while `integrationReady` is `false`.
+## V5 Canonical Documentation (Start Here)
 
-## Start here
+| Document | Audience & Purpose |
+|---|---|
+| [CURRENT_STATE.md](CURRENT_STATE.md) | Live Base Mainnet V5 35-contract directory, Zero-Lock Fee Periphery, and supply custody (`Block 54,778,829`) |
+| [PROJECT_KNOWLEDGE_BASE.md](PROJECT_KNOWLEDGE_BASE.md) | Complete V5 system guide: `1,000,000 NARA` fixed supply, `949,987 NARA` sealed reserve, `0.1 NARA` Grid, `5%` NFT market, and two-way Range Manager |
+| [ROADMAP.md](ROADMAP.md) | Completed Base Mainnet V5 milestones (`S1..S9`, `LPD 25..37`, Zero-Lock Fee Periphery, 2-hour Pulse Keepers) and `Safe Nonce 10` launch readiness |
+| [NARA_INVESTOR_QNA.md](NARA_INVESTOR_QNA.md) | Technical Q&A & FUD answers covering AMM fees, `99.9984%` supply seal, Range Manager, and multisig custody |
+| [CRYPTOSLIP_PUBLIC_OVERVIEW_AND_LEGAL_FAQ.md](CRYPTOSLIP_PUBLIC_OVERVIEW_AND_LEGAL_FAQ.md) | Companion CryptoSLIP V3.2 architecture, 3-tier forensic visibility analysis, UTXO `slipId` genealogy, and 25-question legal FAQ |
+
+---
+
+## Historical V4 Reference Index (Retired & Frozen Stack)
 
 1. [CURRENT_STATE.md](CURRENT_STATE.md) — canonical state, incident findings,
    remediations, verification evidence, and remaining release blockers.

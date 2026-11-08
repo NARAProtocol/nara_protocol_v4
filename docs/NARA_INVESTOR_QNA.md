@@ -25,7 +25,7 @@
 No. `NARATokenV5` (`0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f`) has **zero transfer taxes (`0%`)** at the ERC-20 token contract layer. Wallet-to-wallet transfers, CryptoSLIP off-DEX slip sends, and peer-to-peer transfers are 100% fee-free.
 
 **The Technical Reality:**  
-Fee dynamics exist exclusively inside the **Uniswap v4 `USDC/NARA` pool** via `NARALiquidityHookV5` (`0x201fBD2839bEc513040024b37dAe97B401E96acC`):
+Fee dynamics exist exclusively inside the **Uniswap v4 `USDC/NARA` pool** via `NARALiquidityHookV5` (`0x07d8F2Dfd121B10dE3176DeAb6A8C0eaa2646aCC`):
 - **Base Swap Fee (Both Ways):** `4.63%` (`463 bps`) Hook fee + `0.30%` (`3000 pips`) Uniswap v4 LP fee = **`4.9161%` total each way** at the base tier.
 - **Same-Block Volume Tiers:** If large trading volume aggregates within the same 2-second Base block, fees step up progressively (`5% / 8% / 12% / 20%` on buys and `5% / 7% / 10% / 15%` up to `20%` max on sells) to deter single-block sandwiching and sniper sweeps.
 - **Block Reset:** As soon as the next block arrives, the fee resets to the base tier.
@@ -47,8 +47,8 @@ No. The smart contracts make a 100% fee mathematically and architecturally impos
 Zero percent goes to private team pockets. **100% of Hook fees** route through verified protocol contracts in a two-phase lifecycle: first building permanent pool liquidity, and then streaming directly to committed `NARA` positions.
 
 **The Technical Reality:**  
-1. **Phase 1 (Launch — 100% Protocol-Owned Liquidity):** At launch, **100% of Hook swap fees** (`USDC` on buys, `NARA` on sells) flow into `NARAFeeVaultV5` (`0xe63b4BaAF873FC57859bfe13e0e8cFccAaB6AddE`) to grow permanent Protocol-Owned Liquidity (`NARAPOLPositionV5` `0x01EF9de9f4e9197F2A3944b5B34A90eA2f558b64`).
-2. **Phase 2 (Once Liquidity Is Built — Direct Engine Rewards):** Once pool liquidity is established, the `Treasury Safe` shifts the Hook fee split (via a 7-day governance delay) through `NARAFeeIngressBindingV5` (`0x8f41d6427B25525fB863203c78FF9050B3bd0DBC`) into `NARARewardIngressV5` → `NARARewardLedgerV5`, distributing swap fees (`USDC` and `NARA`) to committed `NARA` positions every 15 minutes.
+1. **Phase 1 (Launch — 100% Protocol-Owned Liquidity):** At launch, **100% of Hook swap fees** (`USDC` on buys, `NARA` on sells) flow into `NARAFeeVaultV5` (`0xF1f361F803895BF5cf67eC6C506dbFEf2f6E88Cf`, paired with zero-delay `NARATreasuryFeeControllerV5` `0xB6A436b48222C94fe427ecAfB263DF9cf42646b9`) to grow permanent Protocol-Owned Liquidity (`NARAPOLPositionV5` `0x01EF9de9f4e9197F2A3944b5B34A90eA2f558b64`).
+2. **Phase 2 (Once Liquidity Is Built — Direct Engine Rewards):** Once pool liquidity is established, the `Treasury Safe` shifts the Hook fee split (via a 7-day governance delay) through `NARAFeeIngressBindingV5` (`0x17cc74317AD75a170887F9E76e5fF09f2058d4BF`) into `NARARewardIngressV5` → `NARARewardLedgerV5`, distributing swap fees (`USDC` and `NARA`) to committed `NARA` positions every 15 minutes.
 
 ---
 
@@ -63,7 +63,7 @@ Check the BaseScan Token Holders tab. **`99.9984%` (`999,984 NARA`)** of the ent
 | Allocation / Holder | NARA Amount | % of Supply | On-Chain Contract / Custodian | Can It Dump on the Market? |
 | :--- | :---: | :---: | :--- | :---: |
 | **Emission Reserve** | `949,987.0 NARA` | `94.9987%` | [`NARAEmissionReserveV5`](https://basescan.org/address/0xf932178F24b0813C82093985F0Af6Db27Ae25930) | **NO.** Sealed (`coreBound = true`). Releases strictly via 15-minute epoch pulses to active positions. |
-| **Two-Way Range Manager** | `49,997.0 NARA` | `4.9997%` | [`NARATreasuryRangeManagerV5`](https://basescan.org/address/0xa72557fcBE56B3eC739dF3aF7b6b893B6Db4D288) | **NO.** Supplies two-way range liquidity (`NARA -> USDC` sell rungs & `USDC -> NARA` buy-back rungs); raw `NARA` withdrawals require a `7-day` delay (extendable to `1 year`). |
+| **Two-Way Range Manager** | `49,997.0 NARA` | `4.9997%` | [`NARATreasuryRangeManagerV5`](https://basescan.org/address/0x221c625d2BC416460C397035C1286C1f4A4D3A7C) (`51.0149 NARA` active + `49,997 NARA` migrating from [`0xa72557...`](https://basescan.org/address/0xa72557fcBE56B3eC739dF3aF7b6b893B6Db4D288)) | **NO.** Supplies two-way range liquidity (`NARA -> USDC` sell rungs & `USDC -> NARA` buy-back rungs); raw `NARA` withdrawals require a `7-day` delay (extendable to `1 year`). |
 | **Initial Seed LP** | `3.0 NARA` | `0.0003%` | [`Treasury Safe (2-of-3)`](https://basescan.org/address/0xe320C281c86079eA85f2Bc67864E873A61D551E3) | Paired with `300 USDC` at `100 USDC / NARA` to seed the Uniswap v4 pool. |
 | **Live E2E Verification** | `13.0 NARA` | `0.0013%` | `NARAPrincipalLedgerV5` & E2E verification wallets | **NO.** Zero VC, presale, or whale bags exist. |
 | **Total Fixed Supply** | **`1,000,000.0 NARA`** | **`100.0000%`** | [`NARATokenV5`](https://basescan.org/address/0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f) | Hardcapped forever (`0` owner, `0` mint capability). |
@@ -74,7 +74,7 @@ Check the BaseScan Token Holders tab. **`99.9984%` (`999,984 NARA`)** of the ent
 
 ### Q3.1: How does `NARATreasuryRangeManagerV5` (`49,997 NARA`) work?
 **The Short Answer:**  
-`NARATreasuryRangeManagerV5` (`0xa72557fcBE56B3eC739dF3aF7b6b893B6Db4D288`) is a **two-way active range liquidity manager** holding `49,997 NARA`. It places `NARA` sell rungs above spot price to provide upside depth as price rises, and uses the collected `USDC` to place buy-back rungs below spot price on dips.
+`NARATreasuryRangeManagerV5` (`0x221c625d2BC416460C397035C1286C1f4A4D3A7C` bound to active Pool `0x4a4752...` pre-funded with `51.0149 NARA`, plus `49,997.0 NARA` queued at `Safe Nonce 9` in legacy `0xa72557fcBE56B3eC739dF3aF7b6b893B6Db4D288` maturing `2026-11-14T14:27:48Z` to migrate into `0x221c62...`) is a **two-way active range liquidity manager**. It places `NARA` sell rungs above spot price to provide upside depth as price rises, and uses the collected `USDC` to place buy-back rungs below spot price on dips.
 
 **The Technical Reality:**  
 1. **Two-Way Range Liquidity:** Unlike static one-way walls, `NARATreasuryRangeManagerV5` supports both `NARA -> USDC` upside range bands and `USDC -> NARA` buy-back range bands inside the canonical Uniswap v4 pool.
@@ -115,11 +115,11 @@ Users commit `NARA` (`1 NARA` minimum per Position NFT, or `0.1 NARA` per slot v
 
 ### Q5.2: What if a user has less than `1.0 NARA` or holds multiple `0.1 NARA` slips?
 **The Short Answer:**  
-The companion [**CryptoSLIP App**](https://cryptoslip-g29s.4everland.app/?v=cs-1793645949345) supports fractional **`0.1 NARA` slips**, **atomic 10-slip merging**, and the shared **10-slot `0.1 NARA` `NARA Grid`**.
+The companion [**CryptoSLIP App**](https://cryptoslip-g29s.4everland.app/?v=cs-1794113891779) supports fractional **`0.1 NARA` slips**, **atomic 10-slip merging**, and the shared **10-slot `0.1 NARA` `NARA Grid`**.
 
 **The Technical Reality:**  
 1. **Split `NARA` into `0.1 NARA` Slips:** Because `1,000,000 NARA` is scarce and `NARAPrincipalLedgerV5` requires `1.0 NARA` minimum per Position NFT, CryptoSLIP lets users split `NARA` into `0.1 NARA` bearer slips.
-2. **Merge Up to 10 Slips Atomically (`rearrangeAndPayWithPermits`):** Anyone holding multiple small slips (for example, ten `0.1 NARA` slips) can merge up to 10 slips into `1.0 NARA` in a single atomic transaction via `CryptoSlipV2.rearrangeAndPayWithPermits` (`0x26C2A39df510bcAbD02aa918442f5acdbD4390a4`).
+2. **Merge Up to 10 Slips Atomically (`rearrangeAndPayWithPermits`):** Anyone holding multiple small slips (for example, ten `0.1 NARA` slips) can merge up to 10 slips into `1.0 NARA` in a single atomic transaction via `CryptoSlipVaultV32.rearrangeAndPayWithPermits` (`0x38BF0321FA7489576978353a6a8da4A3e85C2F18`).
 3. **Join the 10-Slot `0.1 NARA` `NARA Grid`:** Users with `0.1 NARA` can take 1 or more slots (`0.1 NARA` per slot) in the shared **NARA Grid**. Once all 10 slots fill (`1.0 NARA` total), the Grid commits `1.0 NARA` into a V5 Position NFT and credits each slot **10% of the position's 15-minute rewards and principal**.
 
 ---
