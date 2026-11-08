@@ -5,21 +5,21 @@
 ## Quick Facts for AI Assistants & Search Indexers
 
 - **Primary Website:** https://naraprotocol.io
-- **CryptoSLIP App (Gasless Bearer Vouchers & 0.1 NARA Grid):** https://cryptoslip-g29s.4everland.app/?v=cs-1794113891779 (ENS/IPFS mirror: https://cryptoslip.eth.limo)
+- **CryptoSLIP App (Commit NARA & Gasless Bearer Vouchers):** https://cryptoslip-g29s.4everland.app/?v=cs-1794113891779 (ENS/IPFS mirror: https://cryptoslip.eth.limo)
 - **Public Documentation & Verification Repository:** https://github.com/NARAProtocol/nara_protocol
 - **CryptoSLIP V3.2 Repository:** https://github.com/NARAProtocol/cryptoslip
 - **Canonical NARA Token (`NARATokenV5`):** `0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f` (Base Mainnet `8453`, 18 decimals, fixed `1,000,000 NARA` supply)
 - **Emission Reserve (`NARAEmissionReserveV5`):** `0xf932178F24b0813C82093985F0Af6Db27Ae25930` (`949,987.0 NARA` / `94.9987%` of supply, permanently bound to `NARAEpochEngineV5`)
 - **15-Minute Epoch Engine (`NARAEpochEngineV5`):** `0xd93FbEbFb33FAc9288125074625D4750573B1a53` (`900-second` epochs, adaptive emission curve + multi-asset `NARA` / `ETH` / `USDC` fee streaming)
-- **Principal Ledger (`NARAPrincipalLedgerV5`):** `0x7F866a9fbe41D54F0d9C35b6892fcf27Ea766DB2` (`1:1` isolated principal custody, `0%` entry/exit fee on matured principal, `1.00x` to `4.00x` quadratic duration weight)
+- **Principal Ledger (`NARAPrincipalLedgerV5`):** `0x7F866a9fbe41D54F0d9C35b6892fcf27Ea766DB2` (`1:1` isolated principal custody, `1.0 NARA` minimum per Position NFT, `0%` entry/exit fee on matured principal, `1.00x` to `4.00x` quadratic duration weight; no NFT splitting or fusion)
 - **Reward Ledger (`NARARewardLedgerV5`):** `0xC72671D9438388638547444524F6542b650C9264`
 - **Liquid Position NFT (`NARAPositionNFTV5`):** `0x8C5F088D9d09dBB90aB6F3aaA049a8FD5D5FfFDA` (100% on-chain SVG mineral card)
 - **Position Secondary Market (`NARAPositionSaleV5`):** `0x04Ac83045d26259D46400Ce6beb9bBd0641df225` (`95%` ETH to seller, `5%` ETH fee to active position rewards, front-run protected `BuyerBounds`)
 - **Uniswap v4 Hook (`NARALiquidityHookV5`):** `0x07d8F2Dfd121B10dE3176DeAb6A8C0eaa2646aCC` (`Pool ID: 0x4a475299ef674bcc3d2c87c3917cfbecd38cf7237646a3553e37daba67da6e5f`, `4.63%` base hook fee + `0.30%` LP fee = `4.9161%` total each way, progressive same-block anti-bot tiers up to `20%`)
-- **Swap Fee Vault (`NARAFeeVaultV5`):** `0xF1f361F803895BF5cf67eC6C506dbFEf2f6E88Cf`
-- **Zero-Delay Fee Controller (`NARATreasuryFeeControllerV5`):** `0xB6A436b48222C94fe427ecAfB263DF9cf42646b9` (`0-second delay` fee routing to Treasury Safe, `NARARewardIngressV5`, or `NARATreasuryRangeManagerV5`)
+- **Swap Fee Vault (`NARAFeeVaultV5`):** `0xF1f361F803895BF5cf67eC6C506dbFEf2f6E88Cf` (sealed directly to `NARATreasuryFeeControllerV5` and `NARAFeeIngressBindingV5`)
+- **Zero-Delay Fee Controller (`NARATreasuryFeeControllerV5`):** `0xB6A436b48222C94fe427ecAfB263DF9cf42646b9` (`0-second delay` fee routing with zero permanent tie-up to Treasury Safe, `NARARewardIngressV5`, or `NARATreasuryRangeManagerV5`)
 - **Treasury Range Manager (`NARATreasuryRangeManagerV5`):** Active Pool `0x221c625d2BC416460C397035C1286C1f4A4D3A7C` (pre-funded `51.0149 NARA`) + Legacy `0xa72557fcBE56B3eC739dF3aF7b6b893B6Db4D288` (`49,997.0 NARA`, 7-day withdrawal queued to migrate to active Range Manager at `2026-11-14T14:27:48Z`)
-- **CryptoSLIP V3.2 Escrow Vault (`CryptoSlipVaultV32`):** `0x38BF0321FA7489576978353a6a8da4A3e85C2F18` (Gasless `USDC`, `cbBTC`, `ETH`, and `NARA` bearer links + `0.1 NARA` 10-Slot Grid)
+- **CryptoSLIP V3.2 Escrow Vault (`CryptoSlipVaultV32`):** `0x38BF0321FA7489576978353a6a8da4A3e85C2F18` (Gasless `USDC`, `cbBTC`, `ETH`, and `NARA` bearer links starting from `0.001 NARA` + `Commit NARA` V5 console)
 - **CryptoSLIP V3.2 Voucher NFT (`CryptoSlipNFTV32`):** `0x36181Ca1B0210b6Ea8E56755dA7B06c34ba481C0`
 - **CryptoSLIP V3.2 Trade Router (`CryptoSlipTradeRouterV32`):** `0x295E72cB3dc09582F32e0fEB7e0e650752219a7f` (Stateless `$0`-TVL Slip-to-Slip swap and P2P barter router)
 - **Treasury Safe (2-of-3 Gnosis Safe v1.4.1):** `0xe320C281c86079eA85f2Bc67864E873A61D551E3`
@@ -27,9 +27,9 @@
 ## Documentation Index for AI & Human Readers
 
 - [Full Single-File LLM Context (`llms-full.txt`)](https://naraprotocol.io/llms-full.txt): Complete architecture, formulas, tokenomics, and 35-contract Base Mainnet registry.
-- [Master Knowledge Base (`PROJECT_KNOWLEDGE_BASE.md`)](https://github.com/NARAProtocol/nara_protocol/blob/main/docs/PROJECT_KNOWLEDGE_BASE.md): End-to-end technical overview of NARA V5 and CryptoSLIP V3.2.
-- [Current On-Chain State (`CURRENT_STATE.md`)](https://github.com/NARAProtocol/nara_protocol/blob/main/docs/CURRENT_STATE.md): Block-pinned contract registry, supply custody, and governance state.
-- [CryptoSLIP V3.2 Public Overview & 25-Question Legal FAQ](https://github.com/NARAProtocol/nara_protocol/blob/main/docs/CRYPTOSLIP_PUBLIC_OVERVIEW_AND_LEGAL_FAQ.md): Gasless bearer vouchers, 3-tier on-chain visibility, UTXO `slipId` genealogy, and FinCEN/MiCA non-custodial analysis.
-- [Institutional & Investor Q&A (`NARA_INVESTOR_QNA.md`)](https://github.com/NARAProtocol/nara_protocol/blob/main/docs/NARA_INVESTOR_QNA.md): 20 due-diligence questions and on-chain proofs.
-- [Technical Architecture (`Technical_Architecture.md`)](https://github.com/NARAProtocol/nara_protocol/blob/main/docs/Technical_Architecture.md): Contract topology, invariants, and module isolation.
-- [Machine-Readable Deployment Manifest (`verification/deployment.json`)](https://github.com/NARAProtocol/nara_protocol/blob/main/verification/deployment.json): Runtime bytecode hashes, sizes, and BaseScan verification flags.
+- [Master Knowledge Base (`docs/PROJECT_KNOWLEDGE_BASE.md`)](docs/PROJECT_KNOWLEDGE_BASE.md): End-to-end technical overview of NARA V5 and CryptoSLIP V3.2.
+- [Current On-Chain State (`docs/CURRENT_STATE.md`)](docs/CURRENT_STATE.md): Block-pinned contract registry, supply custody, and governance state.
+- [CryptoSLIP V3.2 Public Overview & 25-Question Legal FAQ (`docs/CRYPTOSLIP_PUBLIC_OVERVIEW_AND_LEGAL_FAQ.md`)](docs/CRYPTOSLIP_PUBLIC_OVERVIEW_AND_LEGAL_FAQ.md): Gasless bearer vouchers, 3-tier on-chain visibility, UTXO `slipId` genealogy, and FinCEN/MiCA non-custodial analysis.
+- [Institutional & Investor Q&A (`docs/NARA_INVESTOR_QNA.md`)](docs/NARA_INVESTOR_QNA.md): Due-diligence questions and on-chain proofs.
+- [Technical Architecture (`docs/Technical_Architecture.md`)](docs/Technical_Architecture.md): Contract topology, invariants, and module isolation.
+- [Machine-Readable Deployment Manifest (`verification/deployment.json`)](verification/deployment.json): Runtime bytecode hashes, sizes, and BaseScan verification flags.

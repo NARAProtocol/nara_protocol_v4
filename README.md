@@ -30,7 +30,7 @@
 
 | Audience / Role | Primary Documentation & Entry Points |
 | :--- | :--- |
-| **👤 Everyday Users & Community** | [**Master Project Knowledge Base (`docs/PROJECT_KNOWLEDGE_BASE.md`)**](docs/PROJECT_KNOWLEDGE_BASE.md) · [**Investor & Community Q&A (`docs/NARA_INVESTOR_QNA.md`)**](docs/NARA_INVESTOR_QNA.md) · [**CryptoSLIP App (`0.1 NARA` Grid & Slips)**](https://cryptoslip-g29s.4everland.app/?v=cs-1794113891779) |
+| **👤 Everyday Users & Community** | [**Master Project Knowledge Base (`docs/PROJECT_KNOWLEDGE_BASE.md`)**](docs/PROJECT_KNOWLEDGE_BASE.md) · [**Investor & Community Q&A (`docs/NARA_INVESTOR_QNA.md`)**](docs/NARA_INVESTOR_QNA.md) · [**CryptoSLIP App (`Commit NARA` & Slips)**](https://cryptoslip-g29s.4everland.app/?v=cs-1794113891779) |
 | **🛠️ DeFi & Protocol Integrators** | [**Current On-Chain State (`docs/CURRENT_STATE.md`)**](docs/CURRENT_STATE.md) · [**V5 Roadmap & Milestones (`docs/ROADMAP.md`)**](docs/ROADMAP.md) · [**Uniswap v4 Hook Specification (`docs/UNISWAP_V4_HOOK.md`)**](docs/UNISWAP_V4_HOOK.md) |
 | **🛡️ Security Auditors & Legal Reviewers** | [**CryptoSLIP Public Overview & Legal FAQ (`docs/CRYPTOSLIP_PUBLIC_OVERVIEW_AND_LEGAL_FAQ.md`)**](docs/CRYPTOSLIP_PUBLIC_OVERVIEW_AND_LEGAL_FAQ.md) · [**Security Policy (`SECURITY.md`)**](SECURITY.md) · [**Custody & Recovery (`docs/NARA_CUSTODY_AND_RECOVERY.md`)**](docs/NARA_CUSTODY_AND_RECOVERY.md) |
 | **🤖 AI Assistants & Autonomous Agents** | [**Universal Agent Context (`AGENTS.md`)**](AGENTS.md) · [**Landing AI Index (`tools/nara-landing/public/llms.txt`)**](tools/nara-landing/public/llms.txt) · [**Full AI Context (`tools/nara-landing/public/llms-full.txt`)**](tools/nara-landing/public/llms-full.txt) |

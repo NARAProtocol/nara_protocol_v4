@@ -194,8 +194,8 @@ flowchart TD
 
 3. **5 Disjoint On-Chain Liability Buckets (`INV-SOLV-01`):**
    - `CryptoSlipVaultV32` tracks every wei/sat/micro-unit across five strictly separated state buckets per asset $A$:
-     $$\text{balance}(A) \ge \text{liabilities}(A) = \text{totalPrincipal}[A] + \text{accruedFees}[A] + \text{totalRefundCredits}[A] + \text{totalReferralCredits}[A] + \text{bountyObligations}(A)$$
-   - No function in the contract can ever touch `totalPrincipal`, `totalReferralCredits`, `totalRefundCredits`, or `bountyObligations` except a valid permit or call from the rightful holder.
+     $$\text{balance}(A) \ge \text{liabilities}(A) = \text{totalPrincipal}[A] + \text{accruedFees}[A] + \text{totalRefundCredits}[A] + \text{totalCreatorShareCredits}[A] + \text{bountyObligations}(A)$$
+   - No function in the contract can ever touch `totalPrincipal`, `totalCreatorShareCredits`, `totalRefundCredits`, or `bountyObligations` except a valid permit or call from the rightful holder.
 
 ---
 
@@ -220,7 +220,7 @@ Because `CryptoSlipVaultV32` (`0x38BF0321FA7489576978353a6a8da4A3e85C2F18`) isol
   - **Linkage Visibility:** **`0%` (Difficulty `10 / 10` — Completely Invisible to Automated Heuristics).**
   - **Why:** When a trader, copy-trade bot, or cluster scanner inspects a recipient wallet that claimed a Slip (`cashWithPermit`), the wallet's top-level `Transactions` tab shows **`0` direct EOA-to-EOA transfers** from the sender. Under `Internal Txns` (for `ETH`) or `ERC-20 Token Txns` (for `USDC` / `cbBTC` / `NARA`), the funds arrive strictly from `CryptoSlipVaultV32` (`0x38BF0321FA7489576978353a6a8da4A3e85C2F18`) inside a transaction whose `From` address is an independent gasless Relayer and whose `To` address is `CryptoSlipVaultV32`. Automated cluster graphs and copy-trading indexers do not decompile internal `slips[slipId]` contract storage or correlate multi-block event topics, so the recipient wallet appears as a clean, unlinked address.
 
-* **Tier 2 — Manual Block-Explorer Investigator ("BaseScan Detective" Tracing Transactions by Hand):**
+* **Tier 2 — Manual Blockchain-Explorer Investigator ("BaseScan Detective" Tracing Transactions by Hand):**
   - **Tracing Complexity:** **High (`8.5 / 10` — Requires a 6-Step Hexadecimal Event-Log Trace Across Blocks).**
   - **What a Manual Investigator Must Do to Trace a Claimed Slip:**
     1. Open the recipient wallet on BaseScan and observe `0` direct incoming transactions from the sender in the main `Transactions` list.
@@ -231,7 +231,7 @@ Because `CryptoSlipVaultV32` (`0x38BF0321FA7489576978353a6a8da4A3e85C2F18`) isol
     6. Inspect the originating `SlipMinted` transaction (and recursively repeat the entire hex `topic[1]` decoding cycle across every parent `slipId` if the voucher was previously split, combined, swapped, or funded from an earlier Slip).
 
 * **Tier 3 — Delegated `mintSlipFor` Mode vs. Standard Consumer `mintSlip*` Mode (`CryptoSlipProtocolV32.sol` Line `448`):**
-  - **`mintSlipFor` Is Natively Built Into Live `CryptoSlipVaultV32`:** Line `448` of `CryptoSlipProtocolV32.sol` implements `mintSlipFor(token, amount, creator, claimSigner, referrer, cancelLockedUntil, escrowInVault)`, which allows a caller or router to specify an explicit `creator` address separate from `msg.sender`. When invoked with a one-time ephemeral address (`creator = claimSigner = ephemeralAddress`), even `topic[2]` (`indexed address creator`) inside the `SlipMinted` event log records a unique one-time address rather than a recurring wallet—preventing bulk log filtering by `topic[2]`.
+  - **`mintSlipFor` Is Natively Built Into Live `CryptoSlipVaultV32`:** Line `448` of `CryptoSlipProtocolV32.sol` implements `mintSlipFor(token, amount, creator, claimSigner, referrer, recallHoldUntil, escrowInVault)`, which allows a caller or router to specify an explicit `creator` address separate from `msg.sender`. When invoked with a one-time ephemeral address (`creator = claimSigner = ephemeralAddress`), even `topic[2]` (`indexed address creator`) inside the `SlipMinted` event log records a unique one-time address rather than a recurring wallet—preventing bulk log filtering by `topic[2]`.
   - **Why the Public Consumer App Uses `creator = userAddress` While Router / Programmatic Flows Use `mintSlipFor`:**
     1. **Cross-Device & Lost-Phone Slip Recovery (`onChainService.ts`):** If a retail user creates a Slip and later loses their phone, clears browser `localStorage`, or signs in on a new device, the CryptoSLIP web app scans `SlipMinted(null, userAddress)` (`topic[2]`) on Base Mainnet to automatically discover and restore every active Slip they created. Setting `creator` to a random one-time address in the standard consumer UI would prevent `topic[2]` wallet-based Slip discovery after a browser reset.
     2. **Free `0%` "Take Back" Undo (`CryptoSlipProtocolV32.sol` Line `1563`):** The Vault contract enforces `if (creator == claimSigner) { refundFeeRequired[slipId] = true; }` at line `1563`. When an everyday user creates a Slip with `creator = userAddress` (`creator != claimSigner`), they can tap **Take back** (`refundSlip`) from their wallet at any time before the Slip is kept and recover **`100%` of their principal at `0%` fee**. By contrast, when `mintSlipFor` is called with `creator == claimSigner`, the contract sets `refundFeeRequired[slipId] = true`, applying the `0.50%` protocol fee on any refund.
@@ -293,7 +293,7 @@ All CryptoSLIP V3.2 smart contracts are deployed live on **Base Mainnet (`Chain 
 CryptoSLIP has **zero subscription fees, zero monthly fees, zero markup on change slips, and zero hidden charges**.
 
 ### Complete Fee Schedule (`FEE_BPS = 50` / `0.50%` Ceiling Rounding)
-$$\text{fee}(\text{grossAmount}) = \left\lceil \frac{\text{grossAmount} \times 50}{10,000} \right\rceil = \frac{\text{grossAmount} \times 50 + 9999}{10,000}$$
+$\text{fee}(\text{grossAmount}) = \left\lceil \frac{\text{grossAmount} \times 50}{10,000} \right\rceil = \frac{\text{grossAmount} \times 50 + 9999}{10,000}$
 
 | Action | On-Chain Function | Protocol Fee | Who Receives the Fee? |
 | :--- | :--- | :---: | :--- |
@@ -308,7 +308,7 @@ $$\text{fee}(\text{grossAmount}) = \left\lceil \frac{\text{grossAmount} \times 5
 | **2nd+ Re-Transfer Keep or NFT Transfer** | `acceptWithPermit` / `onNFTTransfer` | **`0.50%`** | `0.25%` Protocol + `0.25%` Inviting Creator |
 | **Relayed / Post-Keep / Redirected Refund** | `refundWithPermit` | **`0.50%`** | `100%` to Protocol (`0` to Inviting Creator to prevent refund-loop farming) |
 | **Slip-to-Slip Swap or P2P Barter** | `CryptoSlipTradeRouterV32` | **`0.50%`** on swapped input | `0.25%` Protocol + `0.25%` Inviting Creator |
-| **Convert Creator Fee Credits into a New Slip** | `claimReferralAsSlip` | **`0%` (Free)** | — |
+| **Convert Creator Fee Credits into a New Slip** | `claimCreatorCreditsAsSlip` | **`0%` (Free)** | — |
 
 ### How the Lifetime `50/50` On-Chain Creator Fee Share Works
 Every slip you send is automatically your invite link:
@@ -330,7 +330,7 @@ Every slip you send is automatically your invite link:
 4. **In-Person Coffee Shops, Markets & Bodegas ("Split & Pay"):**
    - Hold a `$50 USDC` slip on your phone, scan a merchant's QR code to pay `$3.50`, and get `$46.50` back as a fresh change slip in `< 1 second` (`0%` fee on change)—even in poor reception using `Off-grid QR`.
 5. **Harvesting NARA V5 15-Minute Pulse Rewards Straight into Spendable Slips:**
-   - NARA V5 Grid participants (`NARARewardLedgerV5` `0xC72671D9438388638547444524F6542b650C9264`) can claim their accrued `USDC`, `ETH`, or `NARA` 15-minute pulse rewards directly into shareable CryptoSLIP vouchers (`harvestNaraRewardsOnChain`) without selling a single token of their committed principal.
+   - NARA V5 Position NFT holders (`NARARewardLedgerV5` `0xC72671D9438388638547444524F6542b650C9264`) can claim their accrued `USDC`, `ETH`, or `NARA` 15-minute pulse rewards directly into shareable CryptoSLIP vouchers (`harvestNaraRewardsOnChain`) without selling a single token of their committed principal.
 
 ---
 

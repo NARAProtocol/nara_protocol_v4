@@ -5,9 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>NARA Protocol on Base — Token First. The Machine Follows. | #BanksFail</title>
   <meta name="description" content="NARA Protocol V5 on Base (8453). Fixed 1,000,000 NARA supply, 15-minute multi-asset reward pulses, Uniswap v4 Hook, and CryptoSLIP V3.2 payment links. #BanksFail CA: 0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f">
-  <link rel="preload" href="/fonts/SpaceGrotesk-700.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="/fonts/JetBrainsMono-400.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="/fonts/JetBrainsMono-700.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/SpaceGrotesk-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/JetBrainsMono-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="icon" href="/favicon.svg?v=20261102d" type="image/svg+xml">
   <link rel="icon" href="/favicon-32x32.png?v=20261102d" sizes="32x32" type="image/png">
   <link rel="icon" href="/favicon-16x16.png?v=20261102d" sizes="16x16" type="image/png">
@@ -108,7 +107,7 @@
             "name": "How do NARA Protocol V5 and CryptoSLIP V3.2 work together?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "NARA V5 settles 15-minute reward pulses in NARA, ETH, and USDC, while CryptoSLIP V3.2 (0x38BF0321FA7489576978353a6a8da4A3e85C2F18) turns USDC, cbBTC, ETH, and NARA into 1:1 non-custodial payment links that settle in under 1 second with $0.00 recipient gas fees, 0%-fee in-vault Keep, atomic split-pay with change, offline QR support, and a 10-slot 0.1 NARA commitment grid."
+              "text": "NARA V5 settles 15-minute reward pulses in NARA, ETH, and USDC, while CryptoSLIP V3.2 (0x38BF0321FA7489576978353a6a8da4A3e85C2F18) turns USDC, cbBTC, ETH, and NARA into 1:1 non-custodial payment links that settle in under 1 second with $0.00 recipient gas fees, 0%-fee in-vault Keep, atomic split-pay with change, offline QR support, direct 1.0+ NARA V5 commitments (NARAP Position NFTs), and 1-tap reward harvesting into slips."
             }
           }
         ]
@@ -123,11 +122,13 @@
 
 <body id="pageBody" class="min-h-[100dvh] bg-[#060709] text-[#E5E7EB] flex flex-col justify-between overflow-x-hidden relative font-mono bg-grid-subtle fluorescent-lighting">
 
+  <a href="#mainContent" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:bg-naraGreen focus:text-black focus:font-mono focus:font-bold focus:text-xs focus:no-underline">Skip to main content</a>
+
   <!-- Fullscreen Candlestick TP Physics Canvas -->
-  <canvas id="candleCanvas" class="fixed inset-0 pointer-events-none z-40 select-none"></canvas>
+  <canvas id="candleCanvas" aria-hidden="true" class="fixed inset-0 pointer-events-none z-40 select-none"></canvas>
 
   <!-- Ambient Depth Lighting -->
-  <div class="fixed inset-0 pointer-events-none z-0 overflow-hidden select-none">
+  <div aria-hidden="true" class="fixed inset-0 pointer-events-none z-0 overflow-hidden select-none">
     <div id="ambientGreen" class="absolute -top-40 left-1/2 -translate-x-1/2 w-[850px] h-[350px] bg-emerald-500/[0.05] blur-[160px] rounded-full transition-all duration-300"></div>
     <div class="absolute -bottom-40 left-1/2 -translate-x-1/2 w-[900px] h-[350px] bg-[#0052FF]/[0.06] blur-[160px] rounded-full"></div>
     <div class="absolute top-0 inset-x-0 h-32 slime-drips pointer-events-none"></div>
@@ -226,7 +227,7 @@
   </header>
 
   <!-- Hero Cinematic Centerpiece -->
-  <main class="relative z-10 flex-1 flex flex-col items-center justify-center px-3 sm:px-8 py-3 sm:py-6 my-auto">
+  <main id="mainContent" class="relative z-10 flex-1 flex flex-col items-center justify-center px-3 sm:px-8 py-3 sm:py-6 my-auto">
     <div class="w-full max-w-5xl mx-auto">
       
       <!-- Precision Machined Housing -->
@@ -242,7 +243,7 @@
         <div class="relative bg-black group/art cursor-pointer crt-lines select-none focus-visible:ring-1 focus-visible:ring-naraGreen outline-none" role="button" tabindex="0" aria-label="Click or press Space to flush toilet" data-on-click="triggerHydraulicFlush" data-on-keydown="flushOnKeydown">
           <img 
             src="/nara_meme_hero.jpg" 
-            alt="NARA - Token First. The Machine Follows." 
+            alt="NARA Protocol hero artwork on Base showing red and green candlesticks printed on a toilet paper roll that encode the hidden message BANKS FAIL (#BanksFail)" 
             width="1024"
             height="576"
             class="w-full h-auto max-h-[46vh] sm:max-h-[60vh] md:max-h-[68vh] object-contain mx-auto block select-none pointer-events-none transition-transform duration-300 group-hover/art:scale-[1.006]"
@@ -261,7 +262,7 @@
 
           <!-- Live Dynamic Counter & Immediate Tweet Action -->
           <div class="absolute top-3 right-3 z-30 flex items-center gap-1.5" data-on-click="stopPropagation">
-            <div class="px-2.5 py-1 bg-black/85 border border-white/15 backdrop-blur-md flex items-center gap-2">
+            <div class="px-2.5 py-1 bg-black/85 border border-white/15 backdrop-blur-md flex items-center gap-2" role="status" aria-live="polite" aria-atomic="true">
               <span class="text-[9px] font-mono text-white/50 tracking-wider">FLUSHES:</span>
               <span id="flushCounter" class="text-[10px] font-mono text-naraGreen font-bold">0</span>
             </div>
@@ -403,7 +404,7 @@
               <span id="xpTitleLabel">XP TO NEXT RANK</span>
               <span id="xpPercentLabel">0%</span>
             </div>
-            <div class="w-full h-1.5 bg-white/[0.06] overflow-hidden border border-white/10">
+            <div class="w-full h-1.5 bg-white/[0.06] overflow-hidden border border-white/10" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-labelledby="xpTitleLabel">
               <div id="xpProgressBar" class="h-full bg-naraGreen transition-all duration-150 shadow-[0_0_8px_#39FF14]" style="width: 0%"></div>
             </div>
           </div>
@@ -497,7 +498,7 @@
               <!-- Live text renders here -->
             </div>
 
-            <div id="copyToast" class="hidden absolute inset-0 bg-black/95 backdrop-blur-sm flex items-center justify-center text-naraGreen font-mono font-bold text-xs tracking-widest uppercase transition-opacity">
+            <div id="copyToast" role="status" aria-live="polite" aria-atomic="true" class="hidden absolute inset-0 bg-black/95 backdrop-blur-sm flex items-center justify-center text-naraGreen font-mono font-bold text-xs tracking-widest uppercase transition-opacity">
               ✓ COPIED TO CLIPBOARD // READY TO PASTE
             </div>
           </div>
@@ -713,11 +714,11 @@
           <table class="w-full text-left font-mono text-[10px] divide-y divide-white/[0.05]">
             <thead>
               <tr class="bg-[#08090C] text-white/40 uppercase tracking-wider text-[9px]">
-                <th class="py-2 px-3 sm:px-4 w-14 text-center">RANK</th>
-                <th class="py-2 px-3 sm:px-4">OPERATOR</th>
-                <th class="py-2 px-3 sm:px-4 text-center">SCORE</th>
-                <th class="py-2 px-3 sm:px-4 hidden sm:table-cell">RATING TIER</th>
-                <th class="py-2 px-3 sm:px-4 text-right hidden md:table-cell">RECORD DATE</th>
+                <th scope="col" class="py-2 px-3 sm:px-4 w-14 text-center">RANK</th>
+                <th scope="col" class="py-2 px-3 sm:px-4">OPERATOR</th>
+                <th scope="col" class="py-2 px-3 sm:px-4 text-center">SCORE</th>
+                <th scope="col" class="py-2 px-3 sm:px-4 hidden sm:table-cell">RATING TIER</th>
+                <th scope="col" class="py-2 px-3 sm:px-4 text-right hidden md:table-cell">RECORD DATE</th>
               </tr>
             </thead>
             <tbody id="fameBoardBody" class="divide-y divide-white/[0.04] text-white/80">
@@ -800,7 +801,7 @@
                   What is NARA Protocol V5 on Base?
                 </h3>
                 <p class="text-[11px] text-white/70 m-0">
-                  NARA Protocol V5 is an immutable, non-custodial 36-contract DeFi ecosystem on Base (`Chain ID 8453`). The canonical `$NARA` token (`0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f`) has a fixed `1,000,000 NARA` supply with `949,987 NARA` sealed in `NARAEmissionReserveV5`, segregated principal custody, a Uniswap v4 Hook (`0x07d8F2Dfd121B10dE3176DeAb6A8C0eaa2646aCC`), and 15-minute reward pulses in `NARA`, `ETH`, and `USDC`.
+                  NARA Protocol V5 is an immutable, non-custodial 35-contract DeFi ecosystem on Base (`Chain ID 8453`). The canonical `$NARA` token (`0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f`) has a fixed `1,000,000 NARA` supply with `949,987 NARA` sealed in `NARAEmissionReserveV5`, segregated principal custody, a Uniswap v4 Hook (`0x07d8F2Dfd121B10dE3176DeAb6A8C0eaa2646aCC`) paired with zero-delay `NARATreasuryFeeControllerV5`, and 15-minute reward pulses in `NARA`, `ETH`, and `USDC`.
                 </p>
               </div>
 
@@ -809,7 +810,7 @@
                   How does CryptoSLIP V3.2 work with NARA?
                 </h3>
                 <p class="text-[11px] text-white/70 m-0">
-                  CryptoSLIP V3.2 (`0x38BF0321FA7489576978353a6a8da4A3e85C2F18`) is the payment and commitment app paired with NARA V5. Users send 1:1 `USDC`, `cbBTC`, `ETH`, and `NARA` payment links across any chat app with `$0.00` recipient gas fees, or commit `0.1 NARA` per slot in the 10-slot NARA Grid (`10 × 0.1 = 1.0 NARA`).
+                  CryptoSLIP V3.2 (`0x38BF0321FA7489576978353a6a8da4A3e85C2F18`) is the payment and commitment app paired with NARA V5. Users send 1:1 `USDC`, `cbBTC`, `ETH`, and `NARA` (`>= 0.001 NARA`) payment links across any chat app with `$0.00` recipient gas fees, commit `1.0+ NARA` into V5 Position NFTs (`NARAP`), and harvest 15-minute rewards directly into slips.
                 </p>
               </div>
 
@@ -828,10 +829,10 @@
               <table class="w-full text-left font-mono text-[10px] divide-y divide-white/[0.08]">
                 <thead>
                   <tr class="bg-[#0C0E13] text-white/60 uppercase tracking-wider text-[9px]">
-                    <th class="py-2 px-3">Capability</th>
-                    <th class="py-2 px-3 text-naraGreen">NARA V5 + CryptoSLIP V3.2</th>
-                    <th class="py-2 px-3">Peanut / TipLink</th>
-                    <th class="py-2 px-3">Hardware Wallets</th>
+                    <th scope="col" class="py-2 px-3">Capability</th>
+                    <th scope="col" class="py-2 px-3 text-naraGreen">NARA V5 + CryptoSLIP V3.2</th>
+                    <th scope="col" class="py-2 px-3">Peanut / TipLink</th>
+                    <th scope="col" class="py-2 px-3">Hardware Wallets</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-white/[0.05] text-white/75">
@@ -1086,8 +1087,8 @@
 
       <!-- Scaled Mobile-First Retina Card Canvas -->
       <div class="relative w-44 sm:w-56 md:w-64 max-h-[30vh] sm:max-h-[36vh] aspect-square mb-2 sm:mb-2.5 shadow-[0_12px_36px_rgba(0,0,0,0.8)] border border-white/15 bg-black overflow-hidden group select-none flex items-center justify-center">
-        <canvas id="cardCanvas" width="600" height="600" class="w-full h-full object-contain block"></canvas>
-        <div id="cardCopyOverlay" class="hidden absolute inset-0 bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center p-2 text-naraGreen text-xs font-bold uppercase tracking-wider">
+        <canvas id="cardCanvas" width="600" height="600" role="img" aria-label="Collectible Sewer Sticker Card Preview" class="w-full h-full object-contain block"></canvas>
+        <div id="cardCopyOverlay" role="status" aria-live="polite" aria-atomic="true" class="hidden absolute inset-0 bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center p-2 text-naraGreen text-xs font-bold uppercase tracking-wider">
           <span class="text-2xl mb-1">📋✓</span>
           <span>CARD COPIED TO CLIPBOARD!</span>
           <span class="text-[9px] text-white/70 normal-case mt-1 font-sans">Press Ctrl+V in your tweet to attach!</span>
@@ -1346,7 +1347,7 @@
             <span id="victorySubmitBtnText">SUBMIT SCORE</span>
           </button>
         </div>
-        <div id="victorySubmitNotice" class="hidden text-[8px] text-white/60 font-mono mt-1"></div>
+        <div id="victorySubmitNotice" role="status" aria-live="polite" aria-atomic="true" class="hidden text-[8px] text-white/60 font-mono mt-1"></div>
       </div>
 
       <!-- Action Buttons -->
