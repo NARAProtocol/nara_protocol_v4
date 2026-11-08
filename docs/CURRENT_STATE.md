@@ -1,7 +1,7 @@
 # Current On-Chain State (NARA V5)
 
-**Verification Checkpoint:** Base Mainnet (Chain ID `8453`) — Block **`53,422,831`** (`2026-11-03`)  
-**Compiler & Architecture:** `Solidity 0.8.37` (Cancun EVM, `viaIR`, 34 Verified V5 Contracts)
+**Verification Checkpoint:** Base Mainnet (Chain ID `8453`) — Block **`54,778,829`** (`2026-11-08`)  
+**Compiler & Architecture:** `Solidity 0.8.37` (Cancun EVM, `viaIR`, 35 Verified V5 Contracts)
 
 ---
 
@@ -12,17 +12,18 @@
 | **`NARATokenV5` (`NARA`)** | **Live & Immutable** | `0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f` — Fixed `1,000,000 NARA` supply, `owner = 0x0`, `feeSink` permanently bound to `NARAEmissionReserveV5`. |
 | **`NARAEmissionReserveV5`** | **Sealed (`949,987 NARA`)** | `0xf932178F24b0813C82093985F0Af6Db27Ae25930` — Holds **94.9987%** of total supply; `coreBound = true` to `NARAEpochEngineV5`. |
 | **`NARAEpochEngineV5`** | **Activated (`900s` Epochs)** | `0xd93FbEbFb33FAc9288125074625D4750573B1a53` — `activated = true`; 15-minute epochs (`96/day`); `1–365 day` commitments (`1.00x–4.00x` weight). |
-| **`NARAPrincipalLedgerV5`** | **Live & Bound** | `0x7F866a9fbe41D54F0d9C35b6892fcf27Ea766DB2` — 1-for-1 segregated user principal custody (`1.0 NARA` committed in live `Position #1`). |
+| **`NARAPrincipalLedgerV5`** | **Live & Bound** | `0x7F866a9fbe41D54F0d9C35b6892fcf27Ea766DB2` — 1-for-1 segregated user principal custody (`Position #1` + live E2E commitments). |
 | **`NARAPositionNFTV5` (`NARAP`)** | **Live & Minted** | `0x8C5F088D9d09dBB90aB6F3aaA049a8FD5D5FfFDA` — On-chain SVG Position NFTs rendered via `NARAPositionRendererV5` and `NARAPositionCardV5` (`Position #1` minted & verified). |
 | **`NARAPositionSaleV5`** | **Live (`ETH` Market)** | `0x04Ac83045d26259D46400Ce6beb9bBd0641df225` — Built-in native-`ETH` Position NFT escrow market (`95%` seller / `5%` rewards). |
-| **Canonical `NARA / USDC` Pool** | **Initialized & Bound** | Pool ID `0x3bd8b60dc9eb37f00afa57585232e4018ae661b2dbd5318562183a67a07ac758` on Uniswap v4 `PoolManager`. |
-| **`NARALiquidityHookV5`** | **Live (`100% POL` -> Rewards)** | `0x201fBD2839bEc513040024b37dAe97B401E96acC` — `4.63%` base fee (`463 bps`) scaling to `20.00%` (`2,000 bps`); `100%` builds POL at launch, then redirects swap tax to Engine rewards once liquidity is built. |
-| **`NARATreasuryRangeManagerV5`** | **Funded (`49,997 NARA`)** | `0xa72557fcBE56B3eC739dF3aF7b6b893B6Db4D288` — Holds **4.9997%** of total supply for two-way range liquidity (sells `NARA` for `USDC` on upside, then buys `NARA` back with `USDC` on dips; `7-day` `NARA` withdrawal delay, extendable to `1 year`). |
-| **Treasury Safe (`2-of-3`)** | **Seed Ready (`3 NARA + 300 USDC`)** | `0xe320C281c86079eA85f2Bc67864E873A61D551E3` — Holds `3.0 NARA + 300.0 USDC` for the initial `NARA / USDC` LP seed. |
+| **Canonical `NARA / USDC` Pool** | **Initialized & Bound** | Pool ID `0x4a475299ef674bcc3d2c87c3917cfbecd38cf7237646a3553e37daba67da6e5f` on Uniswap v4 `PoolManager` (`tick = 230270`, `$100.00 / NARA`). |
+| **`NARALiquidityHookV5`** | **Live (`100% POL` -> Rewards)** | `0x07d8F2Dfd121B10dE3176DeAb6A8C0eaa2646aCC` (`hookFeeCalculator` `0xeCc6bB347c615BD51E13dcAB670D0c34Df3375F8`) — `4.63%` base fee (`463 bps`) scaling to `20.00%` (`2,000 bps`); `100%` builds POL at launch, then redirects swap tax to Engine rewards once liquidity is built. |
+| **`NARATreasuryFeeControllerV5`** | **Live (`0s` Fee Routing)** | `0xB6A436b48222C94fe427ecAfB263DF9cf42646b9` — `0-second delay` fee withdrawal and routing controller paired with `NARAFeeVaultV5` (`0xF1f361F803895BF5cf67eC6C506dbFEf2f6E88Cf`). |
+| **`NARATreasuryRangeManagerV5`** | **Active (`51.0149 NARA`) + Legacy (`49,997 NARA`)** | Active Pool Manager `0x221c625d2BC416460C397035C1286C1f4A4D3A7C` (bound to Pool `0x4a4752...`, pre-funded with `51.0149 NARA`); Legacy Manager `0xa72557fcBE56B3eC739dF3aF7b6b893B6Db4D288` holds **4.9997%** (`49,997.0 NARA`, 7-day withdrawal queued at `Safe Nonce 9`, maturing `2026-11-14T14:27:48Z` to migrate into `0x221c62...`). |
+| **Treasury Safe (`2-of-3`)** | **Seed Ready (`3 NARA + 301 USDC`)** | `0xe320C281c86079eA85f2Bc67864E873A61D551E3` (`onchainNonce = 10`) — Holds `3.0 NARA + 301.0 USDC` for the atomic `Safe Nonce 10` `NARA / USDC` LP seed (`300 USDC + 3 NARA` at `$100.00 / NARA`). |
 
 ---
 
-## Verified V5 Contract Directory (Base Mainnet `8453` — All 34 Contracts)
+## Verified V5 Contract Directory (Base Mainnet `8453` — All 35 Contracts)
 
 ### 1. Token & Emission Reserve (2 Contracts)
 
@@ -63,21 +64,23 @@
 | **`NARAPositionSaleV5`** | [`0x04Ac83045d26259D46400Ce6beb9bBd0641df225`](https://basescan.org/address/0x04Ac83045d26259D46400Ce6beb9bBd0641df225) | Built-in native-`ETH` secondary marketplace (`95%` seller / `5%` rewards) |
 | **`NARASaleCreditLensV5`** | [`0x26b481f1545D9912D39693D7F8E589F82835e03d`](https://basescan.org/address/0x26b481f1545D9912D39693D7F8E589F82835e03d) | Constructor child of `NARAPositionSaleV5` computing claimable reward credits on listed NFTs |
 
-### 4. Uniswap v4 Liquidity, Hook, Capital Policy & Range Manager (10 Contracts + Pool ID)
+### 4. Uniswap v4 Liquidity, Hook, Capital Policy & Range Manager (11 Contracts + Pool ID)
 
 | Contract | Address | Role |
 |---|---|---|
-| **`NARALiquidityHookV5`** | [`0x201fBD2839bEc513040024b37dAe97B401E96acC`](https://basescan.org/address/0x201fBD2839bEc513040024b37dAe97B401E96acC) | Uniswap v4 Hook (`4.63%` base fee -> `20%` same-block burst curve) |
-| **`NARAHookFeeCalculatorV5`** | [`0x989aE21D79D9750A6528F1FCc4c2b331BF2D59d4`](https://basescan.org/address/0x989aE21D79D9750A6528F1FCc4c2b331BF2D59d4) | Constructor child of `NARALiquidityHookV5` computing dynamic buy/sell fee tiers |
-| **`NARAFeeVaultV5`** | [`0xe63b4BaAF873FC57859bfe13e0e8cFccAaB6AddE`](https://basescan.org/address/0xe63b4BaAF873FC57859bfe13e0e8cFccAaB6AddE) | Hook fee vault routing swap fees to permanent POL and/or epoch rewards |
-| **`NARAFeeIngressBindingV5`** | [`0x8f41d6427B25525fB863203c78FF9050B3bd0DBC`](https://basescan.org/address/0x8f41d6427B25525fB863203c78FF9050B3bd0DBC) | Constructor child of `NARAFeeVaultV5` forwarding holder fee share into `NARARewardIngressV5` |
-| **`NARAPoolOracleV5`** | [`0xA2151333BDD77DF2E058f9cE274F63D2e48A5553`](https://basescan.org/address/0xA2151333BDD77DF2E058f9cE274F63D2e48A5553) | Ring-buffer TWAP tick oracle for the canonical `USDC / NARA` Uniswap v4 pool |
+| **`NARALiquidityHookV5`** | [`0x07d8F2Dfd121B10dE3176DeAb6A8C0eaa2646aCC`](https://basescan.org/address/0x07d8F2Dfd121B10dE3176DeAb6A8C0eaa2646aCC) | Uniswap v4 Hook (`4.63%` base fee -> `20%` same-block burst curve) |
+| **`NARAHookFeeCalculatorV5`** | [`0xeCc6bB347c615BD51E13dcAB670D0c34Df3375F8`](https://basescan.org/address/0xeCc6bB347c615BD51E13dcAB670D0c34Df3375F8) | Constructor child of `NARALiquidityHookV5` computing dynamic buy/sell fee tiers |
+| **`NARAFeeVaultV5`** | [`0xF1f361F803895BF5cf67eC6C506dbFEf2f6E88Cf`](https://basescan.org/address/0xF1f361F803895BF5cf67eC6C506dbFEf2f6E88Cf) | Hook fee vault routing swap fees to permanent POL and/or epoch rewards |
+| **`NARAFeeIngressBindingV5`** | [`0x17cc74317AD75a170887F9E76e5fF09f2058d4BF`](https://basescan.org/address/0x17cc74317AD75a170887F9E76e5fF09f2058d4BF) | Constructor child of `NARAFeeVaultV5` forwarding holder fee share into `NARARewardIngressV5` |
+| **`NARATreasuryFeeControllerV5`** | [`0xB6A436b48222C94fe427ecAfB263DF9cf42646b9`](https://basescan.org/address/0xB6A436b48222C94fe427ecAfB263DF9cf42646b9) | Zero-delay (`0s`) fee withdrawal & routing controller for `USDC` and `NARA` swap fees |
+| **`NARAPoolOracleV5`** | [`0xBCF29E9E37E62FBB996D5FF890FEd5280fC02e1A`](https://basescan.org/address/0xBCF29E9E37E62FBB996D5FF890FEd5280fC02e1A) | Ring-buffer TWAP tick oracle for the canonical `USDC / NARA` Uniswap v4 pool |
 | **`NARAPOLPositionV5`** | [`0x01EF9de9f4e9197F2A3944b5B34A90eA2f558b64`](https://basescan.org/address/0x01EF9de9f4e9197F2A3944b5B34A90eA2f558b64) | Permanent protocol-owned liquidity (POL) position holder |
 | **`NARALiquiditySizerV5`** | [`0x46B486a300190df823C5f1E4D04c100813fB0843`](https://basescan.org/address/0x46B486a300190df823C5f1E4D04c100813fB0843) | Pure liquidity sizer computing optimal POL compounding amounts |
 | **`NARACapitalBudgetV5`** | [`0x6f5f586Bd4F14e47F432264D88Fe9A6A6A80552B`](https://basescan.org/address/0x6f5f586Bd4F14e47F432264D88Fe9A6A6A80552B) | Bounded capital budget guard for POL rebalancing (`paused = true` at launch) |
 | **`NARACapitalPolicyV5`** | [`0xC6b5471ADadcf66c2375EC8600bb7a3D85C73e45`](https://basescan.org/address/0xC6b5471ADadcf66c2375EC8600bb7a3D85C73e45) | Operator-invoked POL compounding controller (`compound`) |
-| **`NARATreasuryRangeManagerV5`** | [`0xa72557fcBE56B3eC739dF3aF7b6b893B6Db4D288`](https://basescan.org/address/0xa72557fcBE56B3eC739dF3aF7b6b893B6Db4D288) | Two-way range manager holding `49,997 NARA` (`4.9997%`) |
-| **Canonical Pool ID** | `0x3bd8b60dc9eb37f00afa57585232e4018ae661b2dbd5318562183a67a07ac758` | Uniswap v4 `NARA / USDC` pool (`tickSpacing = 60`, dynamic fee flag `0x800000`) |
+| **`NARATreasuryRangeManagerV5` (Active Pool)** | [`0x221c625d2BC416460C397035C1286C1f4A4D3A7C`](https://basescan.org/address/0x221c625d2BC416460C397035C1286C1f4A4D3A7C) | Active two-way range manager bound to Pool `0x4a4752...` (pre-funded with `51.0149 NARA`) |
+| **`NARATreasuryRangeManagerV5` (Legacy Custody)** | [`0xa72557fcBE56B3eC739dF3aF7b6b893B6Db4D288`](https://basescan.org/address/0xa72557fcBE56B3eC739dF3aF7b6b893B6Db4D288) | Holds `49,997 NARA` (`4.9997%`, 7-day withdrawal queued at `Safe Nonce 9`, maturing `2026-11-14T14:27:48Z`) |
+| **Canonical Pool ID** | `0x4a475299ef674bcc3d2c87c3917cfbecd38cf7237646a3553e37daba67da6e5f` | Uniswap v4 `NARA / USDC` pool (`tickSpacing = 60`, dynamic fee flag `0x800000`) |
 
 ### 5. Governance Multisigs (`2-of-3` Gnosis Safes)
 

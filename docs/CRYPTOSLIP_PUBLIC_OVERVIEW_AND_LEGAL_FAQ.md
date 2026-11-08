@@ -6,7 +6,7 @@
 
 - **Web App (Decentralized IPFS + ENS):** [https://cryptoslip.eth.limo](https://cryptoslip.eth.limo)
 - **Web3 Native ENS Domain:** `cryptoslip.eth`
-- **4EVERLAND DWeb Mirror:** [https://cryptoslip-g29s.4everland.app](https://cryptoslip-g29s.4everland.app)
+- **4EVERLAND DWeb Mirror:** [https://cryptoslip-g29s.4everland.app/?v=cs-1794113891779](https://cryptoslip-g29s.4everland.app/?v=cs-1794113891779)
 - **Telegram Mini App:** [https://t.me/cryptoslip_bot/SLIP](https://t.me/cryptoslip_bot/SLIP) (`@cryptoslip_bot`)
 - **Network:** Base Mainnet (`Chain ID: 8453`)
 
@@ -194,8 +194,8 @@ flowchart TD
 
 3. **5 Disjoint On-Chain Liability Buckets (`INV-SOLV-01`):**
    - `CryptoSlipVaultV32` tracks every wei/sat/micro-unit across five strictly separated state buckets per asset $A$:
-     $$\text{balance}(A) \ge \text{liabilities}(A) = \text{totalPrincipal}[A] + \text{accruedFees}[A] + \text{totalRefundCredits}[A] + \text{totalCreatorShareCredits}[A] + \text{bountyObligations}(A)$$
-   - No function in the contract can ever touch `totalPrincipal`, `totalCreatorShareCredits`, `totalRefundCredits`, or `bountyObligations` except a valid permit or call from the rightful holder.
+     $$\text{balance}(A) \ge \text{liabilities}(A) = \text{totalPrincipal}[A] + \text{accruedFees}[A] + \text{totalRefundCredits}[A] + \text{totalReferralCredits}[A] + \text{bountyObligations}(A)$$
+   - No function in the contract can ever touch `totalPrincipal`, `totalReferralCredits`, `totalRefundCredits`, or `bountyObligations` except a valid permit or call from the rightful holder.
 
 ---
 
@@ -308,7 +308,7 @@ $$\text{fee}(\text{grossAmount}) = \left\lceil \frac{\text{grossAmount} \times 5
 | **2nd+ Re-Transfer Keep or NFT Transfer** | `acceptWithPermit` / `onNFTTransfer` | **`0.50%`** | `0.25%` Protocol + `0.25%` Inviting Creator |
 | **Relayed / Post-Keep / Redirected Refund** | `refundWithPermit` | **`0.50%`** | `100%` to Protocol (`0` to Inviting Creator to prevent refund-loop farming) |
 | **Slip-to-Slip Swap or P2P Barter** | `CryptoSlipTradeRouterV32` | **`0.50%`** on swapped input | `0.25%` Protocol + `0.25%` Inviting Creator |
-| **Convert Creator Fee Credits into a New Slip** | `claimCreatorCreditsAsSlip` | **`0%` (Free)** | — |
+| **Convert Creator Fee Credits into a New Slip** | `claimReferralAsSlip` | **`0%` (Free)** | — |
 
 ### How the Lifetime `50/50` On-Chain Creator Fee Share Works
 Every slip you send is automatically your invite link:
