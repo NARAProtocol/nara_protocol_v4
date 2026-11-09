@@ -458,6 +458,7 @@ function loadFlushProgress() {
       if (parsed && typeof parsed.flushCount === "number" && Number.isFinite(parsed.flushCount)) {
         flushCount = Math.max(0, Math.min(1000000, Math.floor(parsed.flushCount)));
         previousTierLevel = Math.max(1, Math.min(9, Math.floor(Number(parsed.previousTierLevel) || 1)));
+        runWon = parsed.runWon === true && Object.keys(userStash.unlocked).length >= STICKER_COLLECTION.length;
       }
     }
     const savedRun = localStorage.getItem("nara_current_run_flushes_v1");
@@ -478,7 +479,8 @@ function saveFlushProgress() {
   try {
     localStorage.setItem("nara_flush_progress", JSON.stringify({
       flushCount: Math.max(0, Math.floor(flushCount)),
-      previousTierLevel: Math.max(1, Math.min(9, Math.floor(previousTierLevel)))
+      previousTierLevel: Math.max(1, Math.min(9, Math.floor(previousTierLevel))),
+      runWon: !!runWon
     }));
     localStorage.setItem("nara_current_run_flushes_v1", String(runFlushes));
     if (bestRunRecord !== null) {
@@ -569,6 +571,8 @@ class Candlestick {
   }
 }
 
+let candleRafId = null;
+
 function animateCandles() {
   ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
   for (let i = candles.length - 1; i >= 0; i--) {
@@ -582,9 +586,22 @@ function animateCandles() {
   if (candles.length > MAX_CANDLES) {
     candles = candles.slice(-MAX_CANDLES);
   }
-  requestAnimationFrame(animateCandles);
+  if (candles.length > 0 && !document.hidden) {
+    candleRafId = requestAnimationFrame(animateCandles);
+  } else {
+    candleRafId = null;
+  }
 }
-requestAnimationFrame(animateCandles);
+
+function startCandleLoop() {
+  if (candleRafId === null && candles.length > 0 && !document.hidden) {
+    candleRafId = requestAnimationFrame(animateCandles);
+  }
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && candles.length > 0) startCandleLoop();
+});
 
 // --- OPERATOR PROGRESSION & TIER MATRIX (LEVELS 1 TO 9) ---
 const OPERATOR_LEVELS = [
@@ -617,50 +634,50 @@ function getOperatorTier(count) {
 }
 
 const RANDOM_HOOKS = [
-  (n) => n > 0 
-    ? `The toad stared into my soul while I flushed ${n} short sellers. I will never be the same.` 
-    : `The toad stared into my soul from the porcelain bowl. Something unhinged is brewing on Base.`,
-  (n) => n > 0 
-    ? `Checked my portfolio on the toilet at 3 AM. Ended up flushing ${n} bears down the $NARA bowl.`
-    : `Checked my portfolio on the toilet at 3 AM. Found the $NARA bowl and the machine is loading.`,
-  (n) => n > 0 
-    ? `He who controls the candlestick toilet paper controls the machine. ${n} bears flushed.`
-    : `He who controls the candlestick toilet paper controls the machine. Token first.`,
-  (n) => n > 0 
-    ? `Thought it was just a meme. Then I flushed ${n} times and the pipes whispered 'token first'.`
-    : `Thought it was just a meme. Then the pipes whispered 'token first. The machine follows.'`,
-  (n) => n > 0 
-    ? `Just wiped the floor with ${n} liquidated shorts. Something's coming to Base.`
-    : `Just wiped the floor with liquidated shorts. Something's coming to Base.`,
-  (n) => n > 0 
-    ? `The candlestick roll doesn't lie. ${n} bears sent straight to the sewer grid.`
-    : `The candlestick roll doesn't lie. Green candles only on Base.`,
-  (n) => n > 0 
-    ? `Told him not to short $NARA on Base. Now he's in the bowl and I've flushed him ${n} times.`
-    : `Told him not to short $NARA on Base. Green candles are loading.`,
-  (n) => n > 0 
-    ? `Red candle paper wiped. ${n} flushes later, only green God candles remain.`
+  (n) => n > 0
+    ? `The toad stared into my soul while I flushed ${n} ${n === 1 ? 'short' : 'shorts'}.`
+    : `The toad stared into my soul from the porcelain bowl on Base.`,
+  (n) => n > 0
+    ? `Checked charts at 3 AM. Flushed ${n} ${n === 1 ? 'bear' : 'bears'} down $NARA.`
+    : `Checked charts at 3 AM. Found the $NARA bowl. Machine loading.`,
+  (n) => n > 0
+    ? `Read the candlestick roll: BANKS FAIL. ${n} ${n === 1 ? 'bear' : 'bears'} flushed.`
+    : `Read the candlestick roll closely: BANKS FAIL. Token first.`,
+  (n) => n > 0
+    ? `Flushed ${n} ${n === 1 ? 'time' : 'times'}. The pipes whispered: token first.`
+    : `The sewer pipes whispered: token first. The machine follows.`,
+  (n) => n > 0
+    ? `Just wiped the floor with ${n} liquidated ${n === 1 ? 'short' : 'shorts'} on Base.`
+    : `Just wiped the floor with liquidated shorts. Base is live.`,
+  (n) => n > 0
+    ? `The candlestick roll doesn't lie: BANKS FAIL. ${n} purged.`
+    : `The candlestick roll doesn't lie: BANKS FAIL. Green candles only.`,
+  (n) => n > 0
+    ? `Told him not to short $NARA. Flushed him ${n} ${n === 1 ? 'time' : 'times'}.`
+    : `Told him not to short $NARA on Base. Green candles loading.`,
+  (n) => n > 0
+    ? `Red candle paper wiped. ${n} ${n === 1 ? 'flush' : 'flushes'} later, green remains.`
     : `Red candle paper wiped. Only green God candles remain on Base.`,
-  (n) => n > 0 
-    ? `Doctor said to stop checking charts on the toilet. So I flushed ${n} bears on $NARA instead.`
-    : `Doctor said to stop checking charts on the toilet. So I opened $NARA on Base instead.`,
-  (n) => n > 0 
-    ? `The machine follows. But first, ${n} bears had to be purged down the porcelain throne.`
-    : `The machine follows. Token first. The revolution starts on Base.`,
-  (n) => n > 0 
-    ? `Wiped my portfolio with the candlestick roll. Flushed ${n} times. Pure catharsis.`
-    : `Wiped my portfolio with the candlestick roll. Pure catharsis on Base.`,
-  (n) => n > 0 
-    ? `No whitepaper needed when you can flush ${n} short sellers into the sewer.`
-    : `No whitepaper needed when green God candles wipe out the bears.`
+  (n) => n > 0
+    ? `Doctor said stop checking charts. Flushed ${n} ${n === 1 ? 'bear' : 'bears'} instead.`
+    : `Doctor said stop checking charts on the toilet. Opened $NARA.`,
+  (n) => n > 0
+    ? `Token first. The machine follows. ${n} ${n === 1 ? 'bear' : 'bears'} purged.`
+    : `Token first. The machine follows. The revolution starts on Base.`,
+  (n) => n > 0
+    ? `Decoded the candlestick roll: BANKS FAIL. ${n} ${n === 1 ? 'time' : 'times'} flushed.`
+    : `Decoded the candlestick roll wicks: BANKS FAIL. Pure catharsis.`,
+  (n) => n > 0
+    ? `No whitepaper needed. Flushed ${n} ${n === 1 ? 'short seller' : 'short sellers'} on Base.`
+    : `No whitepaper needed when green candles wipe out the bears.`
 ];
 
 const RANDOM_REPLY_BAITS = [
-  "Drop your purge score below 👇",
-  "How many bears did you flush? Drop your badge 👇",
-  "Beat my purge score or wipe with red paper 👇",
+  "Drop your purge score 👇",
+  "How many bears did you flush? 👇",
+  "Beat my score or wipe with red paper 👇",
   "Can anyone top this operator rank? 👇",
-  "Drop your score below if you survived the flush 👇"
+  "Drop your score if you survived the flush 👇"
 ];
 
 let currentRoll = {
@@ -670,7 +687,7 @@ let currentRoll = {
   opId: Math.floor(1000 + Math.random() * 9000)
 };
 
-let activeTweetMode = 'flex'; // 'flex' | 'receipt' | 'lore' | 'unhinged'
+let activeTweetMode = 'flex'; // 'flex' | 'receipt' | 'lore' | 'unhinged' | 'sticker'
 let combo = 0;
 let comboTimer = null;
 let previousTierLevel = 1;
@@ -685,43 +702,83 @@ function rollNewDegenMessage(count) {
 }
 
 // --- VIRAL SOCIAL POSTING ENGINE (RFC-3986 STRICT & POPUP-PROOF) ---
-// Share links always point at the canonical origin, never at a preview host or a query/hash.
-function getShareUrl() {
+// Share links always point at the canonical origin, or at /s/{id} for sticker card OpenGraph previews.
+function getShareUrl(stickerIdOverride) {
+  if (stickerIdOverride) {
+    return `${CANONICAL_URL}s/${stickerIdOverride}`;
+  }
+  if (activeTweetMode === 'sticker') {
+    const stickerId = (userStash && userStash.activeStickerId) || 1;
+    return `${CANONICAL_URL}s/${stickerId}`;
+  }
   return CANONICAL_URL;
 }
 
+// Computes X (Twitter) weighted character length:
+// - Astral-plane / emoji characters count as 2 chars (variation selectors \uFE0F stripped)
+// - Attached &url= counts as 24 chars (1 space + 23-char t.co wrapper)
+function getXWeightedLength(text, hasUrl = true) {
+  let len = 0;
+  for (const ch of text.replace(/\uFE0F/g, "")) {
+    len += ch.codePointAt(0) > 0x1f00 ? 2 : 1;
+  }
+  return hasUrl ? len + 24 : len;
+}
+
+const RECEIPT_OUTCOMES = [
+  "WIPED DOWN THE BOWL 🚽",
+  "SIPHONED INTO THE SEWER 🪠",
+  "PURGED BY GREEN CANDLES 🕯️",
+  "FLUSHED ON BASE 8453 ⚡",
+];
+
+const LORE_WHISPERS = [
+  "token first. the machine follows.",
+  "read the candlestick roll: BANKS FAIL.",
+  "green candles only in the porcelain bowl.",
+  "he who controls the roll controls Base.",
+  "bears belong in the sewer pipes.",
+];
+
+let receiptOutcomeIdx = 0;
+let loreWhisperIdx = 0;
+
 function buildTweetByMode(mode, count, roll) {
   const tier = getOperatorTier(count);
-  const purgeLabel = count > 0 ? `${count} BEARS PURGED` : `READY TO PURGE`;
+  const purgeLabel = count > 0 ? `${count} ${count === 1 ? 'BEAR' : 'BEARS'} PURGED` : `READY TO PURGE`;
   const opId = roll.opId;
 
   if (mode === 'receipt') {
     const bears = count > 0 ? count : 1;
-    return `[SEWER LIQUIDATION RECEIPT #${opId}] 🧾🐸\n\nAsset: $NARA (Base)\nTarget: ${bears} Short Sellers\nOutcome: WIPED DOWN THE BOWL 🚽\nPaper: 100% Green Candlestick Roll\n\nDrop your receipt below 👇\nCA: 0x91FB...Ae0f`;
+    const outcome = RECEIPT_OUTCOMES[receiptOutcomeIdx % RECEIPT_OUTCOMES.length];
+    return `[SEWER LIQUIDATION RECEIPT #${opId}] 🧾🐸\n\nAsset: $NARA on Base (@NARA_protocol)\nTarget: ${bears} ${bears === 1 ? 'Short Seller' : 'Short Sellers'}\nOutcome: ${outcome}\nCipher: #BanksFail\n\nCA: ${NARA_CONTRACT}\n\nDrop your receipt 👇`;
   }
 
   if (mode === 'lore') {
-    return `[SEWER TRANSMISSION // TOAD PROTOCOL] 🐸📡\n\n"The toad stared into my soul while I flushed ${count || 1} times. The pipes whispered: token first. the machine follows."\n\nSomething unhinged on Base.\nDrop OP badge 👇\n⛓️ CA: 0x91FB...Ae0f`;
+    const n = count || 1;
+    const whisper = LORE_WHISPERS[loreWhisperIdx % LORE_WHISPERS.length];
+    return `[SEWER TRANSMISSION #${opId} // @NARA_protocol] 🐸📡\n\n"The toad stared into my soul while I flushed ${n} ${n === 1 ? 'time' : 'times'} on $NARA. The pipes whispered: ${whisper}"\n\nCA: ${NARA_CONTRACT}\n\nDrop OP badge 👇 #BanksFail`;
   }
 
   if (mode === 'unhinged') {
-    return `Doctor said to stop checking charts on the toilet.\nSo I purged ${count || 69} bears down the $NARA bowl on Base instead.\n\n[OP #${opId} // LVL ${tier.level}: ${tier.rank.toUpperCase()}]\nBeat my score or wipe with red paper 👇\n⛓️ CA: 0x91FB...Ae0f`;
+    const n = count || 69;
+    return `Doctor said to stop checking charts on the toilet.\nSo I purged ${n} ${n === 1 ? 'bear' : 'bears'} down the $NARA bowl on Base (@NARA_protocol).\n\n[OP #${opId} // LVL ${tier.level}: ${tier.rank.toUpperCase()}]\nCA: ${NARA_CONTRACT}\n\n${roll.cta} #BanksFail`;
   }
 
   if (mode === 'sticker') {
     const hasUnlocked = userStash && userStash.unlocked && Object.keys(userStash.unlocked).length > 0;
     if (!hasUnlocked) {
-      return `[SEWER STICKER VAULT] 🐸🚽🔒\n\nNo sticker cards dredged yet! Flush the porcelain bowl to dredge your first rare card.\n\n⛓️ CA: 0x91FB...Ae0f\n\nStart dredging 👇\nhttps://naraprotocol.com`;
+      return `[SEWER STICKER VAULT // @NARA_protocol] 🐸🚽\n\nFlush the $NARA porcelain bowl on Base to dredge all 12 sewer sticker cards. #BanksFail\n\nCA: ${NARA_CONTRACT}\n\nStart dredging 👇`;
     }
     const stickerId = userStash.activeStickerId || 1;
     const sticker = STICKER_COLLECTION.find(s => s.id === stickerId) || STICKER_COLLECTION[0];
     const serial = (userStash.unlocked[sticker.id] && userStash.unlocked[sticker.id].serial) || roll.opId;
     const bears = count > 0 ? count : 1;
-    return `[SEWER STICKER DROP #${serial}] 🐸🚽💩\n\nItem: ${sticker.deco} ${sticker.name}\nRarity: ${sticker.rarity} [${sticker.perk}]\nOperator: ${tier.rank.toUpperCase()} // ${bears} Flushed\n\n(Card image attached 👆)\n⛓️ CA: 0x91FB...Ae0f\n\nStash 👇\nhttps://naraprotocol.com`;
+    return `[SEWER STICKER DROP #${serial}] 🐸🚽\n\nItem: ${sticker.deco} ${sticker.name}\nRarity: ${sticker.rarity} [${sticker.perk}]\nOperator: ${tier.rank.toUpperCase()} // ${bears} Flushed\n\n$NARA (@NARA_protocol) #BanksFail\nCA: ${NARA_CONTRACT}\n\nDredge yours 👇`;
   }
 
   // Default: 'flex'
-  return `[OP #${opId} // LVL ${tier.level}: ${tier.rank.toUpperCase()} // ${purgeLabel}] 🐸🚽\n\n"${roll.hook}"\n\n${roll.cta}\n\n⛓️ $NARA on Base: 0x91FB...Ae0f`;
+  return `[OP #${opId} // LVL ${tier.level}: ${tier.rank.toUpperCase()} // ${purgeLabel}] 🐸🚽\n\n"${roll.hook}"\n\n${roll.cta} #BanksFail\n\n$NARA (@NARA_protocol): ${NARA_CONTRACT}`;
 }
 
 function setTweetMode(mode) {
@@ -732,11 +789,12 @@ function setTweetMode(mode) {
   modes.forEach(m => {
     const btn = document.getElementById(`tabBtn-${m}`);
     if (btn) {
+      btn.setAttribute("aria-pressed", m === mode ? "true" : "false");
       if (m === mode) {
-        btn.className = "px-3 sm:px-3.5 py-2 min-h-[40px] sm:min-h-[42px] text-[10px] font-bold font-mono uppercase tracking-wider bg-white text-black border border-white transition-all cursor-pointer flex items-center gap-1.5 focus-visible:ring-1 focus-visible:ring-naraGreen outline-none";
+        btn.className = "px-3 sm:px-3.5 py-2 min-h-[44px] text-[10px] font-bold font-mono uppercase tracking-wider bg-white text-black border border-white transition-all cursor-pointer flex items-center gap-1.5 focus-visible:ring-1 focus-visible:ring-naraGreen outline-none";
       } else {
         const extraColor = m === 'sticker' ? 'text-amber-300 hover:text-white border-amber-500/30' : 'text-white/70 hover:text-white border-white/10';
-        btn.className = `px-3 sm:px-3.5 py-2 min-h-[40px] sm:min-h-[42px] text-[10px] font-bold font-mono uppercase tracking-wider bg-white/[0.04] ${extraColor} hover:border-white/20 transition-all cursor-pointer flex items-center gap-1.5 focus-visible:ring-1 focus-visible:ring-white outline-none`;
+        btn.className = `px-3 sm:px-3.5 py-2 min-h-[44px] text-[10px] font-bold font-mono uppercase tracking-wider bg-white/[0.04] ${extraColor} hover:border-white/20 transition-all cursor-pointer flex items-center gap-1.5 focus-visible:ring-1 focus-visible:ring-white outline-none`;
       }
     }
   });
@@ -748,6 +806,18 @@ function rerollActiveMode() {
   playMechanicalClick();
   rollNewDegenMessage(flushCount);
   currentRoll.opId = Math.floor(1000 + Math.random() * 9000);
+  receiptOutcomeIdx++;
+  loreWhisperIdx++;
+
+  if (activeTweetMode === 'sticker' && userStash && userStash.unlocked) {
+    const unlockedIds = Object.keys(userStash.unlocked).map(Number).filter(Boolean);
+    if (unlockedIds.length > 1) {
+      const curIdx = unlockedIds.indexOf(userStash.activeStickerId);
+      userStash.activeStickerId = unlockedIds[(curIdx + 1) % unlockedIds.length];
+      saveUserStash();
+    }
+  }
+
   updateForgeUI();
 
   const preview = document.getElementById("tweetPreviewDisplay");
@@ -775,18 +845,22 @@ function updateForgeUI() {
   if (rankLabel) rankLabel.innerText = `LVL ${tier.level}: ${tier.rank.toUpperCase()}`;
   if (titleLabel) titleLabel.innerText = tier.title.toUpperCase();
   if (xpPercentLabel) xpPercentLabel.innerText = `${tier.progress}%`;
-  if (xpBar) xpBar.style.width = `${tier.progress}%`;
+  if (xpBar) {
+    xpBar.style.width = `${tier.progress}%`;
+    xpBar.parentElement?.setAttribute("aria-valuenow", String(tier.progress));
+  }
   if (xpTitle) {
     xpTitle.innerText = tier.nextTier ? `XP TO LVL ${tier.nextTier.level} (${tier.nextTier.minFlushes - flushCount} LEFT)` : `MAX DEITY TIER REACHED`;
   }
 
-  // 2. Terminal Preview update
+  // 2. Terminal Preview update (using true X-weighted length incl. 24-char t.co URL)
   const preview = document.getElementById("tweetPreviewDisplay");
   const charCountLabel = document.getElementById("charCountLabel");
+  const xWeightedLen = getXWeightedLength(text, true);
   if (preview) preview.innerText = text;
   if (charCountLabel) {
-    charCountLabel.innerText = `${text.length} / 280 CHARS`;
-    if (text.length > 280) {
+    charCountLabel.innerText = `${xWeightedLen} / 280 CHARS`;
+    if (xWeightedLen > 280) {
       charCountLabel.classList.add("text-red-400");
       charCountLabel.classList.remove("text-white/50");
     } else {
@@ -811,6 +885,10 @@ function updateForgeUI() {
   if (quickBtn) quickBtn.href = xUrl;
   if (mTweet) mTweet.href = xUrl;
   if (mCast) mCast.href = warpcastUrl;
+  const shareStashBtn = document.getElementById("shareStashBtn");
+  if (shareStashBtn && shareStashBtn.tagName === "A") {
+    shareStashBtn.href = buildStashTweetUrl();
+  }
 
   // 4. Toggle Copy Card Image button visibility
   const forgeCardBtn = document.getElementById("forgeCopyCardBtn");
@@ -912,6 +990,7 @@ function openSafeWindow(url) {
 // Only events from THIS browser session appear here, plus rotating true tips while idle.
 const IDLE_TIPS = [
   "Tip: press SPACE or F to flush without clicking.",
+  "Tip: look closely at the candlestick toilet paper roll — the hidden cipher is BANKS FAIL (#BanksFail).",
   "Tip: stickers and scores save in this browser only. Clearing site data resets them.",
   "Tip: the Fame Board is self-reported. Fewest clicks to 12/12 wins.",
   "Tip: SWAP opens CryptoSLIP, the NARA swap app, in a new tab once trading is live.",
@@ -1001,7 +1080,7 @@ function saveUserStash() {
 
 function formatStickerTweet(sticker, serial, opRank, flushNum) {
   const bears = flushNum > 0 ? flushNum : 1;
-  return `[SEWER STICKER DROP #${serial}] 🐸🚽💩\n\nItem: ${sticker.deco} ${sticker.name}\nRarity: ${sticker.rarity} [${sticker.perk}]\nOperator: ${opRank.toUpperCase()} // ${bears} Bears Flushed\n\n(Card image pasted above 👆)\n⛓️ CA: 0x91FB...Ae0f\n\nCollect your stash 👇\nhttps://naraprotocol.com`;
+  return `[SEWER STICKER DROP #${serial}] 🐸🚽\n\nItem: ${sticker.deco} ${sticker.name}\nRarity: ${sticker.rarity} [${sticker.perk}]\nOperator: ${opRank.toUpperCase()} // ${bears} Bears Flushed\n\n$NARA (@NARA_protocol) #BanksFail\nCA: ${NARA_CONTRACT}\n\nDredge yours 👇`;
 }
 
 function renderStickerCardCanvas(sticker, serial, opRank, flushNum) {
@@ -1148,7 +1227,7 @@ function renderStickerCardCanvas(sticker, serial, opRank, flushNum) {
 
   c.textAlign = "right";
   c.fillStyle = "#39FF14";
-  c.fillText("naraprotocol.com", W - 42, 545);
+  c.fillText("naraprotocol.io", W - 42, 545);
 }
 
 function pauseLootAutoDismiss() {
@@ -1271,6 +1350,29 @@ function closeLootModal(e) {
   }
 }
 
+async function writeCanvasPngToClipboard(cardCanvas) {
+  if (!cardCanvas || !cardCanvas.toBlob || !navigator.clipboard || !window.ClipboardItem) {
+    return false;
+  }
+  const blobPromise = new Promise((resolve, reject) => {
+    cardCanvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Canvas toBlob failed"))), "image/png");
+  });
+  try {
+    // Pass Promise directly to ClipboardItem so Safari/WebKit preserves transient user activation
+    await navigator.clipboard.write([new ClipboardItem({ "image/png": blobPromise })]);
+    return true;
+  } catch (_err) {
+    try {
+      const blob = await blobPromise;
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+      return true;
+    } catch (err2) {
+      console.warn("Clipboard image copy fallback:", err2);
+      return false;
+    }
+  }
+}
+
 async function copyCardAndTweet() {
   playMechanicalClick();
   const cardCanvas = document.getElementById("cardCanvas");
@@ -1281,7 +1383,7 @@ async function copyCardAndTweet() {
   const { sticker, serial } = currentInspectedSticker;
   const tier = getOperatorTier(flushCount);
   const tweetText = formatStickerTweet(sticker, serial, tier.rank, flushCount);
-  const shareUrl = getShareUrl();
+  const shareUrl = getShareUrl(sticker.id);
   const xUrl = `https://x.com/intent/post?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(shareUrl)}`;
 
   // 1. Check for Mobile Native Web Share API with File attachment (1-click direct to Twitter / Telegram app!)
@@ -1315,29 +1417,13 @@ async function copyCardAndTweet() {
   }
 
   // 2. Desktop / Fallback: Copy image to clipboard
-  let imageCopied = false;
-  if (cardCanvas && cardCanvas.toBlob) {
-    try {
-      const blob = await new Promise(resolve => cardCanvas.toBlob(resolve, 'image/png'));
-      if (blob && navigator.clipboard && window.ClipboardItem) {
-        const item = new ClipboardItem({ 'image/png': blob });
-        await navigator.clipboard.write([item]);
-        imageCopied = true;
-      }
-    } catch (err) {
-      console.warn('Clipboard image copy fallback:', err);
-    }
-  }
+  const imageCopied = await writeCanvasPngToClipboard(cardCanvas);
 
   if (copyOverlay) {
     copyOverlay.classList.remove("hidden");
-    if (!imageCopied) {
-      copyOverlay.innerHTML = `
-        <span class="text-2xl mb-1">💾</span>
-        <span>CARD READY TO ATTACH!</span>
-        <span class="text-[9px] text-white/70 normal-case mt-1 font-sans">Browser blocked clipboard image. Click DOWNLOAD below to attach!</span>
-      `;
-    }
+    copyOverlay.innerHTML = imageCopied
+      ? `<span class="text-2xl mb-1">📋✓</span><span>CARD COPIED TO CLIPBOARD!</span><span class="text-[9px] text-white/70 normal-case mt-1 font-sans">Press Ctrl+V in your tweet to attach!</span>`
+      : `<span class="text-2xl mb-1">💾</span><span>CARD READY TO ATTACH!</span><span class="text-[9px] text-white/70 normal-case mt-1 font-sans">Browser blocked clipboard image. Click DOWNLOAD below to attach!</span>`;
   }
   if (btnText) btnText.innerText = imageCopied ? "✓ COPIED! OPENING X..." : "OPENING X...";
 
@@ -1375,19 +1461,7 @@ async function copyStickerCardFromForge() {
   renderStickerCardCanvas(sticker, stashItem.serial, tier.rank.toUpperCase(), flushCount);
   const cardCanvas = document.getElementById("cardCanvas");
 
-  let imageCopied = false;
-  if (cardCanvas && cardCanvas.toBlob) {
-    try {
-      const blob = await new Promise(resolve => cardCanvas.toBlob(resolve, 'image/png'));
-      if (blob && navigator.clipboard && window.ClipboardItem) {
-        const item = new ClipboardItem({ 'image/png': blob });
-        await navigator.clipboard.write([item]);
-        imageCopied = true;
-      }
-    } catch (err) {
-      console.warn('Forge image copy error:', err);
-    }
-  }
+  const imageCopied = await writeCanvasPngToClipboard(cardCanvas);
 
   if (btnLabel) {
     btnLabel.innerText = imageCopied ? "COPIED! PRESS CTRL+V" : "COPY FAILED (DOWNLOAD BELOW)";
@@ -1407,21 +1481,31 @@ async function copyStickerCardFromForge() {
   }
 }
 
-function shareFullStashTweet() {
-  playMechanicalClick();
+function buildStashTweetUrl() {
   const unlockedKeys = Object.keys(userStash.unlocked);
   const count = unlockedKeys.length;
   const tier = getOperatorTier(flushCount);
-  const shareUrl = getShareUrl();
-  const text = `[SEWER LOOT LOCKER // DISCOVERY REPORT] 🎴💩\n\nStickers Unlocked: ${count} / 12 (${Math.round((count/12)*100)}%)\nPurge Rank: ${tier.rank.toUpperCase()} (${flushCount} flushes)\n\nCan anyone complete the porcelain 12? 👇\n\n⛓️ CA: 0x91FB...Ae0f`;
-  const xUrl = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`;
-  openSafeWindow(xUrl);
+  const shareUrl = count > 0 ? `${CANONICAL_URL}s/${userStash.activeStickerId || 1}` : CANONICAL_URL;
+  const text = `[SEWER LOOT LOCKER // @NARA_protocol] 🎴🐸\n\nStickers Unlocked: ${count} / 12 (${Math.round((count/12)*100)}%)\nPurge Rank: ${tier.rank.toUpperCase()} (${flushCount} ${flushCount === 1 ? 'flush' : 'flushes'})\n\n$NARA CA: ${NARA_CONTRACT}\n\nCan you complete the 12/12 vault? 👇 #BanksFail`;
+  return `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`;
+}
+
+function shareFullStashTweet(e) {
+  playMechanicalClick();
+  const xUrl = buildStashTweetUrl();
+  if (e && e.currentTarget && e.currentTarget.tagName && e.currentTarget.tagName.toLowerCase() === "a") {
+    e.currentTarget.href = xUrl;
+  } else {
+    if (e && e.preventDefault) e.preventDefault();
+    openSafeWindow(xUrl);
+  }
 }
 
 function updateVaultUI() {
   const grid = document.getElementById("vaultGrid");
   const countEl = document.getElementById("vaultUnlockedCount");
   const percentEl = document.getElementById("vaultProgressPercent");
+  const shareStashBtn = document.getElementById("shareStashBtn");
   if (!grid) return;
 
   const unlockedKeys = Object.keys(userStash.unlocked);
@@ -1430,20 +1514,37 @@ function updateVaultUI() {
 
   if (countEl) countEl.innerText = count;
   if (percentEl) percentEl.innerText = pct;
+  const badgeBtn = document.getElementById("vaultProgressBadge");
+  if (badgeBtn) {
+    if (count >= STICKER_COLLECTION.length) {
+      badgeBtn.classList.remove("cursor-default");
+      badgeBtn.classList.add("cursor-pointer", "hover:bg-emerald-500/20", "hover:border-naraGreen");
+      badgeBtn.title = "12/12 Vault Conquered! Click to open Victory & Fame Board submission";
+    } else {
+      badgeBtn.classList.add("cursor-default");
+      badgeBtn.classList.remove("cursor-pointer", "hover:bg-emerald-500/20", "hover:border-naraGreen");
+      badgeBtn.title = "Vault collection progress";
+    }
+  }
+  if (shareStashBtn && shareStashBtn.tagName === "A") {
+    shareStashBtn.href = buildStashTweetUrl();
+  }
 
   grid.innerHTML = "";
   STICKER_COLLECTION.forEach(sticker => {
     const stashItem = userStash.unlocked[sticker.id];
     const isUnlocked = !!stashItem;
-    const cardDiv = document.createElement("div");
+    const cardBtn = document.createElement("button");
+    cardBtn.type = "button";
 
     if (isUnlocked) {
-      cardDiv.className = "relative bg-[#0E1117] border p-2.5 flex flex-col items-center justify-between text-center transition-all duration-200 hover:scale-[1.03] cursor-pointer group";
-      cardDiv.style.borderColor = sticker.border;
-      cardDiv.style.boxShadow = `0 4px 18px ${sticker.bg}`;
-      cardDiv.onclick = () => openCardInspector(sticker.id);
+      cardBtn.className = "relative w-full min-h-[110px] bg-[#0E1117] border p-2.5 flex flex-col items-center justify-between text-center transition-all duration-200 hover:scale-[1.03] cursor-pointer group focus-visible:ring-1 focus-visible:ring-naraGreen outline-none";
+      cardBtn.style.borderColor = sticker.border;
+      cardBtn.style.boxShadow = `0 4px 18px ${sticker.bg}`;
+      cardBtn.setAttribute("aria-label", `Inspect unlocked sticker #${sticker.id}: ${sticker.name} (${sticker.rarity})`);
+      cardBtn.addEventListener("click", () => openCardInspector(sticker.id));
 
-      cardDiv.innerHTML = `
+      cardBtn.innerHTML = `
         <div class="w-full flex items-center justify-between text-[8px] font-mono mb-1 select-none">
           <span class="px-1 py-0.5 text-[7px] font-bold uppercase tracking-wider" style="color:${sticker.border}; border:1px solid ${sticker.border}">${sticker.rarity}</span>
           ${stashItem.count > 1 ? `<span class="px-1 py-0.5 bg-white/10 text-white font-bold">x${stashItem.count}</span>` : `<span class="text-white/40">#${String(stashItem.serial).padStart(4, '0')}</span>`}
@@ -1463,14 +1564,15 @@ function updateVaultUI() {
         </div>
       `;
     } else {
-      cardDiv.className = "relative bg-[#07080B] border p-2.5 flex flex-col items-center justify-between text-center transition-all duration-200 cursor-pointer select-none group";
-      cardDiv.style.borderColor = `${sticker.border}33`; // 20% opacity of rarity border
-      cardDiv.onclick = () => {
+      cardBtn.className = "relative w-full min-h-[110px] bg-[#07080B] border p-2.5 flex flex-col items-center justify-between text-center transition-all duration-200 cursor-pointer select-none group focus-visible:ring-1 focus-visible:ring-white/50 outline-none";
+      cardBtn.style.borderColor = `${sticker.border}33`; // 20% opacity of rarity border
+      cardBtn.setAttribute("aria-label", `Locked sticker #${sticker.id} (${sticker.rarity}) — flush toilet to dredge`);
+      cardBtn.addEventListener("click", () => {
         playMechanicalClick();
         injectSewerEvent(`[SEWER LOCKER] Card #${sticker.id} (${sticker.rarity}) is locked! Flush toilet to dredge.`);
-      };
+      });
 
-      cardDiv.innerHTML = `
+      cardBtn.innerHTML = `
         <div class="w-full flex items-center justify-between text-[8px] font-mono mb-1">
           <span class="px-1 py-0.5 text-[7px] font-bold uppercase tracking-wider" style="color:${sticker.border}; border:1px solid ${sticker.border}66; background:${sticker.border}15">${sticker.rarity}</span>
           <span class="text-white/40 font-mono">#${String(sticker.id).padStart(2, '0')}</span>
@@ -1486,13 +1588,14 @@ function updateVaultUI() {
         </div>
       `;
     }
-    grid.appendChild(cardDiv);
+    grid.appendChild(cardBtn);
   });
 }
 
 function checkLootDrop(count) {
-  const isMilestone = [10, 25, 50, 69, 100, 200, 420].includes(count);
-  const isFirst = count === 1;
+  const milestones = [10, 25, 50, 69, 100, 200, 420];
+  const isMilestone = milestones.includes(count) || milestones.includes(runFlushes);
+  const isFirst = count === 1 || runFlushes === 1;
   const willDrop = isFirst || isMilestone || Math.random() < 0.30;
 
   if (!willDrop) return;
@@ -1542,6 +1645,7 @@ function checkLootDrop(count) {
   const totalUnlocked = Object.keys(userStash.unlocked).length;
   if (totalUnlocked === 12 && !runWon) {
     runWon = true;
+    saveFlushProgress();
     setTimeout(() => {
       triggerVictoryFlow();
     }, 600);
@@ -1554,12 +1658,6 @@ let isFlushingCooldown = false;
 const FLUSH_RATE_LIMIT_MS = 1000; // Strict 1.0-second hydraulic cooldown
 
 function triggerHydraulicFlush() {
-  // If loot modal is showing from a dredge auto-drop, immediately dismiss it so it never blocks flushing
-  const lootModal = document.getElementById("lootModal");
-  if (lootModal && !lootModal.classList.contains("hidden") && lootModal._autoDismiss) {
-    closeLootModal();
-  }
-
   const now = Date.now();
   if (isFlushingCooldown || (now - lastFlushTimestamp < FLUSH_RATE_LIMIT_MS)) {
     // Visual and acoustic feedback on early clicks during active 1.0s hydraulic recharge
@@ -1580,6 +1678,12 @@ function triggerHydraulicFlush() {
   isFlushingCooldown = true;
   lastFlushTimestamp = now;
 
+  // If loot modal is showing from a previous dredge auto-drop, dismiss it now that cooldown passed
+  const lootModal = document.getElementById("lootModal");
+  if (lootModal && !lootModal.classList.contains("hidden") && lootModal._autoDismiss) {
+    closeLootModal();
+  }
+
   // Mobile haptic vibration feedback
   if (typeof navigator !== "undefined" && navigator.vibrate) {
     try {
@@ -1594,7 +1698,7 @@ function triggerHydraulicFlush() {
   const hoverText = document.getElementById("artHoverText");
 
   if (headerBtn) headerBtn.classList.add("opacity-75", "cursor-wait");
-  if (headerLabel) headerLabel.innerHTML = '⏳ RECHARGING...';
+  if (headerLabel) headerLabel.innerHTML = '⏳ <span class="hidden sm:inline">RECHARGING...</span><span class="sm:hidden">1.0s</span>';
   if (hoverText) hoverText.innerHTML = '<span class="text-xs">⏳</span> RECHARGING PRESSURE (1.0s)...';
 
   if (cooldownBar) {
@@ -1631,7 +1735,9 @@ function triggerHydraulicFlush() {
   }, 400);
 
   flushCount++;
-  runFlushes++;
+  if (!runWon) {
+    runFlushes++;
+  }
   const counterEl = document.getElementById("flushCounter");
   if (counterEl) counterEl.innerText = flushCount;
   const runCounterEl = document.getElementById("runFlushesCount");
@@ -1687,19 +1793,23 @@ function triggerHydraulicFlush() {
   // Check for Collectible Sticker Loot Dredge!
   checkLootDrop(flushCount);
 
-  // Candlestick burst count multiplies with combo overdrive!
-  const burstCount = combo >= 20 ? 90 : (combo >= 10 ? 65 : 45);
-  const originX = window.innerWidth / 2;
-  const originY = window.innerHeight * 0.38;
+  // Candlestick burst count multiplies with combo overdrive! (Respect OS prefers-reduced-motion)
+  const reduceMotion = typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (!reduceMotion) {
+    const burstCount = combo >= 20 ? 90 : (combo >= 10 ? 65 : 45);
+    const originX = window.innerWidth / 2;
+    const originY = window.innerHeight * 0.38;
 
-  for (let i = 0; i < burstCount; i++) {
-    const c = new Candlestick(
-      originX + (Math.random() - 0.5) * 200,
-      originY + (Math.random() - 0.5) * 120
-    );
-    c.vx = (Math.random() - 0.5) * (combo >= 10 ? 32 : 22);
-    c.vy = (Math.random() * -14) - 3;
-    candles.push(c);
+    for (let i = 0; i < burstCount; i++) {
+      const c = new Candlestick(
+        originX + (Math.random() - 0.5) * 200,
+        originY + (Math.random() - 0.5) * 120
+      );
+      c.vx = (Math.random() - 0.5) * (combo >= 10 ? 32 : 22);
+      c.vy = (Math.random() * -14) - 3;
+      candles.push(c);
+    }
+    startCandleLoop();
   }
 }
 
@@ -1910,6 +2020,7 @@ function refreshLeaderboardUI() {
 // --- CLOUDFLARE TURNSTILE (only loaded when the victory modal opens and a site key exists) ---
 let turnstileWidgetId = null;
 let turnstileFailed = false;
+let isSubmittingVictory = false;
 
 function ensureTurnstile() {
   if (!TURNSTILE_SITE_KEY) return;
@@ -1919,8 +2030,19 @@ function ensureTurnstile() {
   const render = () => {
     if (!window.turnstile) return;
     try {
+      turnstileFailed = false;
       if (turnstileWidgetId === null) {
-        turnstileWidgetId = window.turnstile.render(mount, { sitekey: TURNSTILE_SITE_KEY, theme: "dark", size: "flexible" });
+        turnstileWidgetId = window.turnstile.render(mount, {
+          sitekey: TURNSTILE_SITE_KEY,
+          theme: "dark",
+          size: "flexible",
+          "error-callback": () => { turnstileFailed = true; },
+          "expired-callback": () => {
+            if (window.turnstile && turnstileWidgetId !== null) {
+              try { window.turnstile.reset(turnstileWidgetId); } catch (e) {}
+            }
+          },
+        });
       } else {
         window.turnstile.reset(turnstileWidgetId);
       }
@@ -1929,8 +2051,8 @@ function ensureTurnstile() {
     }
   };
   if (window.turnstile) { render(); return; }
-  window.addEventListener("nara:turnstile-ready", render, { once: true });
   if (document.getElementById("turnstileScript")) return;
+  window.addEventListener("nara:turnstile-ready", render, { once: true });
   window.naraTurnstileReady = () => window.dispatchEvent(new Event("nara:turnstile-ready"));
   const s = document.createElement("script");
   s.id = "turnstileScript";
@@ -1943,6 +2065,7 @@ function ensureTurnstile() {
 
 const SUBMIT_STATES = {
   idle:       { btn: "SUBMIT SCORE",      note: "", cls: "text-white/60" },
+  invalid:    { btn: "SUBMIT SCORE",      note: "Enter a valid handle (2–20 chars, not a reserved name).", cls: "text-red-400" },
   verify:     { btn: "SUBMIT SCORE",      note: "Complete the check above first.", cls: "text-amber-300" },
   loading:    { btn: "SUBMIT SCORE",      note: "Verification is still loading. Try again in a moment.", cls: "text-amber-300" },
   blocked:    { btn: "✓ SAVED ON DEVICE", note: "The verification widget could not load (blocked by your browser?). Saved in this browser only.", cls: "text-amber-300" },
@@ -1965,25 +2088,33 @@ function setSubmitState(state) {
 }
 
 function triggerVictoryFlow() {
+  // Close any open loot modal so victory modal is immediately visible and body scroll is clean
+  closeLootModal();
   playVictoryFanfare();
 
-  // Explosive Gold & Emerald Candlestick shower
-  const originX = window.innerWidth / 2;
-  const originY = window.innerHeight * 0.35;
-  for (let i = 0; i < 110; i++) {
-    const c = new Candlestick(
-      originX + (Math.random() - 0.5) * 350,
-      originY + (Math.random() - 0.5) * 160
-    );
-    c.isGreen = true;
-    c.color = Math.random() > 0.4 ? "#FFD700" : "#39FF14";
-    c.glow = Math.random() > 0.4 ? "rgba(255, 215, 0, 0.7)" : "rgba(57, 255, 20, 0.7)";
-    c.vx = (Math.random() - 0.5) * 30;
-    c.vy = (Math.random() * -18) - 5;
-    candles.push(c);
+  // Explosive Gold & Emerald Candlestick shower (Respect OS prefers-reduced-motion)
+  const reduceMotion = typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (!reduceMotion) {
+    const originX = window.innerWidth / 2;
+    const originY = window.innerHeight * 0.35;
+    for (let i = 0; i < 110; i++) {
+      const c = new Candlestick(
+        originX + (Math.random() - 0.5) * 350,
+        originY + (Math.random() - 0.5) * 160
+      );
+      c.isGreen = true;
+      c.color = Math.random() > 0.4 ? "#FFD700" : "#39FF14";
+      c.glow = Math.random() > 0.4 ? "rgba(255, 215, 0, 0.7)" : "rgba(57, 255, 20, 0.7)";
+      c.vx = (Math.random() - 0.5) * 30;
+      c.vy = (Math.random() * -18) - 5;
+      candles.push(c);
+    }
+    startCandleLoop();
   }
 
   // Update personal best record
+  const effectiveScore = Math.max(12, runFlushes || 12);
+  if (runFlushes < 12) runFlushes = effectiveScore;
   if (bestRunRecord === null || runFlushes < bestRunRecord) {
     bestRunRecord = runFlushes;
     saveFlushProgress();
@@ -2017,8 +2148,16 @@ function triggerVictoryFlow() {
 
   const modal = document.getElementById("victoryModal");
   if (modal) modal.classList.remove("hidden");
+  const vicTweetBtn = document.getElementById("victoryTweetBtn");
+  if (vicTweetBtn) vicTweetBtn.href = buildVictoryTweetUrl();
 
   injectSewerEvent(`👑 [VICTORY] 12/12 VAULT CONQUERED IN ${runFlushes} CLICKS! Rating: ${rating.name}`);
+}
+
+function reopenVictoryIfWon() {
+  if (Object.keys(userStash.unlocked).length >= STICKER_COLLECTION.length) {
+    triggerVictoryFlow();
+  }
 }
 
 function closeVictoryModal(e) {
@@ -2029,12 +2168,14 @@ function closeVictoryModal(e) {
 }
 
 async function submitVictoryToFameBoard() {
+  if (isSubmittingVictory) return;
   playMechanicalClick();
   const handleInput = document.getElementById("victoryHandleInput");
   const rawHandle = handleInput ? handleInput.value.trim() : "";
   const cleanHandle = `@${rawHandle.replace(/@/g, "").replace(/[^a-zA-Z0-9_.-]/g, "").slice(0, 20)}`;
-  if (cleanHandle.length < 2) {
-    alert("Please enter a valid operator handle (e.g. @YourName)");
+  if (cleanHandle.length < 2 || isLegacyMockSeed(cleanHandle)) {
+    setSubmitState("invalid");
+    if (handleInput) handleInput.focus();
     return;
   }
   try { localStorage.setItem("nara_operator_handle_v1", cleanHandle); } catch (e) {}
@@ -2080,6 +2221,7 @@ async function submitVictoryToFameBoard() {
     return;
   }
 
+  isSubmittingVictory = true;
   setSubmitState("submitting");
   try {
     const res = await fetch("/api/leaderboard", {
@@ -2105,18 +2247,28 @@ async function submitVictoryToFameBoard() {
     }
   } catch (err) {
     setSubmitState("local");
+  } finally {
+    isSubmittingVictory = false;
+    if (window.turnstile && turnstileWidgetId !== null) { try { window.turnstile.reset(turnstileWidgetId); } catch (e) {} }
   }
-  if (window.turnstile && turnstileWidgetId !== null) { try { window.turnstile.reset(turnstileWidgetId); } catch (e) {} }
+}
+
+function buildVictoryTweetUrl() {
+  const rating = getRatingTier(runFlushes);
+  const text = `👑 [12/12 SEWER VAULT CONQUERED] 🐸🚽\n\nI dredged all 12 $NARA sewer sticker cards in ${runFlushes} clicks on @NARA_protocol!\nRank: ${rating.name}\n\nCA: ${NARA_CONTRACT}\n\nBeat my record on the Fame Board 👇 #BanksFail`;
+  const shareUrl = getShareUrl(12);
+  return `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`;
 }
 
 function handleVictoryTweet(e) {
-  if (e) e.preventDefault();
   playMechanicalClick();
-  const rating = getRatingTier(runFlushes);
-  const text = `👑 [12/12 SEWER VAULT CONQUERED] 🐸🚽💩\n\nI just dredged all 12 rare poop sticker cards in ${runFlushes} clicks on @NARA_protocol!\n\nRank: ${rating.name}\nHydraulic Cooldown: 1.0s enforced\n\nCan you beat my record on the All-Time Fame Board? 👇\n\n⛓️ CA: 0x91FB...Ae0f`;
-  const shareUrl = getShareUrl();
-  const xUrl = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`;
-  openSafeWindow(xUrl);
+  const xUrl = buildVictoryTweetUrl();
+  if (e && e.currentTarget && e.currentTarget.tagName && e.currentTarget.tagName.toLowerCase() === "a") {
+    e.currentTarget.href = xUrl;
+  } else {
+    if (e && e.preventDefault) e.preventDefault();
+    openSafeWindow(xUrl);
+  }
 }
 
 function resetAndStartNewRun() {
@@ -2131,6 +2283,7 @@ function resetAndStartNewRun() {
   saveFlushProgress();
   updateRunDisplayUI();
   updateVaultUI();
+  updateForgeUI();
 
   closeVictoryModal();
   injectSewerEvent("🔄 [SYSTEM] Fresh run initialized! All 12 cards locked. Race for fewer clicks!");
@@ -2181,21 +2334,35 @@ function copyCA() {
   }
 }
 
+function getEthereumProvider() {
+  if (typeof window === "undefined" || !window.ethereum) return null;
+  if (Array.isArray(window.ethereum.providers) && window.ethereum.providers.length > 0) {
+    return window.ethereum.providers.find((p) => p && p.isMetaMask) || window.ethereum.providers[0];
+  }
+  return window.ethereum;
+}
+
+let isWalletRequestPending = false;
+
 async function addNaraToMetaMask() {
+  if (isWalletRequestPending) return;
   playMechanicalClick();
   const label = document.getElementById("mmBtnLabel");
-  if (typeof window.ethereum !== "undefined") {
+  const provider = getEthereumProvider();
+  if (provider && typeof provider.request === "function") {
+    isWalletRequestPending = true;
     try {
       // 1. Ensure user is on Base Mainnet (0x2105 / 8453)
       try {
-        await window.ethereum.request({
+        await provider.request({
           method: 'wallet_switchEthereumChain',
           params: [{ chainId: BASE_CHAIN_ID_HEX }],
         });
       } catch (switchError) {
-        // 4902 indicates chain has not been added to wallet
-        if (switchError.code === 4902) {
-          await window.ethereum.request({
+        // 4902 indicates chain has not been added to wallet (check nested provider error too)
+        const errCode = switchError?.code ?? switchError?.data?.originalError?.code;
+        if (errCode === 4902) {
+          await provider.request({
             method: 'wallet_addEthereumChain',
             params: [{
               chainId: BASE_CHAIN_ID_HEX,
@@ -2205,11 +2372,13 @@ async function addNaraToMetaMask() {
               blockExplorerUrls: ['https://basescan.org']
             }],
           });
+        } else {
+          throw switchError;
         }
       }
 
       // 2. Add $NARA asset to wallet
-      const wasAdded = await window.ethereum.request({
+      const wasAdded = await provider.request({
         method: "wallet_watchAsset",
         params: {
           type: "ERC20",
@@ -2240,6 +2409,8 @@ async function addNaraToMetaMask() {
           label.innerText = "ADD $NARA TO METAMASK";
         }, 3000);
       }
+    } finally {
+      isWalletRequestPending = false;
     }
   } else {
     copyCA();
@@ -2270,30 +2441,46 @@ if (_quickLabel && flushCount > 0) _quickLabel.innerText = `POST [${flushCount}]
 
 // --- KEYBOARD SHORTCUTS ---
 document.addEventListener("keydown", (e) => {
-  // Don't trigger when typing in an input
-  if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
-  if (e.key === " " || e.key === "f" || e.key === "F") {
-    e.preventDefault();
-    const lootModal = document.getElementById("lootModal");
-    if (lootModal && !lootModal.classList.contains("hidden") && lootModal._autoDismiss) {
-      closeLootModal();
-    }
-    triggerHydraulicFlush();
-  }
+  // Never hijack browser shortcuts (Ctrl+F, Cmd+F, Alt+F, etc.)
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const tag = e.target?.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA" || e.target?.isContentEditable) return;
+
   if (e.key === "Escape") {
-    const modal = document.getElementById("lootModal");
-    if (modal && !modal.classList.contains("hidden")) {
-      closeLootModal();
-    }
-    const swapModal = document.getElementById("swapPrelaunchModal");
-    if (swapModal && !swapModal.classList.contains("hidden")) {
-      closeSwapModal();
-    }
     const vicModal = document.getElementById("victoryModal");
+    const swapModal = document.getElementById("swapPrelaunchModal");
+    const lootModal = document.getElementById("lootModal");
     if (vicModal && !vicModal.classList.contains("hidden")) {
       closeVictoryModal();
+    } else if (swapModal && !swapModal.classList.contains("hidden")) {
+      closeSwapModal();
+    } else if (lootModal && !lootModal.classList.contains("hidden")) {
+      closeLootModal();
+    } else {
+      dismissMilestone();
     }
-    dismissMilestone();
+    return;
+  }
+
+  if (e.key === " " || e.key === "f" || e.key === "F") {
+    if (e.repeat) return;
+    // Allow Space to activate focused buttons/links naturally
+    if (e.key === " " && (tag === "BUTTON" || tag === "A" || e.target?.getAttribute?.("role") === "button")) {
+      return;
+    }
+    const vicModal = document.getElementById("victoryModal");
+    const swapModal = document.getElementById("swapPrelaunchModal");
+    const lootModal = document.getElementById("lootModal");
+    // Do not flush behind blocking modals (or explicit card inspect modal)
+    if (
+      (vicModal && !vicModal.classList.contains("hidden")) ||
+      (swapModal && !swapModal.classList.contains("hidden")) ||
+      (lootModal && !lootModal.classList.contains("hidden") && !lootModal._autoDismiss)
+    ) {
+      return;
+    }
+    e.preventDefault();
+    triggerHydraulicFlush();
   }
 });
 
@@ -2305,6 +2492,13 @@ const ACTIONS = {
   toggleAudio: () => toggleAudio(),
   handleSwapButtonClick: (e) => handleSwapButtonClick(e),
   triggerHydraulicFlush: () => triggerHydraulicFlush(),
+  flushOnKeydown: (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      e.stopPropagation();
+      triggerHydraulicFlush();
+    }
+  },
   copyCA: () => copyCA(),
   handleShareClick: (e, arg) => handleShareClick(e, arg),
   rerollBannerQuote: (e) => rerollBannerQuote(e),
@@ -2315,7 +2509,8 @@ const ACTIONS = {
   copyForgeTweetText: () => copyForgeTweetText(),
   copyStickerCardFromForge: () => copyStickerCardFromForge(),
   confirmResetRun: () => confirmResetRun(),
-  shareFullStashTweet: () => shareFullStashTweet(),
+  reopenVictoryIfWon: () => reopenVictoryIfWon(),
+  shareFullStashTweet: (e) => shareFullStashTweet(e),
   refreshLeaderboardUI: () => refreshLeaderboardUI(),
   addNaraToMetaMask: () => addNaraToMetaMask(),
   handleLootBackdropClick: (e) => handleLootBackdropClick(e),
@@ -2364,3 +2559,10 @@ function bindActions(root = document) {
 
 initSwapControl();
 bindActions();
+
+if (typeof navigator !== "undefined" && "serviceWorker" in navigator && import.meta.env?.PROD) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}
+

@@ -1,4 +1,4 @@
-# NARA landing (naraprotocol.com)
+# NARA landing (naraprotocol.io)
 
 Single static page: the NARA toilet/frog meme landing with the flush game, post forge,
 sticker cards and the self-reported Fame Board. Built with Vite 5 and Tailwind 3 (compiled
@@ -17,7 +17,8 @@ This directory is the canonical landing source. The public mirror repo
 | `src/meme/main.js` | Game, audio, share, sticker and board logic. `ACTIONS` + `bindActions()` at the bottom wire the markup. |
 | `src/meme/styles.css` | Tailwind directives, self-hosted `@font-face`, page CSS. |
 | `public/_headers` | Security headers incl. the CSP (`script-src 'self' https://challenges.cloudflare.com …`). |
-| `public/_redirects` | `/swap*` → CryptoSLIP (302); `/app*`, `/meme*` → `/` (301). |
+| `public/_redirects` | `/swap*`, `/app*` → CryptoSLIP (302); `/docs*`, `/github`, `/audit` → GitHub Docs (302); `/meme*` → `/` (301). |
+| `public/llms.txt`, `public/llms-full.txt`, `public/ai.txt`, `public/robots.txt` | AI / LLM crawler discovery manifests & full single-file protocol context. |
 | `public/404.html` | Static not-found page (no scripts). |
 | `public/fonts/` | JetBrains Mono + Space Grotesk, latin variable subsets (SIL OFL). |
 | `functions/api/leaderboard.js` | Fame Board API: same-origin check, Turnstile verify, KV rate limit, strict validation. |
@@ -49,10 +50,9 @@ SMOKE_URL=http://127.0.0.1:8788 SMOKE_EXPECT_SUBMIT="POSTED TO BOARD" npm run te
 
 ## Hosting (Cloudflare Pages)
 
-Project name: `naraprotocol-site` (`wrangler.jsonc`). The old `nara-landing` Pages name
-belongs to an unrelated third party. Static catch-all hosts (4everland/IPFS) ignore
-`_headers`, `_redirects` and `functions/`, so the security headers and the global board
-only work on Pages.
+Project name: `nara-landing` (`nara-landing-6wd.pages.dev`, `wrangler.jsonc`). Static
+catch-all hosts (4everland/IPFS) ignore `_headers`, `_redirects` and `functions/`, so the
+security headers and the global board only work on Cloudflare Pages / Workers.
 
 | Setting | Value |
 |---|---|
@@ -72,16 +72,10 @@ Verify on the `*.pages.dev` URL before pointing DNS: `curl -I` for CSP/HSTS/XFO,
 
 ## Launch switch
 
-`SWAP_PUBLIC_LAUNCHED` in `src/meme/config.js` is `false`. While false, the header SWAP
-control is a plain `<button>` with no href (so middle-click, "open in new tab", long-press
-and link previews cannot reach a swap) and opens the "SWAPS OPEN SOON" modal; `_redirects`
-sends old `/swap*` links to `/`. When true, `initSwapControl()` turns the button into a real
-link to `https://cryptoslip.eth.limo/` (`target=_blank rel=noopener`) before any interaction.
-
-Launch commit (one reviewed commit, only after Safe nonce 8 `Hook.setTradingPaused(false)`
-executed and the V5 launch verification passed): set the flag to `true` AND change the four
-`/swap*` targets in `public/_redirects` to `https://cryptoslip.eth.limo/`. Verify with
-`SMOKE_SWAP_LAUNCHED=1 npm run test:smoke`.
+`SWAP_PUBLIC_LAUNCHED` in `src/meme/config.js` is `true`. When true, `initSwapControl()` turns the
+header SWAP control into a direct link to `CRYPTOSLIP_URL` (`https://cryptoslip-g29s.4everland.app/?v=cs-1794196154337`,
+`target=_blank rel=noopener`) before any interaction, and `/swap*` and `/app*` in `public/_redirects`
+redirect (302) to CryptoSLIP. Verify with `npm run test:smoke`.
 
 ## Security posture
 
@@ -90,7 +84,7 @@ executed and the V5 launch verification passed): set the flag to `true` AND chan
   (only if Web Analytics is enabled in the dashboard). No `unsafe-inline`/`unsafe-eval` for
   scripts. Styles allow `'unsafe-inline'` for the inline `style=` attributes the game sets.
 - HSTS (1 year, `includeSubDomains`; the `preload` directive is deliberately left out until the
-  owner confirms every `*.naraprotocol.com` subdomain is HTTPS-only, since preload-list entry
+  owner confirms every `*.naraprotocol.io` subdomain is HTTPS-only, since preload-list entry
   is effectively irreversible), `X-Frame-Options: DENY`, `frame-ancestors 'none'`, nosniff,
   strict referrer, restrictive Permissions-Policy, COOP same-origin. No
   `Cross-Origin-Resource-Policy` so wallets can load `/nara_token_256.png` for `wallet_watchAsset`.

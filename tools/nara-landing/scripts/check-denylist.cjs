@@ -6,7 +6,7 @@ const path = require("node:path");
 
 const ROOT = path.resolve(__dirname, "..");
 const SCAN = ["index.html", "src", "public", "functions", "tests", "vite.config.ts", "tailwind.config.js", "wrangler.jsonc", "package.json", "README.md"];
-const SKIP_DIRS = new Set(["node_modules", "dist", "fonts", "tokens", "smoke-out"]);
+const SKIP_DIRS = new Set(["node_modules", "dist", "smoke-out"]);
 const BINARY = /\.(png|jpg|jpeg|webp|gif|ico|mp3|woff2?|svg)$/i;
 const SELF = path.join("scripts", "check-denylist.cjs");
 
@@ -20,9 +20,9 @@ const RULES = [
   { re: /0x1e30584545a5b9e461ad72ff9c631c99039d30e1167932aa5eca5c734e297b2a/i, why: "retired v4 pool id" },
   { re: /cdn\.tailwindcss\.com/, why: "runtime Tailwind CDN", only: /(_headers|\.html|\.js|\.ts)$/i },
   { re: /unsafe-eval/, why: "CSP must not allow eval", only: /(_headers|\.html|\.js|\.ts)$/i },
-  { re: /naraprotocol\.com\/meme\.html/, why: "dead canonical URL" },
+  { re: /naraprotocol\.(com|io)\/meme\.html/, why: "dead canonical URL" },
   { re: /\son(click|dblclick|keydown|keyup|keypress|mouseenter|mouseleave|mouseover|mouseout|touchstart|touchend|load|error|submit|change|input|focus|blur)=/i, why: "inline event handler (breaks CSP)", onlyHtml: true },
-  { re: /<script(?![^>]*\btype="module")(?![^>]*\bsrc=)/i, why: "inline <script> (breaks CSP)", onlyHtml: true },
+  { re: /<script(?![^>]*\bsrc=)(?![^>]*\btype=["']application\/ld\+json["'])/i, why: "inline <script> (breaks CSP)", onlyHtml: true },
   { re: /\b(NFT|on-?chain (poop|collectible|sticker)|Royal Dividend)\b/i, why: "stickers are device-local cards, not tokens", onlyHtml: true },
   { re: /Live Base telemetry|15M Epoch|VERIFIED ON BASE|CONTRACT: VERIFIED|OFFICIAL RUN SCORE|VICTORY PROOF/i, why: "unbacked authority/protocol claim", onlyHtml: true },
 ];

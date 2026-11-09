@@ -12,8 +12,8 @@
     "test:smoke": "node tests/smoke.mjs",
     "check": "npm run check:denylist && npm run test:api && npm run build",
     "pages:dev": "wrangler pages dev dist --port 8788 --kv NARA_LEADERBOARD_KV",
-    "deploy:cf:preview": "npm run check && wrangler pages deploy dist --project-name naraprotocol-site --branch preview",
-    "deploy:cf:prod": "npm run check && wrangler pages deploy dist --project-name naraprotocol-site --branch main"
+    "deploy:cf:preview": "npm run check && wrangler pages deploy dist --project-name nara-landing --branch preview",
+    "deploy:cf:prod": "npm run check && wrangler pages deploy dist --project-name nara-landing --branch main"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.19",

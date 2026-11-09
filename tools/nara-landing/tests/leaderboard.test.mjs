@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { onRequestGet, onRequestHead, onRequestPost, onRequestOptions } from "../functions/api/leaderboard.js";
 
-const ORIGIN = "https://naraprotocol.com";
+const ORIGIN = "https://naraprotocol.io";
 
 function makeKV(initial = {}) {
   const store = new Map(Object.entries(initial));
@@ -138,7 +138,7 @@ test("POST with missing token never calls siteverify and is 403", async () => {
 });
 
 test("POST happy path stores, ranks, returns board; repeat only improves", async () => {
-  const restore = withTurnstile({ success: true, hostname: "naraprotocol.com" });
+  const restore = withTurnstile({ success: true, hostname: "naraprotocol.io" });
   try {
     const kv = makeKV();
     const env = { NARA_LEADERBOARD_KV: kv, TURNSTILE_SECRET_KEY: "s" };
@@ -246,5 +246,56 @@ test("board is capped at 50 ranked entries", async () => {
     assert.equal(data.board[0].handle, "@toad_01");
     assert.equal(data.board[49].rank, 50);
     assert.equal(data.board.some((e) => e.handle === "@seed_49"), false, "worst entry drops off");
+  } finally { restore(); }
+});
+
+test("POST rejects legacy mock seed handles with 400", async () => {
+  const restore = withTurnstile({ success: true });
+  try {
+    const env = { NARA_LEADERBOARD_KV: makeKV(), TURNSTILE_SECRET_KEY: "s" };
+    const res = await onRequestPost(makeContext({
+      method: "POST",
+      body: { ...GOOD, handle: "@Satoshi_Plunger" },
+      headers: GOOD_HEADERS,
+      env,
+    }));
+    assert.equal(res.status, 400);
+    assert.equal((await res.json()).error, "invalid_handle");
+  } finally { restore(); }
+});
+
+test("POST rate limits IPv6 addresses across the same /64 prefix", async () => {
+  const restore = withTurnstile({ success: true });
+  try {
+    const env = { NARA_LEADERBOARD_KV: makeKV(), TURNSTILE_SECRET_KEY: "s" };
+    let last;
+    for (let i = 0; i < 6; i++) {
+      last = await onRequestPost(makeContext({
+        method: "POST",
+        body: { ...GOOD, handle: `@v6_${i}` },
+        headers: GOOD_HEADERS,
+        env,
+        ip: `2001:db8:abcd:0012::${i + 1}`,
+      }));
+    }
+    assert.equal(last.status, 429, "different host suffixes in same /64 share rate-limit bucket");
+  } finally { restore(); }
+});
+
+test("POST skips KV board write when submitted score does not improve existing record", async () => {
+  const restore = withTurnstile({ success: true });
+  try {
+    let boardPuts = 0;
+    const kv = makeKV();
+    const origPut = kv.put.bind(kv);
+    kv.put = async (key, value, opts) => {
+      if (key === "fame_board_v1") boardPuts++;
+      return origPut(key, value, opts);
+    };
+    const env = { NARA_LEADERBOARD_KV: kv, TURNSTILE_SECRET_KEY: "s" };
+    await onRequestPost(makeContext({ method: "POST", body: { ...GOOD, score: 25 }, headers: GOOD_HEADERS, env, ip: "203.0.113.70" }));
+    assert.equal(boardPuts, 1);
+    await onRequestPost(makeContext({ method: "POST", body: { ...GOOD, score: 40 }, headers: GOOD_HEADERS, env, ip: "203.0.113.71" }));
+    assert.equal(boardPuts, 1, "worse score must not trigger a KV board write");
   } finally { restore(); }
 });

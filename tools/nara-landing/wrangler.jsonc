@@ -1,11 +1,11 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  // Cloudflare Pages project. Create once with: npx wrangler pages project create naraprotocol-site
-  // Bindings are configured in the Pages dashboard (Settings > Bindings / Variables), not here:
+  // Cloudflare Pages project `nara-landing` (nara-landing-6wd.pages.dev).
+  // Bindings are configured in the Pages project (Settings > Bindings / Variables):
   //   KV namespace binding   NARA_LEADERBOARD_KV   (fame board + rate-limit counters)
   //   Secret                 TURNSTILE_SECRET_KEY  (Turnstile secret; absent => board posting disabled)
   //   Build variable         VITE_TURNSTILE_SITE_KEY (public Turnstile site key; absent => device-only scores)
-  "name": "naraprotocol-site",
+  "name": "nara-landing",
   "compatibility_date": "2026-05-03",
   "pages_build_output_dir": "./dist"
 }

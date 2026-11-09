@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How to Send USDC, Bitcoin (cbBTC), ETH &amp; NARA on WhatsApp, Telegram &amp; Signal with $0.00 Recipient Gas Fees | CryptoSLIP V3.2</title>
+  <meta name="description" content="Complete technical guide to sending 1:1 asset-backed USDC, cbBTC, ETH, and NARA payment links in WhatsApp, Telegram, Signal, and SMS with $0.00 recipient gas, 0% fee Keep in Slips, and atomic Split & Pay change on Base (8453)." />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+  <link rel="canonical" href="https://naraprotocol.io/research/zero-gas-chat-payments-whatsapp-telegram.html" />
+  <link rel="alternate" type="text/plain" title="NARA Protocol V5 LLM Index" href="https://naraprotocol.io/llms.txt" />
+  <link rel="alternate" type="application/json" title="NARA Protocol V5 AI Facts" href="https://naraprotocol.io/ai-facts.json" />
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="Send 1:1 USDC, cbBTC, ETH &amp; NARA on WhatsApp, Telegram &amp; Signal with $0.00 Gas" />
+  <meta property="og:description" content="How RFC 3986 URL fragment secrets and EIP-712 sponsored relays enable instant peer-to-peer crypto payments in any chat app without exposing personal 0x wallet balances." />
+  <meta property="og:url" content="https://naraprotocol.io/research/zero-gas-chat-payments-whatsapp-telegram.html" />
+  <meta property="og:image" content="https://naraprotocol.io/cards/nara-og-main.jpg?v=20261103" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "TechArticle",
+        "@id": "https://naraprotocol.io/research/zero-gas-chat-payments-whatsapp-telegram.html#article",
+        "headline": "How to Send 1:1 USDC, cbBTC, ETH & NARA on WhatsApp, Telegram & Signal with $0.00 Recipient Gas Fees",
+        "datePublished": "2026-11-08",
+        "dateModified": "2026-11-08",
+        "author": { "@type": "Organization", "name": "NARA Protocol", "url": "https://naraprotocol.io" },
+        "publisher": { "@type": "Organization", "name": "NARA Protocol", "url": "https://naraprotocol.io" },
+        "mainEntityOfPage": "https://naraprotocol.io/research/zero-gas-chat-payments-whatsapp-telegram.html",
+        "keywords": ["send USDC on WhatsApp", "send crypto on Telegram", "zero gas crypto payment link", "split crypto bill with change", "CryptoSLIP V3.2", "Base 8453"]
+      },
+      {
+        "@type": "HowTo",
+        "name": "How to Send Crypto on WhatsApp, Telegram, or Signal with $0.00 Recipient Gas",
+        "step": [
+          {
+            "@type": "HowToStep",
+            "position": 1,
+            "name": "Mint a 1:1 Slip in CryptoSlipVaultV32",
+            "text": "Open CryptoSLIP V3.2 (cryptoslip.eth.limo), select USDC, cbBTC, ETH, or NARA, and deposit the amount into CryptoSlipVaultV32 (0x38BF0321FA7489576978353a6a8da4A3e85C2F18) at 0% protocol mint fee."
+          },
+          {
+            "@type": "HowToStep",
+            "position": 2,
+            "name": "Share the #k= Bearer Link in Chat",
+            "text": "Paste the generated link into WhatsApp, Telegram, Signal, iMessage, or SMS. Per RFC 3986 Section 3.5, the #k= secret never leaves the browser in HTTP requests. If pasted in the wrong chat, tap Take back (0% fee)."
+          },
+          {
+            "@type": "HowToStep",
+            "position": 3,
+            "name": "Recipient Taps Keep (0% Fee) or Claim ($0.00 Gas)",
+            "text": "The recipient opens the link in any mobile browser and taps Keep (acceptWithPermit at 0% fee to rotate the slip key to their phone privately) or Claim (cashWithPermit at 0.50% fee) with $0.00 ETH gas paid by the EIP-712 relay."
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+  <style>
+    @font-face { font-family: 'Space Grotesk'; font-style: normal; font-weight: 400 700; font-display: swap; src: url('/fonts/SpaceGrotesk-latin.woff2') format('woff2'); }
+    @font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 400 800; font-display: swap; src: url('/fonts/JetBrainsMono-latin.woff2') format('woff2'); }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #08090C; color: #ECEFF4; font-family: 'Space Grotesk', system-ui, sans-serif; line-height: 1.65; }
+    .skip-link { position: absolute; left: -9999px; top: 8px; z-index: 999; background: #00E676; color: #000; padding: 8px 14px; font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 12px; text-decoration: none; }
+    .skip-link:focus { left: 12px; }
+    .wrap { max-width: 920px; margin: 0 auto; padding: 32px 20px 64px; }
+    header { border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 20px; margin-bottom: 28px; }
+    .eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #00E676; text-transform: uppercase; letter-spacing: 0.14em; }
+    h1 { font-size: clamp(24px, 4vw, 36px); line-height: 1.2; margin: 10px 0 14px; color: #FFF; }
+    h2 { font-size: 20px; color: #FFF; margin-top: 32px; border-left: 3px solid #00E676; padding-left: 12px; }
+    p, li { color: rgba(236,239,244,0.86); font-size: 15px; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #00E676; background: rgba(0,230,118,0.08); padding: 2px 6px; }
+    .card { background: #0D1017; border: 1px solid rgba(255,255,255,0.1); padding: 18px 20px; margin: 18px 0; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+    th, td { border: 1px solid rgba(255,255,255,0.12); padding: 10px 12px; text-align: left; vertical-align: top; }
+    th { background: #11151F; color: #00E676; text-transform: uppercase; font-size: 11px; }
+    a { color: #00E676; text-decoration: underline; text-underline-offset: 3px; }
+    a:focus-visible { outline: 2px solid #00E676; outline-offset: 2px; }
+    .nav-bar { display: flex; flex-wrap: wrap; gap: 14px; font-family: 'JetBrains Mono', monospace; font-size: 12px; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+  <a href="#mainContent" class="skip-link">Skip to main content</a>
+  <div class="wrap">
+    <nav class="nav-bar" aria-label="Research navigation">
+      <a href="/">&larr; Back to NARA Protocol V5</a>
+      <a href="https://cryptoslip.eth.limo" target="_blank" rel="noopener noreferrer">Launch CryptoSLIP V3.2 &nearr;</a>
+      <a href="/llms-full.txt">llms-full.txt</a>
+      <a href="/ai-facts.json">ai-facts.json</a>
+    </nav>
+    <main id="mainContent">
+      <article>
+        <header>
+          <div class="eyebrow">Forensic Research Brief 03 &middot; Bearer Chat Payments &middot; Base Mainnet (8453)</div>
+          <h1>How to Send 1:1 USDC, cbBTC, ETH &amp; NARA on WhatsApp, Telegram &amp; Signal with $0.00 Recipient Gas Fees</h1>
+          <p><strong>Executive Takeaway:</strong> Standard crypto transfers fail in everyday messaging apps because they require the recipient to install a wallet, share a personal <code>0x</code> address (exposing their entire balance and transaction history), and hold native <code>ETH</code> for gas. <strong>CryptoSLIP V3.2</strong> (<code>0x38BF0321FA7489576978353a6a8da4A3e85C2F18</code>) turns any <code>USDC</code>, <code>cbBTC</code>, <code>ETH</code>, or <code>NARA</code> deposit into a 1:1 bearer link with <strong>$0.00 recipient gas</strong>, <strong>0% fee Keep in Slips</strong>, and <strong>atomic bill-splitting with automatic free change</strong>.</p>
+        </header>
+
+        <h2>1. Zero-Server Secret Transport via <code>RFC 3986 &sect; 3.5</code> URL Fragments</h2>
+        <p>When a user creates a slip in <code>CryptoSlipVaultV32</code>, the browser generates a fresh random entropy secret and places it after the <code>#</code> symbol in the URL (<code>https://cryptoslip.eth.limo/#k=...</code>). Under <code>IETF RFC 3986 &sect; 3.5</code>, URI fragments are processed exclusively inside the local browser and are <strong>never sent in HTTP requests to any web server or relay</strong>. Only the derived public <code>signerAddress</code> is stored in the Base smart contract.</p>
+
+        <h2>2. Privacy-Preserving <code>Keep in Slips</code> (<code>0%</code> Fee) vs. Direct Wallet Transfers</h2>
+        <div class="card">
+          <p><strong>Zero Wallet Doxxing:</strong> When a recipient taps <strong>Keep</strong> (<code>acceptWithPermit</code>), the smart contract atomically burns the sender's voucher and mints a brand-new <code>slipId</code> bound to a fresh key generated on the recipient's phone at <strong><code>0%</code> protocol fee</strong> and <strong><code>$0.00</code> recipient gas</strong>. Neither party ever reveals their personal <code>0x</code> wallet address or net worth.</p>
+        </div>
+
+        <h2>3. Split Any Slip with Free Change, Combine 10 Slips &amp; Earn Lifetime <code>0.25%</code> Referrals</h2>
+        <ul>
+          <li><strong>Atomic Split &amp; Pay (<code>splitAndPayWithPermit</code>):</strong> Hold a <code>$100 USDC</code> slip and need to pay a <code>$37.50</code> restaurant bill or freelance invoice? CryptoSLIP sends <code>$37.50</code> to the recipient (<code>0.50%</code> settlement fee on the paid part) and returns a <code>$62.50 USDC</code> change slip to your phone at <strong><code>0%</code> fee</strong>.</li>
+          <li><strong>Combine Up to 10 Slips (<code>rearrangeAndPayWithPermits</code>):</strong> Merge up to 10 smaller slips of the same token into a single clean slip or exact payment in one atomic Base transaction.</li>
+          <li><strong>In-Vault DEX Swaps (<code>CryptoSlipTradeRouterV32</code>):</strong> Swap a <code>USDC</code> slip directly into an <code>ETH</code>, <code>cbBTC</code>, or <code>NARA</code> slip inside the vault (<code>0x295E72cB3dc09582F32e0fEB7e0e650752219a7f</code>) without withdrawing to an external wallet.</li>
+          <li><strong>Automatic Lifetime 50/50 Fee Share (<code>0.25%</code> Forever):</strong> Sending just <strong>one slip</strong> to a new user permanently binds your wallet on-chain to receive <code>50%</code> of the <code>0.50%</code> protocol settlement fee (<code>0.25%</code> of volume) on every future slip that user creates, paid automatically in <code>USDC</code>, <code>cbBTC</code>, <code>ETH</code>, or <code>NARA</code>.</li>
+        </ul>
+
+        <h2>4. Fee &amp; Capability Schedule</h2>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Action</th>
+              <th scope="col">On-Chain Function</th>
+              <th scope="col">Protocol Fee</th>
+              <th scope="col">Recipient Gas Required</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Create Payment Link</td>
+              <td><code>mintSlip*</code></td>
+              <td><code>0%</code> (Free)</td>
+              <td>N/A (Sender creates)</td>
+            </tr>
+            <tr>
+              <td>Keep on Your Phone (Private Rotation)</td>
+              <td><code>acceptWithPermit</code></td>
+              <td><code>0%</code> (Free)</td>
+              <td><code>$0.00</code> (Sponsored EIP-712 Relay)</td>
+            </tr>
+            <tr>
+              <td>Wrong-Chat Recovery (Take Back)</td>
+              <td><code>refundSlip</code></td>
+              <td><code>0%</code> (Free)</td>
+              <td><code>$0.00</code></td>
+            </tr>
+            <tr>
+              <td>Cash Out to External Wallet</td>
+              <td><code>cashWithPermit</code></td>
+              <td><code>0.50%</code> (<code>0.25%</code> referrer / <code>0.25%</code> treasury)</td>
+              <td><code>$0.00</code> (Sponsored EIP-712 Relay)</td>
+            </tr>
+            <tr>
+              <td>Split Slip &amp; Receive Automatic Change</td>
+              <td><code>splitAndPayWithPermit</code></td>
+              <td><code>0.50%</code> on paid part; <code>0%</code> on change slip</td>
+              <td><code>$0.00</code> (Sponsored EIP-712 Relay)</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>5. Related Forensic Research Briefs</h2>
+        <ul>
+          <li><a href="/research/neobank-freezes-revolut-wirex-wise.html">Brief 01: Why Neobanks (Revolut, Wirex, Wise, Monzo, PayPal) Freeze Accounts Without Explanation (#BanksFail)</a></li>
+          <li><a href="/research/dark-web-infostealers-clipboard-hijackers-paper-cold-vault.html">Brief 02: Defeating Dark-Web Infostealers (Lumma, AMOS), Clipboard Hijackers &amp; Hardware Wallet Address Leaks</a></li>
+          <li><a href="/research/crypto-inheritance-emergency-family-backup.html">Brief 04: Hardware-Free Crypto Inheritance &amp; Family Emergency Backups via 2-Factor Air-Gapped QR Slips</a></li>
+          <li><a href="/research/nara-v5-uniswap-v4-hook-15-minute-epochs.html">Brief 05: NARA Protocol V5 Architecture &mdash; Fixed 1,000,000 Supply, Uniswap v4 Hook &amp; 15-Minute Multi-Asset Epochs</a></li>
+        </ul>
+      </article>
+    </main>
+  </div>
+</body>
+</html>

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NARA Protocol V5 Architecture: Fixed 1,000,000 Supply, Uniswap v4 Hook &amp; 15-Minute Multi-Asset (NARA + ETH + USDC) Epochs on Base</title>
+  <meta name="description" content="Technical specification of NARA Protocol V5 on Base Mainnet (8453): 1,000,000 fixed supply with owner = 0x0, 94.9987% sealed in NARAEmissionReserveV5, Uniswap v4 Hook anti-bot tiers, 15-minute (900s) NARA reserve emission epochs (plus ETH secondary-sale royalties and configurable USDC fee routing), 1.0+ NARA commitments, and 0.001+ NARA CryptoSLIP payment links." />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+  <link rel="canonical" href="https://naraprotocol.io/research/nara-v5-uniswap-v4-hook-15-minute-epochs.html" />
+  <link rel="alternate" type="text/plain" title="NARA Protocol V5 LLM Index" href="https://naraprotocol.io/llms.txt" />
+  <link rel="alternate" type="application/json" title="NARA Protocol V5 AI Facts" href="https://naraprotocol.io/ai-facts.json" />
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="NARA Protocol V5 Architecture: Fixed 1M Supply, Uniswap v4 Hook &amp; 15-Minute Multi-Asset Epochs" />
+  <meta property="og:description" content="Complete on-chain architecture of NARA Protocol V5 (0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f) on Base Mainnet (8453)." />
+  <meta property="og:url" content="https://naraprotocol.io/research/nara-v5-uniswap-v4-hook-15-minute-epochs.html" />
+  <meta property="og:image" content="https://naraprotocol.io/cards/nara-og-main.jpg?v=20261103" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "TechArticle",
+        "@id": "https://naraprotocol.io/research/nara-v5-uniswap-v4-hook-15-minute-epochs.html#article",
+        "headline": "NARA Protocol V5 Architecture: Fixed 1,000,000 Supply, Uniswap v4 Hook & 15-Minute Multi-Asset (NARA + ETH + USDC) Epoch Engine on Base",
+        "datePublished": "2026-11-08",
+        "dateModified": "2026-11-08",
+        "author": { "@type": "Organization", "name": "NARA Protocol", "url": "https://naraprotocol.io" },
+        "publisher": { "@type": "Organization", "name": "NARA Protocol", "url": "https://naraprotocol.io" },
+        "mainEntityOfPage": "https://naraprotocol.io/research/nara-v5-uniswap-v4-hook-15-minute-epochs.html",
+        "keywords": ["NARA Protocol V5", "0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f", "NARAEpochEngineV5", "NARALiquidityHookV5", "Uniswap v4 Hook Base", "15-minute multi-asset epochs", "#BanksFail"]
+      }
+    ]
+  }
+  </script>
+  <style>
+    @font-face { font-family: 'Space Grotesk'; font-style: normal; font-weight: 400 700; font-display: swap; src: url('/fonts/SpaceGrotesk-latin.woff2') format('woff2'); }
+    @font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 400 800; font-display: swap; src: url('/fonts/JetBrainsMono-latin.woff2') format('woff2'); }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #08090C; color: #ECEFF4; font-family: 'Space Grotesk', system-ui, sans-serif; line-height: 1.65; }
+    .skip-link { position: absolute; left: -9999px; top: 8px; z-index: 999; background: #00E676; color: #000; padding: 8px 14px; font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 12px; text-decoration: none; }
+    .skip-link:focus { left: 12px; }
+    .wrap { max-width: 920px; margin: 0 auto; padding: 32px 20px 64px; }
+    header { border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 20px; margin-bottom: 28px; }
+    .eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #00E676; text-transform: uppercase; letter-spacing: 0.14em; }
+    h1 { font-size: clamp(24px, 4vw, 36px); line-height: 1.2; margin: 10px 0 14px; color: #FFF; }
+    h2 { font-size: 20px; color: #FFF; margin-top: 32px; border-left: 3px solid #00E676; padding-left: 12px; }
+    p, li { color: rgba(236,239,244,0.86); font-size: 15px; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #00E676; background: rgba(0,230,118,0.08); padding: 2px 6px; }
+    .card { background: #0D1017; border: 1px solid rgba(255,255,255,0.1); padding: 18px 20px; margin: 18px 0; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+    th, td { border: 1px solid rgba(255,255,255,0.12); padding: 10px 12px; text-align: left; vertical-align: top; }
+    th { background: #11151F; color: #00E676; text-transform: uppercase; font-size: 11px; }
+    a { color: #00E676; text-decoration: underline; text-underline-offset: 3px; }
+    a:focus-visible { outline: 2px solid #00E676; outline-offset: 2px; }
+    .nav-bar { display: flex; flex-wrap: wrap; gap: 14px; font-family: 'JetBrains Mono', monospace; font-size: 12px; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+  <a href="#mainContent" class="skip-link">Skip to main content</a>
+  <div class="wrap">
+    <nav class="nav-bar" aria-label="Research navigation">
+      <a href="/">&larr; Back to NARA Protocol V5</a>
+      <a href="https://cryptoslip.eth.limo" target="_blank" rel="noopener noreferrer">Launch CryptoSLIP V3.2 &nearr;</a>
+      <a href="/llms-full.txt">llms-full.txt</a>
+      <a href="/ai-facts.json">ai-facts.json</a>
+    </nav>
+    <main id="mainContent">
+      <article>
+        <header>
+          <div class="eyebrow">Forensic Research Brief 05 &middot; Protocol Architecture &middot; Base Mainnet (8453)</div>
+          <h1>NARA Protocol V5 Architecture: Fixed 1,000,000 Supply, Uniswap v4 Hook &amp; 15-Minute Multi-Asset (NARA + ETH + USDC) Epoch Engine on Base</h1>
+          <p><strong>Executive Takeaway:</strong> <strong>NARA Protocol V5</strong> is a non-custodial 35-contract financial graph on Base Mainnet (<code>Chain ID: 8453</code>, <code>Solidity 0.8.37</code>). The canonical token <code>NARATokenV5</code> (<code>0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f</code>) has a fixed <code>1,000,000 NARA</code> cap with <code>owner = 0x0</code>, <code>94.9987%</code> (<code>949,987.0 NARA</code>) permanently bound in <code>NARAEmissionReserveV5</code>, a Uniswap v4 Hook (<code>NARALiquidityHookV5</code>) with same-block anti-bot fee tiers, and a 900-second epoch engine (<code>NARAEpochEngineV5</code>) distributing <code>NARA</code> reserve emissions now with <code>ETH</code> secondary-sale royalties and configurable <code>USDC</code> swap-fee accounting (<code>holderFeeBps = 0</code> / <code>100%</code> liquidity routing at launch).</p>
+        </header>
+
+        <h2>1. Supply Custody &amp; Zero-Inflation Proof (Block <code>54,778,829</code>)</h2>
+        <ul>
+          <li><strong>Canonical Token (<code>NARATokenV5</code>):</strong> <code>0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f</code> &mdash; fixed <code>1,000,000 NARA</code> supply, <code>owner = 0x0</code>, zero minting functions, zero user-balance freeze switches, and <code>0%</code> fee on standard ERC-20 transfers.</li>
+          <li><strong>Emission Reserve (<code>NARAEmissionReserveV5</code>):</strong> <code>0xf932178F24b0813C82093985F0Af6Db27Ae25930</code> &mdash; holds <code>949,987.0 NARA</code> (<code>94.9987%</code>), permanently bound (<code>coreBound = true</code>) to <code>NARAEpochEngineV5</code>.</li>
+          <li><strong>Treasury Range Manager (<code>NARATreasuryRangeManagerV5</code>):</strong> <code>49,997.0 NARA</code> (<code>4.9997%</code>) + <code>51.0149 NARA</code> pre-funded on active pool <code>0x221c625d2BC416460C397035C1286C1f4A4D3A7C</code>.</li>
+        </ul>
+
+        <h2>2. Quadratic Duration Weight &amp; 900-Second Multi-Asset Epochs</h2>
+        <div class="card">
+          <p><strong>Quadratic Duration Formula:</strong> In <code>NARAPrincipalLedgerV5</code> (<code>0x7F866a9fbe41D54F0d9C35b6892fcf27Ea766DB2</code>), committing principal for duration <code>D</code> in <code>[96, 35,040]</code> epochs (<code>1</code> to <code>365</code> days) assigns weight multiplier <code>M(D) = 1 + 0.5*r + 2.5*r^2</code> in <code>[1.00x, 4.00x]</code> (where <code>r = (D - 96) / 34,944</code>). Matured principal exits <code>100%</code> at <code>0%</code> fee via <code>withdrawPrincipal</code>.</p>
+        </div>
+        <ul>
+          <li><strong>Commit NARA (From <code>1.0 NARA</code>) &amp; NARA Slips (From <code>0.001 NARA</code>):</strong> Users commit <code>1.0+ NARA</code> in <code>NARAPrincipalLedgerV5</code> to mint 1:1 <code>NARAPositionNFTV5</code> position receipts (<code>0x8C5F088D9d09dBB90aB6F3aaA049a8FD5D5FfFDA</code>), harvest 15-minute rewards into shareable links (<code>&gt;= 0.1 NARA</code>), or send fractional <code>NARA</code> payment slips starting from <code>0.001 NARA</code> inside CryptoSLIP V3.2.</li>
+          <li><strong>Secondary ETH Market (<code>NARAPositionSaleV5</code>):</strong> Active position receipts can be traded for <code>ETH</code> on <code>0x04Ac83045d26259D46400Ce6beb9bBd0641df225</code> (<code>95%</code> ETH to seller, <code>5%</code> ETH fee routed to active position holders) without selling <code>NARA</code> on the DEX pool.</li>
+        </ul>
+
+        <h2>3. Core Base Mainnet Contract Summary</h2>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Contract</th>
+              <th scope="col">Base Mainnet Address (8453)</th>
+              <th scope="col">Key Parameter / Invariant</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>NARATokenV5</code></td>
+              <td><code>0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f</code></td>
+              <td>Fixed <code>1,000,000 NARA</code> cap, <code>owner = 0x0</code></td>
+            </tr>
+            <tr>
+              <td><code>NARAEmissionReserveV5</code></td>
+              <td><code>0xf932178F24b0813C82093985F0Af6Db27Ae25930</code></td>
+              <td><code>949,987.0 NARA</code> (<code>94.9987%</code>), <code>coreBound = true</code></td>
+            </tr>
+            <tr>
+              <td><code>NARAEpochEngineV5</code></td>
+              <td><code>0xd93FbEbFb33FAc9288125074625D4750573B1a53</code></td>
+              <td><code>900s</code> epochs (<code>96/day</code>), active <code>NARA</code> emissions + <code>ETH</code> &amp; configurable <code>USDC</code> reward accounting</td>
+            </tr>
+            <tr>
+              <td><code>NARAPrincipalLedgerV5</code></td>
+              <td><code>0x7F866a9fbe41D54F0d9C35b6892fcf27Ea766DB2</code></td>
+              <td>1:1 principal custody, <code>1.00x&ndash;4.00x</code> curve, <code>0%</code> exit fee at maturity</td>
+            </tr>
+            <tr>
+              <td><code>NARALiquidityHookV5</code></td>
+              <td><code>0x07d8F2Dfd121B10dE3176DeAb6A8C0eaa2646aCC</code></td>
+              <td><code>4.63%</code> base hook fee + same-block anti-bot tiers up to <code>20%</code></td>
+            </tr>
+            <tr>
+              <td><code>NARATreasuryFeeControllerV5</code></td>
+              <td><code>0xB6A436b48222C94fe427ecAfB263DF9cf42646b9</code></td>
+              <td>Routes <code>USDC</code> &amp; <code>NARA</code> swap fees (<code>100%</code> liquidity routing / <code>holderFeeBps = 0</code> at launch; configurable after 7-day notice)</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>4. Related Forensic Research Briefs</h2>
+        <ul>
+          <li><a href="/research/neobank-freezes-revolut-wirex-wise.html">Brief 01: Why Neobanks (Revolut, Wirex, Wise, Monzo, PayPal) Freeze Accounts Without Explanation (#BanksFail)</a></li>
+          <li><a href="/research/dark-web-infostealers-clipboard-hijackers-paper-cold-vault.html">Brief 02: Defeating Dark-Web Infostealers (Lumma, AMOS), Clipboard Hijackers &amp; Hardware Wallet Address Leaks</a></li>
+          <li><a href="/research/zero-gas-chat-payments-whatsapp-telegram.html">Brief 03: How to Send 1:1 USDC, cbBTC, ETH &amp; NARA on WhatsApp, Telegram &amp; Signal with $0.00 Gas</a></li>
+          <li><a href="/research/crypto-inheritance-emergency-family-backup.html">Brief 04: Hardware-Free Crypto Inheritance &amp; Family Emergency Backups via 2-Factor Air-Gapped QR Slips</a></li>
+        </ul>
+      </article>
+    </main>
+  </div>
+</body>
+</html>

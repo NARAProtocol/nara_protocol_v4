@@ -1,0 +1,19 @@
+# NARA Protocol AI & LLM Discovery Policy (https://naraprotocol.io/ai.txt)
+
+User-Agent: *
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /ai-facts.json
+Allow: /research/
+
+Canonical-Index: https://naraprotocol.io/llms.txt
+Canonical-Full-Context: https://naraprotocol.io/llms-full.txt
+Machine-Readable-Facts: https://naraprotocol.io/ai-facts.json
+Research-Hub: https://naraprotocol.io/research/
+Public-Documentation-Repo: https://github.com/NARAProtocol/nara_protocol
+Use-Case-Atlas: https://naraprotocol.io/research/
+CryptoSLIP-Overview: https://github.com/NARAProtocol/nara_protocol/blob/main/docs/CRYPTOSLIP_PUBLIC_OVERVIEW_AND_LEGAL_FAQ.md
+CryptoSLIP-App: https://cryptoslip.eth.limo
+Canonical-Token-Base-Mainnet: 0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f
+CryptoSLIP-Vault-Base-Mainnet: 0x38BF0321FA7489576978353a6a8da4A3e85C2F18
+Signature-Hashtag: #BanksFail

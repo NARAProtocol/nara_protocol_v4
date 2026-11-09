@@ -108,15 +108,36 @@ async function verifyTurnstile(secret, token, ip) {
 
 // KV is eventually consistent, so this is an abuse brake, not an exact counter. Only accepted
 // submissions consume budget; expired Turnstile tokens or typos do not lock a visitor out.
+// IPv6 addresses are normalized to their /64 prefix (first 4 hextets) so rotating the
+// 64-bit interface identifier within a single client subnet cannot bypass the rate limit.
+function normalizeIpKey(ip) {
+  if (!ip || typeof ip !== "string") return "";
+  const trimmed = ip.trim().toLowerCase();
+  if (!trimmed.includes(":")) return trimmed;
+  // Expand IPv6 "::" zero-compression and normalize first 4 hextets (/64 prefix)
+  const halves = trimmed.split("::");
+  if (halves.length > 2) return trimmed;
+  const left = halves[0] ? halves[0].split(":") : [];
+  const right = halves.length === 2 && halves[1] ? halves[1].split(":") : [];
+  const missing = Math.max(0, 8 - (left.length + right.length));
+  const full = [...left, ...Array(missing).fill("0"), ...right].map((h) => h.padStart(4, "0"));
+  if (full.length >= 4) {
+    return `${full.slice(0, 4).join(":")}::/64`;
+  }
+  return trimmed;
+}
+
 async function rateLimitState(kv, ip) {
-  if (!kv || !ip) return { limited: false, count: 0 };
-  const count = Number(await kv.get(`rl:${ip}`)) || 0;
+  const key = normalizeIpKey(ip);
+  if (!kv || !key) return { limited: false, count: 0 };
+  const count = Number(await kv.get(`rl:${key}`)) || 0;
   return { limited: count >= RATE_LIMIT_MAX, count };
 }
 
 async function consumeRateBudget(kv, ip, count) {
-  if (!kv || !ip) return;
-  await kv.put(`rl:${ip}`, String(count + 1), { expirationTtl: RATE_LIMIT_WINDOW_SEC });
+  const key = normalizeIpKey(ip);
+  if (!kv || !key) return;
+  await kv.put(`rl:${key}`, String(count + 1), { expirationTtl: RATE_LIMIT_WINDOW_SEC });
 }
 
 export async function onRequestOptions() {
@@ -132,6 +153,7 @@ export async function onRequestGet(context) {
     }
   } catch (err) {
     console.warn("leaderboard GET error", err);
+    return json([], 200); // no-store on transient KV error so edge does not cache empty fallback
   }
   return json([], 200, GET_CACHE);
 }
@@ -151,6 +173,9 @@ export async function onRequestPost(context) {
 
     const contentType = request.headers.get("Content-Type") || "";
     if (!contentType.toLowerCase().startsWith("application/json")) return json({ error: "unsupported_media_type" }, 415);
+
+    const declaredLen = Number(request.headers.get("Content-Length") || 0);
+    if (Number.isFinite(declaredLen) && declaredLen > MAX_BODY_BYTES) return json({ error: "payload_too_large" }, 413);
 
     const raw = await request.text();
     if (raw.length > MAX_BODY_BYTES) return json({ error: "payload_too_large" }, 413);
@@ -172,7 +197,7 @@ export async function onRequestPost(context) {
     const handle = normalizeHandle(body.handle);
     const score = body.score;
     const cards = body.cards;
-    if (!handle || handle.length < 2) return json({ error: "invalid_handle" }, 400);
+    if (!handle || handle.length < 2 || LEGACY_SEEDS.has(handle.toLowerCase())) return json({ error: "invalid_handle" }, 400);
     if (!Number.isInteger(score) || score < 12 || score > 50000) return json({ error: "invalid_score" }, 400);
     if (cards !== 12) return json({ error: "collection_incomplete" }, 400);
 
@@ -192,13 +217,20 @@ export async function onRequestPost(context) {
 
     const list = cleanBoard(await kv.get(BOARD_KEY, "json"));
     const idx = list.findIndex((e) => e.handle.toLowerCase() === handle.toLowerCase());
+    let mutated = false;
     if (idx !== -1) {
-      if (score < list[idx].score) list[idx] = entry;
+      if (score < list[idx].score) {
+        list[idx] = entry;
+        mutated = true;
+      }
     } else {
       list.push(entry);
+      mutated = true;
     }
     const ranked = rankBoard(list);
-    await kv.put(BOARD_KEY, JSON.stringify(ranked));
+    if (mutated) {
+      await kv.put(BOARD_KEY, JSON.stringify(ranked));
+    }
     return json({ ok: true, board: ranked, stored: true });
   } catch (err) {
     console.warn("leaderboard POST error", err);

@@ -81,3 +81,12 @@
   pointer-events: none;
   opacity: 0.5;
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .fluorescent-lighting,
+  .screen-flush-active,
+  .animate-pulse {
+    animation: none !important;
+    transform: none !important;
+  }
+}

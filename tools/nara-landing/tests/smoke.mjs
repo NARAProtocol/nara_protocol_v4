@@ -2,7 +2,7 @@
 // or failed same-origin requests. Writes screenshots to SMOKE_OUT (default ./smoke-out).
 //
 //   SMOKE_URL            base URL (default http://127.0.0.1:4173 = `npm run preview`)
-//   SMOKE_SWAP_LAUNCHED  "1" when the build has SWAP_PUBLIC_LAUNCHED=true
+//   SMOKE_SWAP_GATED     "1" when the build has SWAP_PUBLIC_LAUNCHED=false (gated SWAP button + modal)
 //   SMOKE_EXPECT_SUBMIT  expected victory submit state text (default: any honest state)
 import { chromium } from "playwright";
 import fs from "node:fs";
@@ -10,7 +10,7 @@ import path from "node:path";
 
 const BASE = (process.env.SMOKE_URL || "http://127.0.0.1:4173").replace(/\/$/, "");
 const OUT = process.env.SMOKE_OUT || path.resolve("smoke-out");
-const EXPECT_SWAP_GATED = process.env.SMOKE_SWAP_LAUNCHED !== "1";
+const EXPECT_SWAP_GATED = process.env.SMOKE_SWAP_GATED === "1";
 const EXPECT_SUBMIT = process.env.SMOKE_EXPECT_SUBMIT || "";
 fs.mkdirSync(OUT, { recursive: true });
 
@@ -32,7 +32,13 @@ const context = await browser.newContext({
   baseURL: BASE,
 });
 const page = await context.newPage();
-page.on("console", (msg) => { if (msg.type() === "error") fail(`console.error: ${msg.text()}`); });
+page.on("console", (msg) => {
+  if (msg.type() !== "error") return;
+  const text = msg.text();
+  const loc = msg.location()?.url || "";
+  if (loc.includes("challenges.cloudflare.com") || /font-size:0;color:transparent|challenges\.cloudflare\.com|cloudflarecaptcha\.com|Fetch API cannot load data:,/.test(text)) return;
+  fail(`console.error: ${text}`);
+});
 page.on("pageerror", (err) => fail(`pageerror: ${err.message}`));
 page.on("requestfailed", (req) => {
   if (req.url().startsWith(BASE) && !req.url().includes("/cdn-cgi/rum")) fail(`request failed: ${req.url()} ${req.failure()?.errorText}`);
@@ -95,14 +101,14 @@ for (const mode of ["receipt", "lore", "unhinged", "sticker", "flex"]) {
   const text = await page.locator("#tweetPreviewDisplay").innerText();
   if (!text.trim()) fail(`empty preview for ${mode}`);
   if (!text.includes("0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f")) fail(`missing full CA in ${mode} preview`);
-  if (/0x91FB\.\.\.Ae0f|Card image|naraprotocol\.com/i.test(text)) fail(`truncated CA, fake image notice, or duplicate URL in ${mode} preview: ${text.slice(0, 120)}`);
+  if (/0x91FB\.\.\.Ae0f|Card image|naraprotocol\.(com|io)/i.test(text)) fail(`truncated CA, fake image notice, or duplicate URL in ${mode} preview: ${text.slice(0, 120)}`);
   if (/NFT|on-chain|onchain|meme\.html/i.test(text)) fail(`banned wording in ${mode} preview: ${text.slice(0, 80)}`);
 }
 await page.click('[data-on-click="rerollActiveMode"]');
 await page.click('[data-on-click="copyForgeTweetText"]');
 const copiedTweet = await page.evaluate(() => navigator.clipboard.readText());
 const copiedUrlMatch = copiedTweet.match(/https:\/\/[^\s]+/);
-if (!copiedUrlMatch || new URL(copiedUrlMatch[0]).hostname !== "naraprotocol.com") fail("copied tweet lacks share url");
+if (!copiedUrlMatch || new URL(copiedUrlMatch[0]).hostname !== "naraprotocol.io") fail("copied tweet lacks share url");
 note("forge ok");
 
 // Share anchors carry encoded intent URLs
@@ -128,7 +134,7 @@ if (EXPECT_SWAP_GATED) {
   if (popups.length !== popupsBefore) fail("middle-click on gated SWAP opened a new tab");
   await page.keyboard.press("Escape");
 } else {
-  if (swapTag !== "A" || swapHref !== "https://cryptoslip.eth.limo/") fail(`launched swap must link to CryptoSLIP, got <${swapTag} href=${swapHref}>`);
+  if (swapTag !== "A" || swapHref !== "https://cryptoslip-g29s.4everland.app/?v=cs-1794196154337") fail(`launched swap must link to CryptoSLIP, got <${swapTag} href=${swapHref}>`);
   const swapRel = await page.locator("#headerSwapBtn").getAttribute("rel");
   if (!/noopener/.test(swapRel || "")) fail("swap link lacks rel=noopener");
 }
