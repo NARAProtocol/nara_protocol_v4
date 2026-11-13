@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hardware-Free Crypto Inheritance &amp; Family Emergency Backups Using 2-Factor Air-Gapped QR Slips | CryptoSLIP V3.2 &amp; NARA V5</title>
+  <meta name="description" content="How to set up a self-custodial crypto inheritance or family emergency backup for USDC, Bitcoin (cbBTC), ETH, and NARA without seed phrases, hardware wallets, or ETH gas fees using CryptoSLIP V3.2 2-Factor Air-Gapped QR Slips on Base (8453)." />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+  <link rel="canonical" href="https://naraprotocol.io/research/crypto-inheritance-emergency-family-backup.html" />
+  <link rel="alternate" type="text/plain" title="NARA Protocol V5 LLM Index" href="https://naraprotocol.io/llms.txt" />
+  <link rel="alternate" type="application/json" title="NARA Protocol V5 AI Facts" href="https://naraprotocol.io/ai-facts.json" />
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="Hardware-Free Crypto Inheritance &amp; Family Emergency Backups via 2-Factor QR Slips" />
+  <meta property="og:description" content="Leave USDC, cbBTC, ETH, or NARA to your family without seed phrases or gas fees: split a printed No-take-back QR card in your safe and a 12-character code in your will." />
+  <meta property="og:url" content="https://naraprotocol.io/research/crypto-inheritance-emergency-family-backup.html" />
+  <meta property="og:image" content="https://naraprotocol.io/cards/nara-og-main.jpg?v=20261103" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "TechArticle",
+        "@id": "https://naraprotocol.io/research/crypto-inheritance-emergency-family-backup.html#article",
+        "headline": "Hardware-Free Crypto Inheritance & Family Emergency Backups Using 2-Factor Air-Gapped QR Slips",
+        "datePublished": "2026-11-08",
+        "dateModified": "2026-11-13",
+        "author": { "@type": "Organization", "name": "NARA Protocol", "url": "https://naraprotocol.io" },
+        "publisher": { "@type": "Organization", "name": "NARA Protocol", "url": "https://naraprotocol.io" },
+        "mainEntityOfPage": "https://naraprotocol.io/research/crypto-inheritance-emergency-family-backup.html",
+        "keywords": ["crypto inheritance without seed phrase", "family crypto backup", "leave Bitcoin or USDC in a will", "2-factor paper cold storage", "CryptoSLIP V3.2", "#BanksFail"]
+      },
+      {
+        "@type": "HowTo",
+        "name": "How to Set Up a 2-Factor Crypto Inheritance Slip Without Seed Phrases or Gas Fees",
+        "step": [
+          {
+            "@type": "HowToStep",
+            "position": 1,
+            "name": "Mint an Irrevocable 2-Factor Slip on Base",
+            "text": "In CryptoSLIP V3.2 (https://slip.naraprotocol.io or ENS mirror https://cryptoslip.eth.limo), select USDC, cbBTC, ETH, or NARA and enable both 'Needs a code' (100,000-round PBKDF2/scrypt) and permanent 'No take-back' (cancelLockedUntil = 9,999,999,999)."
+          },
+          {
+            "@type": "HowToStep",
+            "position": 2,
+            "name": "Separate the Printed QR Card and the 12-Character Code",
+            "text": "Place the printed Air-Gapped QR Card inside your family safe and seal the separate 12-character claim code inside your will or estate attorney envelope. Neither piece alone can move the funds."
+          },
+          {
+            "@type": "HowToStep",
+            "position": 3,
+            "name": "Heirs Scan the QR and Claim with $0.00 Gas",
+            "text": "Your beneficiary scans the QR card with any smartphone camera, enters the 12-character code from the will, and claims 100% of the funds in their browser with $0.00 ETH gas sponsored by the protocol relay."
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+  <style>
+    @font-face { font-family: 'Space Grotesk'; font-style: normal; font-weight: 400 700; font-display: swap; src: url('/fonts/SpaceGrotesk-latin.woff2') format('woff2'); }
+    @font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 400 800; font-display: swap; src: url('/fonts/JetBrainsMono-latin.woff2') format('woff2'); }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #08090C; color: #ECEFF4; font-family: 'Space Grotesk', system-ui, sans-serif; line-height: 1.65; }
+    .skip-link { position: absolute; left: -9999px; top: 8px; z-index: 999; background: #00E676; color: #000; padding: 8px 14px; font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 12px; text-decoration: none; }
+    .skip-link:focus { left: 12px; }
+    .wrap { max-width: 920px; margin: 0 auto; padding: 32px 20px 64px; }
+    header { border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 20px; margin-bottom: 28px; }
+    .eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #00E676; text-transform: uppercase; letter-spacing: 0.14em; }
+    h1 { font-size: clamp(24px, 4vw, 36px); line-height: 1.2; margin: 10px 0 14px; color: #FFF; }
+    h2 { font-size: 20px; color: #FFF; margin-top: 32px; border-left: 3px solid #00E676; padding-left: 12px; }
+    p, li { color: rgba(236,239,244,0.86); font-size: 15px; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #00E676; background: rgba(0,230,118,0.08); padding: 2px 6px; }
+    .card { background: #0D1017; border: 1px solid rgba(255,255,255,0.1); padding: 18px 20px; margin: 18px 0; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+    th, td { border: 1px solid rgba(255,255,255,0.12); padding: 10px 12px; text-align: left; vertical-align: top; }
+    th { background: #11151F; color: #00E676; text-transform: uppercase; font-size: 11px; }
+    a { color: #00E676; text-decoration: underline; text-underline-offset: 3px; }
+    a:focus-visible { outline: 2px solid #00E676; outline-offset: 2px; }
+    .nav-bar { display: flex; flex-wrap: wrap; gap: 14px; font-family: 'JetBrains Mono', monospace; font-size: 12px; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+  <a href="#mainContent" class="skip-link">Skip to main content</a>
+  <div class="wrap">
+    <nav class="nav-bar" aria-label="Research navigation">
+      <a href="/">&larr; Back to NARA Protocol V5</a>
+      <a href="https://slip.naraprotocol.io/?tab=nara" target="_blank" rel="noopener noreferrer">Launch CryptoSLIP V3.2 &nearr;</a>
+      <a href="https://cryptoslip.eth.limo" target="_blank" rel="noopener noreferrer">ENS Mirror &nearr;</a>
+      <a href="/llms-full.txt">llms-full.txt</a>
+      <a href="/ai-facts.json">ai-facts.json</a>
+    </nav>
+    <main id="mainContent">
+      <article>
+        <header>
+          <div class="eyebrow">Forensic Research Brief 04 &middot; Estate &amp; Emergency Custody &middot; Base Mainnet (8453)</div>
+          <h1>Hardware-Free Crypto Inheritance &amp; Family Emergency Backups Using 2-Factor Air-Gapped QR Slips</h1>
+          <p><strong>Executive Takeaway:</strong> Traditional crypto inheritance fails for two reasons: (1) writing a raw 12/24-word seed phrase in a will means any person who sees the document can steal <code>100%</code> of the funds immediately, and (2) non-technical family members struggle with USB hardware wallets, derivation paths, and buying <code>ETH</code> for gas fees. <strong>CryptoSLIP V3.2</strong> solves both problems with <strong>2-Factor Air-Gapped QR Slips</strong> and <strong>$0.00 gas</strong> browser redemption.</p>
+        </header>
+
+        <h2>1. Why Seed Phrases and Hardware Wallets Fail Non-Technical Heirs</h2>
+        <ul>
+          <li><strong>Single-Point-of-Failure Exposure:</strong> A standard 12-word or 24-word mnemonic phrase grants full unilateral control the moment it is photographed by a paralegal, courier, or burglar.</li>
+          <li><strong>Hardware &amp; Gas Friction:</strong> Even when heirs receive a hardware device and PIN, firmware updates, expired battery cells, derivation path mismatches, and the requirement to purchase native <code>ETH</code> on an exchange just to pay gas fees frequently lock families out of their inheritance.</li>
+        </ul>
+
+        <h2>2. The 2-Factor Split-Custody Inheritance Pattern (QR Card + 12-Character Will Code)</h2>
+        <div class="card">
+          <p><strong>Cryptographic 2-of-2 Physical Split:</strong> When you create a slip in <code>CryptoSlipVaultV32</code> (active <code>v33</code> vault <code>0x3f80aa68Fb4834d6E119EE1cf932C14419Cf63EB</code> &amp; preserved <code>v32</code> vault <code>0x38BF0321FA7489576978353a6a8da4A3e85C2F18</code>) with <strong>Needs a code</strong> and permanent <strong>No take-back</strong> (<code>cancelLockedUntil = 9,999,999,999</code>), the on-chain ECDSA signing key is derived from <em>both</em> the URL fragment entropy on the printed QR card AND the separate 12-character alphanumeric claim code stretched through <code>100,000</code> rounds of <code>PBKDF2-HMAC-SHA256</code> / <code>scrypt</code> (<code>NIST SP 800-132</code>).</p>
+        </div>
+        <ol>
+          <li><strong>Location 1 (Family Safe):</strong> Store the printed <strong>Air-Gapped QR Card</strong> (which displays the asset, amount, and Base contract address, but cannot be claimed without the code).</li>
+          <li><strong>Location 2 (Legal Will / Sealed Attorney Envelope):</strong> Store the <strong>12-character claim code</strong>. An attorney or third party who sees the 12-character code cannot move the funds without the physical QR card in your safe.</li>
+          <li><strong>Zero-Gas Redemption on Any Phone:</strong> When the estate is executed, your spouse or child scans the QR card with their phone camera, types the 12-character code, and claims <code>USDC</code>, <code>cbBTC</code>, <code>ETH</code>, or <code>NARA</code> with <strong><code>$0.00</code> ETH gas</strong>.</li>
+        </ol>
+
+        <h2>3. Inheritance Architecture Comparison</h2>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Feature</th>
+              <th scope="col">12/24-Word Seed Phrase in Will</th>
+              <th scope="col">Hardware Wallet + Multisig</th>
+              <th scope="col">CryptoSLIP 2-Factor Inheritance Slip</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Safe Against Single-Document Theft</td>
+              <td>No &mdash; anyone photographing the seed steals 100%</td>
+              <td>Yes</td>
+              <td>Yes &mdash; requires BOTH physical QR card + separate 12-char code</td>
+            </tr>
+            <tr>
+              <td>Heir Needs ETH for Gas Fees</td>
+              <td>Yes (must fund wallet with ETH first)</td>
+              <td>Yes</td>
+              <td>No &mdash; <code>$0.00</code> gas via sponsored EIP-712 relay</td>
+            </tr>
+            <tr>
+              <td>Hardware Firmware / USB Dependencies</td>
+              <td>Requires wallet software + derivation path</td>
+              <td>Requires multiple USB devices &amp; coordinator software</td>
+              <td>Zero hardware &mdash; works in any smartphone browser</td>
+            </tr>
+            <tr>
+              <td>Per-Beneficiary Isolation</td>
+              <td>One seed exposes entire portfolio</td>
+              <td>Complex per-heir vault setup</td>
+              <td>Mint separate 1:1 slips for each child or beneficiary</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>4. Related Forensic Research Briefs</h2>
+        <ul>
+          <li><a href="/research/neobank-freezes-revolut-wirex-wise.html">Brief 01: Why Neobanks (Revolut, Wirex, Wise, Monzo, PayPal) Freeze Accounts Without Explanation (#BanksFail)</a></li>
+          <li><a href="/research/dark-web-infostealers-clipboard-hijackers-paper-cold-vault.html">Brief 02: Defeating Dark-Web Infostealers (Lumma, AMOS), Clipboard Hijackers &amp; Hardware Wallet Address Leaks</a></li>
+          <li><a href="/research/zero-gas-chat-payments-whatsapp-telegram.html">Brief 03: How to Send 1:1 USDC, cbBTC, ETH &amp; NARA on WhatsApp, Telegram &amp; Signal with $0.00 Gas</a></li>
+          <li><a href="/research/nara-v5-uniswap-v4-hook-15-minute-epochs.html">Brief 05: NARA Protocol V5 Architecture &mdash; Fixed 1,000,000 Supply, Uniswap v4 Hook &amp; 15-Minute Multi-Asset Epochs</a></li>
+        </ul>
+      </article>
+    </main>
+  </div>
+</body>
+</html>

@@ -2,6 +2,35 @@ import {
   NARA_CONTRACT, NARA_SYMBOL, NARA_DECIMALS, NARA_IMAGE, BASE_CHAIN_ID_HEX,
   CANONICAL_URL, CRYPTOSLIP_URL, SWAP_PUBLIC_LAUNCHED, TURNSTILE_SITE_KEY,
 } from "./config.js";
+import {
+  initBuyExperience,
+  isBuyModalOpen,
+  openBuyModal,
+  closeBuyModal,
+  copyBuyModalCA,
+  setBuyModalDirection,
+  setBuyModalAsset,
+  setBuyModalPreset,
+  setBuyModalMax,
+  setBuyModalSlippage,
+  handleBuyModalAmountInput,
+  disconnectBuyWallet,
+  getConnectedWalletProvider,
+  getConnectedAccount,
+  applyLowFeeSwapSize,
+  refreshBuyQuote,
+  executeBuyModalSwap,
+} from "./buyModal.js";
+
+function syncBodyScrollLock() {
+  if (typeof document === "undefined") return;
+  const modalIds = ["lootModal", "victoryModal", "swapPrelaunchModal", "buyNaraModal"];
+  const anyOpen = modalIds.some((id) => {
+    const el = document.getElementById(id);
+    return el && !el.classList.contains("hidden");
+  });
+  document.body.classList.toggle("overflow-hidden", anyOpen);
+}
 
 // --- SWAP GATE ---
 // SWAP_PUBLIC_LAUNCHED lives in config.js. While false, SWAP shows the pre-launch modal.
@@ -18,7 +47,10 @@ function handleSwapButtonClick(e) {
   }
   if (e && e.preventDefault) e.preventDefault();
   const modal = document.getElementById("swapPrelaunchModal");
-  if (modal) modal.classList.remove("hidden");
+  if (modal) {
+    modal.classList.remove("hidden");
+    syncBodyScrollLock();
+  }
 }
 
 // While gated, the header SWAP control is a <button> without an href, so middle-click,
@@ -49,7 +81,10 @@ function closeSwapModal(e) {
   if (e) e.stopPropagation();
   playMechanicalClick();
   const modal = document.getElementById("swapPrelaunchModal");
-  if (modal) modal.classList.add("hidden");
+  if (modal) {
+    modal.classList.add("hidden");
+    syncBodyScrollLock();
+  }
 }
 
 // --- HIGH-PERFORMANCE PROCEDURAL & RECORDED AUDIO ENGINE ---
@@ -449,6 +484,43 @@ function escapeHTML(value) {
 let runFlushes = 0;
 let bestRunRecord = null;
 let runWon = false;
+let dredgePressure = 0; // 0..100 pity pressure gauge for guaranteed new drops
+let dryNewStreak = 0;
+let questShared = false;
+let lastAwardPass = null;
+let victoryPlatform = "x";
+let resetConfirmArmedUntil = 0;
+let resetConfirmTimer = null;
+
+let sessionOperatorSecret = "";
+
+function generateCsprngHex16() {
+  if (typeof crypto === "undefined" || typeof crypto.getRandomValues !== "function") {
+    return "";
+  }
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function getOperatorSecret() {
+  if (/^[a-f0-9]{24,64}$/i.test(sessionOperatorSecret)) {
+    return sessionOperatorSecret;
+  }
+  try {
+    let secret = localStorage.getItem("nara_operator_secret_v1") || "";
+    if (!/^[a-f0-9]{24,64}$/i.test(secret)) {
+      secret = generateCsprngHex16();
+      if (!secret) return "";
+      localStorage.setItem("nara_operator_secret_v1", secret);
+    }
+    sessionOperatorSecret = secret;
+    return secret;
+  } catch (e) {
+    sessionOperatorSecret = generateCsprngHex16();
+    return sessionOperatorSecret;
+  }
+}
 
 function loadFlushProgress() {
   try {
@@ -458,6 +530,13 @@ function loadFlushProgress() {
       if (parsed && typeof parsed.flushCount === "number" && Number.isFinite(parsed.flushCount)) {
         flushCount = Math.max(0, Math.min(1000000, Math.floor(parsed.flushCount)));
         previousTierLevel = Math.max(1, Math.min(9, Math.floor(Number(parsed.previousTierLevel) || 1)));
+        runWon = parsed.runWon === true && Object.keys(userStash.unlocked).length >= STICKER_COLLECTION.length;
+        if (typeof parsed.dredgePressure === "number" && Number.isFinite(parsed.dredgePressure)) {
+          dredgePressure = Math.max(0, Math.min(100, Math.floor(parsed.dredgePressure)));
+        }
+        if (typeof parsed.dryNewStreak === "number" && Number.isFinite(parsed.dryNewStreak)) {
+          dryNewStreak = Math.max(0, Math.min(200, Math.floor(parsed.dryNewStreak)));
+        }
       }
     }
     const savedRun = localStorage.getItem("nara_current_run_flushes_v1");
@@ -470,15 +549,27 @@ function loadFlushProgress() {
       const num = parseInt(savedBest, 10);
       if (Number.isFinite(num) && num >= 12) bestRunRecord = num;
     }
+    questShared = localStorage.getItem("nara_quest_shared_v1") === "1";
+    const savedPass = localStorage.getItem("nara_award_pass_v1");
+    if (savedPass) {
+      const parsedPass = JSON.parse(savedPass);
+      if (parsedPass && typeof parsedPass.claimCode === "string" && parsedPass.claimCode) {
+        lastAwardPass = parsedPass;
+      }
+    }
   } catch (e) {}
   updateRunDisplayUI();
+  updateQuestUI();
 }
 
 function saveFlushProgress() {
   try {
     localStorage.setItem("nara_flush_progress", JSON.stringify({
       flushCount: Math.max(0, Math.floor(flushCount)),
-      previousTierLevel: Math.max(1, Math.min(9, Math.floor(previousTierLevel)))
+      previousTierLevel: Math.max(1, Math.min(9, Math.floor(previousTierLevel))),
+      runWon: !!runWon,
+      dredgePressure: Math.max(0, Math.min(100, Math.floor(dredgePressure))),
+      dryNewStreak: Math.max(0, Math.floor(dryNewStreak)),
     }));
     localStorage.setItem("nara_current_run_flushes_v1", String(runFlushes));
     if (bestRunRecord !== null) {
@@ -494,6 +585,104 @@ function updateRunDisplayUI() {
   if (bestEl) {
     bestEl.innerText = bestRunRecord !== null ? `${bestRunRecord} CLICKS` : "--";
   }
+  const pressureEl = document.getElementById("vaultDredgePressureText");
+  if (pressureEl) {
+    pressureEl.innerText = `${dredgePressure}%`;
+    pressureEl.className = dredgePressure >= 80
+      ? "px-1.5 py-0.5 bg-naraGreen/20 border border-naraGreen/60 text-naraGreen font-bold tracking-wider"
+      : "px-1.5 py-0.5 bg-amber-500/10 border border-amber-500/30 text-amber-300 font-bold tracking-wider";
+  }
+  const heroBar = document.getElementById("heroPressureBar");
+  if (heroBar) heroBar.style.width = `${dredgePressure}%`;
+  const heroVault = document.getElementById("heroVaultCount");
+  if (heroVault) heroVault.innerText = String(Object.keys(userStash.unlocked).length);
+}
+
+function markQuestShared() {
+  if (!questShared) {
+    questShared = true;
+    try { localStorage.setItem("nara_quest_shared_v1", "1"); } catch (e) {}
+    updateQuestUI();
+  }
+}
+
+function setQuestStepDone(btnId, badgeId, isDone, doneLabel, todoLabel) {
+  const btn = document.getElementById(btnId);
+  const badge = document.getElementById(badgeId);
+  if (btn) {
+    btn.classList.toggle("border-naraGreen/50", isDone);
+    btn.classList.toggle("bg-emerald-500/[0.06]", isDone);
+    btn.classList.toggle("border-white/10", !isDone);
+    btn.classList.toggle("bg-[#07090D]", !isDone);
+  }
+  if (badge) {
+    badge.innerText = isDone ? doneLabel : todoLabel;
+    badge.className = isDone
+      ? "px-1.5 py-0.5 text-[8px] font-bold border border-naraGreen/60 bg-naraGreen/20 text-naraGreen shrink-0"
+      : "px-1.5 py-0.5 text-[8px] font-bold border border-white/15 text-white/50 shrink-0";
+  }
+}
+
+function updateQuestUI() {
+  const unlockedCount = Object.keys(userStash.unlocked).length;
+  const s1 = flushCount > 0;
+  const s2 = questShared;
+  const s3 = unlockedCount >= STICKER_COLLECTION.length;
+  const s4 = !!(lastAwardPass && lastAwardPass.claimCode);
+  const completed = [s1, s2, s3, s4].filter(Boolean).length;
+
+  setQuestStepDone("questStep1Btn", "questStep1Badge", s1, "✓ FLUSHED", "START");
+  setQuestStepDone("questStep2Btn", "questStep2Badge", s2, "✓ SHARED", "POST");
+  setQuestStepDone("questStep3Btn", "questStep3Badge", s3, "✓ 12/12", `${unlockedCount}/12`);
+  setQuestStepDone("questStep4Btn", "questStep4Badge", s4, "✓ LOCKED", s3 ? "CLAIM" : "LOCK");
+
+  const pill = document.getElementById("questProgressPill");
+  if (pill) {
+    pill.innerText = `${completed} / 4 STEPS`;
+    pill.className = completed === 4
+      ? "px-2 py-0.5 bg-naraGreen/20 border border-naraGreen/60 text-naraGreen font-bold uppercase tracking-wider"
+      : "px-2 py-0.5 bg-amber-500/10 border border-amber-500/30 text-amber-300 font-bold uppercase tracking-wider";
+  }
+
+  const claimBadge = document.getElementById("questMyClaimBadge");
+  if (claimBadge) {
+    if (s4) {
+      claimBadge.innerText = `PASS: ${lastAwardPass.claimCode} (${lastAwardPass.handle})`;
+      claimBadge.classList.remove("hidden");
+    } else {
+      claimBadge.classList.add("hidden");
+    }
+  }
+}
+
+function spawnFloatingFeedback(text, tone = "green", e = null) {
+  const layer = document.getElementById("flushFloatLayer");
+  if (!layer) return;
+  const reduceMotion = typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduceMotion) return;
+
+  const badge = document.createElement("span");
+  const toneClass = tone === "gold"
+    ? "text-amber-300 border-amber-400/70 bg-black/85"
+    : tone === "cyan"
+      ? "text-[#00F0FF] border-[#00F0FF]/60 bg-black/85"
+      : "text-naraGreen border-naraGreen/60 bg-black/85";
+  badge.className = `float-flush-badge px-2 py-0.5 border ${toneClass}`;
+  badge.innerText = text;
+
+  let leftPct = 42 + Math.random() * 16;
+  let topPct = 36 + Math.random() * 14;
+  if (e && typeof e.clientX === "number" && e.clientX > 0) {
+    const rect = layer.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
+      leftPct = Math.max(12, Math.min(82, ((e.clientX - rect.left) / rect.width) * 100));
+      topPct = Math.max(18, Math.min(76, ((e.clientY - rect.top) / rect.height) * 100));
+    }
+  }
+  badge.style.left = `${leftPct.toFixed(1)}%`;
+  badge.style.top = `${topPct.toFixed(1)}%`;
+  layer.appendChild(badge);
+  setTimeout(() => badge.remove(), 860);
 }
 
 function resizeCanvas() {
@@ -569,6 +758,8 @@ class Candlestick {
   }
 }
 
+let candleRafId = null;
+
 function animateCandles() {
   ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
   for (let i = candles.length - 1; i >= 0; i--) {
@@ -582,9 +773,22 @@ function animateCandles() {
   if (candles.length > MAX_CANDLES) {
     candles = candles.slice(-MAX_CANDLES);
   }
-  requestAnimationFrame(animateCandles);
+  if (candles.length > 0 && !document.hidden) {
+    candleRafId = requestAnimationFrame(animateCandles);
+  } else {
+    candleRafId = null;
+  }
 }
-requestAnimationFrame(animateCandles);
+
+function startCandleLoop() {
+  if (candleRafId === null && candles.length > 0 && !document.hidden) {
+    candleRafId = requestAnimationFrame(animateCandles);
+  }
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && candles.length > 0) startCandleLoop();
+});
 
 // --- OPERATOR PROGRESSION & TIER MATRIX (LEVELS 1 TO 9) ---
 const OPERATOR_LEVELS = [
@@ -617,50 +821,50 @@ function getOperatorTier(count) {
 }
 
 const RANDOM_HOOKS = [
-  (n) => n > 0 
-    ? `The toad stared into my soul while I flushed ${n} short sellers. I will never be the same.` 
-    : `The toad stared into my soul from the porcelain bowl. Something unhinged is brewing on Base.`,
-  (n) => n > 0 
-    ? `Checked my portfolio on the toilet at 3 AM. Ended up flushing ${n} bears down the $NARA bowl.`
-    : `Checked my portfolio on the toilet at 3 AM. Found the $NARA bowl and the machine is loading.`,
-  (n) => n > 0 
-    ? `He who controls the candlestick toilet paper controls the machine. ${n} bears flushed.`
-    : `He who controls the candlestick toilet paper controls the machine. Token first.`,
-  (n) => n > 0 
-    ? `Thought it was just a meme. Then I flushed ${n} times and the pipes whispered 'token first'.`
-    : `Thought it was just a meme. Then the pipes whispered 'token first. The machine follows.'`,
-  (n) => n > 0 
-    ? `Just wiped the floor with ${n} liquidated shorts. Something's coming to Base.`
-    : `Just wiped the floor with liquidated shorts. Something's coming to Base.`,
-  (n) => n > 0 
-    ? `The candlestick roll doesn't lie. ${n} bears sent straight to the sewer grid.`
-    : `The candlestick roll doesn't lie. Green candles only on Base.`,
-  (n) => n > 0 
-    ? `Told him not to short $NARA on Base. Now he's in the bowl and I've flushed him ${n} times.`
-    : `Told him not to short $NARA on Base. Green candles are loading.`,
-  (n) => n > 0 
-    ? `Red candle paper wiped. ${n} flushes later, only green God candles remain.`
+  (n) => n > 0
+    ? `The toad stared into my soul while I flushed ${n} ${n === 1 ? 'short' : 'shorts'}.`
+    : `The toad stared into my soul from the porcelain bowl on Base.`,
+  (n) => n > 0
+    ? `Checked charts at 3 AM. Flushed ${n} ${n === 1 ? 'bear' : 'bears'} down $NARA.`
+    : `Checked charts at 3 AM. Found the $NARA bowl. Machine loading.`,
+  (n) => n > 0
+    ? `Read the candlestick roll: BANKS FAIL. ${n} ${n === 1 ? 'bear' : 'bears'} flushed.`
+    : `Read the candlestick roll closely: BANKS FAIL. Token first.`,
+  (n) => n > 0
+    ? `Flushed ${n} ${n === 1 ? 'time' : 'times'}. The pipes whispered: token first.`
+    : `The sewer pipes whispered: token first. The machine follows.`,
+  (n) => n > 0
+    ? `Just wiped the floor with ${n} liquidated ${n === 1 ? 'short' : 'shorts'} on Base.`
+    : `Just wiped the floor with liquidated shorts. Base is live.`,
+  (n) => n > 0
+    ? `The candlestick roll doesn't lie: BANKS FAIL. ${n} purged.`
+    : `The candlestick roll doesn't lie: BANKS FAIL. Green candles only.`,
+  (n) => n > 0
+    ? `Told him not to short $NARA. Flushed him ${n} ${n === 1 ? 'time' : 'times'}.`
+    : `Told him not to short $NARA on Base. Green candles loading.`,
+  (n) => n > 0
+    ? `Red candle paper wiped. ${n} ${n === 1 ? 'flush' : 'flushes'} later, green remains.`
     : `Red candle paper wiped. Only green God candles remain on Base.`,
-  (n) => n > 0 
-    ? `Doctor said to stop checking charts on the toilet. So I flushed ${n} bears on $NARA instead.`
-    : `Doctor said to stop checking charts on the toilet. So I opened $NARA on Base instead.`,
-  (n) => n > 0 
-    ? `The machine follows. But first, ${n} bears had to be purged down the porcelain throne.`
-    : `The machine follows. Token first. The revolution starts on Base.`,
-  (n) => n > 0 
-    ? `Wiped my portfolio with the candlestick roll. Flushed ${n} times. Pure catharsis.`
-    : `Wiped my portfolio with the candlestick roll. Pure catharsis on Base.`,
-  (n) => n > 0 
-    ? `No whitepaper needed when you can flush ${n} short sellers into the sewer.`
-    : `No whitepaper needed when green God candles wipe out the bears.`
+  (n) => n > 0
+    ? `Doctor said stop checking charts. Flushed ${n} ${n === 1 ? 'bear' : 'bears'} instead.`
+    : `Doctor said stop checking charts on the toilet. Opened $NARA.`,
+  (n) => n > 0
+    ? `Token first. The machine follows. ${n} ${n === 1 ? 'bear' : 'bears'} purged.`
+    : `Token first. The machine follows. The revolution starts on Base.`,
+  (n) => n > 0
+    ? `Decoded the candlestick roll: BANKS FAIL. ${n} ${n === 1 ? 'time' : 'times'} flushed.`
+    : `Decoded the candlestick roll wicks: BANKS FAIL. Pure catharsis.`,
+  (n) => n > 0
+    ? `No whitepaper needed. Flushed ${n} ${n === 1 ? 'short seller' : 'short sellers'} on Base.`
+    : `No whitepaper needed when green candles wipe out the bears.`
 ];
 
 const RANDOM_REPLY_BAITS = [
-  "Drop your purge score below 👇",
-  "How many bears did you flush? Drop your badge 👇",
-  "Beat my purge score or wipe with red paper 👇",
+  "Drop your purge score 👇",
+  "How many bears did you flush? 👇",
+  "Beat my score or wipe with red paper 👇",
   "Can anyone top this operator rank? 👇",
-  "Drop your score below if you survived the flush 👇"
+  "Drop your score if you survived the flush 👇"
 ];
 
 let currentRoll = {
@@ -670,7 +874,7 @@ let currentRoll = {
   opId: Math.floor(1000 + Math.random() * 9000)
 };
 
-let activeTweetMode = 'flex'; // 'flex' | 'receipt' | 'lore' | 'unhinged'
+let activeTweetMode = 'flex'; // 'flex' | 'receipt' | 'lore' | 'unhinged' | 'sticker'
 let combo = 0;
 let comboTimer = null;
 let previousTierLevel = 1;
@@ -685,43 +889,84 @@ function rollNewDegenMessage(count) {
 }
 
 // --- VIRAL SOCIAL POSTING ENGINE (RFC-3986 STRICT & POPUP-PROOF) ---
-// Share links always point at the canonical origin, never at a preview host or a query/hash.
-function getShareUrl() {
+// Share links always point at the canonical origin, or at /s/{id} for sticker card OpenGraph previews.
+function getShareUrl(stickerIdOverride) {
+  const base = CANONICAL_URL.replace(/\/$/, "");
+  if (stickerIdOverride) {
+    return `${base}/s/${stickerIdOverride}`;
+  }
+  if (activeTweetMode === 'sticker') {
+    const stickerId = (userStash && userStash.activeStickerId) || 1;
+    return `${base}/s/${stickerId}`;
+  }
   return CANONICAL_URL;
 }
 
+// Computes X (Twitter) weighted character length:
+// - Astral-plane / emoji characters count as 2 chars (variation selectors \uFE0F stripped)
+// - Attached &url= counts as 24 chars (1 space + 23-char t.co wrapper)
+function getXWeightedLength(text, hasUrl = true) {
+  let len = 0;
+  for (const ch of text.replace(/\uFE0F/g, "")) {
+    len += ch.codePointAt(0) > 0x1f00 ? 2 : 1;
+  }
+  return hasUrl ? len + 24 : len;
+}
+
+const RECEIPT_OUTCOMES = [
+  "WIPED DOWN THE BOWL 🚽",
+  "SIPHONED INTO THE SEWER 🪠",
+  "PURGED BY GREEN CANDLES 🕯️",
+  "FLUSHED ON BASE 8453 ⚡",
+];
+
+const LORE_WHISPERS = [
+  "token first. the machine follows.",
+  "read the candlestick roll: BANKS FAIL.",
+  "green candles only in the porcelain bowl.",
+  "he who controls the roll controls Base.",
+  "bears belong in the sewer pipes.",
+];
+
+let receiptOutcomeIdx = 0;
+let loreWhisperIdx = 0;
+
 function buildTweetByMode(mode, count, roll) {
   const tier = getOperatorTier(count);
-  const purgeLabel = count > 0 ? `${count} BEARS PURGED` : `READY TO PURGE`;
+  const purgeLabel = count > 0 ? `${count} ${count === 1 ? 'BEAR' : 'BEARS'} PURGED` : `READY TO PURGE`;
   const opId = roll.opId;
 
   if (mode === 'receipt') {
     const bears = count > 0 ? count : 1;
-    return `[SEWER LIQUIDATION RECEIPT #${opId}] 🧾🐸\n\nAsset: $NARA (Base)\nTarget: ${bears} Short Sellers\nOutcome: WIPED DOWN THE BOWL 🚽\nPaper: 100% Green Candlestick Roll\n\nDrop your receipt below 👇\nCA: 0x91FB...Ae0f`;
+    const outcome = RECEIPT_OUTCOMES[receiptOutcomeIdx % RECEIPT_OUTCOMES.length];
+    return `[SEWER LIQUIDATION RECEIPT #${opId}] 🧾🐸\n\nAsset: $NARA on Base (@NARA_protocol)\nTarget: ${bears} ${bears === 1 ? 'Short Seller' : 'Short Sellers'}\nOutcome: ${outcome}\nCipher: #BanksFail\n\nCA: ${NARA_CONTRACT}\n\nDrop your receipt 👇`;
   }
 
   if (mode === 'lore') {
-    return `[SEWER TRANSMISSION // TOAD PROTOCOL] 🐸📡\n\n"The toad stared into my soul while I flushed ${count || 1} times. The pipes whispered: token first. the machine follows."\n\nSomething unhinged on Base.\nDrop OP badge 👇\n⛓️ CA: 0x91FB...Ae0f`;
+    const n = count || 1;
+    const whisper = LORE_WHISPERS[loreWhisperIdx % LORE_WHISPERS.length];
+    return `[SEWER TRANSMISSION #${opId} // @NARA_protocol] 🐸📡\n\n"The toad stared into my soul while I flushed ${n} ${n === 1 ? 'time' : 'times'} on $NARA. The pipes whispered: ${whisper}"\n\nCA: ${NARA_CONTRACT}\n\nDrop OP badge 👇 #BanksFail`;
   }
 
   if (mode === 'unhinged') {
-    return `Doctor said to stop checking charts on the toilet.\nSo I purged ${count || 69} bears down the $NARA bowl on Base instead.\n\n[OP #${opId} // LVL ${tier.level}: ${tier.rank.toUpperCase()}]\nBeat my score or wipe with red paper 👇\n⛓️ CA: 0x91FB...Ae0f`;
+    const n = count || 69;
+    return `Doctor said to stop checking charts on the toilet.\nSo I purged ${n} ${n === 1 ? 'bear' : 'bears'} down the $NARA bowl on Base (@NARA_protocol).\n\n[OP #${opId} // LVL ${tier.level}: ${tier.rank.toUpperCase()}]\nCA: ${NARA_CONTRACT}\n\n${roll.cta} #BanksFail`;
   }
 
   if (mode === 'sticker') {
     const hasUnlocked = userStash && userStash.unlocked && Object.keys(userStash.unlocked).length > 0;
     if (!hasUnlocked) {
-      return `[SEWER STICKER VAULT] 🐸🚽🔒\n\nNo sticker cards dredged yet! Flush the porcelain bowl to dredge your first rare card.\n\n⛓️ CA: 0x91FB...Ae0f\n\nStart dredging 👇\nhttps://naraprotocol.com`;
+      return `[SEWER STICKER VAULT // @NARA_protocol] 🐸🚽\n\nFlush the $NARA porcelain bowl on Base to dredge all 12 sewer sticker cards. #BanksFail\n\nCA: ${NARA_CONTRACT}\n\nStart dredging 👇`;
     }
     const stickerId = userStash.activeStickerId || 1;
     const sticker = STICKER_COLLECTION.find(s => s.id === stickerId) || STICKER_COLLECTION[0];
     const serial = (userStash.unlocked[sticker.id] && userStash.unlocked[sticker.id].serial) || roll.opId;
     const bears = count > 0 ? count : 1;
-    return `[SEWER STICKER DROP #${serial}] 🐸🚽💩\n\nItem: ${sticker.deco} ${sticker.name}\nRarity: ${sticker.rarity} [${sticker.perk}]\nOperator: ${tier.rank.toUpperCase()} // ${bears} Flushed\n\n(Card image attached 👆)\n⛓️ CA: 0x91FB...Ae0f\n\nStash 👇\nhttps://naraprotocol.com`;
+    return `[SEWER STICKER DROP #${serial}] 🐸🚽\n\nItem: ${sticker.deco} ${sticker.name}\nRarity: ${sticker.rarity} [${sticker.perk}]\nOperator: ${tier.rank.toUpperCase()} // ${bears} Flushed\n\n$NARA (@NARA_protocol) #BanksFail\nCA: ${NARA_CONTRACT}\n\nDredge yours 👇`;
   }
 
   // Default: 'flex'
-  return `[OP #${opId} // LVL ${tier.level}: ${tier.rank.toUpperCase()} // ${purgeLabel}] 🐸🚽\n\n"${roll.hook}"\n\n${roll.cta}\n\n⛓️ $NARA on Base: 0x91FB...Ae0f`;
+  return `[OP #${opId} // LVL ${tier.level}: ${tier.rank.toUpperCase()} // ${purgeLabel}] 🐸🚽\n\n"${roll.hook}"\n\n${roll.cta} #BanksFail\n\n$NARA (@NARA_protocol): ${NARA_CONTRACT}`;
 }
 
 function setTweetMode(mode) {
@@ -732,11 +977,12 @@ function setTweetMode(mode) {
   modes.forEach(m => {
     const btn = document.getElementById(`tabBtn-${m}`);
     if (btn) {
+      btn.setAttribute("aria-pressed", m === mode ? "true" : "false");
       if (m === mode) {
-        btn.className = "px-3 sm:px-3.5 py-2 min-h-[40px] sm:min-h-[42px] text-[10px] font-bold font-mono uppercase tracking-wider bg-white text-black border border-white transition-all cursor-pointer flex items-center gap-1.5 focus-visible:ring-1 focus-visible:ring-naraGreen outline-none";
+        btn.className = "px-3 sm:px-3.5 py-2 min-h-[44px] text-[10px] font-bold font-mono uppercase tracking-wider bg-white text-black border border-white transition-all cursor-pointer flex items-center gap-1.5 focus-visible:ring-1 focus-visible:ring-naraGreen outline-none";
       } else {
         const extraColor = m === 'sticker' ? 'text-amber-300 hover:text-white border-amber-500/30' : 'text-white/70 hover:text-white border-white/10';
-        btn.className = `px-3 sm:px-3.5 py-2 min-h-[40px] sm:min-h-[42px] text-[10px] font-bold font-mono uppercase tracking-wider bg-white/[0.04] ${extraColor} hover:border-white/20 transition-all cursor-pointer flex items-center gap-1.5 focus-visible:ring-1 focus-visible:ring-white outline-none`;
+        btn.className = `px-3 sm:px-3.5 py-2 min-h-[44px] text-[10px] font-bold font-mono uppercase tracking-wider bg-white/[0.04] ${extraColor} hover:border-white/20 transition-all cursor-pointer flex items-center gap-1.5 focus-visible:ring-1 focus-visible:ring-white outline-none`;
       }
     }
   });
@@ -748,6 +994,18 @@ function rerollActiveMode() {
   playMechanicalClick();
   rollNewDegenMessage(flushCount);
   currentRoll.opId = Math.floor(1000 + Math.random() * 9000);
+  receiptOutcomeIdx++;
+  loreWhisperIdx++;
+
+  if (activeTweetMode === 'sticker' && userStash && userStash.unlocked) {
+    const unlockedIds = Object.keys(userStash.unlocked).map(Number).filter(Boolean);
+    if (unlockedIds.length > 1) {
+      const curIdx = unlockedIds.indexOf(userStash.activeStickerId);
+      userStash.activeStickerId = unlockedIds[(curIdx + 1) % unlockedIds.length];
+      saveUserStash();
+    }
+  }
+
   updateForgeUI();
 
   const preview = document.getElementById("tweetPreviewDisplay");
@@ -775,18 +1033,22 @@ function updateForgeUI() {
   if (rankLabel) rankLabel.innerText = `LVL ${tier.level}: ${tier.rank.toUpperCase()}`;
   if (titleLabel) titleLabel.innerText = tier.title.toUpperCase();
   if (xpPercentLabel) xpPercentLabel.innerText = `${tier.progress}%`;
-  if (xpBar) xpBar.style.width = `${tier.progress}%`;
+  if (xpBar) {
+    xpBar.style.width = `${tier.progress}%`;
+    xpBar.parentElement?.setAttribute("aria-valuenow", String(tier.progress));
+  }
   if (xpTitle) {
     xpTitle.innerText = tier.nextTier ? `XP TO LVL ${tier.nextTier.level} (${tier.nextTier.minFlushes - flushCount} LEFT)` : `MAX DEITY TIER REACHED`;
   }
 
-  // 2. Terminal Preview update
+  // 2. Terminal Preview update (using true X-weighted length incl. 24-char t.co URL)
   const preview = document.getElementById("tweetPreviewDisplay");
   const charCountLabel = document.getElementById("charCountLabel");
+  const xWeightedLen = getXWeightedLength(text, true);
   if (preview) preview.innerText = text;
   if (charCountLabel) {
-    charCountLabel.innerText = `${text.length} / 280 CHARS`;
-    if (text.length > 280) {
+    charCountLabel.innerText = `${xWeightedLen} / 280 CHARS`;
+    if (xWeightedLen > 280) {
       charCountLabel.classList.add("text-red-400");
       charCountLabel.classList.remove("text-white/50");
     } else {
@@ -811,6 +1073,10 @@ function updateForgeUI() {
   if (quickBtn) quickBtn.href = xUrl;
   if (mTweet) mTweet.href = xUrl;
   if (mCast) mCast.href = warpcastUrl;
+  const shareStashBtn = document.getElementById("shareStashBtn");
+  if (shareStashBtn && shareStashBtn.tagName === "A") {
+    shareStashBtn.href = buildStashTweetUrl();
+  }
 
   // 4. Toggle Copy Card Image button visibility
   const forgeCardBtn = document.getElementById("forgeCopyCardBtn");
@@ -826,6 +1092,7 @@ function updateForgeUI() {
 
 function handleForgeClick(e, platform) {
   playMechanicalClick();
+  markQuestShared();
   updateForgeUI();
   const forgeX = document.getElementById("forgeXBtn");
   const forgeCast = document.getElementById("forgeCastBtn");
@@ -912,9 +1179,10 @@ function openSafeWindow(url) {
 // Only events from THIS browser session appear here, plus rotating true tips while idle.
 const IDLE_TIPS = [
   "Tip: press SPACE or F to flush without clicking.",
+  "Tip: look closely at the candlestick toilet paper roll — the hidden cipher is BANKS FAIL (#BanksFail).",
   "Tip: stickers and scores save in this browser only. Clearing site data resets them.",
   "Tip: the Fame Board is self-reported. Fewest clicks to 12/12 wins.",
-  "Tip: SWAP opens CryptoSLIP, the NARA swap app, in a new tab once trading is live.",
+  "Tip: click BUY $NARA at the top to swap ETH or USDC on the Base Uniswap v4 Hook, or open CryptoSLIP to commit 1+ NARA.",
   "Tip: COPY puts the full token address on your clipboard. Check it before any swap.",
   "Tip: ADD $NARA TO METAMASK asks your wallet to switch to Base, then to show the token.",
 ];
@@ -1001,7 +1269,7 @@ function saveUserStash() {
 
 function formatStickerTweet(sticker, serial, opRank, flushNum) {
   const bears = flushNum > 0 ? flushNum : 1;
-  return `[SEWER STICKER DROP #${serial}] 🐸🚽💩\n\nItem: ${sticker.deco} ${sticker.name}\nRarity: ${sticker.rarity} [${sticker.perk}]\nOperator: ${opRank.toUpperCase()} // ${bears} Bears Flushed\n\n(Card image pasted above 👆)\n⛓️ CA: 0x91FB...Ae0f\n\nCollect your stash 👇\nhttps://naraprotocol.com`;
+  return `[SEWER STICKER DROP #${serial}] 🐸🚽\n\nItem: ${sticker.deco} ${sticker.name}\nRarity: ${sticker.rarity} [${sticker.perk}]\nOperator: ${opRank.toUpperCase()} // ${bears} Bears Flushed\n\n$NARA (@NARA_protocol) #BanksFail\nCA: ${NARA_CONTRACT}\n\nDredge yours 👇`;
 }
 
 function renderStickerCardCanvas(sticker, serial, opRank, flushNum) {
@@ -1148,7 +1416,7 @@ function renderStickerCardCanvas(sticker, serial, opRank, flushNum) {
 
   c.textAlign = "right";
   c.fillStyle = "#39FF14";
-  c.fillText("naraprotocol.com", W - 42, 545);
+  c.fillText("naraprotocol.io", W - 42, 545);
 }
 
 function pauseLootAutoDismiss() {
@@ -1221,7 +1489,7 @@ function showLootModal(sticker, serial, isNew, flushNum, isExplicitInspect = fal
 
   if (modal) {
     modal.classList.remove("hidden");
-    document.body.classList.add("overflow-hidden");
+    syncBodyScrollLock();
     const modalBox = document.getElementById("lootModalBox");
     if (modalBox) modalBox.scrollTop = 0;
     clearTimeout(modal._autoDismiss);
@@ -1267,12 +1535,36 @@ function closeLootModal(e) {
     clearTimeout(modal._autoDismiss);
     modal._autoDismiss = null;
     modal.classList.add("hidden");
-    document.body.classList.remove("overflow-hidden");
+    syncBodyScrollLock();
+  }
+}
+
+async function writeCanvasPngToClipboard(cardCanvas) {
+  if (!cardCanvas || !cardCanvas.toBlob || !navigator.clipboard || !window.ClipboardItem) {
+    return false;
+  }
+  const blobPromise = new Promise((resolve, reject) => {
+    cardCanvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Canvas toBlob failed"))), "image/png");
+  });
+  try {
+    // Pass Promise directly to ClipboardItem so Safari/WebKit preserves transient user activation
+    await navigator.clipboard.write([new ClipboardItem({ "image/png": blobPromise })]);
+    return true;
+  } catch (_err) {
+    try {
+      const blob = await blobPromise;
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+      return true;
+    } catch (err2) {
+      console.warn("Clipboard image copy fallback:", err2);
+      return false;
+    }
   }
 }
 
 async function copyCardAndTweet() {
   playMechanicalClick();
+  markQuestShared();
   const cardCanvas = document.getElementById("cardCanvas");
   const copyOverlay = document.getElementById("cardCopyOverlay");
   const btnText = document.getElementById("modalTweetBtnText");
@@ -1281,7 +1573,7 @@ async function copyCardAndTweet() {
   const { sticker, serial } = currentInspectedSticker;
   const tier = getOperatorTier(flushCount);
   const tweetText = formatStickerTweet(sticker, serial, tier.rank, flushCount);
-  const shareUrl = getShareUrl();
+  const shareUrl = getShareUrl(sticker.id);
   const xUrl = `https://x.com/intent/post?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(shareUrl)}`;
 
   // 1. Check for Mobile Native Web Share API with File attachment (1-click direct to Twitter / Telegram app!)
@@ -1315,29 +1607,13 @@ async function copyCardAndTweet() {
   }
 
   // 2. Desktop / Fallback: Copy image to clipboard
-  let imageCopied = false;
-  if (cardCanvas && cardCanvas.toBlob) {
-    try {
-      const blob = await new Promise(resolve => cardCanvas.toBlob(resolve, 'image/png'));
-      if (blob && navigator.clipboard && window.ClipboardItem) {
-        const item = new ClipboardItem({ 'image/png': blob });
-        await navigator.clipboard.write([item]);
-        imageCopied = true;
-      }
-    } catch (err) {
-      console.warn('Clipboard image copy fallback:', err);
-    }
-  }
+  const imageCopied = await writeCanvasPngToClipboard(cardCanvas);
 
   if (copyOverlay) {
     copyOverlay.classList.remove("hidden");
-    if (!imageCopied) {
-      copyOverlay.innerHTML = `
-        <span class="text-2xl mb-1">💾</span>
-        <span>CARD READY TO ATTACH!</span>
-        <span class="text-[9px] text-white/70 normal-case mt-1 font-sans">Browser blocked clipboard image. Click DOWNLOAD below to attach!</span>
-      `;
-    }
+    copyOverlay.innerHTML = imageCopied
+      ? `<span class="text-2xl mb-1">📋✓</span><span>CARD COPIED TO CLIPBOARD!</span><span class="text-[9px] text-white/70 normal-case mt-1 font-sans">Press Ctrl+V in your tweet to attach!</span>`
+      : `<span class="text-2xl mb-1">💾</span><span>CARD READY TO ATTACH!</span><span class="text-[9px] text-white/70 normal-case mt-1 font-sans">Browser blocked clipboard image. Click DOWNLOAD below to attach!</span>`;
   }
   if (btnText) btnText.innerText = imageCopied ? "✓ COPIED! OPENING X..." : "OPENING X...";
 
@@ -1375,19 +1651,7 @@ async function copyStickerCardFromForge() {
   renderStickerCardCanvas(sticker, stashItem.serial, tier.rank.toUpperCase(), flushCount);
   const cardCanvas = document.getElementById("cardCanvas");
 
-  let imageCopied = false;
-  if (cardCanvas && cardCanvas.toBlob) {
-    try {
-      const blob = await new Promise(resolve => cardCanvas.toBlob(resolve, 'image/png'));
-      if (blob && navigator.clipboard && window.ClipboardItem) {
-        const item = new ClipboardItem({ 'image/png': blob });
-        await navigator.clipboard.write([item]);
-        imageCopied = true;
-      }
-    } catch (err) {
-      console.warn('Forge image copy error:', err);
-    }
-  }
+  const imageCopied = await writeCanvasPngToClipboard(cardCanvas);
 
   if (btnLabel) {
     btnLabel.innerText = imageCopied ? "COPIED! PRESS CTRL+V" : "COPY FAILED (DOWNLOAD BELOW)";
@@ -1407,21 +1671,33 @@ async function copyStickerCardFromForge() {
   }
 }
 
-function shareFullStashTweet() {
-  playMechanicalClick();
+function buildStashTweetUrl() {
   const unlockedKeys = Object.keys(userStash.unlocked);
   const count = unlockedKeys.length;
   const tier = getOperatorTier(flushCount);
-  const shareUrl = getShareUrl();
-  const text = `[SEWER LOOT LOCKER // DISCOVERY REPORT] 🎴💩\n\nStickers Unlocked: ${count} / 12 (${Math.round((count/12)*100)}%)\nPurge Rank: ${tier.rank.toUpperCase()} (${flushCount} flushes)\n\nCan anyone complete the porcelain 12? 👇\n\n⛓️ CA: 0x91FB...Ae0f`;
-  const xUrl = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`;
-  openSafeWindow(xUrl);
+  const base = CANONICAL_URL.replace(/\/$/, "");
+  const shareUrl = count > 0 ? `${base}/s/${userStash.activeStickerId || 1}` : CANONICAL_URL;
+  const text = `[SEWER LOOT LOCKER // @NARA_protocol] 🎴🐸\n\nStickers Unlocked: ${count} / 12 (${Math.round((count/12)*100)}%)\nPurge Rank: ${tier.rank.toUpperCase()} (${flushCount} ${flushCount === 1 ? 'flush' : 'flushes'})\n\n$NARA CA: ${NARA_CONTRACT}\n\nCan you complete the 12/12 vault? 👇 #BanksFail`;
+  return `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`;
+}
+
+function shareFullStashTweet(e) {
+  playMechanicalClick();
+  markQuestShared();
+  const xUrl = buildStashTweetUrl();
+  if (e && e.currentTarget && e.currentTarget.tagName && e.currentTarget.tagName.toLowerCase() === "a") {
+    e.currentTarget.href = xUrl;
+  } else {
+    if (e && e.preventDefault) e.preventDefault();
+    openSafeWindow(xUrl);
+  }
 }
 
 function updateVaultUI() {
   const grid = document.getElementById("vaultGrid");
   const countEl = document.getElementById("vaultUnlockedCount");
   const percentEl = document.getElementById("vaultProgressPercent");
+  const shareStashBtn = document.getElementById("shareStashBtn");
   if (!grid) return;
 
   const unlockedKeys = Object.keys(userStash.unlocked);
@@ -1430,20 +1706,37 @@ function updateVaultUI() {
 
   if (countEl) countEl.innerText = count;
   if (percentEl) percentEl.innerText = pct;
+  const badgeBtn = document.getElementById("vaultProgressBadge");
+  if (badgeBtn) {
+    if (count >= STICKER_COLLECTION.length) {
+      badgeBtn.classList.remove("cursor-default");
+      badgeBtn.classList.add("cursor-pointer", "hover:bg-emerald-500/20", "hover:border-naraGreen");
+      badgeBtn.title = "12/12 Vault Conquered! Click to open Victory & Fame Board submission";
+    } else {
+      badgeBtn.classList.add("cursor-default");
+      badgeBtn.classList.remove("cursor-pointer", "hover:bg-emerald-500/20", "hover:border-naraGreen");
+      badgeBtn.title = "Vault collection progress";
+    }
+  }
+  if (shareStashBtn && shareStashBtn.tagName === "A") {
+    shareStashBtn.href = buildStashTweetUrl();
+  }
 
   grid.innerHTML = "";
   STICKER_COLLECTION.forEach(sticker => {
     const stashItem = userStash.unlocked[sticker.id];
     const isUnlocked = !!stashItem;
-    const cardDiv = document.createElement("div");
+    const cardBtn = document.createElement("button");
+    cardBtn.type = "button";
 
     if (isUnlocked) {
-      cardDiv.className = "relative bg-[#0E1117] border p-2.5 flex flex-col items-center justify-between text-center transition-all duration-200 hover:scale-[1.03] cursor-pointer group";
-      cardDiv.style.borderColor = sticker.border;
-      cardDiv.style.boxShadow = `0 4px 18px ${sticker.bg}`;
-      cardDiv.onclick = () => openCardInspector(sticker.id);
+      cardBtn.className = "relative w-full min-h-[110px] bg-[#0E1117] border p-2.5 flex flex-col items-center justify-between text-center transition-all duration-200 hover:scale-[1.03] cursor-pointer group focus-visible:ring-1 focus-visible:ring-naraGreen outline-none";
+      cardBtn.style.borderColor = sticker.border;
+      cardBtn.style.boxShadow = `0 4px 18px ${sticker.bg}`;
+      cardBtn.setAttribute("aria-label", `Inspect unlocked sticker #${sticker.id}: ${sticker.name} (${sticker.rarity})`);
+      cardBtn.addEventListener("click", () => openCardInspector(sticker.id));
 
-      cardDiv.innerHTML = `
+      cardBtn.innerHTML = `
         <div class="w-full flex items-center justify-between text-[8px] font-mono mb-1 select-none">
           <span class="px-1 py-0.5 text-[7px] font-bold uppercase tracking-wider" style="color:${sticker.border}; border:1px solid ${sticker.border}">${sticker.rarity}</span>
           ${stashItem.count > 1 ? `<span class="px-1 py-0.5 bg-white/10 text-white font-bold">x${stashItem.count}</span>` : `<span class="text-white/40">#${String(stashItem.serial).padStart(4, '0')}</span>`}
@@ -1463,58 +1756,92 @@ function updateVaultUI() {
         </div>
       `;
     } else {
-      cardDiv.className = "relative bg-[#07080B] border p-2.5 flex flex-col items-center justify-between text-center transition-all duration-200 cursor-pointer select-none group";
-      cardDiv.style.borderColor = `${sticker.border}33`; // 20% opacity of rarity border
-      cardDiv.onclick = () => {
-        playMechanicalClick();
-        injectSewerEvent(`[SEWER LOCKER] Card #${sticker.id} (${sticker.rarity}) is locked! Flush toilet to dredge.`);
-      };
+      cardBtn.className = "relative w-full min-h-[110px] bg-[#07080B] border p-2.5 flex flex-col items-center justify-between text-center transition-all duration-200 cursor-pointer select-none group hover:border-naraGreen/60 focus-visible:ring-1 focus-visible:ring-white/50 outline-none";
+      cardBtn.style.borderColor = `${sticker.border}33`; // 20% opacity of rarity border
+      cardBtn.setAttribute("aria-label", `Locked sticker #${sticker.id} (${sticker.rarity}) — tap to flush and dredge`);
+      cardBtn.addEventListener("click", (ev) => {
+        cardBtn.classList.remove("animate-pulse");
+        void cardBtn.offsetWidth;
+        cardBtn.classList.add("animate-pulse");
+        setTimeout(() => cardBtn.classList.remove("animate-pulse"), 450);
+        const hintEl = document.getElementById("vaultHintText");
+        if (hintEl) {
+          hintEl.innerText = `DREDGING FOR #${String(sticker.id).padStart(2, "0")} ${sticker.name.toUpperCase()} (${sticker.rarity}) // PRESSURE ${dredgePressure}%`;
+        }
+        triggerHydraulicFlush(ev);
+      });
 
-      cardDiv.innerHTML = `
+      cardBtn.innerHTML = `
         <div class="w-full flex items-center justify-between text-[8px] font-mono mb-1">
           <span class="px-1 py-0.5 text-[7px] font-bold uppercase tracking-wider" style="color:${sticker.border}; border:1px solid ${sticker.border}66; background:${sticker.border}15">${sticker.rarity}</span>
           <span class="text-white/40 font-mono">#${String(sticker.id).padStart(2, '0')}</span>
         </div>
-        <div class="my-2 text-2xl sm:text-3xl opacity-35 filter grayscale group-hover:opacity-60 group-hover:scale-105 transition-all">
+        <div class="my-2 text-2xl sm:text-3xl opacity-35 filter grayscale group-hover:opacity-70 group-hover:scale-105 transition-all">
           💩❓
         </div>
         <div class="w-full truncate text-[9px] sm:text-[10px] font-mono font-bold text-white/50 group-hover:text-white/80 transition-colors mt-1">
           ${sticker.name.split(' ')[0]} ???
         </div>
-        <div class="text-[8px] sm:text-[9px] font-mono mt-0.5" style="color:${sticker.border}cc">
-          Drop: ${sticker.dropWeight ? (sticker.dropWeight / 10).toFixed(1) + '%' : '1%'}
+        <div class="text-[8px] sm:text-[9px] font-mono mt-0.5 group-hover:text-naraGreen transition-colors" style="color:${sticker.border}cc">
+          TAP TO DREDGE
         </div>
       `;
     }
-    grid.appendChild(cardDiv);
+    grid.appendChild(cardBtn);
   });
+  updateRunDisplayUI();
+  updateQuestUI();
 }
 
-function checkLootDrop(count) {
-  const isMilestone = [10, 25, 50, 69, 100, 200, 420].includes(count);
-  const isFirst = count === 1;
-  const willDrop = isFirst || isMilestone || Math.random() < 0.30;
+function checkLootDrop(count, evt = null) {
+  const milestones = [10, 25, 50, 69, 100, 200, 420];
+  const isMilestone = milestones.includes(count) || milestones.includes(runFlushes);
+  const isFirst = count === 1 || runFlushes === 1;
+  const lockedPool = STICKER_COLLECTION.filter((s) => !userStash.unlocked[s.id]);
+  const pressureGuaranteed = dredgePressure >= 100;
+  const dropChance = lockedPool.length > 0 ? Math.min(0.92, 0.34 + dredgePressure * 0.004) : 0.30;
+  const willDrop = isFirst || isMilestone || pressureGuaranteed || Math.random() < dropChance;
 
-  if (!willDrop) return;
+  if (!willDrop) {
+    if (lockedPool.length > 0) {
+      dredgePressure = Math.min(100, dredgePressure + 34);
+      dryNewStreak++;
+      saveFlushProgress();
+      updateRunDisplayUI();
+    }
+    return;
+  }
 
   let pool = STICKER_COLLECTION;
-  if (isMilestone) {
-    pool = STICKER_COLLECTION.filter(s => s.rarity !== 'COMMON');
+  if (lockedPool.length > 0) {
+    const forceNewCard = isFirst || isMilestone || pressureGuaranteed || dryNewStreak >= 1 || Math.random() < 0.78;
+    if (forceNewCard) {
+      pool = isMilestone && lockedPool.some((s) => s.rarity !== "COMMON")
+        ? lockedPool.filter((s) => s.rarity !== "COMMON")
+        : lockedPool;
+    } else if (isMilestone) {
+      pool = STICKER_COLLECTION.filter((s) => s.rarity !== "COMMON");
+    }
+  } else if (isMilestone) {
+    pool = STICKER_COLLECTION.filter((s) => s.rarity !== "COMMON");
   }
-  const totalWeight = pool.reduce((sum, s) => sum + s.dropWeight, 0);
+
+  // Soften weight tail (pow 0.42) so all 12 rarities stay achievable within ~25-60 clicks
+  const weights = pool.map((s) => Math.max(2, Math.pow(s.dropWeight || 10, 0.42)));
+  const totalWeight = weights.reduce((sum, w) => sum + w, 0);
   let r = Math.random() * totalWeight;
   let chosen = pool[0];
-  for (const s of pool) {
-    if (r < s.dropWeight) {
-      chosen = s;
+  for (let i = 0; i < pool.length; i++) {
+    if (r < weights[i]) {
+      chosen = pool[i];
       break;
     }
-    r -= s.dropWeight;
+    r -= weights[i];
   }
 
   const isNew = !userStash.unlocked[chosen.id];
-  const serial = isNew 
-    ? Math.floor(1000 + Math.random() * 9000) 
+  const serial = isNew
+    ? Math.floor(1000 + Math.random() * 9000)
     : userStash.unlocked[chosen.id].serial;
 
   if (isNew) {
@@ -1523,17 +1850,33 @@ function checkLootDrop(count) {
       serial: serial,
       firstDropAt: Date.now()
     };
+    dredgePressure = 0;
+    dryNewStreak = 0;
   } else {
     userStash.unlocked[chosen.id].count++;
+    if (lockedPool.length > 0) {
+      dredgePressure = Math.min(100, dredgePressure + 45);
+      dryNewStreak++;
+    }
   }
   userStash.activeStickerId = chosen.id;
   userStash.totalDrops = (userStash.totalDrops || 0) + 1;
   saveUserStash();
+  saveFlushProgress();
 
   playLootDropChime();
   injectSewerEvent(`🚽 [SEWER DREDGE] You dredged: ${chosen.deco} ${chosen.name} (${chosen.rarity})!`);
+  spawnFloatingFeedback(isNew ? `🎴 NEW ${chosen.name.split(" ")[0]}!` : `♻️ DUPE +PRESSURE`, isNew ? "gold" : "cyan", evt);
+  const hintEl = document.getElementById("vaultHintText");
+  if (hintEl) {
+    hintEl.innerText = isNew
+      ? `UNLOCKED #${String(chosen.id).padStart(2, "0")} ${chosen.name.toUpperCase()}! (${Object.keys(userStash.unlocked).length}/12)`
+      : `DUPLICATE DROPPED — PRESSURE CHARGED TO ${dredgePressure}% FOR NEXT NEW CARD`;
+  }
   showLootModal(chosen, serial, isNew, count);
   updateVaultUI();
+  updateRunDisplayUI();
+  updateQuestUI();
   if (activeTweetMode === 'sticker') {
     updateForgeUI();
   }
@@ -1542,6 +1885,7 @@ function checkLootDrop(count) {
   const totalUnlocked = Object.keys(userStash.unlocked).length;
   if (totalUnlocked === 12 && !runWon) {
     runWon = true;
+    saveFlushProgress();
     setTimeout(() => {
       triggerVictoryFlow();
     }, 600);
@@ -1553,13 +1897,7 @@ let lastFlushTimestamp = 0;
 let isFlushingCooldown = false;
 const FLUSH_RATE_LIMIT_MS = 1000; // Strict 1.0-second hydraulic cooldown
 
-function triggerHydraulicFlush() {
-  // If loot modal is showing from a dredge auto-drop, immediately dismiss it so it never blocks flushing
-  const lootModal = document.getElementById("lootModal");
-  if (lootModal && !lootModal.classList.contains("hidden") && lootModal._autoDismiss) {
-    closeLootModal();
-  }
-
+function triggerHydraulicFlush(evt = null) {
   const now = Date.now();
   if (isFlushingCooldown || (now - lastFlushTimestamp < FLUSH_RATE_LIMIT_MS)) {
     // Visual and acoustic feedback on early clicks during active 1.0s hydraulic recharge
@@ -1580,6 +1918,12 @@ function triggerHydraulicFlush() {
   isFlushingCooldown = true;
   lastFlushTimestamp = now;
 
+  // If loot modal is showing from a previous dredge auto-drop, dismiss it now that cooldown passed
+  const lootModal = document.getElementById("lootModal");
+  if (lootModal && !lootModal.classList.contains("hidden") && lootModal._autoDismiss) {
+    closeLootModal();
+  }
+
   // Mobile haptic vibration feedback
   if (typeof navigator !== "undefined" && navigator.vibrate) {
     try {
@@ -1594,7 +1938,7 @@ function triggerHydraulicFlush() {
   const hoverText = document.getElementById("artHoverText");
 
   if (headerBtn) headerBtn.classList.add("opacity-75", "cursor-wait");
-  if (headerLabel) headerLabel.innerHTML = '⏳ RECHARGING...';
+  if (headerLabel) headerLabel.innerHTML = '⏳ <span class="hidden sm:inline">RECHARGING...</span><span class="sm:hidden">1.0s</span>';
   if (hoverText) hoverText.innerHTML = '<span class="text-xs">⏳</span> RECHARGING PRESSURE (1.0s)...';
 
   if (cooldownBar) {
@@ -1631,7 +1975,9 @@ function triggerHydraulicFlush() {
   }, 400);
 
   flushCount++;
-  runFlushes++;
+  if (!runWon) {
+    runFlushes++;
+  }
   const counterEl = document.getElementById("flushCounter");
   if (counterEl) counterEl.innerText = flushCount;
   const runCounterEl = document.getElementById("runFlushesCount");
@@ -1639,6 +1985,8 @@ function triggerHydraulicFlush() {
 
   // Persist progress
   saveFlushProgress();
+  updateRunDisplayUI();
+  updateQuestUI();
 
   // Update Quick Tweet button label
   const quickLabel = document.getElementById("quickTweetLabel");
@@ -1649,6 +1997,7 @@ function triggerHydraulicFlush() {
   // Combo management
   combo++;
   updateComboUI();
+  spawnFloatingFeedback(combo >= 5 ? `🔥 COMBO x${combo}` : `+1 FLUSH [${flushCount}]`, combo >= 10 ? "gold" : "green", evt);
   clearTimeout(comboTimer);
   comboTimer = setTimeout(() => {
     combo = 0;
@@ -1685,21 +2034,25 @@ function triggerHydraulicFlush() {
   }
 
   // Check for Collectible Sticker Loot Dredge!
-  checkLootDrop(flushCount);
+  checkLootDrop(flushCount, evt);
 
-  // Candlestick burst count multiplies with combo overdrive!
-  const burstCount = combo >= 20 ? 90 : (combo >= 10 ? 65 : 45);
-  const originX = window.innerWidth / 2;
-  const originY = window.innerHeight * 0.38;
+  // Candlestick burst count multiplies with combo overdrive! (Respect OS prefers-reduced-motion)
+  const reduceMotion = typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (!reduceMotion) {
+    const burstCount = combo >= 20 ? 90 : (combo >= 10 ? 65 : 45);
+    const originX = window.innerWidth / 2;
+    const originY = window.innerHeight * 0.38;
 
-  for (let i = 0; i < burstCount; i++) {
-    const c = new Candlestick(
-      originX + (Math.random() - 0.5) * 200,
-      originY + (Math.random() - 0.5) * 120
-    );
-    c.vx = (Math.random() - 0.5) * (combo >= 10 ? 32 : 22);
-    c.vy = (Math.random() * -14) - 3;
-    candles.push(c);
+    for (let i = 0; i < burstCount; i++) {
+      const c = new Candlestick(
+        originX + (Math.random() - 0.5) * 200,
+        originY + (Math.random() - 0.5) * 120
+      );
+      c.vx = (Math.random() - 0.5) * (combo >= 10 ? 32 : 22);
+      c.vy = (Math.random() * -14) - 3;
+      candles.push(c);
+    }
+    startCandleLoop();
   }
 }
 
@@ -1774,17 +2127,42 @@ function isLegacyMockSeed(handle) {
   );
 }
 
+function safePostHref(raw) {
+  if (typeof raw !== "string" || !raw.trim()) return "";
+  try {
+    const u = new URL(raw.trim());
+    if (u.protocol !== "https:") return "";
+    const host = u.hostname.toLowerCase();
+    if (host === "x.com" || host === "www.x.com" || host === "twitter.com" || host === "www.twitter.com" || host === "mobile.twitter.com") {
+      const m = u.pathname.match(/^\/([A-Za-z0-9_]{1,20})\/status\/(\d{5,25})\/?$/);
+      return m ? `https://x.com/${m[1]}/status/${m[2]}` : "";
+    }
+    if (host === "warpcast.com" || host === "www.warpcast.com" || host === "farcaster.xyz" || host === "www.farcaster.xyz") {
+      const m = u.pathname.match(/^\/([A-Za-z0-9_.-]{1,30})\/(0x[a-fA-F0-9]{4,64})\/?$/);
+      return m ? `https://warpcast.com/${m[1]}/${m[2]}` : "";
+    }
+  } catch (e) {}
+  return "";
+}
+
 // Normalize any board row (API JSON or localStorage) to known types before it reaches the DOM.
 function sanitizeBoardEntry(item) {
   if (!item || typeof item !== "object" || typeof item.handle !== "string") return null;
   const score = Number(item.score);
   if (!Number.isFinite(score) || score < 1) return null;
+  const plat = typeof item.platform === "string" && ["x", "tg", "fc"].includes(item.platform.toLowerCase())
+    ? item.platform.toLowerCase()
+    : "x";
   return {
     handle: item.handle.slice(0, 24),
     score: Math.floor(score),
     tier: typeof item.tier === "string" ? item.tier.slice(0, 40) : getRatingTier(Math.floor(score)).name,
     date: typeof item.date === "string" ? item.date.slice(0, 24) : "RECENT",
     timestamp: Number(item.timestamp) || 0,
+    platform: plat,
+    walletHint: typeof item.walletHint === "string" ? item.walletHint.slice(0, 16) : "",
+    postUrl: safePostHref(item.postUrl),
+    awardReady: item.awardReady === true,
   };
 }
 
@@ -1817,19 +2195,27 @@ function renderFameBoard(entries) {
   if (list.length === 0) {
     tbody.innerHTML = `
       <tr id="emptyFameBoardRow">
-        <td colspan="5" class="py-10 px-4 text-center">
-          <div class="flex flex-col items-center justify-center gap-2 text-white/50">
+        <td colspan="5" class="py-8 px-4 text-center">
+          <div class="flex flex-col items-center justify-center gap-2.5 text-white/50">
             <span class="text-3xl select-none">🚽</span>
             <div class="font-mono text-xs font-bold text-amber-300 tracking-widest uppercase">
               LEADERBOARD IS EMPTY // CLAIM #1 SPOT
             </div>
             <div class="text-[11px] text-white/60 max-w-md">
-              No operator records logged yet. Complete all 12 collectibles in your vault to immortalize your handle on the All-Time Fame Board!
+              No operator records logged yet. Dredge all 12 vault cards (~25–55 clicks with pressure gauge) to lock your Fame Board rank &amp; Award Claim Pass!
             </div>
+            <button
+              type="button"
+              data-on-click="startRunFromBoard"
+              class="mt-1 px-4 py-2 min-h-[40px] bg-amber-500 hover:bg-amber-400 text-black font-mono font-extrabold text-[10px] tracking-wider uppercase cursor-pointer shadow-[0_0_16px_rgba(245,158,11,0.3)]"
+            >
+              ⚡ FLUSH NOW &amp; CLAIM #1
+            </button>
           </div>
         </td>
       </tr>
     `;
+    bindActions(tbody);
     return;
   }
 
@@ -1851,12 +2237,27 @@ function renderFameBoard(entries) {
       rankClass = "text-amber-500 font-bold font-mono";
     }
 
+    const platLabel = (entry.platform || "x").toUpperCase();
+    const walletPill = entry.walletHint
+      ? `<span class="ml-1.5 px-1 py-0.5 text-[8px] border border-naraGreen/30 bg-naraGreen/10 text-naraGreen/90">${escapeHTML(entry.walletHint)}</span>`
+      : "";
+    const passPill = entry.awardReady
+      ? `<span class="ml-1.5 px-1 py-0.5 text-[8px] border border-amber-400/40 bg-amber-500/10 text-amber-300">PASS ✓</span>`
+      : "";
+    const postLink = entry.postUrl
+      ? `<a href="${escapeHTML(entry.postUrl)}" target="_blank" rel="noopener noreferrer" class="ml-1.5 text-[9px] text-[#00F0FF] hover:underline no-underline">POST ↗</a>`
+      : "";
+
     const tr = document.createElement("tr");
     tr.className = rank === 1 ? "bg-amber-500/[0.04] hover:bg-amber-500/[0.08] transition-colors" : "hover:bg-white/[0.02] transition-colors";
     tr.innerHTML = `
       <td class="py-2.5 px-3 sm:px-4 text-center ${rankClass}">${rankBadge}</td>
       <td class="py-2.5 px-3 sm:px-4 font-mono font-bold text-white tracking-wide">
-        ${escapeHTML(entry.handle)}
+        <span class="inline-flex flex-wrap items-center gap-1">
+          <span class="px-1 py-0.5 text-[8px] border border-white/15 bg-white/[0.06] text-white/70">${platLabel}</span>
+          <span>${escapeHTML(entry.handle)}</span>
+          ${walletPill}${passPill}${postLink}
+        </span>
       </td>
       <td class="py-2.5 px-3 sm:px-4 text-center font-mono font-extrabold text-amber-300">
         ${score} <span class="text-[8px] text-white/40 font-normal">CLICKS</span>
@@ -1910,6 +2311,7 @@ function refreshLeaderboardUI() {
 // --- CLOUDFLARE TURNSTILE (only loaded when the victory modal opens and a site key exists) ---
 let turnstileWidgetId = null;
 let turnstileFailed = false;
+let isSubmittingVictory = false;
 
 function ensureTurnstile() {
   if (!TURNSTILE_SITE_KEY) return;
@@ -1919,8 +2321,20 @@ function ensureTurnstile() {
   const render = () => {
     if (!window.turnstile) return;
     try {
+      turnstileFailed = false;
       if (turnstileWidgetId === null) {
-        turnstileWidgetId = window.turnstile.render(mount, { sitekey: TURNSTILE_SITE_KEY, theme: "dark", size: "flexible" });
+        turnstileWidgetId = window.turnstile.render(mount, {
+          sitekey: TURNSTILE_SITE_KEY,
+          action: "fame_board_submit",
+          theme: "dark",
+          size: "flexible",
+          "error-callback": () => { turnstileFailed = true; },
+          "expired-callback": () => {
+            if (window.turnstile && turnstileWidgetId !== null) {
+              try { window.turnstile.reset(turnstileWidgetId); } catch (e) {}
+            }
+          },
+        });
       } else {
         window.turnstile.reset(turnstileWidgetId);
       }
@@ -1929,8 +2343,8 @@ function ensureTurnstile() {
     }
   };
   if (window.turnstile) { render(); return; }
-  window.addEventListener("nara:turnstile-ready", render, { once: true });
   if (document.getElementById("turnstileScript")) return;
+  window.addEventListener("nara:turnstile-ready", render, { once: true });
   window.naraTurnstileReady = () => window.dispatchEvent(new Event("nara:turnstile-ready"));
   const s = document.createElement("script");
   s.id = "turnstileScript";
@@ -1943,6 +2357,7 @@ function ensureTurnstile() {
 
 const SUBMIT_STATES = {
   idle:       { btn: "SUBMIT SCORE",      note: "", cls: "text-white/60" },
+  invalid:    { btn: "SUBMIT SCORE",      note: "Enter a valid handle (2–20 chars, not a reserved name).", cls: "text-red-400" },
   verify:     { btn: "SUBMIT SCORE",      note: "Complete the check above first.", cls: "text-amber-300" },
   loading:    { btn: "SUBMIT SCORE",      note: "Verification is still loading. Try again in a moment.", cls: "text-amber-300" },
   blocked:    { btn: "✓ SAVED ON DEVICE", note: "The verification widget could not load (blocked by your browser?). Saved in this browser only.", cls: "text-amber-300" },
@@ -1951,6 +2366,7 @@ const SUBMIT_STATES = {
   local:      { btn: "✓ SAVED ON DEVICE", note: "Global board is offline. Your record is saved in this browser only.", cls: "text-amber-300" },
   limited:    { btn: "✓ SAVED ON DEVICE", note: "Too many submissions from your network. Saved in this browser; try again later.", cls: "text-amber-300" },
   rejected:   { btn: "✓ SAVED ON DEVICE", note: "The board rejected this entry. Saved in this browser only.", cls: "text-amber-300" },
+  locked:     { btn: "HANDLE LOCKED",     note: "That handle is already claimed by another operator key. Pick your own handle.", cls: "text-red-400" },
 };
 
 function setSubmitState(state) {
@@ -1964,26 +2380,118 @@ function setSubmitState(state) {
   }
 }
 
+function setVictoryPlatform(_e, plat) {
+  playMechanicalClick();
+  const next = ["x", "tg", "fc"].includes(plat) ? plat : "x";
+  victoryPlatform = next;
+  ["x", "tg", "fc"].forEach((key) => {
+    const btn = document.getElementById(`victoryPlatBtn-${key}`);
+    if (!btn) return;
+    const active = key === next;
+    btn.setAttribute("aria-pressed", active ? "true" : "false");
+    btn.className = active
+      ? "px-2 py-0.5 min-h-[26px] bg-white text-black text-[9px] font-bold uppercase cursor-pointer"
+      : "px-2 py-0.5 min-h-[26px] bg-white/[0.06] border border-white/15 text-white/70 text-[9px] font-bold uppercase cursor-pointer";
+  });
+}
+
+function renderAwardClaimPass(pass) {
+  const box = document.getElementById("victoryClaimPassBox");
+  const codeEl = document.getElementById("victoryClaimCodeValue");
+  const metaEl = document.getElementById("victoryClaimMeta");
+  if (!box || !codeEl || !metaEl) return;
+  if (!pass || !pass.claimCode) {
+    box.classList.add("hidden");
+    return;
+  }
+  codeEl.innerText = pass.claimCode;
+  const walletTag = pass.walletHint ? ` // ${pass.walletHint}` : "";
+  const modeTag = pass.verifiedGlobal ? "GLOBAL PASS" : "DEVICE PASS";
+  metaEl.innerText = `${(pass.platform || "x").toUpperCase()} ${pass.handle} // ${pass.score} CLICKS${walletTag} // ${modeTag}`;
+  box.classList.remove("hidden");
+}
+
+function offlineClaimCode(handle, score) {
+  let h = 2166136261;
+  const seed = `${handle.toLowerCase()}:${score}:${getOperatorSecret()}`;
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  const part1 = (h >>> 0).toString(16).toUpperCase().padStart(8, "0");
+  return `PASS-${part1.slice(0, 4)}-${part1.slice(4, 8)}`;
+}
+
+async function fillVictoryConnectedWallet() {
+  playMechanicalClick();
+  const input = document.getElementById("victoryWalletInput");
+  if (!input) return;
+  const addr = getConnectedAccount();
+  if (addr && /^0x[a-fA-F0-9]{40}$/.test(addr)) {
+    input.value = addr;
+    injectSewerEvent(`[AWARD ROUTE] Loaded connected wallet ${addr.slice(0, 6)}…${addr.slice(-4)}.`);
+    return;
+  }
+  const notice = document.getElementById("victorySubmitNotice");
+  if (notice) {
+    notice.innerText = "Connect a wallet in BUY $NARA first, or paste any Base 0x address manually.";
+    notice.className = "text-[8px] font-mono mt-1 text-amber-300";
+  }
+}
+
+function copyAwardClaimPass() {
+  playMechanicalClick();
+  if (!lastAwardPass || !lastAwardPass.claimCode) return;
+  const summary = [
+    "NARA PROTOCOL — AWARD CLAIM PASS",
+    `Operator: ${(lastAwardPass.platform || "x").toUpperCase()} ${lastAwardPass.handle}`,
+    `Claim Code: ${lastAwardPass.claimCode}`,
+    `Score: ${lastAwardPass.score} clicks (12/12 Sewer Vault)`,
+    lastAwardPass.walletHint ? `Wallet: ${lastAwardPass.walletHint}` : "Wallet: Claim via CryptoSLIP DM",
+    lastAwardPass.postUrl ? `Post: ${lastAwardPass.postUrl}` : null,
+  ].filter(Boolean).join("\n");
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(summary).catch(() => copyTextFallback(summary));
+  } else {
+    copyTextFallback(summary);
+  }
+  const label = document.getElementById("victoryCopyPassLabel");
+  if (label) {
+    label.innerText = "✓ CLAIM PASS COPIED!";
+    setTimeout(() => { label.innerText = "📋 COPY AWARD CLAIM PASS"; }, 2200);
+  }
+  injectSewerEvent(`[AWARD PASS] Copied Claim Code ${lastAwardPass.claimCode} for ${lastAwardPass.handle}.`);
+}
+
 function triggerVictoryFlow() {
+  // Close any open loot modal so victory modal is immediately visible and body scroll is clean
+  closeLootModal();
   playVictoryFanfare();
 
-  // Explosive Gold & Emerald Candlestick shower
-  const originX = window.innerWidth / 2;
-  const originY = window.innerHeight * 0.35;
-  for (let i = 0; i < 110; i++) {
-    const c = new Candlestick(
-      originX + (Math.random() - 0.5) * 350,
-      originY + (Math.random() - 0.5) * 160
-    );
-    c.isGreen = true;
-    c.color = Math.random() > 0.4 ? "#FFD700" : "#39FF14";
-    c.glow = Math.random() > 0.4 ? "rgba(255, 215, 0, 0.7)" : "rgba(57, 255, 20, 0.7)";
-    c.vx = (Math.random() - 0.5) * 30;
-    c.vy = (Math.random() * -18) - 5;
-    candles.push(c);
+  // Explosive Gold & Emerald Candlestick shower (Respect OS prefers-reduced-motion)
+  const reduceMotion = typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (!reduceMotion) {
+    const originX = window.innerWidth / 2;
+    const originY = window.innerHeight * 0.35;
+    for (let i = 0; i < 110; i++) {
+      const c = new Candlestick(
+        originX + (Math.random() - 0.5) * 350,
+        originY + (Math.random() - 0.5) * 160
+      );
+      c.isGreen = true;
+      c.color = Math.random() > 0.4 ? "#FFD700" : "#39FF14";
+      c.glow = Math.random() > 0.4 ? "rgba(255, 215, 0, 0.7)" : "rgba(57, 255, 20, 0.7)";
+      c.vx = (Math.random() - 0.5) * 30;
+      c.vy = (Math.random() * -18) - 5;
+      candles.push(c);
+    }
+    startCandleLoop();
   }
 
   // Update personal best record
+  const effectiveScore = Math.max(12, runFlushes || 12);
+  if (runFlushes < 12) runFlushes = effectiveScore;
   if (bestRunRecord === null || runFlushes < bestRunRecord) {
     bestRunRecord = runFlushes;
     saveFlushProgress();
@@ -1994,6 +2502,8 @@ function triggerVictoryFlow() {
   const scoreEl = document.getElementById("victoryScoreNumber");
   const tierEl = document.getElementById("victoryTierBadge");
   const handleInput = document.getElementById("victoryHandleInput");
+  const walletInput = document.getElementById("victoryWalletInput");
+  const postInput = document.getElementById("victoryPostUrlInput");
   const notice = document.getElementById("victorySubmitNotice");
 
   if (scoreEl) scoreEl.innerText = runFlushes;
@@ -2007,37 +2517,80 @@ function triggerVictoryFlow() {
   setSubmitState("idle");
   ensureTurnstile();
 
-  // Remember last used handle if available
+  // Remember last used handle & optional award route fields
   try {
     const savedHandle = localStorage.getItem("nara_operator_handle_v1");
     if (savedHandle && handleInput && !handleInput.value) {
       handleInput.value = savedHandle;
     }
+    const savedPlat = localStorage.getItem("nara_operator_platform_v1");
+    if (savedPlat) setVictoryPlatform(null, savedPlat);
+    const savedWallet = localStorage.getItem("nara_operator_wallet_v1");
+    if (savedWallet && walletInput && !walletInput.value) {
+      walletInput.value = savedWallet;
+    } else if (walletInput && !walletInput.value) {
+      const connected = getConnectedAccount();
+      if (connected) walletInput.value = connected;
+    }
+    const savedPost = localStorage.getItem("nara_operator_post_v1");
+    if (savedPost && postInput && !postInput.value) {
+      postInput.value = savedPost;
+    }
   } catch (e) {}
 
+  renderAwardClaimPass(lastAwardPass);
+
   const modal = document.getElementById("victoryModal");
-  if (modal) modal.classList.remove("hidden");
+  if (modal) {
+    modal.classList.remove("hidden");
+    syncBodyScrollLock();
+  }
+  const vicTweetBtn = document.getElementById("victoryTweetBtn");
+  if (vicTweetBtn) vicTweetBtn.href = buildVictoryTweetUrl();
 
   injectSewerEvent(`👑 [VICTORY] 12/12 VAULT CONQUERED IN ${runFlushes} CLICKS! Rating: ${rating.name}`);
+}
+
+function reopenVictoryIfWon() {
+  if (Object.keys(userStash.unlocked).length >= STICKER_COLLECTION.length) {
+    triggerVictoryFlow();
+  }
 }
 
 function closeVictoryModal(e) {
   if (e) e.stopPropagation();
   playMechanicalClick();
   const modal = document.getElementById("victoryModal");
-  if (modal) modal.classList.add("hidden");
+  if (modal) {
+    modal.classList.add("hidden");
+    syncBodyScrollLock();
+  }
 }
 
 async function submitVictoryToFameBoard() {
+  if (isSubmittingVictory) return;
   playMechanicalClick();
   const handleInput = document.getElementById("victoryHandleInput");
+  const walletInput = document.getElementById("victoryWalletInput");
+  const postInput = document.getElementById("victoryPostUrlInput");
   const rawHandle = handleInput ? handleInput.value.trim() : "";
   const cleanHandle = `@${rawHandle.replace(/@/g, "").replace(/[^a-zA-Z0-9_.-]/g, "").slice(0, 20)}`;
-  if (cleanHandle.length < 2) {
-    alert("Please enter a valid operator handle (e.g. @YourName)");
+  if (cleanHandle.length < 2 || isLegacyMockSeed(cleanHandle)) {
+    setSubmitState("invalid");
+    if (handleInput) handleInput.focus();
     return;
   }
-  try { localStorage.setItem("nara_operator_handle_v1", cleanHandle); } catch (e) {}
+  const rawWallet = walletInput ? walletInput.value.trim() : "";
+  const cleanWallet = /^0x[a-fA-F0-9]{40}$/.test(rawWallet) ? rawWallet : "";
+  const cleanPostUrl = safePostHref(postInput ? postInput.value.trim() : "");
+  const walletHint = cleanWallet ? `${cleanWallet.slice(0, 6)}…${cleanWallet.slice(-4)}` : "";
+
+  try {
+    localStorage.setItem("nara_operator_handle_v1", cleanHandle);
+    localStorage.setItem("nara_operator_platform_v1", victoryPlatform);
+    if (cleanWallet) localStorage.setItem("nara_operator_wallet_v1", cleanWallet);
+    if (cleanPostUrl) localStorage.setItem("nara_operator_post_v1", cleanPostUrl);
+  } catch (e) {}
 
   // 1. Always save locally first (device record)
   const rating = getRatingTier(runFlushes);
@@ -2047,6 +2600,10 @@ async function submitVictoryToFameBoard() {
     tier: rating.name,
     date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
     timestamp: Date.now(),
+    platform: victoryPlatform,
+    walletHint,
+    postUrl: cleanPostUrl,
+    awardReady: true,
   };
   const existingIdx = localFameBoard.findIndex((e) => e.handle.toLowerCase() === cleanHandle.toLowerCase());
   if (existingIdx !== -1) {
@@ -2059,10 +2616,27 @@ async function submitVictoryToFameBoard() {
   saveLocalFameBoard();
   renderFameBoard(localFameBoard);
 
+  const issueLocalPass = () => {
+    lastAwardPass = {
+      handle: cleanHandle,
+      platform: victoryPlatform,
+      score: runFlushes,
+      walletHint,
+      postUrl: cleanPostUrl,
+      claimCode: offlineClaimCode(cleanHandle, runFlushes),
+      verifiedGlobal: false,
+      issuedAt: Date.now(),
+    };
+    try { localStorage.setItem("nara_award_pass_v1", JSON.stringify(lastAwardPass)); } catch (e) {}
+    renderAwardClaimPass(lastAwardPass);
+    updateQuestUI();
+  };
+
   // 2. Global board only when Turnstile is configured and the check passed
   if (!TURNSTILE_SITE_KEY) {
+    issueLocalPass();
     setSubmitState("local");
-    injectSewerEvent(`[FAME BOARD] ${cleanHandle} saved ${runFlushes} clicks on this device.`);
+    injectSewerEvent(`[FAME BOARD] ${cleanHandle} saved ${runFlushes} clicks & Claim Pass ${lastAwardPass.claimCode}.`);
     return;
   }
   let token = "";
@@ -2070,6 +2644,7 @@ async function submitVictoryToFameBoard() {
     if (window.turnstile && turnstileWidgetId !== null) token = window.turnstile.getResponse(turnstileWidgetId) || "";
   } catch (e) {}
   if (!token) {
+    issueLocalPass();
     if (turnstileFailed || (!window.turnstile && !document.getElementById("turnstileScript"))) {
       setSubmitState("blocked");
     } else if (!window.turnstile || turnstileWidgetId === null) {
@@ -2080,12 +2655,22 @@ async function submitVictoryToFameBoard() {
     return;
   }
 
+  isSubmittingVictory = true;
   setSubmitState("submitting");
   try {
     const res = await fetch("/api/leaderboard", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ handle: cleanHandle, score: runFlushes, cards: 12, turnstileToken: token }),
+      body: JSON.stringify({
+        handle: cleanHandle,
+        platform: victoryPlatform,
+        wallet: cleanWallet,
+        postUrl: cleanPostUrl,
+        operatorKey: getOperatorSecret(),
+        score: runFlushes,
+        cards: 12,
+        turnstileToken: token,
+      }),
     });
     if (res.ok) {
       const data = await res.json();
@@ -2094,33 +2679,84 @@ async function submitVictoryToFameBoard() {
         saveLocalFameBoard();
         renderFameBoard(localFameBoard);
       }
+      const serverRow = Array.isArray(data?.board)
+        ? data.board.find((r) => typeof r?.handle === "string" && r.handle.toLowerCase() === cleanHandle.toLowerCase())
+        : null;
+      lastAwardPass = {
+        handle: cleanHandle,
+        platform: victoryPlatform,
+        score: runFlushes,
+        walletHint: serverRow?.walletHint || walletHint,
+        postUrl: cleanPostUrl,
+        claimCode: data?.claimCode || offlineClaimCode(cleanHandle, runFlushes),
+        verifiedGlobal: true,
+        issuedAt: Date.now(),
+      };
+      try { localStorage.setItem("nara_award_pass_v1", JSON.stringify(lastAwardPass)); } catch (e) {}
+      renderAwardClaimPass(lastAwardPass);
+      updateQuestUI();
       setSubmitState("posted");
-      injectSewerEvent(`[FAME BOARD] ${cleanHandle} posted ${runFlushes} clicks to the global board.`);
+      injectSewerEvent(`[FAME BOARD] ${cleanHandle} posted ${runFlushes} clicks // Pass ${lastAwardPass.claimCode}.`);
+    } else if (res.status === 403) {
+      const errData = await res.json().catch(() => ({}));
+      if (errData && errData.error === "handle_locked") {
+        setSubmitState("locked");
+      } else {
+        issueLocalPass();
+        setSubmitState("rejected");
+      }
     } else if (res.status === 429) {
+      issueLocalPass();
       setSubmitState("limited");
     } else if (res.status === 503) {
+      issueLocalPass();
       setSubmitState("local");
     } else {
+      issueLocalPass();
       setSubmitState("rejected");
     }
   } catch (err) {
+    issueLocalPass();
     setSubmitState("local");
+  } finally {
+    isSubmittingVictory = false;
+    if (window.turnstile && turnstileWidgetId !== null) { try { window.turnstile.reset(turnstileWidgetId); } catch (e) {} }
   }
-  if (window.turnstile && turnstileWidgetId !== null) { try { window.turnstile.reset(turnstileWidgetId); } catch (e) {} }
+}
+
+function buildVictoryTweetUrl() {
+  const rating = getRatingTier(runFlushes);
+  const text = `👑 [12/12 SEWER VAULT CONQUERED] 🐸🚽\n\nI dredged all 12 $NARA sewer sticker cards in ${runFlushes} clicks on @NARA_protocol!\nRank: ${rating.name}\n\nCA: ${NARA_CONTRACT}\n\nBeat my record on the Fame Board 👇 #BanksFail`;
+  const shareUrl = getShareUrl(12);
+  return `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`;
 }
 
 function handleVictoryTweet(e) {
-  if (e) e.preventDefault();
   playMechanicalClick();
-  const rating = getRatingTier(runFlushes);
-  const text = `👑 [12/12 SEWER VAULT CONQUERED] 🐸🚽💩\n\nI just dredged all 12 rare poop sticker cards in ${runFlushes} clicks on @NARA_protocol!\n\nRank: ${rating.name}\nHydraulic Cooldown: 1.0s enforced\n\nCan you beat my record on the All-Time Fame Board? 👇\n\n⛓️ CA: 0x91FB...Ae0f`;
-  const shareUrl = getShareUrl();
-  const xUrl = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`;
-  openSafeWindow(xUrl);
+  markQuestShared();
+  const xUrl = buildVictoryTweetUrl();
+  if (e && e.currentTarget && e.currentTarget.tagName && e.currentTarget.tagName.toLowerCase() === "a") {
+    e.currentTarget.href = xUrl;
+  } else {
+    if (e && e.preventDefault) e.preventDefault();
+    openSafeWindow(xUrl);
+  }
+}
+
+function clearResetArming() {
+  resetConfirmArmedUntil = 0;
+  clearTimeout(resetConfirmTimer);
+  resetConfirmTimer = null;
+  const btn = document.getElementById("resetRunBtn");
+  if (btn) {
+    btn.innerText = "RESET RUN";
+    btn.classList.remove("bg-hazardRed", "text-white", "border-white");
+  }
 }
 
 function resetAndStartNewRun() {
   playMechanicalClick();
+  clearResetArming();
   // Reset unlocked cards and run flushes for new attempt
   userStash.unlocked = {};
   userStash.activeStickerId = 1;
@@ -2128,20 +2764,158 @@ function resetAndStartNewRun() {
 
   runFlushes = 0;
   runWon = false;
+  dredgePressure = 0;
+  dryNewStreak = 0;
   saveFlushProgress();
   updateRunDisplayUI();
   updateVaultUI();
+  updateForgeUI();
+  updateQuestUI();
 
   closeVictoryModal();
+  const hintEl = document.getElementById("vaultHintText");
+  if (hintEl) hintEl.innerText = "TAP ANY LOCKED CARD TO DREDGE // CLICK ANY UNLOCKED CARD TO TWEET";
   injectSewerEvent("🔄 [SYSTEM] Fresh run initialized! All 12 cards locked. Race for fewer clicks!");
 }
 
 function confirmResetRun() {
   playMechanicalClick();
-  const unlockedCount = Object.keys(userStash.unlocked).length;
-  const msg = `Are you sure you want to reset your current run (${unlockedCount}/12 cards unlocked in ${runFlushes} clicks) to start fresh from 0?\n\n(Your lifetime flushes and personal best are preserved!)`;
-  if (confirm(msg)) {
+  const now = Date.now();
+  if (now < resetConfirmArmedUntil) {
     resetAndStartNewRun();
+    return;
+  }
+  const unlockedCount = Object.keys(userStash.unlocked).length;
+  resetConfirmArmedUntil = now + 4000;
+  const btn = document.getElementById("resetRunBtn");
+  if (btn) {
+    btn.innerText = "⚠️ CONFIRM RESET?";
+    btn.classList.add("bg-hazardRed", "text-white", "border-white");
+  }
+  injectSewerEvent(`[SYSTEM] Tap RESET RUN again within 4s to restart (${unlockedCount}/12 cleared; best preserved).`);
+  clearTimeout(resetConfirmTimer);
+  resetConfirmTimer = setTimeout(() => {
+    clearResetArming();
+  }, 4000);
+}
+
+// --- INTERACTIVE QUEST, CIPHER JUMP & CLAIM VERIFIER ---
+function jumpToVaultOrVictory() {
+  playMechanicalClick();
+  if (Object.keys(userStash.unlocked).length >= STICKER_COLLECTION.length) {
+    triggerVictoryFlow();
+    return;
+  }
+  const vault = document.getElementById("stickerVaultSection");
+  if (vault) vault.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function revealBanksFailCipher() {
+  playMechanicalClick();
+  const details = document.getElementById("protocolSpecsDetails");
+  if (details) details.open = true;
+  const cipherCard = document.getElementById("banksFailCipherCard");
+  if (cipherCard) {
+    cipherCard.scrollIntoView({ behavior: "smooth", block: "center" });
+    cipherCard.classList.add("ring-2", "ring-naraGreen");
+    setTimeout(() => cipherCard.classList.remove("ring-2", "ring-naraGreen"), 1600);
+  }
+  injectSewerEvent("[CIPHER] Decoded #BanksFail Candlestick Toilet Paper Roll Pillars.");
+}
+
+function questShareAction() {
+  playMechanicalClick();
+  markQuestShared();
+  const forgeX = document.getElementById("forgeXBtn");
+  if (forgeX) {
+    forgeX.scrollIntoView({ behavior: "smooth", block: "center" });
+    forgeX.classList.add("ring-2", "ring-naraGreen");
+    setTimeout(() => forgeX.classList.remove("ring-2", "ring-naraGreen"), 1400);
+  }
+  injectSewerEvent("[QUEST] Share step armed — hit POST ON X or CAST in the Forge!");
+}
+
+function openAwardPassOrInfo() {
+  playMechanicalClick();
+  if (Object.keys(userStash.unlocked).length >= STICKER_COLLECTION.length) {
+    triggerVictoryFlow();
+    return;
+  }
+  const board = document.getElementById("fameBoardSection");
+  if (board) board.scrollIntoView({ behavior: "smooth", block: "start" });
+  const remaining = Math.max(0, STICKER_COLLECTION.length - Object.keys(userStash.unlocked).length);
+  injectSewerEvent(`[AWARD PASS] Dredge ${remaining} more sticker cards to unlock your Fame Board Claim Pass!`);
+}
+
+function startRunFromBoard() {
+  const hero = document.getElementById("artHousing");
+  if (hero) hero.scrollIntoView({ behavior: "smooth", block: "center" });
+  triggerHydraulicFlush();
+}
+
+function toggleVerifyPassBar() {
+  playMechanicalClick();
+  const bar = document.getElementById("verifyPassBar");
+  if (!bar) return;
+  bar.classList.toggle("hidden");
+  if (!bar.classList.contains("hidden")) {
+    const hInput = document.getElementById("verifyHandleInput");
+    const cInput = document.getElementById("verifyClaimInput");
+    if (hInput && !hInput.value && lastAwardPass?.handle) hInput.value = lastAwardPass.handle;
+    if (cInput && !cInput.value && lastAwardPass?.claimCode) cInput.value = lastAwardPass.claimCode;
+    if (hInput) hInput.focus();
+  }
+}
+
+async function verifyClaimCodeUI() {
+  playMechanicalClick();
+  const hInput = document.getElementById("verifyHandleInput");
+  const cInput = document.getElementById("verifyClaimInput");
+  const resultEl = document.getElementById("verifyPassResult");
+  if (!resultEl) return;
+
+  const rawHandle = hInput ? hInput.value.trim() : "";
+  const handle = rawHandle.startsWith("@") ? rawHandle : `@${rawHandle}`;
+  const code = (cInput ? cInput.value.trim().toUpperCase() : "");
+  if (handle.length < 2 || !code) {
+    resultEl.innerText = "Enter @handle + claim code.";
+    resultEl.className = "text-[10px] font-mono text-red-400";
+    return;
+  }
+  resultEl.innerText = "Checking...";
+  resultEl.className = "text-[10px] font-mono text-white/60";
+
+  if (!code.startsWith("PASS-")) {
+    try {
+      const url = `/api/leaderboard?verify=1&handle=${encodeURIComponent(handle)}&claim=${encodeURIComponent(code)}`;
+      const res = await fetch(url);
+      if (res.status === 429) {
+        resultEl.innerText = "⏳ Too many verification attempts. Try again later.";
+        resultEl.className = "text-[10px] font-mono text-amber-300";
+        return;
+      }
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.valid) {
+          resultEl.innerText = `✓ VERIFIED GLOBAL PASS (${data.score} clicks)`;
+          resultEl.className = "text-[10px] font-mono text-naraGreen font-bold";
+          return;
+        }
+        if (data && typeof data.reason === "string" && data.reason !== "dev_api_offline") {
+          resultEl.innerText = `✕ NOT VERIFIED (${data.reason})`;
+          resultEl.className = "text-[10px] font-mono text-red-400";
+          return;
+        }
+      }
+    } catch (e) {}
+  }
+
+  if (lastAwardPass && lastAwardPass.handle.toLowerCase() === handle.toLowerCase() && lastAwardPass.claimCode === code) {
+    resultEl.innerText = `✓ MATCHED LOCAL DEVICE PASS (${lastAwardPass.score} clicks)`;
+    resultEl.className = "text-[10px] font-mono text-amber-300 font-bold";
+  } else {
+    resultEl.innerText = "✕ Pass not found on board.";
+    resultEl.className = "text-[10px] font-mono text-red-400";
   }
 }
 
@@ -2181,21 +2955,38 @@ function copyCA() {
   }
 }
 
+function getEthereumProvider() {
+  const connected = getConnectedWalletProvider();
+  if (connected && typeof connected.request === "function") return connected;
+  if (typeof window === "undefined" || !window.ethereum) return null;
+  if (Array.isArray(window.ethereum.providers) && window.ethereum.providers.length > 0) {
+    return window.ethereum.providers.find((p) => p && p.isMetaMask) || window.ethereum.providers[0];
+  }
+  return window.ethereum;
+}
+
+let isWalletRequestPending = false;
+
 async function addNaraToMetaMask() {
+  if (isWalletRequestPending) return;
   playMechanicalClick();
   const label = document.getElementById("mmBtnLabel");
-  if (typeof window.ethereum !== "undefined") {
+  const receiptBtn = document.getElementById("buyReceiptWatchBtn");
+  const provider = getEthereumProvider();
+  if (provider && typeof provider.request === "function") {
+    isWalletRequestPending = true;
     try {
       // 1. Ensure user is on Base Mainnet (0x2105 / 8453)
       try {
-        await window.ethereum.request({
+        await provider.request({
           method: 'wallet_switchEthereumChain',
           params: [{ chainId: BASE_CHAIN_ID_HEX }],
         });
       } catch (switchError) {
-        // 4902 indicates chain has not been added to wallet
-        if (switchError.code === 4902) {
-          await window.ethereum.request({
+        // 4902 indicates chain has not been added to wallet (check nested provider error too)
+        const errCode = switchError?.code ?? switchError?.data?.originalError?.code;
+        if (errCode === 4902) {
+          await provider.request({
             method: 'wallet_addEthereumChain',
             params: [{
               chainId: BASE_CHAIN_ID_HEX,
@@ -2205,11 +2996,13 @@ async function addNaraToMetaMask() {
               blockExplorerUrls: ['https://basescan.org']
             }],
           });
+        } else {
+          throw switchError;
         }
       }
 
       // 2. Add $NARA asset to wallet
-      const wasAdded = await window.ethereum.request({
+      const wasAdded = await provider.request({
         method: "wallet_watchAsset",
         params: {
           type: "ERC20",
@@ -2230,6 +3023,12 @@ async function addNaraToMetaMask() {
             label.classList.remove("text-naraGreen");
           }, 3000);
         }
+        if (receiptBtn) {
+          receiptBtn.textContent = "✓ $NARA IN WALLET";
+          setTimeout(() => {
+            receiptBtn.textContent = "+ SHOW $NARA IN WALLET";
+          }, 3000);
+        }
       }
     } catch (err) {
       console.warn("Wallet interaction fallback to copy", err);
@@ -2240,6 +3039,14 @@ async function addNaraToMetaMask() {
           label.innerText = "ADD $NARA TO METAMASK";
         }, 3000);
       }
+      if (receiptBtn) {
+        receiptBtn.textContent = "CA COPIED ✓";
+        setTimeout(() => {
+          receiptBtn.textContent = "+ SHOW $NARA IN WALLET";
+        }, 3000);
+      }
+    } finally {
+      isWalletRequestPending = false;
     }
   } else {
     copyCA();
@@ -2249,51 +3056,60 @@ async function addNaraToMetaMask() {
         label.innerText = "ADD $NARA TO METAMASK";
       }, 3000);
     }
+    if (receiptBtn) {
+      receiptBtn.textContent = "CA COPIED ✓";
+      setTimeout(() => {
+        receiptBtn.textContent = "+ SHOW $NARA IN WALLET";
+      }, 3000);
+    }
   }
 }
 
-// --- SYSTEM INITIALIZATION ---
-loadUserStash();
-loadFlushProgress();
-loadLocalFameBoard();
-renderFameBoard(localFameBoard);
-syncFameBoardFromAPI();
-updateVaultUI();
-rollNewDegenMessage(flushCount);
-updateForgeUI();
-
-// Restore flush counter display from persisted state
-const _counterEl = document.getElementById("flushCounter");
-if (_counterEl && flushCount > 0) _counterEl.innerText = flushCount;
-const _quickLabel = document.getElementById("quickTweetLabel");
-if (_quickLabel && flushCount > 0) _quickLabel.innerText = `POST [${flushCount}]`;
-
 // --- KEYBOARD SHORTCUTS ---
 document.addEventListener("keydown", (e) => {
-  // Don't trigger when typing in an input
-  if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
-  if (e.key === " " || e.key === "f" || e.key === "F") {
-    e.preventDefault();
-    const lootModal = document.getElementById("lootModal");
-    if (lootModal && !lootModal.classList.contains("hidden") && lootModal._autoDismiss) {
-      closeLootModal();
-    }
-    triggerHydraulicFlush();
-  }
+  // Never hijack browser shortcuts (Ctrl+F, Cmd+F, Alt+F, etc.)
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const tag = e.target?.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA" || e.target?.isContentEditable) return;
+
   if (e.key === "Escape") {
-    const modal = document.getElementById("lootModal");
-    if (modal && !modal.classList.contains("hidden")) {
-      closeLootModal();
-    }
+    const vicModal = document.getElementById("victoryModal");
     const swapModal = document.getElementById("swapPrelaunchModal");
-    if (swapModal && !swapModal.classList.contains("hidden")) {
+    const lootModal = document.getElementById("lootModal");
+    if (isBuyModalOpen()) {
+      closeBuyModal();
+    } else if (vicModal && !vicModal.classList.contains("hidden")) {
+      closeVictoryModal();
+    } else if (swapModal && !swapModal.classList.contains("hidden")) {
       closeSwapModal();
+    } else if (lootModal && !lootModal.classList.contains("hidden")) {
+      closeLootModal();
+    } else {
+      dismissMilestone();
+    }
+    return;
+  }
+
+  if (e.key === " " || e.key === "f" || e.key === "F") {
+    if (e.repeat) return;
+    // Allow Space to activate focused buttons/links naturally
+    if (e.key === " " && (tag === "BUTTON" || tag === "A" || e.target?.getAttribute?.("role") === "button")) {
+      return;
     }
     const vicModal = document.getElementById("victoryModal");
-    if (vicModal && !vicModal.classList.contains("hidden")) {
-      closeVictoryModal();
+    const swapModal = document.getElementById("swapPrelaunchModal");
+    const lootModal = document.getElementById("lootModal");
+    // Do not flush behind blocking modals (or explicit card inspect modal)
+    if (
+      isBuyModalOpen() ||
+      (vicModal && !vicModal.classList.contains("hidden")) ||
+      (swapModal && !swapModal.classList.contains("hidden")) ||
+      (lootModal && !lootModal.classList.contains("hidden") && !lootModal._autoDismiss)
+    ) {
+      return;
     }
-    dismissMilestone();
+    e.preventDefault();
+    triggerHydraulicFlush();
   }
 });
 
@@ -2303,8 +3119,28 @@ document.addEventListener("keydown", (e) => {
 const ACTIONS = {
   stopPropagation: (e) => e.stopPropagation(),
   toggleAudio: () => toggleAudio(),
+  openBuyModal: () => openBuyModal(),
+  closeBuyModal: (e) => closeBuyModal(e),
+  closeBuyModalBackdrop: (e) => closeBuyModal(e),
+  copyBuyModalCA: () => copyBuyModalCA(),
+  setBuyModalDirection: (e, arg) => setBuyModalDirection(e, arg),
+  setBuyModalAsset: (e, arg) => setBuyModalAsset(e, arg),
+  setBuyModalPreset: (e, arg) => setBuyModalPreset(e, arg),
+  setBuyModalMax: () => setBuyModalMax(),
+  setBuyModalSlippage: (e, arg) => setBuyModalSlippage(e, arg),
+  handleBuyModalAmountInput: (e) => handleBuyModalAmountInput(e),
+  disconnectBuyWallet: () => disconnectBuyWallet(),
+  refreshBuyQuote: () => refreshBuyQuote(),
+  executeBuyModalSwap: () => executeBuyModalSwap(),
   handleSwapButtonClick: (e) => handleSwapButtonClick(e),
-  triggerHydraulicFlush: () => triggerHydraulicFlush(),
+  triggerHydraulicFlush: (e) => triggerHydraulicFlush(e),
+  flushOnKeydown: (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      e.stopPropagation();
+      triggerHydraulicFlush(e);
+    }
+  },
   copyCA: () => copyCA(),
   handleShareClick: (e, arg) => handleShareClick(e, arg),
   rerollBannerQuote: (e) => rerollBannerQuote(e),
@@ -2315,7 +3151,8 @@ const ACTIONS = {
   copyForgeTweetText: () => copyForgeTweetText(),
   copyStickerCardFromForge: () => copyStickerCardFromForge(),
   confirmResetRun: () => confirmResetRun(),
-  shareFullStashTweet: () => shareFullStashTweet(),
+  reopenVictoryIfWon: () => reopenVictoryIfWon(),
+  shareFullStashTweet: (e) => shareFullStashTweet(e),
   refreshLeaderboardUI: () => refreshLeaderboardUI(),
   addNaraToMetaMask: () => addNaraToMetaMask(),
   handleLootBackdropClick: (e) => handleLootBackdropClick(e),
@@ -2332,14 +3169,28 @@ const ACTIONS = {
   submitVictoryToFameBoard: () => submitVictoryToFameBoard(),
   handleVictoryTweet: (e) => handleVictoryTweet(e),
   resetAndStartNewRun: () => resetAndStartNewRun(),
+  jumpToVaultOrVictory: () => jumpToVaultOrVictory(),
+  revealBanksFailCipher: () => revealBanksFailCipher(),
+  questShareAction: () => questShareAction(),
+  openAwardPassOrInfo: () => openAwardPassOrInfo(),
+  startRunFromBoard: () => startRunFromBoard(),
+  toggleVerifyPassBar: () => toggleVerifyPassBar(),
+  verifyClaimCodeUI: () => verifyClaimCodeUI(),
+  setVictoryPlatform: (e, arg) => setVictoryPlatform(e, arg),
+  fillVictoryConnectedWallet: () => fillVictoryConnectedWallet(),
+  copyAwardClaimPass: () => copyAwardClaimPass(),
+  applyLowFeeSwapSize: () => applyLowFeeSwapSize(),
 };
 
-const BOUND_EVENTS = ["click", "keydown", "mouseenter", "touchstart"];
+const BOUND_EVENTS = ["click", "keydown", "mouseenter", "touchstart", "input"];
+const boundActionElements = new WeakSet();
 
 function bindActions(root = document) {
   const selector = BOUND_EVENTS.map((evt) => `[data-on-${evt}]`).join(",");
   const unknown = [];
   root.querySelectorAll(selector).forEach((el) => {
+    if (boundActionElements.has(el)) return;
+    boundActionElements.add(el);
     BOUND_EVENTS.forEach((evt) => {
       const spec = el.getAttribute(`data-on-${evt}`);
       if (!spec) return;
@@ -2362,5 +3213,37 @@ function bindActions(root = document) {
   }
 }
 
+// --- SYSTEM INITIALIZATION ---
 initSwapControl();
 bindActions();
+loadUserStash();
+loadFlushProgress();
+loadLocalFameBoard();
+renderFameBoard(localFameBoard);
+syncFameBoardFromAPI();
+updateVaultUI();
+rollNewDegenMessage(flushCount);
+updateForgeUI();
+
+// Restore flush counter display from persisted state
+const _counterEl = document.getElementById("flushCounter");
+if (_counterEl && flushCount > 0) _counterEl.innerText = flushCount;
+const _quickLabel = document.getElementById("quickTweetLabel");
+if (_quickLabel && flushCount > 0) _quickLabel.innerText = `POST [${flushCount}]`;
+
+initBuyExperience({
+  playClick: playMechanicalClick,
+  playSuccess: () => {
+    if (soundMode === "mute") return;
+    try { playArcadeChime(getAudioContext()); } catch (e) {}
+  },
+  copyCA,
+  onModalVisibilityChange: syncBodyScrollLock,
+});
+
+if (typeof navigator !== "undefined" && "serviceWorker" in navigator && import.meta.env?.PROD) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}
+

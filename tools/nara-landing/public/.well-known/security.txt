@@ -1,0 +1,6 @@
+Contact: https://github.com/NARAProtocol/nara_protocol/security/advisories/new
+Contact: mailto:security@naraprotocol.io
+Expires: 2027-11-08T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://naraprotocol.io/.well-known/security.txt
+Policy: https://github.com/NARAProtocol/nara_protocol/blob/main/SECURITY.md

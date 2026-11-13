@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { onRequestGet, onRequestHead, onRequestPost, onRequestOptions } from "../functions/api/leaderboard.js";
 
-const ORIGIN = "https://naraprotocol.com";
+const ORIGIN = "https://naraprotocol.io";
 
 function makeKV(initial = {}) {
   const store = new Map(Object.entries(initial));
@@ -17,9 +17,9 @@ function makeKV(initial = {}) {
   };
 }
 
-function makeContext({ method = "GET", body, rawBody, headers = {}, env = {}, ip = "203.0.113.7" } = {}) {
+function makeContext({ method = "GET", url = `${ORIGIN}/api/leaderboard`, body, rawBody, headers = {}, env = {}, ip = "203.0.113.7" } = {}) {
   const h = new Headers({ "CF-Connecting-IP": ip, ...headers });
-  const request = new Request(`${ORIGIN}/api/leaderboard`, {
+  const request = new Request(url, {
     method,
     headers: h,
     body: rawBody !== undefined ? rawBody : body === undefined ? undefined : JSON.stringify(body),
@@ -29,9 +29,12 @@ function makeContext({ method = "GET", body, rawBody, headers = {}, env = {}, ip
 
 function withTurnstile(result) {
   const original = globalThis.fetch;
+  const payload = result && result.success === true
+    ? { hostname: "naraprotocol.io", action: "fame_board_submit", ...result }
+    : result;
   globalThis.fetch = async (url) => {
     assert.match(String(url), /challenges\.cloudflare\.com\/turnstile\/v0\/siteverify/);
-    return new Response(JSON.stringify(result), { status: 200 });
+    return new Response(JSON.stringify(payload), { status: 200 });
   };
   return () => { globalThis.fetch = original; };
 }
@@ -138,7 +141,7 @@ test("POST with missing token never calls siteverify and is 403", async () => {
 });
 
 test("POST happy path stores, ranks, returns board; repeat only improves", async () => {
-  const restore = withTurnstile({ success: true, hostname: "naraprotocol.com" });
+  const restore = withTurnstile({ success: true, hostname: "naraprotocol.io" });
   try {
     const kv = makeKV();
     const env = { NARA_LEADERBOARD_KV: kv, TURNSTILE_SECRET_KEY: "s" };
@@ -247,4 +250,276 @@ test("board is capped at 50 ranked entries", async () => {
     assert.equal(data.board[49].rank, 50);
     assert.equal(data.board.some((e) => e.handle === "@seed_49"), false, "worst entry drops off");
   } finally { restore(); }
+});
+
+test("POST rejects legacy mock seed handles with 400", async () => {
+  const restore = withTurnstile({ success: true });
+  try {
+    const env = { NARA_LEADERBOARD_KV: makeKV(), TURNSTILE_SECRET_KEY: "s" };
+    const res = await onRequestPost(makeContext({
+      method: "POST",
+      body: { ...GOOD, handle: "@Satoshi_Plunger" },
+      headers: GOOD_HEADERS,
+      env,
+    }));
+    assert.equal(res.status, 400);
+    assert.equal((await res.json()).error, "invalid_handle");
+  } finally { restore(); }
+});
+
+test("POST rate limits IPv6 addresses across the same /64 prefix", async () => {
+  const restore = withTurnstile({ success: true });
+  try {
+    const env = { NARA_LEADERBOARD_KV: makeKV(), TURNSTILE_SECRET_KEY: "s" };
+    let last;
+    for (let i = 0; i < 6; i++) {
+      last = await onRequestPost(makeContext({
+        method: "POST",
+        body: { ...GOOD, handle: `@v6_${i}` },
+        headers: GOOD_HEADERS,
+        env,
+        ip: `2001:db8:abcd:0012::${i + 1}`,
+      }));
+    }
+    assert.equal(last.status, 429, "different host suffixes in same /64 share rate-limit bucket");
+  } finally { restore(); }
+});
+
+test("POST skips KV board write when submitted score does not improve existing record", async () => {
+  const restore = withTurnstile({ success: true });
+  try {
+    let boardPuts = 0;
+    const kv = makeKV();
+    const origPut = kv.put.bind(kv);
+    kv.put = async (key, value, opts) => {
+      if (key === "fame_board_v1") boardPuts++;
+      return origPut(key, value, opts);
+    };
+    const env = { NARA_LEADERBOARD_KV: kv, TURNSTILE_SECRET_KEY: "s" };
+    await onRequestPost(makeContext({ method: "POST", body: { ...GOOD, score: 25 }, headers: GOOD_HEADERS, env, ip: "203.0.113.70" }));
+    assert.equal(boardPuts, 1);
+    await onRequestPost(makeContext({ method: "POST", body: { ...GOOD, score: 40 }, headers: GOOD_HEADERS, env, ip: "203.0.113.71" }));
+    assert.equal(boardPuts, 1, "worse score must not trigger a KV board write");
+  } finally { restore(); }
+});
+
+test("IPv4-mapped IPv6 addresses map to distinct IPv4 buckets instead of sharing ::/64", async () => {
+  const restore = withTurnstile({ success: true });
+  try {
+    const kv = makeKV();
+    const env = { NARA_LEADERBOARD_KV: kv, TURNSTILE_SECRET_KEY: "s" };
+    // Exhaust bucket for ::ffff:203.0.113.5
+    for (let i = 0; i < 5; i++) {
+      const r = await onRequestPost(makeContext({
+        method: "POST",
+        body: { ...GOOD, handle: `@m1_${i}` },
+        headers: GOOD_HEADERS,
+        env,
+        ip: "::ffff:203.0.113.5",
+      }));
+      assert.equal(r.status, 200);
+    }
+    // Plain IPv4 203.0.113.5 shares the exact same bucket and is rate-limited on #6
+    const blocked = await onRequestPost(makeContext({
+      method: "POST",
+      body: { ...GOOD, handle: "@m1_block" },
+      headers: GOOD_HEADERS,
+      env,
+      ip: "203.0.113.5",
+    }));
+    assert.equal(blocked.status, 429);
+
+    // Different IPv4-mapped IPv6 (::ffff:198.51.100.9) is NOT blocked by 203.0.113.5
+    const independent = await onRequestPost(makeContext({
+      method: "POST",
+      body: { ...GOOD, handle: "@m2_ok" },
+      headers: GOOD_HEADERS,
+      env,
+      ip: "0:0:0:0:0:ffff:198.51.100.9",
+    }));
+    assert.equal(independent.status, 200);
+  } finally { restore(); }
+});
+
+test("POST stores masked walletHint, validated postUrl, platform, and returns verifiable NARA Claim Pass", async () => {
+  const restore = withTurnstile({ success: true });
+  try {
+    const kv = makeKV();
+    const env = {
+      NARA_LEADERBOARD_KV: kv,
+      TURNSTILE_SECRET_KEY: "s",
+      AWARD_CLAIM_SALT: "test_salt_123",
+      AWARD_ADMIN_TOKEN: "admin_secret_token_1234567",
+    };
+
+    // Invalid wallet rejected with 400
+    const badWalletRes = await onRequestPost(makeContext({
+      method: "POST",
+      body: { ...GOOD, wallet: "not-a-wallet" },
+      headers: GOOD_HEADERS,
+      env,
+    }));
+    assert.equal(badWalletRes.status, 400);
+    assert.equal((await badWalletRes.json()).error, "invalid_wallet");
+
+    // Valid post with platform, wallet, postUrl, operatorKey
+    const wallet = "0x1111111111111111111111111111111111111111";
+    const postUrl = "https://x.com/nara/status/123456";
+    const okRes = await onRequestPost(makeContext({
+      method: "POST",
+      body: { ...GOOD, platform: "tg", wallet, postUrl, operatorKey: "op_key_abc_1_valid16" },
+      headers: GOOD_HEADERS,
+      env,
+    }));
+    assert.equal(okRes.status, 200);
+    const okBody = await okRes.json();
+    assert.match(okBody.claimCode, /^NARA-[A-F0-9]{4}-[A-F0-9]{4}$/);
+    const postedRow = okBody.board[0];
+    assert.equal(postedRow.platform, "tg");
+    assert.equal(postedRow.walletHint, "0x1111…1111");
+    assert.equal(postedRow.postUrl, postUrl);
+    assert.equal(postedRow.awardReady, true);
+    assert.equal("wallet" in postedRow, false, "public POST entry must not expose raw wallet");
+
+    // Public GET must mask wallet and omit operator keyHash
+    const pubGet = await onRequestGet(makeContext({ env }));
+    const pubRows = await pubGet.json();
+    assert.equal(pubRows.length, 1);
+    assert.equal(pubRows[0].walletHint, "0x1111…1111");
+    assert.equal("wallet" in pubRows[0], false);
+    assert.equal("keyHash" in pubRows[0], false);
+
+    // Public GET ?verify=1 validates real Claim Code and rejects forged codes
+    const verifyOk = await onRequestGet(makeContext({
+      url: `${ORIGIN}/api/leaderboard?verify=1&handle=%40toad_01&claim=${okBody.claimCode}`,
+      env,
+    }));
+    assert.equal(verifyOk.status, 200);
+    assert.equal((await verifyOk.json()).valid, true);
+
+    const verifyBad = await onRequestGet(makeContext({
+      url: `${ORIGIN}/api/leaderboard?verify=1&handle=%40toad_01&claim=NARA-0000-0000`,
+      env,
+    }));
+    assert.equal((await verifyBad.json()).valid, false);
+
+    // Anti-hijack: different operatorKey cannot overwrite @toad_01
+    const hijackRes = await onRequestPost(makeContext({
+      method: "POST",
+      body: { ...GOOD, score: 15, operatorKey: "different_attacker_key_99" },
+      headers: GOOD_HEADERS,
+      env,
+      ip: "203.0.113.9",
+    }));
+    assert.equal(hijackRes.status, 403);
+    assert.equal((await hijackRes.json()).error, "handle_locked");
+
+    // Admin GET ?admin=1 requires bearer token and reveals unmasked payout list when authorized
+    const adminNoAuth = await onRequestGet(makeContext({
+      url: `${ORIGIN}/api/leaderboard?admin=1`,
+      env,
+    }));
+    assert.equal(adminNoAuth.status, 403);
+
+    const adminOk = await onRequestGet(makeContext({
+      url: `${ORIGIN}/api/leaderboard?admin=1`,
+      headers: { Authorization: "Bearer admin_secret_token_1234567" },
+      env,
+    }));
+    assert.equal(adminOk.status, 200);
+    const adminBody = await adminOk.json();
+    assert.equal(adminBody.count, 1);
+    assert.equal(adminBody.entries[0].wallet, wallet);
+    assert.equal(adminBody.entries[0].hasClaimPass, true);
+  } finally { restore(); }
+});
+
+test("Turnstile rejects spoofed hostname (localhost / evil.example) and wrong action on real secret", async () => {
+  const kv = makeKV();
+  const env = { NARA_LEADERBOARD_KV: kv, TURNSTILE_SECRET_KEY: "real-prod-secret" };
+
+  for (const badSiteverify of [
+    { success: true, hostname: "localhost", action: "fame_board_submit" },
+    { success: true, hostname: "evil.example", action: "fame_board_submit" },
+    { success: true, hostname: "naraprotocol.io", action: "wrong_action" },
+  ]) {
+    const restore = withTurnstile(badSiteverify);
+    try {
+      const res = await onRequestPost(makeContext({
+        method: "POST",
+        body: GOOD,
+        headers: GOOD_HEADERS,
+        env,
+      }));
+      assert.equal(res.status, 403);
+      assert.equal((await res.json()).error, "verification_failed");
+    } finally { restore(); }
+  }
+
+  // Preview Pages host matches preview Turnstile hostname
+  const restorePreview = withTurnstile({
+    success: true,
+    hostname: "preview.nara-landing-6wd.pages.dev",
+    action: "fame_board_submit",
+  });
+  try {
+    const previewOrigin = "https://preview.nara-landing-6wd.pages.dev";
+    const okPreview = await onRequestPost(makeContext({
+      method: "POST",
+      url: `${previewOrigin}/api/leaderboard`,
+      body: GOOD,
+      headers: { Origin: previewOrigin, "Content-Type": "application/json" },
+      env,
+    }));
+    assert.equal(okPreview.status, 200);
+    assert.equal(okPreview.headers.get("Referrer-Policy"), "no-referrer");
+    assert.equal(okPreview.headers.get("Cross-Origin-Resource-Policy"), "same-origin");
+  } finally { restorePreview(); }
+});
+
+test("GET ?admin=1 enforces >=24-char token and rate limits brute force at 429; GET ?verify=1 rate limits at 429", async () => {
+  const kv = makeKV();
+  const shortRes = await onRequestGet(makeContext({
+    url: `${ORIGIN}/api/leaderboard?admin=1`,
+    headers: { Authorization: "Bearer short_16_chars_only" },
+    env: { NARA_LEADERBOARD_KV: kv, AWARD_ADMIN_TOKEN: "short_16_chars_only" },
+  }));
+  assert.equal(shortRes.status, 503);
+  assert.equal((await shortRes.json()).error, "admin_disabled");
+
+  const env = { NARA_LEADERBOARD_KV: kv, AWARD_ADMIN_TOKEN: "valid_prod_admin_token_0123456789" };
+  for (let i = 0; i < 5; i++) {
+    const failRes = await onRequestGet(makeContext({
+      url: `${ORIGIN}/api/leaderboard?admin=1`,
+      headers: { Authorization: "Bearer wrong_guess" },
+      env,
+      ip: "198.51.100.77",
+    }));
+    assert.equal(failRes.status, 403);
+  }
+  const throttledAdmin = await onRequestGet(makeContext({
+    url: `${ORIGIN}/api/leaderboard?admin=1`,
+    headers: { Authorization: "Bearer wrong_guess" },
+    env,
+    ip: "198.51.100.77",
+  }));
+  assert.equal(throttledAdmin.status, 429);
+  assert.equal((await throttledAdmin.json()).error, "rate_limited");
+
+  for (let i = 0; i < 30; i++) {
+    const missVerify = await onRequestGet(makeContext({
+      url: `${ORIGIN}/api/leaderboard?verify=1&handle=%40missing&claim=NARA-0000-0000`,
+      env,
+      ip: "198.51.100.88",
+    }));
+    assert.equal(missVerify.status, 200);
+    assert.equal((await missVerify.json()).valid, false);
+  }
+  const throttledVerify = await onRequestGet(makeContext({
+    url: `${ORIGIN}/api/leaderboard?verify=1&handle=%40missing&claim=NARA-0000-0000`,
+    env,
+    ip: "198.51.100.88",
+  }));
+  assert.equal(throttledVerify.status, 429);
+  assert.equal((await throttledVerify.json()).error, "rate_limited");
 });
