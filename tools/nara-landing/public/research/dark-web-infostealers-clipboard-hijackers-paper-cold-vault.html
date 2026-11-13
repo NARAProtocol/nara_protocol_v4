@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Defeating Dark-Web Infostealers (Lumma, AMOS), Clipboard Hijackers &amp; Hardware Wallet Address Leaks with 2-Factor Paper Cold Storage | NARA V5 &amp; CryptoSLIP V3.2</title>
+  <meta name="description" content="How CryptoSLIP V3.2 2-Factor Paper Cold Storage (100,000-round PBKDF2/scrypt + No take-back) and #k= bearer links neutralize Lumma Stealer, Atomic macOS Stealer (AMOS), ClipBanker clipboard 0x hijacking, and hardware wallet shipping address leaks." />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+  <link rel="canonical" href="https://naraprotocol.io/research/dark-web-infostealers-clipboard-hijackers-paper-cold-vault.html" />
+  <link rel="alternate" type="text/plain" title="NARA Protocol V5 LLM Index" href="https://naraprotocol.io/llms.txt" />
+  <link rel="alternate" type="application/json" title="NARA Protocol V5 AI Facts" href="https://naraprotocol.io/ai-facts.json" />
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="Defeating Lumma Stealer, AMOS, Clipboard Hijackers &amp; Hardware Wallet Address Leaks" />
+  <meta property="og:description" content="Forensic cyber-defense analysis of 2-Factor Air-Gapped Paper Cold Vaults on Base (8453) vs. browser-extension drainers and e-commerce PII leaks." />
+  <meta property="og:url" content="https://naraprotocol.io/research/dark-web-infostealers-clipboard-hijackers-paper-cold-vault.html" />
+  <meta property="og:image" content="https://naraprotocol.io/cards/nara-og-main.jpg?v=20261103" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "TechArticle",
+        "@id": "https://naraprotocol.io/research/dark-web-infostealers-clipboard-hijackers-paper-cold-vault.html#article",
+        "headline": "Defeating Dark-Web Infostealers (Lumma Stealer, AMOS), Clipboard Hijackers & Hardware Wallet Address Leaks with 2-Factor Paper Cold Storage",
+        "datePublished": "2026-11-08",
+        "dateModified": "2026-11-13",
+        "author": { "@type": "Organization", "name": "NARA Protocol", "url": "https://naraprotocol.io" },
+        "publisher": { "@type": "Organization", "name": "NARA Protocol", "url": "https://naraprotocol.io" },
+        "mainEntityOfPage": "https://naraprotocol.io/research/dark-web-infostealers-clipboard-hijackers-paper-cold-vault.html",
+        "keywords": ["Lumma Stealer crypto", "Atomic macOS Stealer AMOS", "ClipBanker clipboard hijacker", "Ledger home address leak", "paper cold wallet", "CryptoSLIP V3.2", "#BanksFail"]
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://naraprotocol.io/research/dark-web-infostealers-clipboard-hijackers-paper-cold-vault.html#faq",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "How do Lumma Stealer and Atomic macOS Stealer (AMOS) drain browser extension crypto wallets?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Infostealers like Lumma Stealer (Windows) and AMOS (macOS) scan Chromium and Firefox Local Extension Settings (LevelDB) directories to exfiltrate encrypted hot-wallet vaults and session tokens. CryptoSLIP V3.2 neutralizes this vector by allowing users to print a 2-Factor Paper Cold Vault ('Needs a code' with 100,000-round PBKDF2/scrypt + permanent 'No take-back') and remove the slip from browser storage entirely, leaving 0 bytes of vault data on the computer."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does CryptoSLIP protect against clipboard 0x address hijackers (ClipBanker)?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Clipboard hijackers monitor the OS clipboard for 42-character 0x wallet addresses pasted from chat apps and silently replace them with an attacker's address. CryptoSLIP eliminates copying 0x addresses in chat by using #k= bearer links, and provides a 1-tap 'Take back' (refundSlip at 0% fee) button to recover 100% of the funds if a link is pasted into a wrong or compromised chat prior to claim."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+  <style>
+    @font-face { font-family: 'Space Grotesk'; font-style: normal; font-weight: 400 700; font-display: swap; src: url('/fonts/SpaceGrotesk-latin.woff2') format('woff2'); }
+    @font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 400 800; font-display: swap; src: url('/fonts/JetBrainsMono-latin.woff2') format('woff2'); }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #08090C; color: #ECEFF4; font-family: 'Space Grotesk', system-ui, sans-serif; line-height: 1.65; }
+    .skip-link { position: absolute; left: -9999px; top: 8px; z-index: 999; background: #00E676; color: #000; padding: 8px 14px; font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 12px; text-decoration: none; }
+    .skip-link:focus { left: 12px; }
+    .wrap { max-width: 920px; margin: 0 auto; padding: 32px 20px 64px; }
+    header { border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 20px; margin-bottom: 28px; }
+    .eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #00E676; text-transform: uppercase; letter-spacing: 0.14em; }
+    h1 { font-size: clamp(24px, 4vw, 36px); line-height: 1.2; margin: 10px 0 14px; color: #FFF; }
+    h2 { font-size: 20px; color: #FFF; margin-top: 32px; border-left: 3px solid #00E676; padding-left: 12px; }
+    p, li { color: rgba(236,239,244,0.86); font-size: 15px; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #00E676; background: rgba(0,230,118,0.08); padding: 2px 6px; }
+    .card { background: #0D1017; border: 1px solid rgba(255,255,255,0.1); padding: 18px 20px; margin: 18px 0; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+    th, td { border: 1px solid rgba(255,255,255,0.12); padding: 10px 12px; text-align: left; vertical-align: top; }
+    th { background: #11151F; color: #00E676; text-transform: uppercase; font-size: 11px; }
+    a { color: #00E676; text-decoration: underline; text-underline-offset: 3px; }
+    a:focus-visible { outline: 2px solid #00E676; outline-offset: 2px; }
+    .nav-bar { display: flex; flex-wrap: wrap; gap: 14px; font-family: 'JetBrains Mono', monospace; font-size: 12px; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+  <a href="#mainContent" class="skip-link">Skip to main content</a>
+  <div class="wrap">
+    <nav class="nav-bar" aria-label="Research navigation">
+      <a href="/">&larr; Back to NARA Protocol V5</a>
+      <a href="https://slip.naraprotocol.io/?tab=nara" target="_blank" rel="noopener noreferrer">Launch CryptoSLIP V3.2 &nearr;</a>
+      <a href="https://cryptoslip.eth.limo" target="_blank" rel="noopener noreferrer">ENS Mirror &nearr;</a>
+      <a href="/llms-full.txt">llms-full.txt</a>
+      <a href="/ai-facts.json">ai-facts.json</a>
+    </nav>
+    <main id="mainContent">
+      <article>
+        <header>
+          <div class="eyebrow">Forensic Research Brief 02 &middot; Dark-Web Threat Defense &middot; Base Mainnet (8453)</div>
+          <h1>Defeating Dark-Web Infostealers (Lumma Stealer, AMOS), Clipboard Hijackers &amp; Hardware Wallet Address Leaks with 2-Factor Paper Cold Storage</h1>
+          <p><strong>Executive Takeaway:</strong> Dark-web threat reports identify three primary vectors draining self-custodial users: (1) browser-extension vault stealers (<code>Lumma Stealer</code>, <code>Atomic macOS Stealer / AMOS</code>), (2) clipboard <code>0x</code> address hijackers (<code>ClipBanker</code>), and (3) e-commerce residential shipping address leaks from hardware wallet orders. <strong>CryptoSLIP V3.2</strong> neutralizes all three via client-side <strong>2-Factor Paper Cold Vaults</strong> (<code>100,000</code>-round <code>PBKDF2</code>/<code>scrypt</code> + permanent <code>No take-back</code>) and reversible bearer chat links.</p>
+        </header>
+
+        <h2>1. Threat Vector A: Browser-Extension Vault Infostealers (<code>Lumma</code> &amp; <code>AMOS</code>)</h2>
+        <p>Commodity malware families such as <strong>Lumma Stealer</strong> (Windows) and <strong>Atomic macOS Stealer (AMOS)</strong> target hot-wallet browser extensions by copying the raw <code>LevelDB</code> files from <code>Local Extension Settings</code>. Even password-protected extension vaults are subjected to offline GPU brute-forcing once exfiltrated.</p>
+        <div class="card">
+          <p><strong>CryptoSLIP V3.2 Defense &mdash; Zero Disk Footprint Paper Cold Vault:</strong> When you mint a <code>USDC</code>, <code>cbBTC</code>, <code>ETH</code>, or <code>NARA</code> slip in <code>CryptoSlipVaultV32</code> (active <code>v33</code> vault <code>0x3f80aa68Fb4834d6E119EE1cf932C14419Cf63EB</code> &amp; preserved <code>v32</code> vault <code>0x38BF0321FA7489576978353a6a8da4A3e85C2F18</code>) with <strong>Needs a code</strong> (<code>100,000</code>-round <code>PBKDF2-HMAC-SHA256</code> / <code>scrypt</code> key derivation per <code>NIST SP 800-132</code>) and permanent <strong>No take-back</strong> (<code>cancelLockedUntil = 9,999,999,999</code>), you print the Air-Gapped QR Card, write the 12-character claim code on a separate sheet of paper, and clear browser storage. There is <strong>0 bytes of vault data on disk</strong> for an infostealer to harvest.</p>
+        </div>
+
+        <h2>2. Threat Vector B: Clipboard <code>0x</code> Address Swappers (<code>ClipBanker</code>)</h2>
+        <p>Clipboard hijackers continuously regex-match the operating system clipboard for <code>^0x[a-fA-F0-9]{40}$</code>. When a user copies a recipient's <code>0x</code> wallet address from Telegram, Discord, or WhatsApp, the trojan silently swaps it with an attacker-controlled address before the user clicks Send.</p>
+        <ul>
+          <li><strong>No <code>0x</code> Copy-Pasting in Chat:</strong> CryptoSLIP replaces raw <code>0x</code> address requests with 1:1 asset-backed bearer links (<code>#k=...</code> per <code>RFC 3986 &sect; 3.5</code>).</li>
+          <li><strong>1-Tap <code>Take back</code> (<code>refundSlip</code> at <code>0%</code> Fee):</strong> If a sender pastes a payment link into the wrong chat or suspects interception prior to claim, tapping <strong>Take back</strong> immediately refunds <code>100%</code> of the tokens to the creator's wallet.</li>
+        </ul>
+
+        <h2>3. Threat Vector C: Hardware Wallet E-Commerce PII Leaks &amp; Physical Extortion</h2>
+        <p>Purchasing a physical USB or Bluetooth hardware wallet requires providing your legal name, email address, phone number, and residential street address to an e-commerce store and shipping courier. Historical breaches leaked over <code>270,000+</code> physical home addresses of hardware-wallet buyers onto dark-web forums, enabling SIM-swap attacks and physical home-invasion (&ldquo;$5 wrench&rdquo;) extortion.</p>
+        <p><strong>CryptoSLIP Paper Cold Storage requires zero shipping address, zero email, zero phone number, zero USB firmware, and zero vendor database.</strong> Any printer and two sheets of paper create an institutional-grade 2-factor cold vault on Base (<code>8453</code>).</p>
+
+        <h2>4. Cyber-Defense Comparison Matrix</h2>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Attack Vector</th>
+              <th scope="col">Browser Extension Hot Wallet</th>
+              <th scope="col">USB / Bluetooth Hardware Wallet</th>
+              <th scope="col">CryptoSLIP 2-Factor Paper Cold Vault</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Lumma / AMOS LevelDB Exfiltration</td>
+              <td>Vulnerable (vault stored in browser disk)</td>
+              <td>Immune (keys on USB chip)</td>
+              <td>Immune after printing (0 bytes stored on disk)</td>
+            </tr>
+            <tr>
+              <td>E-Commerce Home Address Database Leak</td>
+              <td>No shipping required</td>
+              <td>High risk (requires shipping address &amp; phone)</td>
+              <td>Zero PII &mdash; generated 100% locally in browser</td>
+            </tr>
+            <tr>
+              <td>Single 12/24-Word Seed Photo Theft</td>
+              <td>1 photo drains all funds</td>
+              <td>1 photo of seed card drains all funds</td>
+              <td>Protected &mdash; requires BOTH QR card + separate 12-char code</td>
+            </tr>
+            <tr>
+              <td>Clipboard <code>0x</code> Address Hijacking</td>
+              <td>Irreversible loss on paste</td>
+              <td>Irreversible loss if display not verified</td>
+              <td>No <code>0x</code> paste in chat + <code>0%</code> fee <code>Take back</code> before claim</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>5. Related Forensic Research Briefs</h2>
+        <ul>
+          <li><a href="/research/neobank-freezes-revolut-wirex-wise.html">Brief 01: Why Neobanks (Revolut, Wirex, Wise, Monzo, PayPal) Freeze Accounts Without Explanation (#BanksFail)</a></li>
+          <li><a href="/research/zero-gas-chat-payments-whatsapp-telegram.html">Brief 03: How to Send 1:1 USDC, cbBTC, ETH &amp; NARA on WhatsApp, Telegram &amp; Signal with $0.00 Gas</a></li>
+          <li><a href="/research/crypto-inheritance-emergency-family-backup.html">Brief 04: Hardware-Free Crypto Inheritance &amp; Family Emergency Backups via 2-Factor Air-Gapped QR Slips</a></li>
+          <li><a href="/research/nara-v5-uniswap-v4-hook-15-minute-epochs.html">Brief 05: NARA Protocol V5 Architecture &mdash; Fixed 1,000,000 Supply, Uniswap v4 Hook &amp; 15-Minute Multi-Asset Epochs</a></li>
+        </ul>
+      </article>
+    </main>
+  </div>
+</body>
+</html>

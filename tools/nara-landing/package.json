@@ -8,12 +8,12 @@
     "build": "vite build",
     "preview": "vite preview",
     "check:denylist": "node scripts/check-denylist.cjs",
-    "test:api": "node --test tests/leaderboard.test.mjs",
+    "test:api": "node --test tests/leaderboard.test.mjs tests/supply.test.mjs tests/quote.test.mjs",
     "test:smoke": "node tests/smoke.mjs",
     "check": "npm run check:denylist && npm run test:api && npm run build",
     "pages:dev": "wrangler pages dev dist --port 8788 --kv NARA_LEADERBOARD_KV",
-    "deploy:cf:preview": "npm run check && wrangler pages deploy dist --project-name naraprotocol-site --branch preview",
-    "deploy:cf:prod": "npm run check && wrangler pages deploy dist --project-name naraprotocol-site --branch main"
+    "deploy:cf:preview": "node scripts/deploy-pages.mjs preview",
+    "deploy:cf:prod": "node scripts/deploy-pages.mjs main"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.19",

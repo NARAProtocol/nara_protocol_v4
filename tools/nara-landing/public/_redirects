@@ -1,14 +1,18 @@
 # Exact rules first, splats last (Cloudflare Pages evaluates top to bottom).
-# /swap* and /app* redirect (302) to the live CryptoSLIP web app; /docs*, /github, /audit redirect (302) to official GitHub docs; /meme* redirects (301) to /.
-/swap        https://cryptoslip-g29s.4everland.app/?v=cs-1794113891779  302
-/swap.html   https://cryptoslip-g29s.4everland.app/?v=cs-1794113891779  302
-/app         https://cryptoslip-g29s.4everland.app/?v=cs-1794113891779  302
-/app.html    https://cryptoslip-g29s.4everland.app/?v=cs-1794113891779  302
+# /buy redirects to /?buy=1 (opens 1-click V4-Hook Buy modal on naraprotocol.io).
+# /swap* and /app* redirect (302) directly to the NARA Buy/Commit tab in the live CryptoSLIP web app; /docs*, /github, /audit redirect (302) to official GitHub docs; /meme* redirects (301) to /.
+/buy         /?buy=1  302
+/buy.html    /?buy=1  302
+/swap        https://slip.naraprotocol.io/?tab=nara&action=buy  302
+/swap.html   https://slip.naraprotocol.io/?tab=nara&action=buy  302
+/commit      https://slip.naraprotocol.io/?tab=nara  302
+/app         https://slip.naraprotocol.io/?tab=nara  302
+/app.html    https://slip.naraprotocol.io/?tab=nara  302
 /docs        https://github.com/NARAProtocol/nara_protocol  302
 /github      https://github.com/NARAProtocol  302
 /audit       https://github.com/NARAProtocol/nara_protocol/blob/main/verification/README.md  302
 /meme        /  301
 /meme.html   /  301
-/swap/*      https://cryptoslip-g29s.4everland.app/?v=cs-1794113891779  302
-/app/*       https://cryptoslip-g29s.4everland.app/?v=cs-1794113891779  302
+/swap/*      https://slip.naraprotocol.io/?tab=nara&action=buy  302
+/app/*       https://slip.naraprotocol.io/?tab=nara  302
 /docs/*      https://github.com/NARAProtocol/nara_protocol  302

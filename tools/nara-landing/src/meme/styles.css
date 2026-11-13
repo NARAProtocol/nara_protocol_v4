@@ -81,3 +81,31 @@
   pointer-events: none;
   opacity: 0.5;
 }
+
+@keyframes floatUpFade {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 6px) scale(0.92);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(-50%, -6px) scale(1.04);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -44px) scale(0.96);
+  }
+}
+.float-flush-badge {
+  animation: floatUpFade 0.78s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fluorescent-lighting,
+  .screen-flush-active,
+  .float-flush-badge,
+  .animate-pulse {
+    animation: none !important;
+    transform: none !important;
+  }
+}

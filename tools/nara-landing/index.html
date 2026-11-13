@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>NARA Protocol on Base — Token First. The Machine Follows. | #BanksFail</title>
-  <meta name="description" content="NARA Protocol V5 on Base (8453). Fixed 1,000,000 NARA supply, 15-minute multi-asset reward pulses, Uniswap v4 Hook, and CryptoSLIP V3.2 payment links. #BanksFail CA: 0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f">
+  <meta name="description" content="NARA Protocol V5 on Base (8453). Fixed 1,000,000 NARA supply, 15-minute NARA reserve pulses (with multi-asset ETH &amp; USDC reward support), Uniswap v4 Hook, and CryptoSLIP V3.2 payment links. #BanksFail CA: 0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f">
   <link rel="preload" href="/fonts/SpaceGrotesk-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/JetBrainsMono-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="icon" href="/favicon.svg?v=20261102d" type="image/svg+xml">
@@ -17,6 +17,9 @@
   <meta name="theme-color" content="#060709">
   <meta name="apple-mobile-web-app-title" content="NARA">
   <link rel="canonical" href="https://naraprotocol.io/">
+  <link rel="alternate" type="text/plain" title="NARA Protocol V5 LLM Index" href="https://naraprotocol.io/llms.txt">
+  <link rel="alternate" type="text/plain" title="NARA Protocol V5 Full LLM Specification" href="https://naraprotocol.io/llms-full.txt">
+  <link rel="alternate" type="application/json" title="NARA Protocol V5 AI Facts & Benchmarks" href="https://naraprotocol.io/ai-facts.json">
 
   <!-- Open Graph & Social Cards for Viral Distribution on X / Telegram / Warpcast -->
   <meta property="og:type" content="website">
@@ -48,15 +51,15 @@
         "alternateName": ["$NARA", "NARA Protocol V5", "#BanksFail"],
         "url": "https://naraprotocol.io/",
         "logo": "https://naraprotocol.io/apple-touch-icon.png",
-        "description": "Immutable, non-custodial 35-contract DeFi and payment slip protocol deployed on Base (Chain ID 8453) with a fixed 1,000,000 NARA token supply, 15-minute multi-asset reward pulses, Uniswap v4 Hook, and CryptoSLIP V3.2.",
+        "description": "Non-custodial 35-contract DeFi and payment slip protocol deployed on Base (Chain ID 8453) with a fixed 1,000,000 NARA token supply, 15-minute NARA emission pulses (plus multi-asset ETH and USDC reward accounting), Uniswap v4 Hook, and CryptoSLIP V3.2.",
         "sameAs": [
           "https://x.com/NARA_protocol",
           "https://warpcast.com/naraprotocol",
           "https://t.me/NARAProtocol",
           "https://github.com/NARAProtocol/nara_protocol",
-          "https://github.com/NARAProtocol/cryptoslip",
           "https://basescan.org/token/0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f",
           "https://dexscreener.com/base/0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f",
+          "https://slip.naraprotocol.io",
           "https://cryptoslip.eth.limo"
         ]
       },
@@ -73,8 +76,20 @@
         "@id": "https://naraprotocol.io/#application",
         "name": "NARA Protocol V5 & CryptoSLIP V3.2",
         "applicationCategory": "FinanceApplication",
-        "operatingSystem": "Web, Base Blockchain (Chain ID 8453), iOS, Android",
+        "applicationSubCategory": "Non-Custodial DeFi & Peer-to-Peer Crypto Payment Protocol",
+        "operatingSystem": "Web, Base Blockchain (Chain ID 8453), Telegram Mini App, iOS, Android",
         "url": "https://naraprotocol.io/",
+        "featureList": [
+          "Send 1:1 USDC, cbBTC, ETH, and NARA payment links on WhatsApp, Telegram, Signal, and SMS without a recipient wallet address",
+          "$0.00 recipient gas fees via sponsored EIP-712 relay on Base (Chain ID 8453)",
+          "0%-fee Keep in Slips (acceptWithPermit) to receive payments without exposing personal 0x wallet history",
+          "Atomic split payments with automatic free change (splitAndPayWithPermit) and 10-slip combine (rearrangeAndPayWithPermits)",
+          "2-Factor Paper Cold Storage (PBKDF2/scrypt 12-character code + permanent No take-back) as a hardware-free alternative to Ledger and Trezor",
+          "In-vault slip-to-slip token swaps via CryptoSlipTradeRouterV32",
+          "Fixed 1,000,000 NARA supply with burned mint authority (owner = 0x0) and 949,987 NARA sealed at genesis in NARAEmissionReserveV5 (949,923.04 NARA / 94.9923% live at block 56,763,988 via /api/supply)",
+          "15-minute NARA reserve reward pulses via NARAEpochEngineV5, with ETH secondary-sale royalties and configurable USDC/NARA swap-fee routing (100% liquidity routing at launch)",
+          "Lifetime 50/50 on-chain creator fee share (0.25% of referee settlement volume forever from a single sent slip)"
+        ],
         "offers": {
           "@type": "Offer",
           "price": "0",
@@ -91,23 +106,47 @@
             "name": "What is NARA Protocol V5 and what is the canonical $NARA contract address on Base?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "NARA Protocol V5 is an immutable 35-contract DeFi and payment ecosystem on Base (Chain ID 8453). The sole canonical NARA token address is 0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f with a fixed 1,000,000 NARA supply, burned mint authority (owner = 0x0), 949,987 NARA sealed in NARAEmissionReserveV5, and 15-minute multi-asset reward pulses in NARA, ETH, and USDC."
+              "text": "NARA Protocol V5 is a non-custodial 35-contract DeFi and payment ecosystem on Base (Chain ID 8453). The sole canonical NARA token address is 0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f with a fixed 1,000,000 NARA supply, burned mint authority (owner = 0x0), 949,987 NARA sealed at genesis in NARAEmissionReserveV5 (949,923.04 NARA at block 56,763,988; 99.9974% protocol-committed total), live 100% Uniswap v4 Hook swaps on naraprotocol.io, and 15-minute NARA emission pulses via NARAEpochEngineV5."
             }
           },
           {
             "@type": "Question",
-            "name": "What is the hidden message on the NARA candlestick toilet paper roll (#BanksFail)?",
+            "name": "How do I send USDC, Bitcoin (cbBTC), ETH, or NARA on WhatsApp, Telegram, Signal, or SMS with $0.00 recipient gas fees?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "The red and green candlesticks printed on the toilet paper roll in the NARA hero artwork encode the hidden cipher BANKS FAIL (#BanksFail). While traditional institutions can freeze user balances or lend out customer funds, NARA V5 and CryptoSLIP V3.2 isolate user principal in immutable smart contracts on Base with zero admin back doors."
+              "text": "Using CryptoSLIP V3.2 (active v33 micro-minimum vault 0x3f80aa68Fb4834d6E119EE1cf932C14419Cf63EB supporting slips from $0.10 USDC, 100 sats cbBTC, 0.000001 ETH, or 0.000001 NARA, alongside preserved v32 vault 0x38BF0321FA7489576978353a6a8da4A3e85C2F18) at https://slip.naraprotocol.io, you mint a 1:1 non-custodial payment link. The one-time claim key stays inside the URL # fragment (never sent to any server), and the protocol relay pays the Base gas fee so the recipient claims or keeps the funds in 1 tap with $0.00 gas."
             }
           },
           {
             "@type": "Question",
-            "name": "How do NARA Protocol V5 and CryptoSLIP V3.2 work together?",
+            "name": "How does CryptoSLIP 2-Factor Paper Cold Storage work as a hardware-free alternative to Ledger or Trezor?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "NARA V5 settles 15-minute reward pulses in NARA, ETH, and USDC, while CryptoSLIP V3.2 (0x38BF0321FA7489576978353a6a8da4A3e85C2F18) turns USDC, cbBTC, ETH, and NARA into 1:1 non-custodial payment links that settle in under 1 second with $0.00 recipient gas fees, 0%-fee in-vault Keep, atomic split-pay with change, offline QR support, direct 1.0+ NARA V5 commitments (NARAP Position NFTs), and 1-tap reward harvesting into slips."
+              "text": "By enabling Needs a code (100,000-round PBKDF2/scrypt 2-factor key derivation) plus permanent No take-back (cancelLockedUntil = 9,999,999,999), any USDC, cbBTC, ETH, or NARA slip becomes an offline Paper Cold Vault where neither the printed QR card nor the 12-character code alone can move funds, with zero USB firmware, Bluetooth, or vendor servers to breach."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How can I receive, keep, or split crypto payments without exposing my personal wallet address?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "When you receive a slip, tapping Keep (acceptWithPermit) rotates the 1:1 vault balance on-chain to a fresh key on your phone at 0% fee without touching or exposing your main 0x wallet. You can later pay exact amounts with automatic free change (splitAndPayWithPermit), combine up to 10 slips, or swap assets directly inside the vault."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the hidden message on the NARA candlestick toilet paper roll (#BanksFail) and why do apps like Revolut, Wirex, Wise, or PayPal freeze accounts?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The red and green candlesticks printed on the toilet paper roll in the NARA hero artwork encode the hidden cipher BANKS FAIL (#BanksFail). While traditional banks and neobanks (such as Revolut, Wirex, Wise, Monzo, N26, Chime, or PayPal) can freeze an entire omnibus account balance for weeks or months without explanation during automated compliance reviews, NARATokenV5 (owner = 0x0), NARAPrincipalLedgerV5, and CryptoSlipVaultV32 isolate every 1:1 slip and committed principal position on Base with zero admin user-balance freeze, blacklist, or proxy upgrade functions (while periphery modules NARALiquidityHookV5, NARAForgeV5, and NARACapitalBudgetV5 retain bounded operational pause controls)."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does the automatic lifetime 50/50 on-chain referral fee share work?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Sending a single CryptoSLIP link to a new user permanently binds your wallet on-chain in CryptoSlipVaultV32 to earn 50% of the 0.50% protocol settlement fee (0.25% of volume) on every future slip that recipient creates, paid automatically in the same asset (USDC, ETH, cbBTC, or NARA) with no sign-up forms."
             }
           }
         ]
@@ -145,11 +184,11 @@
       <div class="flex items-center gap-2 sm:gap-3 select-none">
         <div class="flex items-center gap-2">
           <span class="inline-block w-1.5 h-1.5 bg-naraGreen shadow-[0_0_8px_#39FF14] animate-pulse"></span>
-          <h1 class="text-[10px] sm:text-[11px] font-bold tracking-[0.18em] text-white uppercase m-0">
-            NARA // BASE
+          <h1 class="text-[10px] sm:text-[11px] font-bold tracking-[0.18em] text-white uppercase m-0 whitespace-nowrap">
+            NARA<span class="hidden sm:inline"> // BASE</span>
           </h1>
         </div>
-        <span class="text-white/20 hidden sm:inline">/</span>
+        <span class="text-white/20 hidden sm:inline" aria-hidden="true">/</span>
         <button 
           id="audioToggleBtn"
           data-on-click="toggleAudio"
@@ -168,37 +207,51 @@
         </button>
       </div>
 
-      <!-- Right Controls: Flush Trigger & Copy CA -->
-      <div class="flex items-center gap-1.5 sm:gap-2.5">
+      <!-- Right Controls: Buy NARA, App Link, Flush Trigger & Copy CA -->
+      <div class="flex items-center gap-1 sm:gap-2">
+
+        <!-- Primary 1-Click Buy $NARA Trigger -->
+        <button
+          id="headerBuyBtn"
+          type="button"
+          data-on-click="openBuyModal"
+          class="px-2.5 sm:px-3.5 py-2 min-h-[44px] bg-naraGreen hover:bg-[#52ff33] active:bg-emerald-400 focus-visible:ring-2 focus-visible:ring-white outline-none border border-naraGreen text-black text-[10px] font-extrabold tracking-[0.12em] uppercase transition-all duration-150 flex items-center gap-1 cursor-pointer shadow-[0_0_16px_rgba(57,255,20,0.35)] select-none whitespace-nowrap"
+          title="Buy $NARA in 1 click on Base (ETH or USDC via Uniswap v4 Hook)"
+          aria-label="Buy NARA on Base"
+        >
+          <span>⚡</span>
+          <span>BUY<span class="hidden sm:inline"> $NARA</span></span>
+        </button>
         
-        <!-- Swap Button Link -->
+        <!-- CryptoSLIP App Link -->
         <button
           id="headerSwapBtn"
           type="button"
           data-on-click="handleSwapButtonClick"
-          class="px-2.5 sm:px-3 py-2 min-h-[44px] bg-emerald-500/15 hover:bg-emerald-500/25 active:bg-emerald-500/40 focus-visible:ring-1 focus-visible:ring-emerald-400 outline-none border border-emerald-500/40 hover:border-emerald-400 text-emerald-300 hover:text-white text-[10px] font-bold tracking-[0.14em] uppercase transition-all duration-150 flex items-center gap-1.5 cursor-pointer shadow-[0_0_12px_rgba(16,185,129,0.2)] select-none"
-          title="Swaps open at launch on CryptoSLIP. Click for details."
-          aria-label="Swap: opens at launch on CryptoSLIP, click for details"
+          class="px-2 sm:px-3 py-2 min-h-[44px] bg-emerald-500/15 hover:bg-emerald-500/25 active:bg-emerald-500/40 focus-visible:ring-1 focus-visible:ring-emerald-400 outline-none border border-emerald-500/40 hover:border-emerald-400 text-emerald-300 hover:text-white text-[10px] font-bold tracking-[0.12em] uppercase transition-all duration-150 flex items-center gap-1 cursor-pointer select-none whitespace-nowrap"
+          title="Open CryptoSLIP App to commit NARA or send $0-gas payment links"
+          aria-label="Open CryptoSLIP App"
         >
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span>SWAP</span>
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 hidden sm:inline-block"></span>
+          <span class="sm:hidden">APP</span>
+          <span class="hidden sm:inline">CRYPTOSLIP</span>
         </button>
 
         <!-- Flush Button with 1.0s Hydraulic Cooldown Gauge -->
         <button
           id="headerFlushBtn"
           data-on-click="triggerHydraulicFlush"
-          class="relative overflow-hidden px-2.5 sm:px-3.5 py-2 min-h-[44px] bg-hazardRed/15 hover:bg-hazardRed/30 active:bg-hazardRed/50 focus-visible:ring-1 focus-visible:ring-hazardRed outline-none border border-hazardRed/40 hover:border-hazardRed text-red-200 hover:text-white text-[10px] font-bold tracking-[0.15em] uppercase transition-all duration-150 flex items-center gap-1.5 cursor-pointer shadow-[0_0_12px_rgba(255,42,42,0.25)] group select-none"
+          class="relative overflow-hidden px-2 sm:px-3 py-2 min-h-[44px] bg-hazardRed/15 hover:bg-hazardRed/30 active:bg-hazardRed/50 focus-visible:ring-1 focus-visible:ring-hazardRed outline-none border border-hazardRed/40 hover:border-hazardRed text-red-200 hover:text-white text-[10px] font-bold tracking-[0.12em] uppercase transition-all duration-150 flex items-center gap-1 cursor-pointer shadow-[0_0_12px_rgba(255,42,42,0.25)] group select-none whitespace-nowrap"
           title="Hydraulic Flush (Space / F) [1.0s Cooldown]"
           aria-label="Flush Toilet"
         >
           <div id="flushCooldownBar" class="absolute inset-y-0 left-0 bg-hazardRed/35 w-0 transition-none pointer-events-none"></div>
           <span class="relative z-10 text-xs group-hover:rotate-12 transition-transform">🚽</span>
-          <span id="headerFlushBtnLabel" class="relative z-10">FLUSH <span class="hidden sm:inline">TOILET</span></span>
+          <span id="headerFlushBtnLabel" class="relative z-10">FLUSH<span class="hidden md:inline"> TOILET</span></span>
         </button>
 
         <!-- CA Copy Button -->
-        <div class="hidden md:flex items-center gap-2 pl-2 border-l border-white/[0.08]">
+        <div class="hidden lg:flex items-center gap-2 pl-2 border-l border-white/[0.08]">
           <span class="text-[10px] text-white/50">CA:</span>
           <a
             href="https://basescan.org/token/0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f"
@@ -206,13 +259,14 @@
             rel="noopener noreferrer"
             class="min-h-[44px] px-1 flex items-center text-[10px] text-white/90 hover:text-naraGreen font-mono select-text selection:bg-emerald-500/40 no-underline transition-colors"
             title="View $NARA contract on BaseScan"
+            aria-label="View the NARA token contract 0x91FB…Ae0f on BaseScan (opens in a new tab)"
           >0x91FB...Ae0f</a>
         </div>
 
         <button 
           id="copyBtn"
           data-on-click="copyCA"
-          class="flex px-2.5 sm:px-3 py-2 min-h-[44px] text-[10px] font-bold tracking-widest uppercase bg-white/[0.04] hover:bg-white/[0.1] active:bg-white/[0.15] focus-visible:ring-1 focus-visible:ring-white/50 outline-none border border-white/[0.12] hover:border-white/30 text-white transition-all cursor-pointer items-center gap-1.5 select-none"
+          class="flex px-2 sm:px-3 py-2 min-h-[44px] text-[10px] font-bold tracking-widest uppercase bg-white/[0.04] hover:bg-white/[0.1] active:bg-white/[0.15] focus-visible:ring-1 focus-visible:ring-white/50 outline-none border border-white/[0.12] hover:border-white/30 text-white transition-all cursor-pointer items-center gap-1 select-none whitespace-nowrap"
           title="Copy token contract address"
           aria-label="Copy token contract address"
         >
@@ -226,10 +280,10 @@
     </div>
   </header>
 
-  <!-- Hero Cinematic Centerpiece -->
-  <main id="mainContent" class="relative z-10 flex-1 flex flex-col items-center justify-center px-3 sm:px-8 py-3 sm:py-6 my-auto">
+  <!-- Hero Centerpiece: Porcelain Artwork & Sewer Arcade -->
+  <main id="mainContent" class="relative z-10 flex-1 flex flex-col items-center justify-center px-3 sm:px-8 py-3 sm:py-5 my-auto">
     <div class="w-full max-w-5xl mx-auto">
-      
+
       <!-- Precision Machined Housing -->
       <div id="artHousing" class="relative bg-[#0A0C10] border border-white/[0.08] specular-top shadow-[0_30px_90px_rgba(0,0,0,0.9)] overflow-hidden transition-all duration-200">
         
@@ -240,16 +294,26 @@
         <div class="absolute bottom-2 right-2 z-20 w-2 h-2 border-b border-r border-white/30 pointer-events-none select-none"></div>
 
         <!-- Master Art Image with Click Target -->
-        <div class="relative bg-black group/art cursor-pointer crt-lines select-none focus-visible:ring-1 focus-visible:ring-naraGreen outline-none" role="button" tabindex="0" aria-label="Click or press Space to flush toilet" data-on-click="triggerHydraulicFlush" data-on-keydown="flushOnKeydown">
+        <div class="relative bg-black group/art crt-lines select-none">
+          <button
+            type="button"
+            id="artFlushBtn"
+            class="relative block w-full cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-naraGreen"
+            aria-label="Flush the toilet (Space or F)"
+            title="Click, or press Space / F, to flush"
+            data-on-click="triggerHydraulicFlush"
+          >
           <img 
             src="/nara_meme_hero.jpg" 
             alt="NARA Protocol hero artwork on Base showing red and green candlesticks printed on a toilet paper roll that encode the hidden message BANKS FAIL (#BanksFail)" 
             width="1024"
             height="576"
-            class="w-full h-auto max-h-[46vh] sm:max-h-[60vh] md:max-h-[68vh] object-contain mx-auto block select-none pointer-events-none transition-transform duration-300 group-hover/art:scale-[1.006]"
+            class="w-full h-auto max-h-[44vh] sm:max-h-[54vh] md:max-h-[58vh] object-contain mx-auto block select-none pointer-events-none transition-transform duration-300 group-hover/art:scale-[1.006]"
             loading="eager"
+            fetchpriority="high"
           />
           <div class="absolute inset-0 vignette-radial pointer-events-none"></div>
+          <div id="flushFloatLayer" aria-hidden="true" class="absolute inset-0 pointer-events-none overflow-hidden z-20"></div>
 
           <!-- Interactive Hover Hint -->
           <div class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 group-hover/art:opacity-100 transition-opacity duration-300">
@@ -258,6 +322,24 @@
                 <span class="text-xs">👇</span> CLICK TO FLUSH CANDLES
               </span>
             </div>
+          </div>
+          </button>
+
+          <!-- Top-Left Vault & Dredge Pressure Pill (Desktop/Tablet) -->
+          <div class="hidden sm:flex absolute top-3 left-3 z-30 items-center gap-1.5" data-on-click="stopPropagation">
+            <button
+              id="heroVaultPill"
+              type="button"
+              data-on-click="jumpToVaultOrVictory"
+              class="px-2.5 py-1.5 min-h-[34px] bg-black/85 hover:bg-black border border-white/15 hover:border-naraGreen/60 backdrop-blur-md flex items-center gap-2 cursor-pointer transition-all focus-visible:ring-1 focus-visible:ring-naraGreen outline-none"
+              title="Jump to 12/12 Sewer Vault & Dredge Pressure meter"
+              aria-label="Jump to Sewer Sticker Vault"
+            >
+              <span class="text-[9px] font-mono text-white/60 tracking-wider">VAULT <strong id="heroVaultCount" class="text-naraGreen">0</strong>/12</span>
+              <span class="w-10 h-1.5 bg-white/10 overflow-hidden border border-white/10 inline-block">
+                <span id="heroPressureBar" class="block h-full bg-amber-400 transition-all duration-200" style="width: 0%"></span>
+              </span>
+            </button>
           </div>
 
           <!-- Live Dynamic Counter & Immediate Tweet Action -->
@@ -363,20 +445,43 @@
 
         </div>
 
-        <!-- Subhead Ribbon -->
-        <div class="w-full bg-[#0C0E13] border-t border-white/[0.08] px-4 py-2 flex flex-wrap items-center justify-between gap-2 text-[10px] text-white/50 tracking-widest uppercase">
-          <div class="flex items-center gap-2">
-            <span class="text-naraGreen animate-pulse">●</span>
-            <span class="text-white/80">TOKEN FIRST. THE MACHINE FOLLOWS.</span>
+        <!-- Subhead & Instant Buy Action Ribbon -->
+        <div class="w-full bg-[#0C0E13] border-t border-white/[0.08] px-3 sm:px-4 py-2 flex flex-wrap items-center justify-between gap-2 text-[10px] tracking-widest uppercase">
+          <div class="flex flex-wrap items-center gap-2 sm:gap-2.5 min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="text-naraGreen animate-pulse">●</span>
+              <span class="text-white/85 font-bold">TOKEN FIRST. THE MACHINE FOLLOWS.</span>
+            </div>
+            <span class="text-white/25 hidden sm:inline">//</span>
+            <button
+              type="button"
+              data-on-click="revealBanksFailCipher"
+              class="text-naraGreen/90 hover:text-naraGreen hover:underline font-bold tracking-widest cursor-pointer bg-transparent border-0 p-0 focus-visible:ring-1 focus-visible:ring-naraGreen outline-none"
+              title="Decode the #BanksFail candlestick toilet paper roll cipher below"
+            >#BanksFail 🔎</button>
+            <span class="text-white/25 hidden md:inline">//</span>
+            <span id="heroSpotPrice" class="hidden md:inline text-emerald-300 font-mono font-bold">BASE 8453</span>
           </div>
-          <div class="flex items-center gap-3 text-white/40">
-            <span>UNISWAP V4 HOOK</span>
-            <span>//</span>
-            <span>BASE 8453</span>
-            <span>//</span>
-            <span class="text-naraGreen/90 font-bold" title="Hidden message encoded in the candlestick toilet paper roll: BANKS FAIL">#BanksFail</span>
-            <span class="hidden md:inline">//</span>
-            <span class="hidden md:inline text-emerald-400/80">RAD: 99.4% TOXIC</span>
+          <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+            <a
+              href="https://dexscreener.com/base/0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="min-h-[38px] px-3 py-1.5 bg-white/[0.04] hover:bg-white/[0.1] border border-white/15 hover:border-[#00F0FF]/50 text-[#00F0FF] font-mono font-bold text-[10px] tracking-wider uppercase transition-all flex items-center justify-center gap-1.5 no-underline focus-visible:ring-1 focus-visible:ring-[#00F0FF] outline-none whitespace-nowrap"
+              title="Live $NARA Chart on DexScreener"
+            >
+              <span>📊 CHART</span>
+              <span aria-hidden="true">↗</span>
+            </a>
+            <button
+              id="heroBuyBtn"
+              type="button"
+              data-on-click="openBuyModal"
+              class="flex-1 sm:flex-initial min-h-[38px] px-4 py-1.5 bg-naraGreen hover:bg-[#52ff33] active:bg-emerald-400 text-black font-mono font-extrabold text-[11px] tracking-wider uppercase transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-[0_0_18px_rgba(57,255,20,0.35)] focus-visible:ring-2 focus-visible:ring-white outline-none whitespace-nowrap"
+            >
+              <span>⚡</span>
+              <span>BUY $NARA</span>
+            </button>
           </div>
         </div>
 
@@ -532,6 +637,7 @@
                 data-on-click="handleForgeClick:warpcast"
                 class="px-3.5 py-2 min-h-[44px] bg-purple-600 hover:bg-purple-500 active:bg-purple-700 text-white font-mono text-[10px] sm:text-[11px] font-bold tracking-wider uppercase transition-all flex items-center gap-1.5 cursor-pointer shadow-[0_0_15px_rgba(147,51,234,0.3)] no-underline focus-visible:ring-1 focus-visible:ring-purple-400 outline-none select-none"
                 title="Post to Warpcast / Farcaster immediately"
+                aria-label="Cast this post to Farcaster (opens in a new tab)"
               >
                 <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 1000 1000">
                   <path d="M150 200h700v100H150zm80 160h540v440h-80V460H570v340h-80V460H370v340h-80V460H230v340h-80V360h80z" fill="currentColor"/>
@@ -586,6 +692,82 @@
 
       </div>
 
+      <!-- OPERATOR QUEST & PARTICIPANT REWARDS FLOW -->
+      <section id="questTrackerSection" aria-label="Operator Quest and Participant Rewards" class="w-full mt-3 bg-[#0A0C10] border border-white/[0.08] specular-top shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden">
+        <div class="px-3 sm:px-4 py-2 bg-[#0C0E13] border-b border-white/[0.08] flex flex-wrap items-center justify-between gap-2 text-[10px]">
+          <div class="flex items-center gap-2">
+            <span class="w-1.5 h-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_#FFD700] animate-pulse"></span>
+            <h2 class="text-[10px] font-bold font-mono text-white tracking-widest uppercase m-0">
+              OPERATOR QUEST // PARTICIPANT AWARD PASS
+            </h2>
+          </div>
+          <div class="flex items-center gap-2 font-mono text-[9px]">
+            <span id="questProgressPill" class="px-2 py-0.5 bg-amber-500/10 border border-amber-500/30 text-amber-300 font-bold uppercase tracking-wider">
+              0 / 4 STEPS
+            </span>
+          </div>
+        </div>
+
+        <div class="p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 font-mono">
+          <button
+            id="questStep1Btn"
+            type="button"
+            data-on-click="triggerHydraulicFlush"
+            class="p-2.5 min-h-[54px] bg-[#07090D] hover:bg-white/[0.04] border border-white/10 hover:border-naraGreen/50 text-left transition-all cursor-pointer flex items-center justify-between gap-2 focus-visible:ring-1 focus-visible:ring-naraGreen outline-none"
+          >
+            <div class="min-w-0">
+              <div class="text-[10px] font-bold text-white truncate">01. FLUSH THE BOWL</div>
+              <div class="text-[9px] text-white/50 truncate">Tap artwork or press Space</div>
+            </div>
+            <span id="questStep1Badge" class="px-1.5 py-0.5 text-[8px] font-bold border border-white/15 text-white/50 shrink-0">START</span>
+          </button>
+
+          <button
+            id="questStep2Btn"
+            type="button"
+            data-on-click="questShareAction"
+            class="p-2.5 min-h-[54px] bg-[#07090D] hover:bg-white/[0.04] border border-white/10 hover:border-naraGreen/50 text-left transition-all cursor-pointer flex items-center justify-between gap-2 focus-visible:ring-1 focus-visible:ring-naraGreen outline-none"
+          >
+            <div class="min-w-0">
+              <div class="text-[10px] font-bold text-white truncate">02. POST ON X OR CAST</div>
+              <div class="text-[9px] text-white/50 truncate">Share your purge score</div>
+            </div>
+            <span id="questStep2Badge" class="px-1.5 py-0.5 text-[8px] font-bold border border-white/15 text-white/50 shrink-0">POST</span>
+          </button>
+
+          <button
+            id="questStep3Btn"
+            type="button"
+            data-on-click="jumpToVaultOrVictory"
+            class="p-2.5 min-h-[54px] bg-[#07090D] hover:bg-white/[0.04] border border-white/10 hover:border-naraGreen/50 text-left transition-all cursor-pointer flex items-center justify-between gap-2 focus-visible:ring-1 focus-visible:ring-naraGreen outline-none"
+          >
+            <div class="min-w-0">
+              <div class="text-[10px] font-bold text-white truncate">03. DREDGE 12/12 VAULT</div>
+              <div class="text-[9px] text-white/50 truncate">Pressure guarantees drops</div>
+            </div>
+            <span id="questStep3Badge" class="px-1.5 py-0.5 text-[8px] font-bold border border-white/15 text-white/50 shrink-0">0/12</span>
+          </button>
+
+          <button
+            id="questStep4Btn"
+            type="button"
+            data-on-click="openAwardPassOrInfo"
+            class="p-2.5 min-h-[54px] bg-[#07090D] hover:bg-white/[0.04] border border-white/10 hover:border-amber-400/50 text-left transition-all cursor-pointer flex items-center justify-between gap-2 focus-visible:ring-1 focus-visible:ring-amber-400 outline-none"
+          >
+            <div class="min-w-0">
+              <div class="text-[10px] font-bold text-white truncate">04. LOCK AWARD PASS</div>
+              <div class="text-[9px] text-white/50 truncate">Claim code + handle / 0x</div>
+            </div>
+            <span id="questStep4Badge" class="px-1.5 py-0.5 text-[8px] font-bold border border-white/15 text-white/50 shrink-0">LOCK</span>
+          </button>
+        </div>
+
+        <div id="questStatusNote" class="px-3 sm:px-4 py-1.5 bg-[#08090C] border-t border-white/[0.06] flex flex-wrap items-center justify-between gap-2 text-[9px] font-mono text-white/50">
+          <span>Discretionary community &amp; event awards can be claimed via $0-gas CryptoSLIP links or your Base wallet after locking a Fame Board Claim Pass.</span>
+          <span id="questMyClaimBadge" class="hidden text-amber-300 font-bold"></span>
+        </div>
+      </section>
+
       <!-- SEWER STICKER VAULT // LOOT LOCKER -->
       <div id="stickerVaultSection" class="w-full mt-3 bg-[#0A0C10] border border-white/[0.08] specular-top shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden">
         
@@ -613,6 +795,10 @@
               <span class="px-1.5 py-0.5 bg-amber-500/10 border border-amber-500/30 text-amber-300 font-bold tracking-wider">
                 <span id="bestRecordCount">--</span>
               </span>
+            </div>
+            <div class="flex items-center gap-1 text-[9px]" title="Reaches 100% to guarantee your next new sticker drop">
+              <span class="text-white/40">PRESSURE:</span>
+              <span id="vaultDredgePressureText" class="px-1.5 py-0.5 bg-amber-500/10 border border-amber-500/30 text-amber-300 font-bold tracking-wider">0%</span>
             </div>
             <button
               id="vaultProgressBadge"
@@ -644,7 +830,7 @@
         <div class="px-3 sm:px-4 py-2 bg-[#08090C] border-t border-white/[0.06] flex flex-wrap items-center justify-between gap-2 text-[9px] sm:text-[10px] font-mono text-white/50">
           <div class="flex items-center gap-1.5">
             <span class="text-naraGreen">💡</span>
-            <span>FLUSH TOILET TO DREDGE RARE POOPS // CLICK ANY UNLOCKED CARD TO TWEET</span>
+            <span id="vaultHintText">TAP ANY LOCKED CARD TO DREDGE // CLICK ANY UNLOCKED CARD TO TWEET</span>
           </div>
           <a 
             id="shareStashBtn"
@@ -739,20 +925,60 @@
           </table>
         </div>
 
-        <!-- Footer Note -->
-        <div class="px-3 sm:px-4 py-1.5 bg-[#08090C] border-t border-white/[0.06] flex flex-wrap items-center justify-between gap-2 text-[9px] font-mono text-white/40">
-          <span class="flex items-center gap-1.5">
-            <span class="text-amber-400">⚡</span>
-            <span>Complete your 12-card vault to immortalize your handle on the Fame Board.</span>
-          </span>
-          <span class="text-emerald-400/80">SELF-REPORTED SCORES</span>
+        <!-- Footer Note & Interactive Claim Pass Checker -->
+        <div class="px-3 sm:px-4 py-2 bg-[#08090C] border-t border-white/[0.06] space-y-2 text-[9px] font-mono text-white/40">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="flex items-center gap-1.5">
+              <span class="text-amber-400">⚡</span>
+              <span>Complete your 12-card vault to claim your Fame Board handle &amp; Award Claim Pass.</span>
+            </span>
+            <div class="flex items-center gap-3">
+              <button
+                id="toggleVerifyPassBtn"
+                type="button"
+                data-on-click="toggleVerifyPassBar"
+                class="text-amber-300 hover:text-white uppercase font-bold cursor-pointer bg-transparent border-0 p-0 focus-visible:ring-1 focus-visible:ring-amber-400 outline-none"
+              >
+                🔎 VERIFY CLAIM CODE
+              </button>
+              <span class="text-emerald-400/80">SELF-REPORTED SCORES</span>
+            </div>
+          </div>
+
+          <div id="verifyPassBar" class="hidden pt-2 border-t border-white/[0.06] flex flex-col sm:flex-row sm:items-center gap-2">
+            <input
+              id="verifyHandleInput"
+              type="text"
+              maxlength="24"
+              placeholder="@handle"
+              aria-label="Operator handle to verify"
+              class="px-2.5 py-1.5 min-h-[38px] bg-black/80 border border-white/15 text-white text-[10px] font-mono focus:border-amber-400 outline-none sm:w-40"
+            />
+            <input
+              id="verifyClaimInput"
+              type="text"
+              maxlength="24"
+              placeholder="NARA-XXXX-XXXX"
+              aria-label="Claim code to verify"
+              class="px-2.5 py-1.5 min-h-[38px] bg-black/80 border border-white/15 text-white text-[10px] font-mono uppercase focus:border-amber-400 outline-none flex-1"
+            />
+            <button
+              id="verifyPassBtn"
+              type="button"
+              data-on-click="verifyClaimCodeUI"
+              class="px-3.5 py-1.5 min-h-[38px] bg-amber-500 hover:bg-amber-400 text-black font-bold text-[10px] uppercase tracking-wider cursor-pointer whitespace-nowrap"
+            >
+              CHECK PASS
+            </button>
+            <div id="verifyPassResult" role="status" aria-live="polite" class="text-[10px] font-mono text-white/70 sm:max-w-xs truncate"></div>
+          </div>
         </div>
 
       </div>
 
       <!-- PROTOCOL ARCHITECTURE, #BanksFail CIPHER & KNOWLEDGE BASE (SEO + AI GEO DRAWER) -->
       <section id="protocolSpecsSection" aria-label="NARA Protocol V5 and CryptoSLIP V3.2 Architecture and FAQ" class="w-full mt-3 bg-[#0A0C10] border border-white/[0.08] specular-top shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden font-mono">
-        <details class="group">
+        <details id="protocolSpecsDetails" class="group">
           <summary class="px-3 sm:px-4 py-2.5 min-h-[44px] bg-[#0C0E13] hover:bg-white/[0.03] border-b border-white/[0.08] flex flex-wrap items-center justify-between gap-2 text-[10px] cursor-pointer list-none select-none focus-visible:ring-1 focus-visible:ring-naraGreen outline-none">
             <div class="flex items-center gap-2">
               <span class="w-1.5 h-1.5 rounded-full bg-naraGreen shadow-[0_0_8px_#39FF14]"></span>
@@ -769,7 +995,7 @@
           <div class="p-3 sm:p-5 space-y-4 text-[11px] text-white/75 leading-relaxed bg-[#08090C]">
             
             <!-- 1. The #BanksFail Candlestick Roll Cipher & 9-Pillar Acrostic -->
-            <div class="p-3 sm:p-4 bg-[#0C0E13] border border-emerald-500/30">
+            <div id="banksFailCipherCard" class="p-3 sm:p-4 bg-[#0C0E13] border border-emerald-500/30 transition-all duration-300">
               <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
                 <h3 class="text-xs font-bold text-naraGreen uppercase tracking-wider m-0">
                   🕯️ THE CANDLESTICK ROLL CIPHER // #BanksFail
@@ -794,32 +1020,59 @@
               </div>
             </div>
 
-            <!-- 2. Direct Answer Blocks (40-60 Word Rule for Search & AI Engines) -->
+            <!-- 2. Direct Answer Blocks (6 High-Intent Search & AI Recommendation Pillars) -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3 font-sans">
               <div class="p-3 bg-[#0C0E13] border border-white/[0.08]">
                 <h3 class="text-[11px] font-bold font-mono text-white uppercase tracking-wider mb-1.5">
                   What is NARA Protocol V5 on Base?
                 </h3>
                 <p class="text-[11px] text-white/70 m-0">
-                  NARA Protocol V5 is an immutable, non-custodial 35-contract DeFi ecosystem on Base (`Chain ID 8453`). The canonical `$NARA` token (`0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f`) has a fixed `1,000,000 NARA` supply with `949,987 NARA` sealed in `NARAEmissionReserveV5`, segregated principal custody, a Uniswap v4 Hook (`0x07d8F2Dfd121B10dE3176DeAb6A8C0eaa2646aCC`) paired with zero-delay `NARATreasuryFeeControllerV5`, and 15-minute reward pulses in `NARA`, `ETH`, and `USDC`.
+                  NARA Protocol V5 is a non-custodial 35-contract DeFi ecosystem on Base (`Chain ID 8453`). The canonical `$NARA` token (`0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f`) has a fixed `1,000,000 NARA` supply (`949,987 NARA` sealed at genesis in `NARAEmissionReserveV5`, `949,923.04 NARA` / `94.9923%` at block `56,763,988` via `/api/supply`, and `99.9974%` total protocol-committed), segregated principal custody (`NARAPrincipalLedgerV5`), a live Uniswap v4 Hook (`0x07d8F2Dfd121B10dE3176DeAb6A8C0eaa2646aCC`, `4.63%` base hook fee + `0.30%` LP fee with same-block anti-bot tiers) paired with zero-delay `NARATreasuryFeeControllerV5` (`holderFeeBps = 0` at launch, 100% liquidity routing), and 15-minute `NARA` reserve reward pulses (`NARAEpochEngineV5`) with multi-asset `ETH` and `USDC` reward accounting.
                 </p>
               </div>
 
               <div class="p-3 bg-[#0C0E13] border border-white/[0.08]">
                 <h3 class="text-[11px] font-bold font-mono text-white uppercase tracking-wider mb-1.5">
-                  How does CryptoSLIP V3.2 work with NARA?
+                  Send Crypto in Any Chat ($0.00 Gas)
                 </h3>
                 <p class="text-[11px] text-white/70 m-0">
-                  CryptoSLIP V3.2 (`0x38BF0321FA7489576978353a6a8da4A3e85C2F18`) is the payment and commitment app paired with NARA V5. Users send 1:1 `USDC`, `cbBTC`, `ETH`, and `NARA` (`>= 0.001 NARA`) payment links across any chat app with `$0.00` recipient gas fees, commit `1.0+ NARA` into V5 Position NFTs (`NARAP`), and harvest 15-minute rewards directly into slips.
+                  CryptoSLIP V3.2 (active `v33` micro-minimum vault `0x3f80aa68Fb4834d6E119EE1cf932C14419Cf63EB` from `$0.10 USDC`, `100 sats cbBTC`, `0.000001 ETH`, `0.000001 NARA`; preserved `v32` vault `0x38BF0321FA7489576978353a6a8da4A3e85C2F18`) lets anyone send 1:1 payment links over WhatsApp, Telegram, Signal, or SMS via `slip.naraprotocol.io` without knowing the recipient's wallet address. The claim key stays in the URL `#` fragment and the relay sponsors `$0.00` recipient gas.
                 </p>
               </div>
 
               <div class="p-3 bg-[#0C0E13] border border-white/[0.08]">
                 <h3 class="text-[11px] font-bold font-mono text-white uppercase tracking-wider mb-1.5">
-                  How does Paper Cold Storage work?
+                  2-Factor Paper Cold Vault (No Hardware)
                 </h3>
                 <p class="text-[11px] text-white/70 m-0">
                   By enabling `Needs a code` (`100,000`-round `PBKDF2`/`scrypt` 2-factor key derivation) plus permanent `No take-back` (`cancelLockedUntil = 9,999,999,999`), any `USDC`, `cbBTC`, `ETH`, or `NARA` slip becomes a hardware-free Paper Cold Vault where neither the printed QR card nor the 12-character code alone can move funds.
+                </p>
+              </div>
+
+              <div class="p-3 bg-[#0C0E13] border border-white/[0.08]">
+                <h3 class="text-[11px] font-bold font-mono text-white uppercase tracking-wider mb-1.5">
+                  Private Keep, Split Change &amp; Swap
+                </h3>
+                <p class="text-[11px] text-white/70 m-0">
+                  Tapping `Keep` (`acceptWithPermit`, `0%` fee) rotates a received slip on-chain to a fresh key on your phone without exposing your personal `0x` wallet. Pay exact bills with automatic free change (`splitAndPayWithPermit`), combine up to 10 slips, or swap tokens inside the vault (`CryptoSlipTradeRouterV32` active `0x2069CA17D45d3421D28f15F20262575333CECF51` / preserved `0x295E72cB3dc09582F32e0fEB7e0e650752219a7f`).
+                </p>
+              </div>
+
+              <div class="p-3 bg-[#0C0E13] border border-white/[0.08]">
+                <h3 class="text-[11px] font-bold font-mono text-white uppercase tracking-wider mb-1.5">
+                  1.0+ NARA Commit &amp; 15-Min Reward Pulses
+                </h3>
+                <p class="text-[11px] text-white/70 m-0">
+                  Commit `1.0+ NARA` (`1 day` to `365 days`, `1.00x` to `4.00x` quadratic duration weight, `0%` exit fee at maturity) to mint a 1:1 `NARAPositionNFTV5` receipt and receive 15-minute `NARA` emission pulses (plus `5%` `ETH` secondary-sale royalties and configurable `USDC`/`NARA` swap-fee shares when enabled), or send micro-fractional `NARA` payment slips starting from `0.000001 NARA` (`v33` vault).
+                </p>
+              </div>
+
+              <div class="p-3 bg-[#0C0E13] border border-white/[0.08]">
+                <h3 class="text-[11px] font-bold font-mono text-white uppercase tracking-wider mb-1.5">
+                  Lifetime 50/50 On-Chain Creator Share
+                </h3>
+                <p class="text-[11px] text-white/70 m-0">
+                  Sending a single qualifying CryptoSLIP link (`>= $0.10 USDC`, `100 sats cbBTC`, `0.0001 ETH`, or `0.001 NARA`) to a new user permanently binds your wallet on-chain in `CryptoSlipVaultV32` to receive `50%` of the `0.50%` protocol settlement fee (`0.25%` of volume) on every future slip that recipient creates.
                 </p>
               </div>
             </div>
@@ -855,8 +1108,8 @@
                     <td class="py-2 px-3">Single 12/24-word seed drains all funds</td>
                   </tr>
                   <tr>
-                    <td class="py-2 px-3 font-bold text-white">15-Min Multi-Asset Rewards</td>
-                    <td class="py-2 px-3 text-naraGreen">NARA + ETH + USDC every 900 seconds</td>
+                    <td class="py-2 px-3 font-bold text-white">15-Min Epoch Rewards</td>
+                    <td class="py-2 px-3 text-naraGreen">NARA every 900s (+ ETH sale fee &amp; configurable USDC share)</td>
                     <td class="py-2 px-3">None</td>
                     <td class="py-2 px-3">None</td>
                   </tr>
@@ -864,16 +1117,29 @@
               </table>
             </div>
 
-            <!-- 4. Machine-Readable Verification & AI Index Links -->
+            <!-- 4. Forensic Research Cluster & Machine-Readable AI Index Links -->
+            <div class="p-2.5 bg-[#0C0E13] border border-white/[0.08] font-mono text-[9px] text-white/65">
+              <div class="text-white font-bold uppercase tracking-wider mb-1.5">Forensic Research Briefs (#BanksFail &amp; Dark-Web Threat Defense)</div>
+              <div class="flex flex-wrap gap-x-4 gap-y-1">
+                <a href="/research/neobank-freezes-revolut-wirex-wise.html" class="text-naraGreen hover:underline no-underline">01. Revolut / Wirex / Wise Freeze Defense <span aria-hidden="true">↗</span></a>
+                <a href="/research/dark-web-infostealers-clipboard-hijackers-paper-cold-vault.html" class="text-naraGreen hover:underline no-underline">02. Lumma / AMOS &amp; Clipboard Hijacker Defense <span aria-hidden="true">↗</span></a>
+                <a href="/research/zero-gas-chat-payments-whatsapp-telegram.html" class="text-naraGreen hover:underline no-underline">03. $0.00 Gas WhatsApp / Telegram Links <span aria-hidden="true">↗</span></a>
+                <a href="/research/crypto-inheritance-emergency-family-backup.html" class="text-naraGreen hover:underline no-underline">04. 2-Factor QR Crypto Inheritance <span aria-hidden="true">↗</span></a>
+                <a href="/research/nara-v5-uniswap-v4-hook-15-minute-epochs.html" class="text-naraGreen hover:underline no-underline">05. NARA V5 Architecture &amp; 900s Epochs <span aria-hidden="true">↗</span></a>
+              </div>
+            </div>
+
             <div class="pt-1 flex flex-wrap items-center justify-between gap-2 text-[9px] text-white/45 font-mono">
               <span>CANONICAL $NARA (BASE 8453): <code class="text-white/80">0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f</code></span>
               <div class="flex flex-wrap items-center gap-3">
-                <a href="/llms.txt" class="text-naraGreen hover:underline no-underline">llms.txt ↗</a>
-                <a href="/llms-full.txt" class="text-naraGreen hover:underline no-underline">llms-full.txt ↗</a>
-                <a href="https://github.com/NARAProtocol/nara_protocol" target="_blank" rel="noopener noreferrer" class="text-white/70 hover:text-white no-underline">GitHub Docs ↗</a>
-                <a href="https://github.com/NARAProtocol/nara_protocol/blob/main/verification/README.md" target="_blank" rel="noopener noreferrer" class="text-white/70 hover:text-white no-underline">Audit &amp; Verification ↗</a>
-                <a href="https://github.com/NARAProtocol/nara_protocol/blob/main/docs/NARA_INVESTOR_QNA.md" target="_blank" rel="noopener noreferrer" class="text-white/70 hover:text-white no-underline">Investor Q&amp;A ↗</a>
-                <a href="https://cryptoslip.eth.limo" target="_blank" rel="noopener noreferrer" class="text-white/70 hover:text-white no-underline">CryptoSLIP ENS ↗</a>
+                <a href="/llms.txt" class="text-naraGreen hover:underline no-underline">llms.txt <span aria-hidden="true">↗</span></a>
+                <a href="/llms-full.txt" class="text-naraGreen hover:underline no-underline">llms-full.txt <span aria-hidden="true">↗</span></a>
+                <a href="/ai-facts.json" class="text-naraGreen hover:underline no-underline">ai-facts.json <span aria-hidden="true">↗</span></a>
+                <a href="https://github.com/NARAProtocol/nara_protocol" target="_blank" rel="noopener noreferrer" class="text-white/70 hover:text-white no-underline">GitHub Docs <span aria-hidden="true">↗</span></a>
+                <a href="https://github.com/NARAProtocol/nara_protocol/blob/main/verification/README.md" target="_blank" rel="noopener noreferrer" class="text-white/70 hover:text-white no-underline">Verification Evidence <span aria-hidden="true">↗</span></a>
+                <a href="https://github.com/NARAProtocol/nara_protocol/blob/main/docs/NARA_INVESTOR_QNA.md" target="_blank" rel="noopener noreferrer" class="text-white/70 hover:text-white no-underline">Investor Q&amp;A <span aria-hidden="true">↗</span></a>
+                <a href="https://slip.naraprotocol.io" target="_blank" rel="noopener noreferrer" class="text-naraGreen hover:underline no-underline">CryptoSLIP App <span aria-hidden="true">↗</span></a>
+                <a href="https://cryptoslip.eth.limo" target="_blank" rel="noopener noreferrer" class="text-white/70 hover:text-white no-underline">CryptoSLIP ENS <span aria-hidden="true">↗</span></a>
               </div>
             </div>
 
@@ -954,7 +1220,7 @@
             <span>TG</span>
           </a>
 
-          <span class="text-white/10 select-none">/</span>
+          <span class="text-white/10 select-none" aria-hidden="true">/</span>
 
           <a 
             href="https://x.com/NARA_protocol" 
@@ -970,7 +1236,7 @@
             <span>X</span>
           </a>
 
-          <span class="text-white/10 select-none">/</span>
+          <span class="text-white/10 select-none" aria-hidden="true">/</span>
 
           <a 
             href="https://warpcast.com/naraprotocol" 
@@ -987,7 +1253,7 @@
             <span class="sm:hidden">CAST</span>
           </a>
 
-          <span class="text-white/10 select-none">/</span>
+          <span class="text-white/10 select-none" aria-hidden="true">/</span>
 
           <a 
             href="https://dexscreener.com/base/0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f" 
@@ -1003,7 +1269,7 @@
             <span>CHART</span>
           </a>
 
-          <span class="text-white/10 select-none">/</span>
+          <span class="text-white/10 select-none" aria-hidden="true">/</span>
 
           <a 
             href="https://basescan.org/token/0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f" 
@@ -1017,7 +1283,7 @@
             <span>SCAN</span>
           </a>
 
-          <span class="text-white/10 select-none">/</span>
+          <span class="text-white/10 select-none" aria-hidden="true">/</span>
 
           <a 
             href="https://github.com/NARAProtocol/nara_protocol" 
@@ -1034,11 +1300,20 @@
 
       </div>
 
-      <!-- Micro Rights Bar -->
-      <div class="px-4 py-2 border-t border-white/[0.06] bg-[#0A0C10] flex flex-wrap items-center justify-between gap-2 text-[9px] text-white/35 tracking-[0.2em] uppercase">
-        <span class="w-full normal-case tracking-normal text-white/45">Game page for entertainment. Nothing here is financial advice. Digital assets can lose value. Verify the token address before any swap.</span>
-        <span>© 2026 NARA PROTOCOL. ALL RIGHTS RESERVED.</span>
-        <span class="hidden sm:inline">TOKEN: 0x91FB…Ae0f // BASE MAINNET</span>
+      <!-- Micro Rights & Legal Compliance Bar -->
+      <div class="px-4 py-3 border-t border-white/[0.08] bg-[#0A0C10] flex flex-col gap-2 text-[11px] sm:text-xs text-white/70 font-mono">
+        <p class="w-full normal-case tracking-normal text-white/70 leading-relaxed m-0 font-sans">
+          Non-custodial decentralized software interface on Base (Chain ID 8453). The interactive sewer terminal is for entertainment only (sticker cards are local browser collectibles). Nothing on this site constitutes financial advice, investment, legal, or tax advice, nor an offer, solicitation, or recommendation of any security or financial instrument. Protocol distributions depend strictly on smart-contract rules and actual on-chain activity, are never promised or guaranteed, and can be zero. Digital assets are volatile and can lose value; always verify canonical token address <code class="text-white/90 font-mono">0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f</code> before any transaction.
+        </p>
+        <div class="flex flex-wrap items-center justify-between gap-2 text-[10px] sm:text-[11px] text-white/65 tracking-[0.14em] uppercase pt-1 border-t border-white/[0.06]">
+          <span>&copy; 2026 NARA PROTOCOL&trade; &amp; CRYPTOSLIP&trade;. ALL RIGHTS RESERVED.</span>
+          <div class="flex flex-wrap items-center gap-3 tracking-wider">
+            <a href="https://github.com/NARAProtocol/nara_protocol/blob/main/docs/CRYPTOSLIP_PUBLIC_OVERVIEW_AND_LEGAL_FAQ.md" target="_blank" rel="noopener noreferrer" class="text-white/80 hover:text-naraGreen no-underline">PUBLIC OVERVIEW &amp; FAQ <span aria-hidden="true">↗</span></a>
+            <a href="https://github.com/NARAProtocol/nara_protocol/blob/main/docs/Risk_Assessment.md" target="_blank" rel="noopener noreferrer" class="text-white/80 hover:text-naraGreen no-underline">RISK DISCLOSURE <span aria-hidden="true">↗</span></a>
+            <a href="https://github.com/NARAProtocol/nara_protocol/blob/main/SECURITY.md" target="_blank" rel="noopener noreferrer" class="text-white/80 hover:text-naraGreen no-underline">SECURITY POLICY <span aria-hidden="true">↗</span></a>
+            <span class="hidden sm:inline text-white/65">CA: 0x91FB…Ae0f // BASE 8453</span>
+          </div>
+        </div>
       </div>
 
     </div>
@@ -1201,7 +1476,7 @@
       <div class="w-full bg-black/60 border border-white/10 p-2.5 mb-4 text-left font-mono">
         <div class="flex items-center justify-between text-[9px] text-white/40 mb-1">
           <span>TOKEN CONTRACT (BASE 8453)</span>
-          <a href="https://basescan.org/token/0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f" target="_blank" rel="noopener noreferrer" class="text-naraGreen hover:underline no-underline">BASESCAN ↗</a>
+          <a href="https://basescan.org/token/0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f" target="_blank" rel="noopener noreferrer" class="text-naraGreen hover:underline no-underline">BASESCAN <span aria-hidden="true">↗</span></a>
         </div>
         <div class="text-[10px] text-white font-mono break-all selection:bg-emerald-500/40 select-text">
           0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f
@@ -1264,11 +1539,11 @@
     role="dialog"
     aria-modal="true"
     aria-labelledby="victoryModalHeading"
-    class="hidden fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 bg-black/90 backdrop-blur-md"
+    class="hidden fixed inset-0 z-[60] flex items-center justify-center p-2.5 sm:p-4 bg-black/90 backdrop-blur-md overflow-y-auto"
     data-on-click="closeVictoryModalBackdrop"
   >
     <div 
-      class="relative w-full max-w-[340px] sm:max-w-md bg-[#0D0F14] border border-amber-400/60 specular-top shadow-[0_20px_80px_rgba(255,215,0,0.3)] p-4 sm:p-6 flex flex-col items-center text-center font-mono select-none"
+      class="relative w-full max-w-[360px] sm:max-w-md max-h-[92dvh] bg-[#0D0F14] border border-amber-400/60 specular-top shadow-[0_20px_80px_rgba(255,215,0,0.3)] p-4 sm:p-5 flex flex-col items-center text-center font-mono select-none overflow-y-auto overscroll-contain my-auto"
       data-on-click="stopPropagation"
     >
       <!-- Corner Reticles -->
@@ -1318,36 +1593,107 @@
         </div>
       </div>
 
-      <!-- Handle Input & Fame Board Submission -->
-      <div class="w-full mb-3 text-left">
-        <div id="victoryTurnstile" class="hidden w-full flex justify-center mb-2"></div>
-        <label for="victoryHandleInput" class="block text-[9px] sm:text-[10px] text-white/70 font-mono uppercase mb-1">
-          OPERATOR HANDLE FOR THE FAME BOARD (SELF-REPORTED):
-        </label>
+      <!-- Handle Input, Platform, Optional Reward Route & Fame Board Submission -->
+      <div class="w-full mb-3 text-left space-y-2">
+        <div id="victoryTurnstile" class="hidden w-full flex justify-center mb-1"></div>
+
+        <div class="flex items-center justify-between gap-2">
+          <label for="victoryHandleInput" class="block text-[9px] sm:text-[10px] text-white/70 font-mono uppercase">
+            OPERATOR HANDLE FOR THE FAME BOARD (SELF-REPORTED):
+          </label>
+          <div class="flex items-center gap-1 shrink-0" role="group" aria-label="Handle platform">
+            <button id="victoryPlatBtn-x" type="button" data-on-click="setVictoryPlatform:x" aria-pressed="true" class="px-2 py-0.5 min-h-[26px] bg-white text-black text-[9px] font-bold uppercase cursor-pointer">X</button>
+            <button id="victoryPlatBtn-tg" type="button" data-on-click="setVictoryPlatform:tg" aria-pressed="false" class="px-2 py-0.5 min-h-[26px] bg-white/[0.06] border border-white/15 text-white/70 text-[9px] font-bold uppercase cursor-pointer">TG</button>
+            <button id="victoryPlatBtn-fc" type="button" data-on-click="setVictoryPlatform:fc" aria-pressed="false" class="px-2 py-0.5 min-h-[26px] bg-white/[0.06] border border-white/15 text-white/70 text-[9px] font-bold uppercase cursor-pointer">FC</button>
+          </div>
+        </div>
+
         <div class="flex items-center gap-1.5">
           <input 
             id="victoryHandleInput" 
             type="text" 
             maxlength="20" 
             placeholder="@anon_operator"
-            autocomplete="username"
+            name="operatorHandle"
+            autocomplete="nickname"
             autocapitalize="none"
             autocorrect="off"
             spellcheck="false"
             data-on-keydown="submitOnEnter"
-            class="flex-1 px-3 py-2 min-h-[44px] bg-black/80 border border-white/20 text-white font-mono text-[11px] focus:border-amber-400 outline-none placeholder:text-white/30"
+            class="flex-1 min-w-0 px-3 py-2 min-h-[44px] bg-black/80 border border-white/20 text-white font-mono text-[11px] focus:border-amber-400 outline-none placeholder:text-white/30"
           />
           <button 
             id="victorySubmitBtn"
             data-on-click="submitVictoryToFameBoard"
-            class="px-4 py-2 min-h-[44px] bg-amber-500 hover:bg-amber-400 active:bg-amber-300 text-black font-bold text-[10px] sm:text-[11px] font-mono uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap shadow-[0_0_12px_rgba(245,158,11,0.3)] focus-visible:ring-1 focus-visible:ring-white outline-none select-none flex items-center justify-center"
-            title="Submit record to All-Time Fame Board"
+            class="px-3.5 py-2 min-h-[44px] bg-amber-500 hover:bg-amber-400 active:bg-amber-300 text-black font-bold text-[10px] sm:text-[11px] font-mono uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap shadow-[0_0_12px_rgba(245,158,11,0.3)] focus-visible:ring-1 focus-visible:ring-white outline-none select-none flex items-center justify-center"
+            title="Submit record & generate your Award Claim Pass"
             aria-label="Submit score"
           >
             <span id="victorySubmitBtnText">SUBMIT SCORE</span>
           </button>
         </div>
+
+        <!-- Optional Award Wallet & Post Link for Community Rewards -->
+        <details id="victoryAwardDetails" class="bg-black/50 border border-white/10 p-2 text-[9px]">
+          <summary class="cursor-pointer text-amber-300 hover:text-white font-bold uppercase tracking-wider select-none">
+            🏆 AWARD PAYOUT ROUTE &amp; POST LINK (OPTIONAL)
+          </summary>
+          <div class="mt-2 space-y-1.5">
+            <div class="flex items-center gap-1">
+              <input
+                id="victoryWalletInput"
+                type="text"
+                maxlength="42"
+                placeholder="0x… Base 0x wallet for awards (masked publicly)"
+                autocomplete="off"
+                spellcheck="false"
+                data-on-keydown="submitOnEnter"
+                class="flex-1 min-w-0 px-2.5 py-1.5 min-h-[36px] bg-black/80 border border-white/15 text-white font-mono text-[10px] focus:border-naraGreen outline-none placeholder:text-white/30"
+              />
+              <button
+                id="victoryFillWalletBtn"
+                type="button"
+                data-on-click="fillVictoryConnectedWallet"
+                class="px-2.5 py-1.5 min-h-[36px] bg-white/[0.06] hover:bg-naraGreen/20 border border-white/15 text-naraGreen font-bold text-[9px] uppercase cursor-pointer whitespace-nowrap"
+                title="Use connected Base wallet address"
+              >
+                USE WALLET
+              </button>
+            </div>
+            <input
+              id="victoryPostUrlInput"
+              type="url"
+              maxlength="180"
+              placeholder="https://x.com/you/status/… or warpcast.com/…"
+              autocomplete="off"
+              spellcheck="false"
+              data-on-keydown="submitOnEnter"
+              class="w-full px-2.5 py-1.5 min-h-[36px] bg-black/80 border border-white/15 text-white font-mono text-[10px] focus:border-amber-400 outline-none placeholder:text-white/30"
+            />
+            <div class="text-[8px] text-white/45 font-sans">
+              Your Base address is stored masked on the public board (team sees full payout list) or leave blank to claim via CryptoSLIP DM with your Claim Code.
+            </div>
+          </div>
+        </details>
+
         <div id="victorySubmitNotice" role="status" aria-live="polite" aria-atomic="true" class="hidden text-[8px] text-white/60 font-mono mt-1"></div>
+
+        <!-- Award Claim Pass Box (Populated after submit) -->
+        <div id="victoryClaimPassBox" class="hidden p-2.5 bg-emerald-500/10 border border-naraGreen/60 space-y-1.5">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[9px] font-bold text-naraGreen uppercase tracking-wider">🎟️ AWARD CLAIM PASS</span>
+            <span id="victoryClaimCodeValue" class="text-[11px] font-extrabold text-amber-300 font-mono select-all">NARA-0000-0000</span>
+          </div>
+          <div id="victoryClaimMeta" class="text-[9px] text-white/75 font-mono truncate"></div>
+          <button
+            id="victoryCopyPassBtn"
+            type="button"
+            data-on-click="copyAwardClaimPass"
+            class="w-full min-h-[36px] py-1.5 bg-naraGreen/20 hover:bg-naraGreen/30 border border-naraGreen/50 text-naraGreen font-bold text-[9px] uppercase tracking-wider cursor-pointer"
+          >
+            <span id="victoryCopyPassLabel">📋 COPY AWARD CLAIM PASS</span>
+          </button>
+        </div>
       </div>
 
       <!-- Action Buttons -->
@@ -1383,6 +1729,332 @@
         </button>
       </div>
 
+    </div>
+  </div>
+
+  <!-- 1-CLICK BUY / SELL $NARA MODAL (UNISWAP V4 HOOK ON BASE 8453) -->
+  <div
+    id="buyNaraModal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="buyModalHeading"
+    class="hidden fixed inset-0 z-[65] flex items-center justify-center p-2.5 sm:p-4 bg-black/90 backdrop-blur-md overflow-y-auto"
+    data-on-click="closeBuyModalBackdrop"
+  >
+    <div
+      class="relative w-full max-w-[360px] sm:max-w-[400px] max-h-[94dvh] bg-[#0D0F14] border border-naraGreen/50 specular-top shadow-[0_24px_80px_rgba(0,0,0,0.95)] p-4 flex flex-col gap-2.5 font-mono overflow-y-auto overscroll-contain my-auto"
+      data-on-click="stopPropagation"
+    >
+      <!-- Corner Reticles -->
+      <div class="absolute top-2 left-2 w-2 h-2 border-t border-l border-naraGreen pointer-events-none"></div>
+      <div class="absolute top-2 right-2 w-2 h-2 border-t border-r border-naraGreen pointer-events-none"></div>
+      <div class="absolute bottom-2 left-2 w-2 h-2 border-b border-l border-naraGreen pointer-events-none"></div>
+      <div class="absolute bottom-2 right-2 w-2 h-2 border-b border-r border-naraGreen pointer-events-none"></div>
+
+      <!-- Compact Modal Header -->
+      <div class="flex items-center justify-between gap-2 pr-11">
+        <div class="min-w-0">
+          <h3 id="buyModalHeading" class="text-sm sm:text-base font-extrabold text-white uppercase tracking-wide m-0">
+            BUY $NARA
+          </h3>
+          <div class="flex flex-wrap items-center gap-1.5 mt-0.5 text-[10px]">
+            <span class="w-1.5 h-1.5 rounded-full bg-naraGreen animate-pulse shrink-0"></span>
+            <span id="buyModalSpotBadge" class="font-bold text-naraGreen truncate">BASE 8453</span>
+            <span class="text-white/30">·</span>
+            <span id="buyModalCircBadge" class="text-white/55 truncate">1M CAP</span>
+          </div>
+        </div>
+        <button
+          type="button"
+          data-on-click="closeBuyModal"
+          class="absolute top-2.5 right-2.5 w-10 h-10 min-w-[44px] min-h-[44px] flex items-center justify-center text-white/60 hover:text-white bg-white/[0.05] hover:bg-white/[0.12] border border-white/10 cursor-pointer text-sm transition-all focus-visible:ring-1 focus-visible:ring-naraGreen outline-none"
+          title="Close (Esc)"
+          aria-label="Close Buy NARA modal"
+        >
+          ✕
+        </button>
+      </div>
+
+      <!-- Buy / Sell Mode Tabs -->
+      <div class="grid grid-cols-2 gap-1 bg-[#060709] p-1 border border-white/10">
+        <button
+          id="buyTabBuyBtn"
+          type="button"
+          data-on-click="setBuyModalDirection:buy"
+          class="flex-1 min-h-[38px] py-1.5 bg-naraGreen text-black font-mono font-extrabold text-[11px] uppercase tracking-wider cursor-pointer transition-all"
+        >
+          ⚡ BUY
+        </button>
+        <button
+          id="buyTabSellBtn"
+          type="button"
+          data-on-click="setBuyModalDirection:sell"
+          class="flex-1 min-h-[38px] py-1.5 bg-white/[0.03] hover:bg-white/[0.08] text-white/65 hover:text-white font-mono font-bold text-[11px] uppercase tracking-wider cursor-pointer transition-all"
+        >
+          SELL
+        </button>
+      </div>
+
+      <!-- Slim Wallet Status Bar (Shown only when connected, picking multi-wallet, or no extension on click) -->
+      <div id="buyWalletBox" class="hidden px-2.5 py-2 bg-[#07090D] border border-white/10 space-y-1.5">
+        <div id="buyWalletConnectedRow" class="hidden space-y-0.5">
+          <div class="flex items-center justify-between gap-2">
+            <span id="buyWalletAddrText" class="text-[10px] font-bold text-naraGreen truncate">Wallet Connected</span>
+            <button
+              type="button"
+              data-on-click="disconnectBuyWallet"
+              class="px-2 py-0.5 bg-white/[0.05] hover:bg-white/[0.12] border border-white/15 text-[9px] text-white/70 hover:text-white uppercase cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+          <div id="buyWalletBalText" class="text-[9px] text-white/60 truncate">
+            Reading Base balances…
+          </div>
+        </div>
+
+        <!-- Multi-Wallet EIP-6963 Picker -->
+        <div id="buyWalletPicker" class="hidden space-y-1">
+          <div class="text-[9px] text-white/55 uppercase">Select Wallet:</div>
+          <div id="buyWalletPickerList" class="space-y-1"></div>
+        </div>
+
+        <!-- Compact Mobile / No-Extension Row -->
+        <div id="buyNoWalletLinks" class="hidden space-y-1">
+          <div class="text-[9px] text-white/55 font-sans">Open directly in wallet app:</div>
+          <div class="grid grid-cols-3 gap-1">
+            <a
+              id="buyOpenMetaMaskMobile"
+              href="https://metamask.app.link/dapp/naraprotocol.io/?buy=1"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="min-h-[34px] px-1.5 py-1 bg-white/[0.05] hover:bg-white/[0.12] border border-white/15 text-[9px] font-bold text-white flex items-center justify-center text-center no-underline"
+            >
+              🦊 MetaMask
+            </a>
+            <a
+              id="buyOpenCoinbaseMobile"
+              href="https://go.cb-w.com/dapp?cb_url=https%3A%2F%2Fnaraprotocol.io%2F%3Fbuy%3D1"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="min-h-[34px] px-1.5 py-1 bg-white/[0.05] hover:bg-white/[0.12] border border-white/15 text-[9px] font-bold text-white flex items-center justify-center text-center no-underline"
+            >
+              🔵 Coinbase
+            </a>
+            <a
+              id="buyOpenCryptoSlipApp"
+              href="https://slip.naraprotocol.io/?tab=nara&action=buy"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="min-h-[34px] px-1.5 py-1 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-[9px] font-bold text-emerald-300 flex items-center justify-center text-center no-underline"
+            >
+              ⚡ CryptoSLIP
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pay Input & Asset Toggle -->
+      <div class="p-2.5 bg-[#060709] border border-white/15 focus-within:border-naraGreen space-y-2">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-[9px] text-white/50 uppercase">YOU PAY</span>
+          <div id="buyAssetSelectorRow" class="flex items-center gap-1">
+            <button
+              id="buyModalAssetEthBtn"
+              type="button"
+              data-on-click="setBuyModalAsset:ETH"
+              class="min-h-[28px] px-2.5 py-0.5 bg-emerald-500/20 border border-naraGreen text-naraGreen text-[10px] font-mono font-bold uppercase cursor-pointer transition-all"
+            >
+              ETH
+            </button>
+            <button
+              id="buyModalAssetUsdcBtn"
+              type="button"
+              data-on-click="setBuyModalAsset:USDC"
+              class="min-h-[28px] px-2.5 py-0.5 bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 text-white/65 hover:text-white text-[10px] font-mono font-bold uppercase cursor-pointer transition-all"
+            >
+              USDC
+            </button>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <input
+            id="buyModalAmountInput"
+            type="text"
+            inputmode="decimal"
+            autocomplete="off"
+            spellcheck="false"
+            value="0.01"
+            aria-label="Amount to swap"
+            data-on-input="handleBuyModalAmountInput"
+            class="w-full min-w-0 bg-transparent text-white font-mono font-extrabold text-xl outline-none"
+          />
+          <button
+            type="button"
+            data-on-click="setBuyModalMax"
+            class="min-h-[28px] px-2 py-0.5 bg-white/[0.06] hover:bg-white/[0.14] border border-white/15 text-[9px] text-naraGreen font-bold cursor-pointer shrink-0"
+          >
+            MAX
+          </button>
+          <span id="buyModalPayUnit" class="px-2 py-0.5 bg-white/[0.08] border border-white/15 text-[10px] font-bold text-white shrink-0">
+            ETH
+          </span>
+        </div>
+
+        <div id="buyModalPresetsWrap" class="grid grid-cols-4 gap-1">
+          <button type="button" data-modal-preset-asset="ETH" data-on-click="setBuyModalPreset:0.005" class="min-h-[30px] py-0.5 bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 text-[10px] text-white/80 cursor-pointer">0.005</button>
+          <button type="button" data-modal-preset-asset="ETH" data-on-click="setBuyModalPreset:0.01" class="min-h-[30px] py-0.5 bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 text-[10px] text-white/80 cursor-pointer">0.01</button>
+          <button type="button" data-modal-preset-asset="ETH" data-on-click="setBuyModalPreset:0.05" class="min-h-[30px] py-0.5 bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 text-[10px] text-white/80 cursor-pointer">0.05</button>
+          <button type="button" data-modal-preset-asset="ETH" data-on-click="setBuyModalPreset:0.1" class="min-h-[30px] py-0.5 bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 text-[10px] text-white/80 cursor-pointer">0.10</button>
+
+          <button type="button" data-modal-preset-asset="USDC" data-on-click="setBuyModalPreset:25" class="hidden min-h-[30px] py-0.5 bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 text-[10px] text-white/80 cursor-pointer">$25</button>
+          <button type="button" data-modal-preset-asset="USDC" data-on-click="setBuyModalPreset:100" class="hidden min-h-[30px] py-0.5 bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 text-[10px] text-white/80 cursor-pointer">$100</button>
+          <button type="button" data-modal-preset-asset="USDC" data-on-click="setBuyModalPreset:250" class="hidden min-h-[30px] py-0.5 bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 text-[10px] text-white/80 cursor-pointer">$250</button>
+          <button type="button" data-modal-preset-asset="USDC" data-on-click="setBuyModalPreset:500" class="hidden min-h-[30px] py-0.5 bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 text-[10px] text-white/80 cursor-pointer">$500</button>
+
+          <button type="button" data-modal-preset-asset="NARA" data-on-click="setBuyModalPreset:0.01" class="hidden min-h-[30px] py-0.5 bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 text-[10px] text-white/80 cursor-pointer">0.01</button>
+          <button type="button" data-modal-preset-asset="NARA" data-on-click="setBuyModalPreset:0.05" class="hidden min-h-[30px] py-0.5 bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 text-[10px] text-white/80 cursor-pointer">0.05</button>
+          <button type="button" data-modal-preset-asset="NARA" data-on-click="setBuyModalPreset:0.25" class="hidden min-h-[30px] py-0.5 bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 text-[10px] text-white/80 cursor-pointer">0.25</button>
+          <button type="button" data-modal-preset-asset="NARA" data-on-click="setBuyModalPreset:1" class="hidden min-h-[30px] py-0.5 bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 text-[10px] text-white/80 cursor-pointer">1.00</button>
+        </div>
+      </div>
+
+      <!-- Clean Output Box -->
+      <div class="p-2.5 bg-[#060709] border border-emerald-500/30 space-y-1.5">
+        <div class="flex items-center justify-between">
+          <span class="text-[9px] text-white/50 uppercase">YOU GET</span>
+          <button
+            type="button"
+            data-on-click="refreshBuyQuote"
+            class="text-[9px] text-naraGreen hover:underline cursor-pointer uppercase"
+          >
+            ↻ QUOTE
+          </button>
+        </div>
+        <div class="flex items-baseline justify-between gap-2">
+          <span id="buyModalOutValue" class="text-2xl font-extrabold text-naraGreen truncate">—</span>
+          <span id="buyModalOutUnit" class="text-xs font-bold text-white/85 shrink-0">$NARA</span>
+        </div>
+
+        <div class="pt-1.5 border-t border-white/[0.08] space-y-1 text-[9px] text-white/60">
+          <div class="flex items-center justify-between gap-2">
+            <span class="shrink-0">Min received:</span>
+            <span id="buyModalMinOut" class="text-white font-bold text-right truncate">—</span>
+          </div>
+          <div id="buyModalSurgeHint" class="hidden flex items-center justify-between gap-2 px-2 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[9px]">
+            <span id="buyModalSurgeText" class="truncate">Surge hook fee active</span>
+            <button
+              type="button"
+              data-on-click="applyLowFeeSwapSize"
+              class="px-1.5 py-0.5 bg-amber-400 text-black font-bold text-[8px] uppercase cursor-pointer shrink-0"
+              title="Set trade size to base 4.63% hook fee clip"
+            >
+              LOW-FEE CLIP
+            </button>
+          </div>
+          <div class="flex items-center justify-between gap-2">
+            <span class="shrink-0">Slippage:</span>
+            <div class="flex items-center gap-1">
+              <button id="buySlipBtn-200" type="button" data-on-click="setBuyModalSlippage:200" class="px-2 py-0.5 min-h-[28px] bg-white/[0.03] border border-white/10 text-white/60 text-[10px] cursor-pointer">2%</button>
+              <button id="buySlipBtn-500" type="button" data-on-click="setBuyModalSlippage:500" class="px-2 py-0.5 min-h-[28px] bg-emerald-500/20 border border-naraGreen text-naraGreen text-[10px] font-bold cursor-pointer">5%</button>
+              <button id="buySlipBtn-1000" type="button" data-on-click="setBuyModalSlippage:1000" class="px-2 py-0.5 min-h-[28px] bg-white/[0.03] border border-white/10 text-white/60 text-[10px] cursor-pointer">10%</button>
+              <button id="buySlipBtn-2000" type="button" data-on-click="setBuyModalSlippage:2000" class="px-2 py-0.5 min-h-[28px] bg-white/[0.03] border border-white/10 text-white/60 text-[10px] cursor-pointer">20%</button>
+            </div>
+          </div>
+
+          <!-- Optional Expandable Route & Fee Details (keeps default UI uncluttered) -->
+          <details class="pt-0.5 text-white/50">
+            <summary class="cursor-pointer select-none hover:text-white/80 text-[9px]">
+              Route &amp; fees (Uniswap v4 Hook)
+            </summary>
+            <div class="mt-1.5 pt-1.5 border-t border-white/[0.06] space-y-1 text-[8px] sm:text-[9px]">
+              <div class="flex items-center justify-between gap-2">
+                <span>Fee:</span>
+                <span id="buyModalHookFee" class="text-emerald-300 text-right">4.63% V5 Hook + 0.30% LP</span>
+              </div>
+              <div id="buyModalRouteText" class="text-white/50 truncate">
+                1-Click Atomic · ETH → USDC → NARA V5 Hook
+              </div>
+              <div class="text-white/45 font-sans leading-snug">
+                Non-custodial Universal Router (<code class="text-white/70">0x6fF5…b43</code>) → <code class="text-white/70">NARALiquidityHookV5</code> (<code class="text-white/70">0x07d8…6aCC</code>). Settles 100% into your wallet.
+              </div>
+            </div>
+          </details>
+        </div>
+      </div>
+
+      <!-- Status / Error Notice -->
+      <div id="buyModalStatusBox" role="status" aria-live="polite" class="hidden"></div>
+
+      <!-- Confirmed Swap Receipt -->
+      <div id="buyModalReceiptBox" class="hidden p-2.5 bg-emerald-500/15 border border-naraGreen space-y-2">
+        <div class="text-[10px] font-extrabold text-naraGreen uppercase">✓ SWAP CONFIRMED ON BASE</div>
+        <div id="buyModalReceiptSummary" class="text-[10px] text-white font-sans"></div>
+        <div class="grid grid-cols-2 gap-1.5">
+          <a
+            id="buyModalReceiptLink"
+            href="https://basescan.org/token/0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="min-h-[36px] px-2 py-1 bg-black/60 hover:bg-black border border-white/20 text-[9px] font-bold text-white flex items-center justify-center no-underline"
+          >
+            BASESCAN TX ↗
+          </a>
+          <button
+            id="buyReceiptWatchBtn"
+            type="button"
+            data-on-click="addNaraToMetaMask"
+            class="min-h-[36px] px-2 py-1 bg-black/60 hover:bg-black border border-white/20 text-[9px] font-bold text-naraGreen cursor-pointer"
+          >
+            + SHOW $NARA IN WALLET
+          </button>
+        </div>
+        <a
+          id="buyModalCommitLink"
+          href="https://slip.naraprotocol.io/?tab=nara"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="w-full min-h-[38px] px-3 py-1.5 bg-naraGreen text-black font-bold text-[10px] uppercase flex items-center justify-center no-underline"
+        >
+          COMMIT 1+ NARA FOR 900s REWARDS ↗
+        </a>
+      </div>
+
+      <!-- Primary Execute Button -->
+      <button
+        id="buyModalSubmitBtn"
+        type="button"
+        data-on-click="executeBuyModalSwap"
+        class="w-full min-h-[48px] py-3 bg-naraGreen hover:bg-[#52ff33] active:bg-emerald-400 text-black font-mono font-extrabold text-xs uppercase tracking-wider cursor-pointer shadow-[0_0_24px_rgba(57,255,20,0.35)] transition-all"
+      >
+        <span id="buyModalSubmitLabel">⚡ CONNECT WALLET</span>
+      </button>
+
+      <!-- Minimal Quick Links Row -->
+      <div class="flex items-center justify-between gap-2 pt-0.5 text-[9px] text-white/55">
+        <button
+          type="button"
+          data-on-click="copyBuyModalCA"
+          class="hover:text-naraGreen cursor-pointer uppercase font-bold"
+        >
+          <span id="buyModalCopyCaLabel">📋 COPY CA</span>
+        </button>
+        <div class="flex items-center gap-3">
+          <a
+            href="https://dexscreener.com/base/0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-white/60 hover:text-[#00F0FF] no-underline uppercase font-bold"
+          >CHART ↗</a>
+          <a
+            href="https://slip.naraprotocol.io/?tab=nara&action=buy"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-emerald-300 hover:text-naraGreen no-underline uppercase font-bold"
+          >CRYPTOSLIP ↗</a>
+        </div>
+      </div>
     </div>
   </div>
 
