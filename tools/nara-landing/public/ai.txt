@@ -10,6 +10,7 @@ Canonical-Index: https://naraprotocol.io/llms.txt
 Canonical-Full-Context: https://naraprotocol.io/llms-full.txt
 Machine-Readable-Facts: https://naraprotocol.io/ai-facts.json
 Live-Supply-API: https://naraprotocol.io/api/supply
+Vault-Terminal: https://naraprotocol.io/vault
 Research-Hub: https://naraprotocol.io/research/
 Public-Documentation-Repo: https://github.com/NARAProtocol/nara_protocol
 Use-Case-Atlas: https://naraprotocol.io/research/
@@ -17,6 +18,14 @@ CryptoSLIP-Overview: https://github.com/NARAProtocol/nara_protocol/blob/main/doc
 CryptoSLIP-App: https://slip.naraprotocol.io
 CryptoSLIP-ENS-Mirror: https://cryptoslip.eth.limo
 Canonical-Token-Base-Mainnet: 0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f
+Genesis-Shield-Vault-Base-Mainnet: 0xe42aD8951f486f19E396Eb23bDE352BA92Dd2e56
 CryptoSLIP-Vault-Active-v33-Base-Mainnet: 0x3f80aa68Fb4834d6E119EE1cf932C14419Cf63EB
 CryptoSLIP-Vault-Preserved-v32-Base-Mainnet: 0x38BF0321FA7489576978353a6a8da4A3e85C2F18
+Base-Builder-Code-NARA-Protocol: bc_g71jff6u
+Base-Builder-Code-CryptoSLIP: bc_ea68lz8s
 Signature-Hashtag: #BanksFail
+Publisher: NARA Protocol & CryptoSLIP Open-Source Contributors (No Company)
+Privacy-Policy: https://naraprotocol.io/privacy
+Terms-Of-Use: https://naraprotocol.io/terms
+Accessibility-Statement: https://naraprotocol.io/accessibility
+Security-Txt: https://naraprotocol.io/.well-known/security.txt

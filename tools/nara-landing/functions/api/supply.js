@@ -7,15 +7,19 @@ import {
   jsonResponse,
   methodNotAllowedResponse,
   optionsResponse,
+  withEdgeCache,
 } from "../_shared/supplyCore.js";
 
-export async function onRequestGet({ env }) {
-  try {
-    const snap = await readSupplySnapshot(env);
-    return jsonResponse(buildPublicSupplyReport(snap), 200);
-  } catch {
-    return jsonResponse({ error: "upstream_rpc_unavailable" }, 503);
-  }
+export async function onRequestGet(ctx = {}) {
+  const { env } = ctx;
+  return withEdgeCache(ctx, "https://naraprotocol.io/api/supply", async () => {
+    try {
+      const snap = await readSupplySnapshot(env);
+      return jsonResponse(buildPublicSupplyReport(snap), 200);
+    } catch {
+      return jsonResponse({ error: "upstream_rpc_unavailable" }, 503);
+    }
+  });
 }
 
 export async function onRequestHead(ctx) {

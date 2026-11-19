@@ -1,7 +1,8 @@
 import {
   NARA_CONTRACT, NARA_SYMBOL, NARA_DECIMALS, NARA_IMAGE, BASE_CHAIN_ID_HEX,
-  CANONICAL_URL, CRYPTOSLIP_URL, SWAP_PUBLIC_LAUNCHED, TURNSTILE_SITE_KEY,
+  CANONICAL_URL, resolveCryptoSlipBuyUrl, SWAP_PUBLIC_LAUNCHED, TURNSTILE_SITE_KEY,
 } from "./config.js";
+import { notifyMiniAppHostReady } from "./erc8021.js";
 import {
   initBuyExperience,
   isBuyModalOpen,
@@ -21,10 +22,23 @@ import {
   refreshBuyQuote,
   executeBuyModalSwap,
 } from "./buyModal.js";
+import {
+  initAnchorSeats,
+  refreshAnchorSeats,
+  selectAnchorSeat,
+  setAnchorTierFilter,
+  cancelSeatReview,
+  copySeatLink,
+  toggleAnchorSpecs,
+  toggleCardHelp,
+  buyAnchorSeat,
+  jumpToAnchorSeats,
+  getAnchorShowcaseSummary,
+} from "./anchorSeats.js";
 
 function syncBodyScrollLock() {
   if (typeof document === "undefined") return;
-  const modalIds = ["lootModal", "victoryModal", "swapPrelaunchModal", "buyNaraModal"];
+  const modalIds = ["lootModal", "victoryModal", "swapPrelaunchModal", "buyNaraModal", "anchorCardHelpModal", "anchorSeatReviewDrawer"];
   const anyOpen = modalIds.some((id) => {
     const el = document.getElementById(id);
     return el && !el.classList.contains("hidden");
@@ -42,7 +56,7 @@ function handleSwapButtonClick(e) {
     // The control is a real <a href=CRYPTOSLIP_URL target=_blank rel=noopener> (see initSwapControl);
     // the browser follows it. Non-anchor callers open it safely.
     const isAnchor = !!(e && e.currentTarget && e.currentTarget.tagName === "A");
-    if (!isAnchor) openSafeWindow(CRYPTOSLIP_URL);
+    if (!isAnchor) openSafeWindow(resolveCryptoSlipBuyUrl());
     return;
   }
   if (e && e.preventDefault) e.preventDefault();
@@ -62,7 +76,7 @@ function initSwapControl() {
   const a = document.createElement("a");
   a.id = el.id;
   a.className = `${el.className} no-underline`;
-  a.href = CRYPTOSLIP_URL;
+  a.href = resolveCryptoSlipBuyUrl();
   a.target = "_blank";
   a.rel = "noopener noreferrer";
   a.title = "Swap on CryptoSLIP, the NARA swap app (opens in a new tab)";
@@ -589,8 +603,8 @@ function updateRunDisplayUI() {
   if (pressureEl) {
     pressureEl.innerText = `${dredgePressure}%`;
     pressureEl.className = dredgePressure >= 80
-      ? "px-1.5 py-0.5 bg-naraGreen/20 border border-naraGreen/60 text-naraGreen font-bold tracking-wider"
-      : "px-1.5 py-0.5 bg-amber-500/10 border border-amber-500/30 text-amber-300 font-bold tracking-wider";
+      ? "px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 font-bold"
+      : "px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-400/30 text-amber-300 font-semibold";
   }
   const heroBar = document.getElementById("heroPressureBar");
   if (heroBar) heroBar.style.width = `${dredgePressure}%`;
@@ -610,16 +624,16 @@ function setQuestStepDone(btnId, badgeId, isDone, doneLabel, todoLabel) {
   const btn = document.getElementById(btnId);
   const badge = document.getElementById(badgeId);
   if (btn) {
-    btn.classList.toggle("border-naraGreen/50", isDone);
+    btn.classList.toggle("border-emerald-400/45", isDone);
     btn.classList.toggle("bg-emerald-500/[0.06]", isDone);
-    btn.classList.toggle("border-white/10", !isDone);
-    btn.classList.toggle("bg-[#07090D]", !isDone);
+    btn.classList.toggle("border-white/[0.07]", !isDone);
+    btn.classList.toggle("bg-[#090E18]", !isDone);
   }
   if (badge) {
     badge.innerText = isDone ? doneLabel : todoLabel;
     badge.className = isDone
-      ? "px-1.5 py-0.5 text-[8px] font-bold border border-naraGreen/60 bg-naraGreen/20 text-naraGreen shrink-0"
-      : "px-1.5 py-0.5 text-[8px] font-bold border border-white/15 text-white/50 shrink-0";
+      ? "px-2 py-0.5 rounded-md text-[10px] font-mono font-bold border border-emerald-400/50 bg-emerald-500/15 text-emerald-300 shrink-0"
+      : "px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold border border-white/12 bg-white/[0.03] text-slate-400 shrink-0";
   }
 }
 
@@ -634,14 +648,14 @@ function updateQuestUI() {
   setQuestStepDone("questStep1Btn", "questStep1Badge", s1, "✓ FLUSHED", "START");
   setQuestStepDone("questStep2Btn", "questStep2Badge", s2, "✓ SHARED", "POST");
   setQuestStepDone("questStep3Btn", "questStep3Badge", s3, "✓ 12/12", `${unlockedCount}/12`);
-  setQuestStepDone("questStep4Btn", "questStep4Badge", s4, "✓ LOCKED", s3 ? "CLAIM" : "LOCK");
+  setQuestStepDone("questStep4Btn", "questStep4Badge", s4, "✓ SEALED", s3 ? "CLAIM" : "SEAL");
 
   const pill = document.getElementById("questProgressPill");
   if (pill) {
-    pill.innerText = `${completed} / 4 STEPS`;
+    pill.innerText = `${completed} / 4 Steps`;
     pill.className = completed === 4
-      ? "px-2 py-0.5 bg-naraGreen/20 border border-naraGreen/60 text-naraGreen font-bold uppercase tracking-wider"
-      : "px-2 py-0.5 bg-amber-500/10 border border-amber-500/30 text-amber-300 font-bold uppercase tracking-wider";
+      ? "px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-400/45 text-emerald-300 font-mono font-semibold text-xs"
+      : "px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-400/30 text-amber-300 font-mono font-semibold text-xs";
   }
 
   const claimBadge = document.getElementById("questMyClaimBadge");
@@ -875,6 +889,7 @@ let currentRoll = {
 };
 
 let activeTweetMode = 'flex'; // 'flex' | 'receipt' | 'lore' | 'unhinged' | 'sticker'
+let xNoLinkMaxReach = false;
 let combo = 0;
 let comboTimer = null;
 let previousTierLevel = 1;
@@ -888,18 +903,35 @@ function rollNewDegenMessage(count) {
   return currentRoll;
 }
 
-// --- VIRAL SOCIAL POSTING ENGINE (RFC-3986 STRICT & POPUP-PROOF) ---
-// Share links always point at the canonical origin, or at /s/{id} for sticker card OpenGraph previews.
-function getShareUrl(stickerIdOverride) {
+// --- VIRAL SOCIAL POSTING ENGINE (X + FARCASTER MAX-REACH, RFC-3986 STRICT & POPUP-PROOF) ---
+// Share links point at canonical origin or dedicated /s/{slug} OpenGraph card routes (/s/1..12, /s/vault, /s/win).
+function getShareUrl(slugOverride) {
   const base = CANONICAL_URL.replace(/\/$/, "");
-  if (stickerIdOverride) {
-    return `${base}/s/${stickerIdOverride}`;
+  if (slugOverride) {
+    return `${base}/s/${slugOverride}`;
   }
   if (activeTweetMode === 'sticker') {
     const stickerId = (userStash && userStash.activeStickerId) || 1;
     return `${base}/s/${stickerId}`;
   }
   return CANONICAL_URL;
+}
+
+function buildXIntentUrl(text, shareUrl, omitUrl = false) {
+  if (omitUrl || !shareUrl) {
+    return `https://x.com/intent/post?text=${encodeURIComponent(text)}`;
+  }
+  return `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`;
+}
+
+function buildWarpcastComposeUrl(text, embedUrl) {
+  const targetEmbed = embedUrl || CANONICAL_URL;
+  return `https://farcaster.xyz/~/compose?text=${encodeURIComponent(text)}&embeds[]=${encodeURIComponent(targetEmbed)}`;
+}
+
+function buildSelfReplyPayload(shareUrl) {
+  const url = shareUrl || getShareUrl();
+  return `${url}\n$NARA on Base: ${NARA_CONTRACT}`;
 }
 
 // Computes X (Twitter) weighted character length:
@@ -914,10 +946,10 @@ function getXWeightedLength(text, hasUrl = true) {
 }
 
 const RECEIPT_OUTCOMES = [
-  "WIPED DOWN THE BOWL 🚽",
-  "SIPHONED INTO THE SEWER 🪠",
-  "PURGED BY GREEN CANDLES 🕯️",
-  "FLUSHED ON BASE 8453 ⚡",
+  "Wiped clean down the porcelain bowl 🚽",
+  "Siphoned straight into Base liquidity 🪠",
+  "Flushed by 900s green candles 🕯️",
+  "Settled on Base 8453 ⚡",
 ];
 
 const LORE_WHISPERS = [
@@ -933,40 +965,40 @@ let loreWhisperIdx = 0;
 
 function buildTweetByMode(mode, count, roll) {
   const tier = getOperatorTier(count);
-  const purgeLabel = count > 0 ? `${count} ${count === 1 ? 'BEAR' : 'BEARS'} PURGED` : `READY TO PURGE`;
   const opId = roll.opId;
 
   if (mode === 'receipt') {
     const bears = count > 0 ? count : 1;
     const outcome = RECEIPT_OUTCOMES[receiptOutcomeIdx % RECEIPT_OUTCOMES.length];
-    return `[SEWER LIQUIDATION RECEIPT #${opId}] 🧾🐸\n\nAsset: $NARA on Base (@NARA_protocol)\nTarget: ${bears} ${bears === 1 ? 'Short Seller' : 'Short Sellers'}\nOutcome: ${outcome}\nCipher: #BanksFail\n\nCA: ${NARA_CONTRACT}\n\nDrop your receipt 👇`;
+    return `Liquidation desk log #${opId} on Base:\n\n• Target: ${bears} overleveraged ${bears === 1 ? 'short' : 'shorts'}\n• Outcome: ${outcome}\n• Engine: $NARA 900s pulse (@NARA_protocol)\n\nDrop your run score 👇`;
   }
 
   if (mode === 'lore') {
-    const n = count || 1;
     const whisper = LORE_WHISPERS[loreWhisperIdx % LORE_WHISPERS.length];
-    return `[SEWER TRANSMISSION #${opId} // @NARA_protocol] 🐸📡\n\n"The toad stared into my soul while I flushed ${n} ${n === 1 ? 'time' : 'times'} on $NARA. The pipes whispered: ${whisper}"\n\nCA: ${NARA_CONTRACT}\n\nDrop OP badge 👇 #BanksFail`;
+    return `${roll.hook}\n\n1,000,000 fixed $NARA supply on Base. ~99.5% sealed out of float while 900s pulses pay committed holders.\n\n"${whisper}" — @NARA_protocol`;
   }
 
   if (mode === 'unhinged') {
     const n = count || 69;
-    return `Doctor said to stop checking charts on the toilet.\nSo I purged ${n} ${n === 1 ? 'bear' : 'bears'} down the $NARA bowl on Base (@NARA_protocol).\n\n[OP #${opId} // LVL ${tier.level}: ${tier.rank.toUpperCase()}]\nCA: ${NARA_CONTRACT}\n\n${roll.cta} #BanksFail`;
+    return `Doctor told me to stop checking charts on the toilet.\n\nFlushed ${n} ${n === 1 ? 'bear' : 'bears'} down the $NARA bowl on Base instead (${tier.rank}).\n\n${roll.cta}`;
   }
 
   if (mode === 'sticker') {
-    const hasUnlocked = userStash && userStash.unlocked && Object.keys(userStash.unlocked).length > 0;
-    if (!hasUnlocked) {
-      return `[SEWER STICKER VAULT // @NARA_protocol] 🐸🚽\n\nFlush the $NARA porcelain bowl on Base to dredge all 12 sewer sticker cards. #BanksFail\n\nCA: ${NARA_CONTRACT}\n\nStart dredging 👇`;
+    const unlockedCount = userStash && userStash.unlocked ? Object.keys(userStash.unlocked).length : 0;
+    if (unlockedCount === 0) {
+      return `12 rare $NARA sewer cards hiding in the porcelain vault on Base (@NARA_protocol).\n\nFewest clicks to 12/12 takes the Fame Board. Try a run 👇`;
     }
     const stickerId = userStash.activeStickerId || 1;
     const sticker = STICKER_COLLECTION.find(s => s.id === stickerId) || STICKER_COLLECTION[0];
     const serial = (userStash.unlocked[sticker.id] && userStash.unlocked[sticker.id].serial) || roll.opId;
-    const bears = count > 0 ? count : 1;
-    return `[SEWER STICKER DROP #${serial}] 🐸🚽\n\nItem: ${sticker.deco} ${sticker.name}\nRarity: ${sticker.rarity} [${sticker.perk}]\nOperator: ${tier.rank.toUpperCase()} // ${bears} Flushed\n\n$NARA (@NARA_protocol) #BanksFail\nCA: ${NARA_CONTRACT}\n\nDredge yours 👇`;
+    return `Pulled ${sticker.deco} ${sticker.name} (${sticker.rarity} · #${String(serial).padStart(4, "0")}) from the $NARA vault on Base.\n\n"${sticker.quote}"\n\n${unlockedCount}/12 dredged — see what you pull 👇`;
   }
 
   // Default: 'flex'
-  return `[OP #${opId} // LVL ${tier.level}: ${tier.rank.toUpperCase()} // ${purgeLabel}] 🐸🚽\n\n"${roll.hook}"\n\n${roll.cta} #BanksFail\n\n$NARA (@NARA_protocol): ${NARA_CONTRACT}`;
+  if (count > 0) {
+    return `${roll.hook}\n\nLogged ${count} ${count === 1 ? 'purge' : 'purges'} in the $NARA terminal on Base (${tier.rank} · @NARA_protocol).\n\n${roll.cta}`;
+  }
+  return `${roll.hook}\n\nStepping into the $NARA porcelain terminal on Base (@NARA_protocol).\n\n${roll.cta}`;
 }
 
 function setTweetMode(mode) {
@@ -979,10 +1011,10 @@ function setTweetMode(mode) {
     if (btn) {
       btn.setAttribute("aria-pressed", m === mode ? "true" : "false");
       if (m === mode) {
-        btn.className = "px-3 sm:px-3.5 py-2 min-h-[44px] text-[10px] font-bold font-mono uppercase tracking-wider bg-white text-black border border-white transition-all cursor-pointer flex items-center gap-1.5 focus-visible:ring-1 focus-visible:ring-naraGreen outline-none";
+        btn.className = "px-3.5 py-2 min-h-[40px] rounded-lg text-xs font-semibold font-sans bg-white text-slate-950 border border-white transition-colors cursor-pointer flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-naraGreen outline-none";
       } else {
-        const extraColor = m === 'sticker' ? 'text-amber-300 hover:text-white border-amber-500/30' : 'text-white/70 hover:text-white border-white/10';
-        btn.className = `px-3 sm:px-3.5 py-2 min-h-[44px] text-[10px] font-bold font-mono uppercase tracking-wider bg-white/[0.04] ${extraColor} hover:border-white/20 transition-all cursor-pointer flex items-center gap-1.5 focus-visible:ring-1 focus-visible:ring-white outline-none`;
+        const extraColor = m === 'sticker' ? 'text-amber-300 hover:text-white border-amber-400/30' : 'text-slate-300 hover:text-white border-white/10';
+        btn.className = `px-3.5 py-2 min-h-[40px] rounded-lg text-xs font-medium font-sans bg-white/[0.04] hover:bg-white/[0.08] ${extraColor} border transition-colors cursor-pointer flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-white outline-none`;
       }
     }
   });
@@ -1041,11 +1073,27 @@ function updateForgeUI() {
     xpTitle.innerText = tier.nextTier ? `XP TO LVL ${tier.nextTier.level} (${tier.nextTier.minFlushes - flushCount} LEFT)` : `MAX DEITY TIER REACHED`;
   }
 
-  // 2. Terminal Preview update (using true X-weighted length incl. 24-char t.co URL)
+  // 2. Terminal Preview update (using true X-weighted length)
   const preview = document.getElementById("tweetPreviewDisplay");
+  const replyPreview = document.getElementById("replyPreviewDisplay");
+  const reachModeBtn = document.getElementById("toggleXReachModeBtn");
+  const reachModeLabel = document.getElementById("xReachModeLabel");
   const charCountLabel = document.getElementById("charCountLabel");
-  const xWeightedLen = getXWeightedLength(text, true);
+  const hasUrlInX = !xNoLinkMaxReach;
+  const xWeightedLen = getXWeightedLength(text, hasUrlInX);
   if (preview) preview.innerText = text;
+  if (replyPreview) {
+    replyPreview.innerText = `SELF-REPLY: ${shareUrl.replace(/^https?:\/\//, "")} · CA ${NARA_CONTRACT.slice(0, 6)}…${NARA_CONTRACT.slice(-4)}`;
+  }
+  if (reachModeBtn) {
+    reachModeBtn.setAttribute("aria-pressed", xNoLinkMaxReach ? "true" : "false");
+    reachModeBtn.className = xNoLinkMaxReach
+      ? "px-2.5 py-1 min-h-[26px] rounded-md bg-amber-500/15 border border-amber-400/50 text-amber-300 text-[10px] font-semibold cursor-pointer"
+      : "px-2.5 py-1 min-h-[26px] rounded-md bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-400/35 text-emerald-300 text-[10px] font-semibold cursor-pointer";
+  }
+  if (reachModeLabel) {
+    reachModeLabel.innerText = xNoLinkMaxReach ? "X MODE: MAX REACH · NO LINK" : "X MODE: OG CARD LINK";
+  }
   if (charCountLabel) {
     charCountLabel.innerText = `${xWeightedLen} / 280 CHARS`;
     if (xWeightedLen > 280) {
@@ -1057,25 +1105,38 @@ function updateForgeUI() {
     }
   }
 
-  // 3. Share URL encoding & anchor pre-population
-  const xUrl = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`;
-  const castText = `${text}\n${shareUrl}`;
-  const warpcastUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(castText)}`;
+  // 3. Share URL encoding & anchor pre-population (Native Farcaster embeds[] + X link mode)
+  const xUrl = buildXIntentUrl(text, shareUrl, xNoLinkMaxReach);
+  const warpcastUrl = buildWarpcastComposeUrl(text, shareUrl);
 
   const forgeX = document.getElementById("forgeXBtn");
   const forgeCast = document.getElementById("forgeCastBtn");
   const quickBtn = document.getElementById("quickTweetBtn");
+  const quickCast = document.getElementById("quickCastBtn");
   const mTweet = document.getElementById("milestoneTweetBtn");
   const mCast = document.getElementById("milestoneCastBtn");
 
   if (forgeX) forgeX.href = xUrl;
   if (forgeCast) forgeCast.href = warpcastUrl;
-  if (quickBtn) quickBtn.href = xUrl;
-  if (mTweet) mTweet.href = xUrl;
+  if (quickBtn) quickBtn.href = buildXIntentUrl(text, shareUrl, false);
+  if (quickCast) quickCast.href = warpcastUrl;
+  if (mTweet) mTweet.href = buildXIntentUrl(text, shareUrl, false);
   if (mCast) mCast.href = warpcastUrl;
   const shareStashBtn = document.getElementById("shareStashBtn");
   if (shareStashBtn && shareStashBtn.tagName === "A") {
     shareStashBtn.href = buildStashTweetUrl();
+  }
+  const castStashBtn = document.getElementById("castStashBtn");
+  if (castStashBtn && castStashBtn.tagName === "A") {
+    castStashBtn.href = buildStashCastUrl();
+  }
+  const shareVaultXBtn = document.getElementById("shareVaultXBtn");
+  if (shareVaultXBtn && shareVaultXBtn.tagName === "A") {
+    shareVaultXBtn.href = buildVaultShowcaseShareData().xUrl;
+  }
+  const shareVaultCastBtn = document.getElementById("shareVaultCastBtn");
+  if (shareVaultCastBtn && shareVaultCastBtn.tagName === "A") {
+    shareVaultCastBtn.href = buildVaultShowcaseShareData().castUrl;
   }
 
   // 4. Toggle Copy Card Image button visibility
@@ -1110,9 +1171,81 @@ function handleShareClick(e, platform) {
   handleForgeClick(e, platform);
 }
 
+function toggleXReachMode() {
+  playMechanicalClick();
+  xNoLinkMaxReach = !xNoLinkMaxReach;
+  updateForgeUI();
+  injectSewerEvent(
+    xNoLinkMaxReach
+      ? "[X REACH] Max-Reach No-Link mode active — attach image & paste Self-Reply + CA below!"
+      : "[X REACH] OG Card Link mode active — auto-attaches OpenGraph preview card."
+  );
+}
+
+function copyForgeReplyText() {
+  playMechanicalClick();
+  const payload = buildSelfReplyPayload(getShareUrl());
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(payload).catch(() => copyTextFallback(payload));
+  } else {
+    copyTextFallback(payload);
+  }
+  const btnLabel = document.getElementById("copyReplyBtnLabel");
+  if (btnLabel) {
+    btnLabel.innerText = "✓ REPLY + CA COPIED!";
+    setTimeout(() => { btnLabel.innerText = "COPY SELF-REPLY + CA"; }, 2200);
+  }
+  injectSewerEvent("[X REACH] Copied link + Base contract address for your self-reply.");
+}
+
+function buildVaultShowcaseShareData() {
+  const summary = getAnchorShowcaseSummary();
+  const shareUrl = getShareUrl("vault");
+  const entryEth = summary.minEthDisplay || "1.61";
+  const priceLine =
+    summary.spotUsdPerNara && summary.maxDiscountPct && summary.maxDiscountPct > 10
+      ? `• Wave 1 from ${entryEth} ETH (up to -${summary.maxDiscountPct}% vs $${Math.round(summary.spotUsdPerNara).toLocaleString("en-US")} V4 spot on larger tiers)`
+      : `• Wave 1 entry from ${entryEth} ETH across 6 monotonic tiers`;
+  const chestLine = summary.totalAccruedNaraDisplay
+    ? `• +${summary.totalAccruedNaraDisplay} $NARA accrued inside chests`
+    : "• 900s $NARA pulses + ETH/USDC cash stack inside each receipt";
+  const text = `Wave 1 $NARA Vault Receipts on Base (@NARA_protocol):\n\n${priceLine}\n• 0% AMM slippage · 90D–365D across 6 tiers (up to 4.00x duration weight)\n${chestLine}\n\nInspect 29 Wave 1 vaults 👇`;
+  return {
+    text,
+    shareUrl,
+    xUrl: buildXIntentUrl(text, shareUrl, false),
+    castUrl: buildWarpcastComposeUrl(text, shareUrl),
+  };
+}
+
+function shareVaultOnX(e) {
+  playMechanicalClick();
+  markQuestShared();
+  const { xUrl } = buildVaultShowcaseShareData();
+  if (e && e.currentTarget && e.currentTarget.tagName && e.currentTarget.tagName.toLowerCase() === "a") {
+    e.currentTarget.href = xUrl;
+  } else {
+    if (e && e.preventDefault) e.preventDefault();
+    openSafeWindow(xUrl);
+  }
+}
+
+function shareVaultOnCast(e) {
+  playMechanicalClick();
+  markQuestShared();
+  const { castUrl } = buildVaultShowcaseShareData();
+  if (e && e.currentTarget && e.currentTarget.tagName && e.currentTarget.tagName.toLowerCase() === "a") {
+    e.currentTarget.href = castUrl;
+  } else {
+    if (e && e.preventDefault) e.preventDefault();
+    openSafeWindow(castUrl);
+  }
+}
+
 function copyForgeTweetText() {
   playMechanicalClick();
-  const text = buildTweetByMode(activeTweetMode, flushCount, currentRoll) + `\n${getShareUrl()}`;
+  const baseText = buildTweetByMode(activeTweetMode, flushCount, currentRoll);
+  const text = xNoLinkMaxReach ? baseText : `${baseText}\n${getShareUrl()}`;
   
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text).catch(() => copyTextFallback(text));
@@ -1139,17 +1272,17 @@ function updateComboUI() {
 
   if (combo <= 1) {
     label.innerText = "1X";
-    container.className = "px-2 py-0.5 bg-white/[0.03] border border-white/10 text-[9px] text-white/40 uppercase tracking-widest flex items-center gap-1 transition-all";
+    container.className = "px-2.5 py-0.5 rounded-full bg-white/[0.04] border border-white/10 text-[11px] font-mono text-slate-400 flex items-center gap-1 transition-all";
   } else if (combo < 10) {
     const mult = Math.min(5, Math.floor(combo / 2) + 1);
     label.innerText = `${mult}X`;
-    container.className = "px-2 py-0.5 bg-emerald-500/15 border border-emerald-500/40 text-[9px] text-naraGreen font-bold uppercase tracking-widest flex items-center gap-1 transition-all";
+    container.className = "px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-400/40 text-[11px] font-mono text-emerald-300 font-bold flex items-center gap-1 transition-all";
   } else if (combo < 25) {
-    label.innerText = `10X OVERDRIVE!`;
-    container.className = "px-2 py-0.5 bg-hazardRed/20 border border-hazardRed text-[9px] text-red-300 font-bold uppercase tracking-widest flex items-center gap-1 animate-pulse transition-all shadow-[0_0_12px_rgba(255,42,42,0.4)]";
+    label.innerText = `10X OVERDRIVE`;
+    container.className = "px-2.5 py-0.5 rounded-full bg-hazardRed/20 border border-hazardRed/60 text-[11px] font-mono text-red-300 font-bold flex items-center gap-1 transition-all";
   } else {
-    label.innerText = `25X RAD-MAX! 🔥`;
-    container.className = "px-2 py-0.5 bg-naraGreen text-black border border-naraGreen text-[9px] font-bold uppercase tracking-widest flex items-center gap-1 animate-pulse transition-all shadow-[0_0_15px_#39FF14]";
+    label.innerText = `25X MAX`;
+    container.className = "px-2.5 py-0.5 rounded-full bg-naraGreen text-slate-950 border border-naraGreen text-[11px] font-mono font-bold flex items-center gap-1 transition-all";
   }
 }
 
@@ -1267,9 +1400,9 @@ function saveUserStash() {
   } catch (e) {}
 }
 
-function formatStickerTweet(sticker, serial, opRank, flushNum) {
+function formatStickerTweet(sticker, serial, _opRank, flushNum) {
   const bears = flushNum > 0 ? flushNum : 1;
-  return `[SEWER STICKER DROP #${serial}] 🐸🚽\n\nItem: ${sticker.deco} ${sticker.name}\nRarity: ${sticker.rarity} [${sticker.perk}]\nOperator: ${opRank.toUpperCase()} // ${bears} Bears Flushed\n\n$NARA (@NARA_protocol) #BanksFail\nCA: ${NARA_CONTRACT}\n\nDredge yours 👇`;
+  return `Pulled ${sticker.deco} ${sticker.name} (${sticker.rarity} · #${String(serial).padStart(4, "0")}) in ${bears} ${bears === 1 ? 'click' : 'clicks'} on $NARA (@NARA_protocol).\n\n"${sticker.quote}"\n\nSee what you dredge on Base 👇`;
 }
 
 function renderStickerCardCanvas(sticker, serial, opRank, flushNum) {
@@ -1574,7 +1707,7 @@ async function copyCardAndTweet() {
   const tier = getOperatorTier(flushCount);
   const tweetText = formatStickerTweet(sticker, serial, tier.rank, flushCount);
   const shareUrl = getShareUrl(sticker.id);
-  const xUrl = `https://x.com/intent/post?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(shareUrl)}`;
+  const xUrl = buildXIntentUrl(tweetText, shareUrl, xNoLinkMaxReach);
 
   // 1. Check for Mobile Native Web Share API with File attachment (1-click direct to Twitter / Telegram app!)
   if (cardCanvas && cardCanvas.toBlob && typeof navigator !== "undefined" && navigator.canShare) {
@@ -1620,9 +1753,20 @@ async function copyCardAndTweet() {
   setTimeout(() => {
     openSafeWindow(xUrl);
     setTimeout(() => {
-      if (btnText) btnText.innerText = "📋 COPY CARD & TWEET ON X";
+      if (btnText) btnText.innerText = "📋 COPY CARD & POST ON X";
     }, 3000);
   }, 700);
+}
+
+function castInspectedSticker() {
+  playMechanicalClick();
+  markQuestShared();
+  if (!currentInspectedSticker) return;
+  const { sticker, serial } = currentInspectedSticker;
+  const tier = getOperatorTier(flushCount);
+  const text = formatStickerTweet(sticker, serial, tier.rank, flushCount);
+  const shareUrl = getShareUrl(sticker.id);
+  openSafeWindow(buildWarpcastComposeUrl(text, shareUrl));
 }
 
 function downloadCardPNG() {
@@ -1666,19 +1810,29 @@ async function copyStickerCardFromForge() {
     toast.classList.remove("hidden");
     setTimeout(() => {
       toast.classList.add("hidden");
-      toast.innerText = "✓ COPIED TO CLIPBOARD // READY TO PASTE";
+      toast.innerText = "✓ Copied to clipboard · Ready to paste";
     }, 2500);
   }
 }
 
-function buildStashTweetUrl() {
+function buildStashShareData() {
   const unlockedKeys = Object.keys(userStash.unlocked);
   const count = unlockedKeys.length;
   const tier = getOperatorTier(flushCount);
   const base = CANONICAL_URL.replace(/\/$/, "");
-  const shareUrl = count > 0 ? `${base}/s/${userStash.activeStickerId || 1}` : CANONICAL_URL;
-  const text = `[SEWER LOOT LOCKER // @NARA_protocol] 🎴🐸\n\nStickers Unlocked: ${count} / 12 (${Math.round((count/12)*100)}%)\nPurge Rank: ${tier.rank.toUpperCase()} (${flushCount} ${flushCount === 1 ? 'flush' : 'flushes'})\n\n$NARA CA: ${NARA_CONTRACT}\n\nCan you complete the 12/12 vault? 👇 #BanksFail`;
-  return `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`;
+  const shareUrl = count > 0 ? `${base}/s/${userStash.activeStickerId || 1}` : `${base}/s/win`;
+  const text = `${count}/12 $NARA sewer cards dredged on Base (${tier.rank} · ${flushCount} ${flushCount === 1 ? 'click' : 'clicks'}).\n\nPressure gauge is primed — chasing the full 12/12 Fame Board run on @NARA_protocol 👇`;
+  return { text, shareUrl };
+}
+
+function buildStashTweetUrl() {
+  const { text, shareUrl } = buildStashShareData();
+  return buildXIntentUrl(text, shareUrl, false);
+}
+
+function buildStashCastUrl() {
+  const { text, shareUrl } = buildStashShareData();
+  return buildWarpcastComposeUrl(text, shareUrl);
 }
 
 function shareFullStashTweet(e) {
@@ -1690,6 +1844,18 @@ function shareFullStashTweet(e) {
   } else {
     if (e && e.preventDefault) e.preventDefault();
     openSafeWindow(xUrl);
+  }
+}
+
+function shareFullStashCast(e) {
+  playMechanicalClick();
+  markQuestShared();
+  const castUrl = buildStashCastUrl();
+  if (e && e.currentTarget && e.currentTarget.tagName && e.currentTarget.tagName.toLowerCase() === "a") {
+    e.currentTarget.href = castUrl;
+  } else {
+    if (e && e.preventDefault) e.preventDefault();
+    openSafeWindow(castUrl);
   }
 }
 
@@ -1721,6 +1887,10 @@ function updateVaultUI() {
   if (shareStashBtn && shareStashBtn.tagName === "A") {
     shareStashBtn.href = buildStashTweetUrl();
   }
+  const castStashBtn = document.getElementById("castStashBtn");
+  if (castStashBtn && castStashBtn.tagName === "A") {
+    castStashBtn.href = buildStashCastUrl();
+  }
 
   grid.innerHTML = "";
   STICKER_COLLECTION.forEach(sticker => {
@@ -1730,60 +1900,37 @@ function updateVaultUI() {
     cardBtn.type = "button";
 
     if (isUnlocked) {
-      cardBtn.className = "relative w-full min-h-[110px] bg-[#0E1117] border p-2.5 flex flex-col items-center justify-between text-center transition-all duration-200 hover:scale-[1.03] cursor-pointer group focus-visible:ring-1 focus-visible:ring-naraGreen outline-none";
-      cardBtn.style.borderColor = sticker.border;
-      cardBtn.style.boxShadow = `0 4px 18px ${sticker.bg}`;
+      cardBtn.className = "relative w-full min-h-[98px] rounded-xl bg-[#0D131F] border p-3 flex flex-col items-center justify-center gap-1.5 text-center transition-colors cursor-pointer group focus-visible:ring-2 focus-visible:ring-naraGreen outline-none";
+      cardBtn.style.borderColor = `${sticker.border}88`;
       cardBtn.setAttribute("aria-label", `Inspect unlocked sticker #${sticker.id}: ${sticker.name} (${sticker.rarity})`);
       cardBtn.addEventListener("click", () => openCardInspector(sticker.id));
 
       cardBtn.innerHTML = `
-        <div class="w-full flex items-center justify-between text-[8px] font-mono mb-1 select-none">
-          <span class="px-1 py-0.5 text-[7px] font-bold uppercase tracking-wider" style="color:${sticker.border}; border:1px solid ${sticker.border}">${sticker.rarity}</span>
-          ${stashItem.count > 1 ? `<span class="px-1 py-0.5 bg-white/10 text-white font-bold">x${stashItem.count}</span>` : `<span class="text-white/40">#${String(stashItem.serial).padStart(4, '0')}</span>`}
+        <div class="relative flex items-center justify-center select-none">
+          <span class="text-3xl">${sticker.icon}</span>
+          <span class="absolute -top-1 -right-1.5 text-sm">${sticker.deco}</span>
         </div>
-        <div class="relative my-1.5 flex items-center justify-center select-none">
-          <span class="text-3xl sm:text-4xl filter drop-shadow">${sticker.icon}</span>
-          <span class="absolute -top-1.5 -right-1 text-base sm:text-lg">${sticker.deco}</span>
-        </div>
-        <div class="w-full truncate text-[9px] sm:text-[10px] font-bold text-white tracking-tight mt-1 font-mono select-none">
+        <div class="w-full truncate text-xs font-medium text-white font-sans select-none">
           ${sticker.name}
-        </div>
-        <div class="text-[8px] text-naraGreen/80 font-mono mt-0.5 truncate w-full select-none">
-          ${sticker.perk}
-        </div>
-        <div class="mt-2 w-full pt-1 border-t border-white/10 text-[8px] text-white/50 group-hover:text-white transition-colors flex items-center justify-center gap-1 select-none">
-          <span>📋</span> <span>TWEET CARD</span>
         </div>
       `;
     } else {
-      cardBtn.className = "relative w-full min-h-[110px] bg-[#07080B] border p-2.5 flex flex-col items-center justify-between text-center transition-all duration-200 cursor-pointer select-none group hover:border-naraGreen/60 focus-visible:ring-1 focus-visible:ring-white/50 outline-none";
-      cardBtn.style.borderColor = `${sticker.border}33`; // 20% opacity of rarity border
+      cardBtn.className = "relative w-full min-h-[98px] rounded-xl bg-[#090E18] border border-white/[0.06] hover:border-white/20 p-3 flex flex-col items-center justify-center gap-1.5 text-center transition-colors cursor-pointer select-none group focus-visible:ring-2 focus-visible:ring-white/50 outline-none";
       cardBtn.setAttribute("aria-label", `Locked sticker #${sticker.id} (${sticker.rarity}) — tap to flush and dredge`);
       cardBtn.addEventListener("click", (ev) => {
         cardBtn.classList.remove("animate-pulse");
         void cardBtn.offsetWidth;
         cardBtn.classList.add("animate-pulse");
         setTimeout(() => cardBtn.classList.remove("animate-pulse"), 450);
-        const hintEl = document.getElementById("vaultHintText");
-        if (hintEl) {
-          hintEl.innerText = `DREDGING FOR #${String(sticker.id).padStart(2, "0")} ${sticker.name.toUpperCase()} (${sticker.rarity}) // PRESSURE ${dredgePressure}%`;
-        }
         triggerHydraulicFlush(ev);
       });
 
       cardBtn.innerHTML = `
-        <div class="w-full flex items-center justify-between text-[8px] font-mono mb-1">
-          <span class="px-1 py-0.5 text-[7px] font-bold uppercase tracking-wider" style="color:${sticker.border}; border:1px solid ${sticker.border}66; background:${sticker.border}15">${sticker.rarity}</span>
-          <span class="text-white/40 font-mono">#${String(sticker.id).padStart(2, '0')}</span>
+        <div class="text-2xl opacity-30 grayscale group-hover:opacity-65 transition-opacity">
+          💩
         </div>
-        <div class="my-2 text-2xl sm:text-3xl opacity-35 filter grayscale group-hover:opacity-70 group-hover:scale-105 transition-all">
-          💩❓
-        </div>
-        <div class="w-full truncate text-[9px] sm:text-[10px] font-mono font-bold text-white/50 group-hover:text-white/80 transition-colors mt-1">
-          ${sticker.name.split(' ')[0]} ???
-        </div>
-        <div class="text-[8px] sm:text-[9px] font-mono mt-0.5 group-hover:text-naraGreen transition-colors" style="color:${sticker.border}cc">
-          TAP TO DREDGE
+        <div class="text-[11px] font-mono text-slate-500 group-hover:text-slate-300">
+          #${String(sticker.id).padStart(2, '0')}
         </div>
       `;
     }
@@ -1870,7 +2017,7 @@ function checkLootDrop(count, evt = null) {
   const hintEl = document.getElementById("vaultHintText");
   if (hintEl) {
     hintEl.innerText = isNew
-      ? `UNLOCKED #${String(chosen.id).padStart(2, "0")} ${chosen.name.toUpperCase()}! (${Object.keys(userStash.unlocked).length}/12)`
+      ? `DREDGED #${String(chosen.id).padStart(2, "0")} ${chosen.name.toUpperCase()}! (${Object.keys(userStash.unlocked).length}/12)`
       : `DUPLICATE DROPPED — PRESSURE CHARGED TO ${dredgePressure}% FOR NEXT NEW CARD`;
   }
   showLootModal(chosen, serial, isNew, count);
@@ -1938,8 +2085,8 @@ function triggerHydraulicFlush(evt = null) {
   const hoverText = document.getElementById("artHoverText");
 
   if (headerBtn) headerBtn.classList.add("opacity-75", "cursor-wait");
-  if (headerLabel) headerLabel.innerHTML = '⏳ <span class="hidden sm:inline">RECHARGING...</span><span class="sm:hidden">1.0s</span>';
-  if (hoverText) hoverText.innerHTML = '<span class="text-xs">⏳</span> RECHARGING PRESSURE (1.0s)...';
+  if (headerLabel) headerLabel.innerHTML = '1.0s';
+  if (hoverText) hoverText.innerHTML = 'Recharging pressure (1.0s)…';
 
   if (cooldownBar) {
     cooldownBar.style.transition = "none";
@@ -1952,8 +2099,8 @@ function triggerHydraulicFlush(evt = null) {
   setTimeout(() => {
     isFlushingCooldown = false;
     if (headerBtn) headerBtn.classList.remove("opacity-75", "cursor-wait");
-    if (headerLabel) headerLabel.innerHTML = 'FLUSH <span class="hidden sm:inline">TOILET</span>';
-    if (hoverText) hoverText.innerHTML = '<span class="text-xs">👇</span> CLICK TO FLUSH CANDLES';
+    if (headerLabel) headerLabel.innerHTML = 'Flush';
+    if (hoverText) hoverText.innerHTML = 'Click or press Space to flush candles';
     if (cooldownBar) {
       cooldownBar.style.transition = "none";
       cooldownBar.style.width = "0%";
@@ -2195,21 +2342,20 @@ function renderFameBoard(entries) {
   if (list.length === 0) {
     tbody.innerHTML = `
       <tr id="emptyFameBoardRow">
-        <td colspan="5" class="py-8 px-4 text-center">
-          <div class="flex flex-col items-center justify-center gap-2.5 text-white/50">
-            <span class="text-3xl select-none">🚽</span>
-            <div class="font-mono text-xs font-bold text-amber-300 tracking-widest uppercase">
-              LEADERBOARD IS EMPTY // CLAIM #1 SPOT
+        <td colspan="5" class="py-10 px-4 text-center">
+          <div class="flex flex-col items-center justify-center gap-2 text-slate-400">
+            <div class="text-sm font-semibold text-amber-300 font-sans">
+              Leaderboard is open · Claim the #1 spot
             </div>
-            <div class="text-[11px] text-white/60 max-w-md">
-              No operator records logged yet. Dredge all 12 vault cards (~25–55 clicks with pressure gauge) to lock your Fame Board rank &amp; Award Claim Pass!
+            <div class="text-xs text-slate-400 max-w-md font-sans leading-relaxed">
+              Dredge all 12 sticker cards (~25–55 clicks with the pressure gauge) to record your handle and generate an Award Claim Pass.
             </div>
             <button
               type="button"
               data-on-click="startRunFromBoard"
-              class="mt-1 px-4 py-2 min-h-[40px] bg-amber-500 hover:bg-amber-400 text-black font-mono font-extrabold text-[10px] tracking-wider uppercase cursor-pointer shadow-[0_0_16px_rgba(245,158,11,0.3)]"
+              class="mt-1.5 px-4 py-2 min-h-[40px] rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-sans font-bold text-xs cursor-pointer transition-colors"
             >
-              ⚡ FLUSH NOW &amp; CLAIM #1
+              Start a Run Now
             </button>
           </div>
         </td>
@@ -2224,51 +2370,51 @@ function renderFameBoard(entries) {
     const score = Number(entry.score) || 0;
     const tier = getRatingTier(score);
     let rankBadge = `#${rank}`;
-    let rankClass = "text-white/40 font-mono";
+    let rankClass = "text-slate-400 font-mono";
 
     if (rank === 1) {
-      rankBadge = "🥇 1ST";
+      rankBadge = "🥇 1st";
       rankClass = "text-amber-300 font-bold font-mono";
     } else if (rank === 2) {
-      rankBadge = "🥈 2ND";
-      rankClass = "text-slate-300 font-bold font-mono";
+      rankBadge = "🥈 2nd";
+      rankClass = "text-slate-200 font-bold font-mono";
     } else if (rank === 3) {
-      rankBadge = "🥉 3RD";
+      rankBadge = "🥉 3rd";
       rankClass = "text-amber-500 font-bold font-mono";
     }
 
     const platLabel = (entry.platform || "x").toUpperCase();
     const walletPill = entry.walletHint
-      ? `<span class="ml-1.5 px-1 py-0.5 text-[8px] border border-naraGreen/30 bg-naraGreen/10 text-naraGreen/90">${escapeHTML(entry.walletHint)}</span>`
+      ? `<span class="ml-1.5 px-1.5 py-0.5 rounded text-[10px] font-mono border border-emerald-400/30 bg-emerald-500/10 text-emerald-300">${escapeHTML(entry.walletHint)}</span>`
       : "";
     const passPill = entry.awardReady
-      ? `<span class="ml-1.5 px-1 py-0.5 text-[8px] border border-amber-400/40 bg-amber-500/10 text-amber-300">PASS ✓</span>`
+      ? `<span class="ml-1.5 px-1.5 py-0.5 rounded text-[10px] font-semibold border border-amber-400/40 bg-amber-500/10 text-amber-300">Pass ✓</span>`
       : "";
     const postLink = entry.postUrl
-      ? `<a href="${escapeHTML(entry.postUrl)}" target="_blank" rel="noopener noreferrer" class="ml-1.5 text-[9px] text-[#00F0FF] hover:underline no-underline">POST ↗</a>`
+      ? `<a href="${escapeHTML(entry.postUrl)}" target="_blank" rel="noopener noreferrer" class="ml-1.5 text-[11px] text-sky-300 hover:underline no-underline">Post ↗</a>`
       : "";
 
     const tr = document.createElement("tr");
     tr.className = rank === 1 ? "bg-amber-500/[0.04] hover:bg-amber-500/[0.08] transition-colors" : "hover:bg-white/[0.02] transition-colors";
     tr.innerHTML = `
-      <td class="py-2.5 px-3 sm:px-4 text-center ${rankClass}">${rankBadge}</td>
-      <td class="py-2.5 px-3 sm:px-4 font-mono font-bold text-white tracking-wide">
+      <td class="py-3 px-3 sm:px-4 text-center text-xs ${rankClass}">${rankBadge}</td>
+      <td class="py-3 px-3 sm:px-4 font-mono font-semibold text-xs text-white">
         <span class="inline-flex flex-wrap items-center gap-1">
-          <span class="px-1 py-0.5 text-[8px] border border-white/15 bg-white/[0.06] text-white/70">${platLabel}</span>
+          <span class="px-1.5 py-0.5 rounded text-[10px] border border-white/15 bg-white/[0.05] text-slate-300">${platLabel}</span>
           <span>${escapeHTML(entry.handle)}</span>
           ${walletPill}${passPill}${postLink}
         </span>
       </td>
-      <td class="py-2.5 px-3 sm:px-4 text-center font-mono font-extrabold text-amber-300">
-        ${score} <span class="text-[8px] text-white/40 font-normal">CLICKS</span>
+      <td class="py-3 px-3 sm:px-4 text-center font-mono font-bold text-xs text-amber-300">
+        ${score} <span class="text-[10px] text-slate-400 font-normal">clicks</span>
       </td>
-      <td class="py-2.5 px-3 sm:px-4 hidden sm:table-cell">
-        <span class="px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider border" style="color:${tier.color}; border-color:${tier.border}; background:${tier.bg};">
+      <td class="py-3 px-3 sm:px-4 hidden sm:table-cell">
+        <span class="px-2 py-0.5 rounded text-[10px] font-semibold border" style="color:${tier.color}; border-color:${tier.border}66; background:${tier.bg};">
           ${tier.name}
         </span>
       </td>
-      <td class="py-2.5 px-3 sm:px-4 text-right hidden md:table-cell text-white/40 font-mono text-[9px]">
-        ${escapeHTML(entry.date || "RECENT")}
+      <td class="py-3 px-3 sm:px-4 text-right hidden md:table-cell text-slate-400 font-mono text-xs">
+        ${escapeHTML(entry.date || "Recent")}
       </td>
     `;
     tbody.appendChild(tr);
@@ -2405,9 +2551,9 @@ function renderAwardClaimPass(pass) {
     return;
   }
   codeEl.innerText = pass.claimCode;
-  const walletTag = pass.walletHint ? ` // ${pass.walletHint}` : "";
-  const modeTag = pass.verifiedGlobal ? "GLOBAL PASS" : "DEVICE PASS";
-  metaEl.innerText = `${(pass.platform || "x").toUpperCase()} ${pass.handle} // ${pass.score} CLICKS${walletTag} // ${modeTag}`;
+  const walletTag = pass.walletHint ? ` · ${pass.walletHint}` : "";
+  const modeTag = pass.verifiedGlobal ? "Global Pass" : "Device Pass";
+  metaEl.innerText = `${(pass.platform || "x").toUpperCase()} ${pass.handle} · ${pass.score} clicks${walletTag} · ${modeTag}`;
   box.classList.remove("hidden");
 }
 
@@ -2547,6 +2693,8 @@ function triggerVictoryFlow() {
   }
   const vicTweetBtn = document.getElementById("victoryTweetBtn");
   if (vicTweetBtn) vicTweetBtn.href = buildVictoryTweetUrl();
+  const vicCastBtn = document.getElementById("victoryCastBtn");
+  if (vicCastBtn) vicCastBtn.href = buildVictoryCastUrl();
 
   injectSewerEvent(`👑 [VICTORY] 12/12 VAULT CONQUERED IN ${runFlushes} CLICKS! Rating: ${rating.name}`);
 }
@@ -2724,11 +2872,21 @@ async function submitVictoryToFameBoard() {
   }
 }
 
-function buildVictoryTweetUrl() {
+function buildVictoryShareData() {
   const rating = getRatingTier(runFlushes);
-  const text = `👑 [12/12 SEWER VAULT CONQUERED] 🐸🚽\n\nI dredged all 12 $NARA sewer sticker cards in ${runFlushes} clicks on @NARA_protocol!\nRank: ${rating.name}\n\nCA: ${NARA_CONTRACT}\n\nBeat my record on the Fame Board 👇 #BanksFail`;
-  const shareUrl = getShareUrl(12);
-  return `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`;
+  const text = `Cleared all 12/12 $NARA vault cards in ${runFlushes} clicks on Base 🏆\n\nRank: ${rating.name} (@NARA_protocol)\n\nThink you can clear the Fame Board in fewer clicks? 👇`;
+  const shareUrl = getShareUrl("win");
+  return { text, shareUrl };
+}
+
+function buildVictoryTweetUrl() {
+  const { text, shareUrl } = buildVictoryShareData();
+  return buildXIntentUrl(text, shareUrl, false);
+}
+
+function buildVictoryCastUrl() {
+  const { text, shareUrl } = buildVictoryShareData();
+  return buildWarpcastComposeUrl(text, shareUrl);
 }
 
 function handleVictoryTweet(e) {
@@ -2740,6 +2898,18 @@ function handleVictoryTweet(e) {
   } else {
     if (e && e.preventDefault) e.preventDefault();
     openSafeWindow(xUrl);
+  }
+}
+
+function handleVictoryCast(e) {
+  playMechanicalClick();
+  markQuestShared();
+  const castUrl = buildVictoryCastUrl();
+  if (e && e.currentTarget && e.currentTarget.tagName && e.currentTarget.tagName.toLowerCase() === "a") {
+    e.currentTarget.href = castUrl;
+  } else {
+    if (e && e.preventDefault) e.preventDefault();
+    openSafeWindow(castUrl);
   }
 }
 
@@ -2774,8 +2944,8 @@ function resetAndStartNewRun() {
 
   closeVictoryModal();
   const hintEl = document.getElementById("vaultHintText");
-  if (hintEl) hintEl.innerText = "TAP ANY LOCKED CARD TO DREDGE // CLICK ANY UNLOCKED CARD TO TWEET";
-  injectSewerEvent("🔄 [SYSTEM] Fresh run initialized! All 12 cards locked. Race for fewer clicks!");
+  if (hintEl) hintEl.innerText = "Tap any locked card to dredge · Click any unlocked card to share";
+  injectSewerEvent("Fresh run initialized. All 12 cards reset — race for fewer clicks.");
 }
 
 function confirmResetRun() {
@@ -2844,7 +3014,7 @@ function openAwardPassOrInfo() {
   const board = document.getElementById("fameBoardSection");
   if (board) board.scrollIntoView({ behavior: "smooth", block: "start" });
   const remaining = Math.max(0, STICKER_COLLECTION.length - Object.keys(userStash.unlocked).length);
-  injectSewerEvent(`[AWARD PASS] Dredge ${remaining} more sticker cards to unlock your Fame Board Claim Pass!`);
+  injectSewerEvent(`[AWARD PASS] Dredge ${remaining} more sticker cards to seal your Fame Board Claim Pass!`);
 }
 
 function startRunFromBoard() {
@@ -2915,6 +3085,124 @@ async function verifyClaimCodeUI() {
     resultEl.className = "text-[10px] font-mono text-amber-300 font-bold";
   } else {
     resultEl.innerText = "✕ Pass not found on board.";
+    resultEl.className = "text-[10px] font-mono text-red-400";
+  }
+}
+
+let eraseConfirmArmedUntil = 0;
+let eraseConfirmTimer = null;
+
+function clearEraseArming() {
+  eraseConfirmArmedUntil = 0;
+  clearTimeout(eraseConfirmTimer);
+  eraseConfirmTimer = null;
+  const btn = document.getElementById("erasePassBtn");
+  if (btn) {
+    btn.innerText = "Erase Entry";
+    btn.classList.remove("bg-red-500/30", "text-white", "border-red-400");
+  }
+}
+
+async function eraseClaimCodeUI() {
+  playMechanicalClick();
+  const hInput = document.getElementById("verifyHandleInput");
+  const cInput = document.getElementById("verifyClaimInput");
+  const resultEl = document.getElementById("verifyPassResult");
+  const btn = document.getElementById("erasePassBtn");
+  if (!resultEl) return;
+
+  const rawHandle = hInput ? hInput.value.trim() : "";
+  const handle = rawHandle.startsWith("@") ? rawHandle : `@${rawHandle}`;
+  const code = cInput ? cInput.value.trim().toUpperCase() : "";
+  if (handle.length < 2 || !code) {
+    clearEraseArming();
+    resultEl.innerText = "Enter @handle + claim code.";
+    resultEl.className = "text-[10px] font-mono text-red-400";
+    return;
+  }
+
+  const now = Date.now();
+  if (now >= eraseConfirmArmedUntil) {
+    eraseConfirmArmedUntil = now + 5000;
+    if (btn) {
+      btn.innerText = "Confirm Erase?";
+      btn.classList.add("bg-red-500/30", "text-white", "border-red-400");
+    }
+    resultEl.innerText = "Tap Confirm Erase? within 5s.";
+    resultEl.className = "text-[10px] font-mono text-amber-300";
+    clearTimeout(eraseConfirmTimer);
+    eraseConfirmTimer = setTimeout(() => {
+      clearEraseArming();
+    }, 5000);
+    return;
+  }
+
+  clearEraseArming();
+  resultEl.innerText = "Erasing...";
+  resultEl.className = "text-[10px] font-mono text-white/60";
+
+  let serverDeleted = false;
+  let serverRateLimited = false;
+  if (!code.startsWith("PASS-")) {
+    try {
+      const res = await fetch("/api/leaderboard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "delete",
+          handle,
+          claimCode: code,
+          operatorKey: getOperatorSecret(),
+        }),
+      });
+      if (res.status === 429) {
+        serverRateLimited = true;
+      } else if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (data && data.deleted) {
+          serverDeleted = true;
+          if (Array.isArray(data.board)) {
+            localFameBoard = data.board.map(sanitizeBoardEntry).filter(Boolean);
+          }
+        }
+      }
+    } catch (e) {}
+  }
+
+  if (serverRateLimited) {
+    resultEl.innerText = "⏳ Too many erase attempts. Try again later.";
+    resultEl.className = "text-[10px] font-mono text-amber-300";
+    return;
+  }
+
+  const localMatched = Boolean(
+    lastAwardPass &&
+      lastAwardPass.handle.toLowerCase() === handle.toLowerCase() &&
+      lastAwardPass.claimCode === code
+  );
+
+  if (serverDeleted || localMatched) {
+    localFameBoard = localFameBoard
+      .filter((item) => item && item.handle.toLowerCase() !== handle.toLowerCase())
+      .map((item, idx) => ({ ...item, rank: idx + 1 }));
+    saveLocalFameBoard();
+    renderFameBoard(localFameBoard);
+
+    if (lastAwardPass && lastAwardPass.handle.toLowerCase() === handle.toLowerCase()) {
+      lastAwardPass = null;
+      try {
+        localStorage.removeItem("nara_award_pass_v1");
+        localStorage.removeItem("nara_operator_handle_v1");
+        localStorage.removeItem("nara_operator_wallet_v1");
+        localStorage.removeItem("nara_operator_post_v1");
+      } catch (e) {}
+      renderAwardClaimPass(null);
+    }
+    resultEl.innerText = "✓ ENTRY ERASED FROM BOARD";
+    resultEl.className = "text-[10px] font-mono text-naraGreen font-bold";
+    injectSewerEvent(`[PRIVACY] Erased Fame Board entry for ${handle}.`);
+  } else {
+    resultEl.innerText = "✕ Could not verify pass to erase.";
     resultEl.className = "text-[10px] font-mono text-red-400";
   }
 }
@@ -3148,17 +3436,23 @@ const ACTIONS = {
   setTweetMode: (_e, arg) => setTweetMode(arg),
   rerollActiveMode: () => rerollActiveMode(),
   handleForgeClick: (e, arg) => handleForgeClick(e, arg),
+  toggleXReachMode: () => toggleXReachMode(),
+  copyForgeReplyText: () => copyForgeReplyText(),
+  shareVaultOnX: (e) => shareVaultOnX(e),
+  shareVaultOnCast: (e) => shareVaultOnCast(e),
   copyForgeTweetText: () => copyForgeTweetText(),
   copyStickerCardFromForge: () => copyStickerCardFromForge(),
   confirmResetRun: () => confirmResetRun(),
   reopenVictoryIfWon: () => reopenVictoryIfWon(),
   shareFullStashTweet: (e) => shareFullStashTweet(e),
+  shareFullStashCast: (e) => shareFullStashCast(e),
   refreshLeaderboardUI: () => refreshLeaderboardUI(),
   addNaraToMetaMask: () => addNaraToMetaMask(),
   handleLootBackdropClick: (e) => handleLootBackdropClick(e),
   pauseLootAutoDismiss: () => pauseLootAutoDismiss(),
   closeLootModal: () => closeLootModal(),
   copyCardAndTweet: () => copyCardAndTweet(),
+  castInspectedSticker: () => castInspectedSticker(),
   downloadCardPNG: () => downloadCardPNG(),
   handleKeepFlushingClick: (e) => handleKeepFlushingClick(e),
   closeSwapModalBackdrop: (e) => closeSwapModal(e),
@@ -3168,6 +3462,7 @@ const ACTIONS = {
   submitOnEnter: (e) => { if (e.key === "Enter") { e.preventDefault(); submitVictoryToFameBoard(); } },
   submitVictoryToFameBoard: () => submitVictoryToFameBoard(),
   handleVictoryTweet: (e) => handleVictoryTweet(e),
+  handleVictoryCast: (e) => handleVictoryCast(e),
   resetAndStartNewRun: () => resetAndStartNewRun(),
   jumpToVaultOrVictory: () => jumpToVaultOrVictory(),
   revealBanksFailCipher: () => revealBanksFailCipher(),
@@ -3176,10 +3471,30 @@ const ACTIONS = {
   startRunFromBoard: () => startRunFromBoard(),
   toggleVerifyPassBar: () => toggleVerifyPassBar(),
   verifyClaimCodeUI: () => verifyClaimCodeUI(),
+  eraseClaimCodeUI: () => eraseClaimCodeUI(),
   setVictoryPlatform: (e, arg) => setVictoryPlatform(e, arg),
   fillVictoryConnectedWallet: () => fillVictoryConnectedWallet(),
   copyAwardClaimPass: () => copyAwardClaimPass(),
   applyLowFeeSwapSize: () => applyLowFeeSwapSize(),
+  refreshAnchorSeats: () => refreshAnchorSeats(true),
+  selectAnchorSeat: (e, arg) => selectAnchorSeat(e, arg),
+  setAnchorTierFilter: (e, arg) => setAnchorTierFilter(e, arg),
+  cancelSeatReview: (e) => cancelSeatReview(e),
+  copySeatLink: (e, arg) => copySeatLink(e, arg),
+  toggleAnchorSpecs: (e) => toggleAnchorSpecs(e),
+  toggleCardHelp: (e, arg) => toggleCardHelp(e, arg),
+  buyAnchorSeat: (e, arg) => buyAnchorSeat(e, arg),
+  jumpToAnchorSeats: () => jumpToAnchorSeats(),
+  jumpToSector: (_e, sectorId) => {
+    playMechanicalClick();
+    const map = {
+      capital: "anchorSeatsSection",
+      arcade: "sectorArcade",
+      registry: "sectorRegistry",
+    };
+    const target = document.getElementById(map[sectorId] || sectorId);
+    if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+  },
 };
 
 const BOUND_EVENTS = ["click", "keydown", "mouseenter", "touchstart", "input"];
@@ -3214,6 +3529,7 @@ function bindActions(root = document) {
 }
 
 // --- SYSTEM INITIALIZATION ---
+notifyMiniAppHostReady();
 initSwapControl();
 bindActions();
 loadUserStash();
@@ -3238,6 +3554,16 @@ initBuyExperience({
     try { playArcadeChime(getAudioContext()); } catch (e) {}
   },
   copyCA,
+  onModalVisibilityChange: syncBodyScrollLock,
+});
+
+initAnchorSeats({
+  bindActions,
+  playClick: playMechanicalClick,
+  playSuccess: () => {
+    if (soundMode === "mute") return;
+    try { playArcadeChime(getAudioContext()); } catch (e) {}
+  },
   onModalVisibilityChange: syncBodyScrollLock,
 });
 

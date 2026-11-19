@@ -12,6 +12,7 @@ import {
   jsonResponse,
   methodNotAllowedResponse,
   optionsResponse,
+  withEdgeCache,
 } from "../_shared/supplyCore.js";
 import {
   V4_SWAP_CONSTANTS,
@@ -73,8 +74,10 @@ async function ethCallSingleRpc(rpcUrl, to, data, fetchImpl = globalThis.fetch) 
   }
 }
 
+let warmPreferredRpcIdx = 0;
+
 export function createFailoverEthCall(rpcUrls, fetchImpl = globalThis.fetch) {
-  let preferredIdx = 0;
+  let preferredIdx = fetchImpl === globalThis.fetch ? warmPreferredRpcIdx % Math.max(1, rpcUrls.length) : 0;
   return async function ethCall(to, data) {
     let lastErr = null;
     for (let offset = 0; offset < rpcUrls.length; offset++) {
@@ -83,6 +86,7 @@ export function createFailoverEthCall(rpcUrls, fetchImpl = globalThis.fetch) {
       try {
         const res = await ethCallSingleRpc(rpcUrl, to, data, fetchImpl);
         preferredIdx = idx;
+        if (fetchImpl === globalThis.fetch) warmPreferredRpcIdx = idx;
         return res;
       } catch (err) {
         if (err instanceof ContractRevertError) throw err;
@@ -194,8 +198,10 @@ export async function handleQuoteRequest(request, env, fetchImpl = globalThis.fe
   }
 }
 
-export async function onRequestGet({ request, env }) {
-  return handleQuoteRequest(request, env);
+export async function onRequestGet(ctx) {
+  return withEdgeCache(ctx, "https://naraprotocol.io/api/quote?summary=1", () =>
+    handleQuoteRequest(ctx.request, ctx.env)
+  );
 }
 
 export async function onRequestHead(ctx) {

@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-[#080C14]">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vault Receipts — NARA Protocol on Base (8453)</title>
+  <meta name="description" content="Fixed-ETH $NARA Vault Receipts (1.61–5.90 ETH) across 6 tiers on Base (8453) with progressive volume discounts and 0% AMM pool slippage.">
+  <link rel="preload" href="/fonts/SpaceGrotesk-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/JetBrainsMono-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="icon" href="/favicon.svg?v=20261102d" type="image/svg+xml">
+  <link rel="icon" href="/favicon-32x32.png?v=20261102d" sizes="32x32" type="image/png">
+  <link rel="icon" href="/favicon-16x16.png?v=20261102d" sizes="16x16" type="image/png">
+  <link rel="shortcut icon" href="/favicon.ico?v=20261102d" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20261102d" sizes="180x180">
+  <link rel="mask-icon" href="/safari-pinned-tab.svg?v=20261102d" color="#FFFFFF">
+  <link rel="manifest" href="/site.webmanifest?v=20261102d">
+  <meta name="theme-color" content="#080C14">
+  <meta name="apple-mobile-web-app-title" content="NARA Vault">
+  <link rel="canonical" href="https://naraprotocol.io/vault">
+
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="NARA Protocol">
+  <meta property="og:url" content="https://naraprotocol.io/vault">
+  <meta property="og:title" content="Wave 1 $NARA Vault Receipts on Base — Up to -25% vs Spot · 0% Slippage">
+  <meta property="og:description" content="29 sealed Wave 1 $NARA positions across 6 tiers (1.61–5.90 ETH) on NARAPositionSaleV5. Larger commitments unlock deeper discounts, 900s pulses, and BuyerBounds protection.">
+  <meta property="og:image" content="https://naraprotocol.io/cards/nara-og-main.jpg?v=20261103">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="NARA Protocol Wave 1 Vault Receipts on Base">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:site" content="@NARA_protocol">
+  <meta name="twitter:creator" content="@NARA_protocol">
+  <meta name="twitter:title" content="Wave 1 $NARA Vault Receipts on Base — Up to -25% vs Spot · 0% Slippage">
+  <meta name="twitter:description" content="29 sealed Wave 1 $NARA positions across 6 tiers (1.61–5.90 ETH) on NARAPositionSaleV5. Larger commitments unlock deeper discounts, 900s pulses, and BuyerBounds protection.">
+  <meta name="twitter:image" content="https://naraprotocol.io/cards/nara-og-main.jpg?v=20261103">
+  <meta name="twitter:image:alt" content="NARA Protocol Wave 1 Vault Receipts on Base">
+
+  <link rel="stylesheet" href="/src/meme/styles.css">
+</head>
+
+<body class="min-h-[100dvh] bg-[#080C14] text-[#E6EDF5] flex flex-col justify-between overflow-x-hidden relative font-sans antialiased">
+
+  <a href="#mainContent" class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-lg focus:bg-naraGreen focus:text-slate-950 focus:font-sans focus:font-bold focus:text-xs focus:no-underline">Skip to main content</a>
+
+  <div class="w-full flex-1 flex flex-col justify-between min-h-[100dvh] relative z-10">
+
+    <!-- Top Navigation -->
+    <header class="w-full pt-[max(0.75rem,env(safe-area-inset-top,0px))] px-3 sm:px-6 max-w-5xl mx-auto">
+      <div class="w-full rounded-2xl bg-[#0D131F] border border-white/[0.08] px-3 sm:px-4 py-2.5">
+        <div class="flex items-center justify-between gap-2 sm:gap-4">
+          <div class="flex items-center gap-3 sm:gap-5 min-w-0">
+            <a href="/" class="flex items-center gap-2 no-underline shrink-0 focus-visible:ring-2 focus-visible:ring-naraGreen rounded-lg outline-none">
+              <img src="/nara-circle-128.png" alt="NARA Protocol" width="28" height="28" class="w-7 h-7 rounded-full border border-white/15 shrink-0" />
+              <span class="text-sm font-bold tracking-tight text-white">NARA</span>
+            </a>
+
+            <nav aria-label="Primary navigation" class="hidden md:flex items-center gap-1 p-1 rounded-xl bg-[#080C14] border border-white/[0.07]">
+              <a href="/" class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white no-underline transition-colors">Overview</a>
+              <a href="/vault" aria-current="page" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/[0.08] text-white no-underline transition-colors">Vaults</a>
+              <a href="/#sectorArcade" class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white no-underline transition-colors">Arcade</a>
+            </nav>
+          </div>
+
+          <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <button
+              id="headerSwapBtn"
+              type="button"
+              data-on-click="handleSwapButtonClick"
+              class="px-2.5 sm:px-3 py-2 min-h-[44px] rounded-xl bg-white/[0.04] hover:bg-white/[0.09] border border-white/10 text-slate-200 hover:text-white text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer select-none whitespace-nowrap"
+              title="Open CryptoSLIP App"
+              aria-label="Open CryptoSLIP App"
+            >
+              <span class="hidden sm:inline">CryptoSLIP</span>
+              <span class="sm:hidden">App</span>
+            </button>
+
+            <button
+              id="copyBtn"
+              type="button"
+              data-on-click="copyCA"
+              class="px-2.5 sm:px-3 py-2 min-h-[44px] rounded-xl bg-white/[0.04] hover:bg-white/[0.09] border border-white/10 text-slate-200 hover:text-white text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer select-none whitespace-nowrap"
+              title="Copy $NARA token contract address"
+              aria-label="Copy token contract address"
+            >
+              <svg class="w-3.5 h-3.5 fill-current text-slate-400 shrink-0" viewBox="0 0 256 256" aria-hidden="true">
+                <path d="M216,32H88a8,8,0,0,0-8,8V80H40a8,8,0,0,0-8,8V216a8,8,0,0,0,8,8H168a8,8,0,0,0,8-8V176h40a8,8,0,0,0,8-8V40A8,8,0,0,0,216,32ZM160,208H48V96H160Zm48-48H176V88a8,8,0,0,0-8-8H96V48H208Z"/>
+              </svg>
+              <span id="copyBtnText">Copy</span>
+            </button>
+
+            <button
+              id="headerBuyBtn"
+              type="button"
+              data-on-click="openBuyModal"
+              class="px-3 sm:px-4 py-2 min-h-[44px] rounded-xl bg-naraGreen hover:bg-[#52ff33] text-slate-950 text-xs font-bold transition-colors nara-press flex items-center gap-1.5 cursor-pointer select-none whitespace-nowrap"
+              aria-label="Buy NARA on Base"
+            >
+              <span>Buy<span class="hidden sm:inline"> $NARA</span></span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Mobile Page Switcher -->
+        <nav aria-label="Mobile page navigation" class="md:hidden mt-2.5 pt-2 border-t border-white/[0.07] grid grid-cols-3 gap-1.5">
+          <a href="/" class="min-h-[34px] px-2 py-1 rounded-lg text-center text-xs font-medium text-slate-400 hover:text-white bg-white/[0.03] no-underline flex items-center justify-center">Overview</a>
+          <a href="/vault" aria-current="page" class="min-h-[34px] px-2 py-1 rounded-lg text-center text-xs font-semibold bg-white/[0.09] text-white no-underline flex items-center justify-center">Vaults</a>
+          <a href="/#sectorArcade" class="min-h-[34px] px-2 py-1 rounded-lg text-center text-xs font-medium text-slate-400 hover:text-white bg-white/[0.03] no-underline flex items-center justify-center">Arcade</a>
+        </nav>
+      </div>
+    </header>
+
+    <!-- Single Calm Main Chassis (Zero Text Walls) -->
+    <main id="mainContent" class="w-full max-w-5xl mx-auto px-3 sm:px-6 py-6 sm:py-8 flex-1">
+
+      <section
+        id="anchorSeatsSection"
+        aria-labelledby="vaultHeading"
+        class="w-full rounded-2xl bg-[#0D131F] border border-white/[0.08] overflow-hidden shadow-[0_24px_60px_rgba(2,6,23,0.65)]"
+      >
+        <!-- Clean Header + Progressive Disclosure (i) Button -->
+        <div class="px-5 sm:px-7 pt-5 sm:pt-6 pb-4 flex flex-wrap items-center justify-between gap-3">
+          <div class="flex flex-wrap items-center gap-2.5">
+            <h1 id="vaultHeading" class="text-xl sm:text-2xl font-bold tracking-tight text-white m-0">
+              Vault Receipts
+            </h1>
+            <span id="anchorSeatsLiveBadge" class="inline-flex items-center px-2.5 py-0.5 rounded-full bg-white/[0.06] text-slate-300 text-xs font-mono">
+              From 1.61 ETH
+            </span>
+            <button
+              id="toggleAnchorSpecsBtn"
+              type="button"
+              data-on-click="toggleAnchorSpecs"
+              aria-expanded="false"
+              aria-controls="anchorSpecsDrawer"
+              class="w-7 h-7 rounded-full bg-white/[0.05] hover:bg-white/[0.12] border border-white/15 text-slate-300 hover:text-white text-xs font-semibold cursor-pointer flex items-center justify-center transition-colors"
+              title="How Vault Receipts work & verified contracts"
+              aria-label="Toggle Vault Receipt details"
+            >
+              i
+            </button>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <span id="vaultStatSpotUsd" class="text-xs font-mono text-slate-400 tabular-nums">Base 8453</span>
+            <button
+              id="refreshAnchorSeatsBtn"
+              type="button"
+              data-on-click="refreshAnchorSeats"
+              class="w-8 h-8 rounded-lg bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 text-slate-300 hover:text-white text-xs cursor-pointer flex items-center justify-center transition-colors"
+              title="Refresh Base state"
+              aria-label="Refresh Vault Receipts"
+            >
+              ↻
+            </button>
+          </div>
+        </div>
+
+        <!-- Progressive Disclosure Drawer (Hidden until user clicks "i") -->
+        <div
+          id="anchorSpecsDrawer"
+          class="hidden mx-5 sm:mx-7 mb-4 p-4 rounded-xl bg-[#080C14] border border-white/[0.08] space-y-3 text-xs text-slate-300"
+        >
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <div class="font-semibold text-white">0% Pool Slippage</div>
+              <div class="text-slate-400 mt-0.5">Fixed-ETH atomic settlement on NARAPositionSaleV5.</div>
+            </div>
+            <div>
+              <div class="font-semibold text-white">15m Reward Pulses</div>
+              <div class="text-slate-400 mt-0.5">Live monthly estimates read current Base emission &amp; Grid weight; actual distributions vary with network weight and activity.</div>
+            </div>
+            <div>
+              <div class="font-semibold text-white">BuyerBounds Guard</div>
+              <div class="text-slate-400 mt-0.5">Pins principal, chest balances &amp; price across dual Base RPCs; 0% exit fee at maturity.</div>
+            </div>
+          </div>
+          <div class="pt-2.5 border-t border-white/[0.07] flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-slate-400">
+            <div class="flex flex-wrap items-center gap-3">
+              <a href="https://basescan.org/address/0x04Ac83045d26259D46400Ce6beb9bBd0641df225" target="_blank" rel="noopener noreferrer" class="text-emerald-300 hover:underline no-underline">Sale 0x04Ac…f225 ↗</a>
+              <a href="https://basescan.org/address/0x8C5F088D9d09dBB90aB6F3aaA049a8FD5D5FfFDA" target="_blank" rel="noopener noreferrer" class="text-slate-300 hover:text-white no-underline">Receipt 0x8C5F…fFDA ↗</a>
+              <a href="https://basescan.org/token/0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f" target="_blank" rel="noopener noreferrer" class="text-slate-300 hover:text-white no-underline">$NARA 0x91FB…Ae0f ↗</a>
+            </div>
+            <div class="flex items-center gap-2 font-sans">
+              <a id="shareVaultXBtn" href="https://x.com/intent/post" target="_blank" rel="noopener noreferrer" data-on-click="shareVaultOnX" class="text-slate-300 hover:text-white no-underline">Share on X ↗</a>
+              <span class="text-slate-600">·</span>
+              <a id="shareVaultCastBtn" href="https://farcaster.xyz/~/compose" target="_blank" rel="noopener noreferrer" data-on-click="shareVaultOnCast" class="text-purple-300 hover:text-white no-underline">Cast ↗</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Single Clean 6-Tier Filter Row -->
+        <div class="px-5 sm:px-7 pb-4 border-b border-white/[0.07] flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter by tier">
+          <button id="anchorTierBtn-featured" type="button" data-on-click="setAnchorTierFilter:featured" aria-pressed="true" class="px-3 py-1.5 min-h-[34px] rounded-lg bg-naraGreen text-slate-950 text-xs font-bold cursor-pointer whitespace-nowrap">Featured</button>
+          <button id="anchorTierBtn-sprint" type="button" data-on-click="setAnchorTierFilter:sprint" aria-pressed="false" class="px-3 py-1.5 min-h-[34px] rounded-lg bg-white/[0.04] hover:bg-white/[0.09] border border-white/10 text-slate-300 text-xs font-medium cursor-pointer whitespace-nowrap">1.61 ETH</button>
+          <button id="anchorTierBtn-starter" type="button" data-on-click="setAnchorTierFilter:starter" aria-pressed="false" class="px-3 py-1.5 min-h-[34px] rounded-lg bg-white/[0.04] hover:bg-white/[0.09] border border-white/10 text-slate-300 text-xs font-medium cursor-pointer whitespace-nowrap">1.84 ETH</button>
+          <button id="anchorTierBtn-core" type="button" data-on-click="setAnchorTierFilter:core" aria-pressed="false" class="px-3 py-1.5 min-h-[34px] rounded-lg bg-white/[0.04] hover:bg-white/[0.09] border border-white/10 text-slate-300 text-xs font-medium cursor-pointer whitespace-nowrap">2.18 ETH</button>
+          <button id="anchorTierBtn-plus" type="button" data-on-click="setAnchorTierFilter:plus" aria-pressed="false" class="px-3 py-1.5 min-h-[34px] rounded-lg bg-white/[0.04] hover:bg-white/[0.09] border border-white/10 text-slate-300 text-xs font-medium cursor-pointer whitespace-nowrap">2.78 ETH</button>
+          <button id="anchorTierBtn-builder" type="button" data-on-click="setAnchorTierFilter:builder" aria-pressed="false" class="px-3 py-1.5 min-h-[34px] rounded-lg bg-white/[0.04] hover:bg-white/[0.09] border border-white/10 text-slate-300 text-xs font-medium cursor-pointer whitespace-nowrap">4.05 ETH</button>
+          <button id="anchorTierBtn-prime" type="button" data-on-click="setAnchorTierFilter:prime" aria-pressed="false" class="px-3 py-1.5 min-h-[34px] rounded-lg bg-white/[0.04] hover:bg-white/[0.09] border border-white/10 text-slate-300 text-xs font-medium cursor-pointer whitespace-nowrap">5.90 ETH</button>
+          <button id="anchorTierBtn-all" type="button" data-on-click="setAnchorTierFilter:all" aria-pressed="false" class="px-3 py-1.5 min-h-[34px] rounded-lg bg-white/[0.04] hover:bg-white/[0.09] border border-white/10 text-slate-300 text-xs font-medium cursor-pointer whitespace-nowrap">All 29</button>
+        </div>
+
+        <!-- Transaction Status Box (Eye-level on mobile & desktop) -->
+        <div id="anchorSeatsStatusBox" role="status" aria-live="polite" class="hidden"></div>
+
+        <!-- Clean 2-Column Vault Cards -->
+        <div id="anchorSeatsGrid" class="p-5 sm:p-7 bg-[#090E18] grid grid-cols-1 md:grid-cols-2 items-start gap-4">
+          <!-- Populated by anchorSeats.js -->
+        </div>
+
+        <!-- Mobile Bottom-Sheet / Desktop Centered Checkout Modal (Opens on Select or ?seat=<id>) -->
+        <div id="anchorSeatReviewDrawer" class="hidden"></div>
+
+        <!-- Clean Receipt Breakdown Modal (Opens on ? click, closes on outside click / Esc / ✕) -->
+        <div id="anchorCardHelpModal" class="hidden"></div>
+
+        <!-- Always-Visible 1-Line Variable Flow & Risk Caption (Zero Clutter, MiCA/FCA Prominence) -->
+        <div class="px-5 sm:px-7 py-2.5 bg-[#090E18] border-t border-white/[0.06] text-[11px] text-slate-400 flex flex-wrap items-center justify-between gap-2">
+          <span>Variable network flow · Actual 15m pulses depend on Base Grid weight &amp; activity, are never guaranteed, and can be zero.</span>
+          <span class="shrink-0">18+ · <a href="/terms" class="text-slate-300 hover:text-white underline">Terms</a> · <a href="/privacy" class="text-slate-300 hover:text-white underline">Privacy</a></span>
+        </div>
+
+        <!-- Minimal Bottom Action Bar -->
+        <div class="px-5 sm:px-7 py-3.5 bg-[#0D131F] border-t border-white/[0.07] flex items-center justify-between gap-3 text-xs">
+          <a href="/" class="text-slate-400 hover:text-white no-underline font-medium">← Overview</a>
+          <button
+            type="button"
+            data-on-click="openBuyModal"
+            class="text-emerald-300 hover:text-white font-semibold bg-transparent border-0 p-0 cursor-pointer"
+          >
+            Swap liquid $NARA instead →
+          </button>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Quiet Minimal Footer -->
+    <footer class="w-full pb-[max(1.25rem,env(safe-area-inset-bottom,0px))] px-3 sm:px-6 max-w-5xl mx-auto">
+      <div class="w-full rounded-2xl bg-[#0D131F] border border-white/[0.07] px-4 sm:px-5 py-3.5 space-y-2">
+        <div class="flex flex-wrap items-center justify-between gap-3 text-xs">
+          <button
+            id="mmBtn"
+            type="button"
+            data-on-click="addNaraToMetaMask"
+            class="min-h-[36px] px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.09] border border-white/10 text-slate-200 hover:text-white text-xs font-medium transition-colors flex items-center gap-2 cursor-pointer select-none"
+            aria-label="Add NARA to MetaMask"
+          >
+            <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 35 33" fill="none" aria-hidden="true">
+              <path d="m32.9582 1-13.1341 9.7183 2.4424-5.72731z" fill="#E27625"/>
+              <path d="m2.66296 1 13.01714 9.809-2.3254-5.81802z" fill="#E27625"/>
+              <path d="m28.2295 23.5335-3.4947 5.3386 7.4829 2.0603 2.1436-7.2823z" fill="#E27625"/>
+              <path d="m1.27281 23.6501 2.13055 7.2823 7.46994-2.0603-3.48166-5.3386z" fill="#E27625"/>
+              <path d="m10.4706 14.5149-2.0786 3.1358 7.405.3369-.2469-7.969z" fill="#E27625"/>
+              <path d="m25.1505 14.5149-5.1575-4.58704-.1688 8.05974 7.4049-.3369z" fill="#E27625"/>
+              <path d="m10.8733 28.8721 4.4819-2.1639-3.8583-3.0062z" fill="#E27625"/>
+              <path d="m20.2659 26.7082 4.4689 2.1639-.6105-5.1701z" fill="#E27625"/>
+            </svg>
+            <span id="mmBtnLabel" class="uppercase tracking-wide">Add $NARA to MetaMask</span>
+          </button>
+
+          <div class="flex flex-wrap items-center gap-3 text-slate-400">
+            <a href="https://t.me/NARAProtocol" target="_blank" rel="noopener noreferrer" class="hover:text-white no-underline">Telegram</a>
+            <a href="https://x.com/NARA_protocol" target="_blank" rel="noopener noreferrer" class="hover:text-white no-underline">X</a>
+            <a href="https://farcaster.xyz/naraprotocol" target="_blank" rel="noopener noreferrer" class="hover:text-white no-underline">Farcaster</a>
+            <a href="https://dexscreener.com/base/0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f" target="_blank" rel="noopener noreferrer" class="hover:text-white no-underline">Chart</a>
+            <a href="https://basescan.org/token/0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f" target="_blank" rel="noopener noreferrer" class="hover:text-white no-underline">BaseScan</a>
+            <a href="https://github.com/NARAProtocol/nara_protocol" target="_blank" rel="noopener noreferrer" class="hover:text-white no-underline">Docs</a>
+            <a href="/privacy" class="hover:text-white no-underline">Privacy</a>
+            <a href="/terms" class="hover:text-white no-underline">Terms</a>
+            <a href="/accessibility" class="hover:text-white no-underline">Accessibility</a>
+          </div>
+        </div>
+
+        <details class="text-[11px] text-slate-500">
+          <summary class="cursor-pointer select-none hover:text-slate-300">Open-source non-custodial Base interface · Zero tracking cookies · Legal &amp; risk notice</summary>
+          <p class="mt-2 pt-2 border-t border-white/[0.06] leading-relaxed text-slate-400 m-0">
+            Published by independent open-source contributors (no corporate custodian) for Base Mainnet (Chain ID 8453). Adults 18+ only; prohibited for sanctioned or restricted persons/jurisdictions. Zero advertising or tracking cookies are used. Nothing on this site constitutes financial advice, investment, legal, or tax advice, nor an offer, solicitation, or recommendation of any security or financial instrument. Protocol distributions depend strictly on smart-contract math and actual on-chain activity, are never promised or guaranteed, and can be zero. Digital assets are volatile and transactions are irreversible; always verify canonical token address <code class="text-slate-200 font-mono">0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f</code> before signing any transaction. Third-party trademarks belong to their respective owners with no affiliation implied.
+            <span class="block mt-1.5 space-x-3">
+              <a href="/privacy" class="text-slate-300 hover:text-emerald-300 no-underline">Privacy Policy</a>
+              <a href="/terms" class="text-slate-300 hover:text-emerald-300 no-underline">Terms of Use</a>
+              <a href="/accessibility" class="text-slate-300 hover:text-emerald-300 no-underline">Accessibility</a>
+              <a href="https://github.com/NARAProtocol/nara_protocol/blob/main/docs/CRYPTOSLIP_PUBLIC_OVERVIEW_AND_LEGAL_FAQ.md" target="_blank" rel="noopener noreferrer" class="text-slate-400 hover:text-emerald-300 no-underline">Legal FAQ ↗</a>
+              <a href="https://github.com/NARAProtocol/nara_protocol/blob/main/docs/Risk_Assessment.md" target="_blank" rel="noopener noreferrer" class="text-slate-400 hover:text-emerald-300 no-underline">Risk Disclosure ↗</a>
+              <a href="https://github.com/NARAProtocol/nara_protocol/blob/main/SECURITY.md" target="_blank" rel="noopener noreferrer" class="text-slate-400 hover:text-emerald-300 no-underline">Security Policy ↗</a>
+            </span>
+          </p>
+        </details>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Swap Pre-Launch Fallback Modal -->
+  <div
+    id="swapPrelaunchModal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="swapModalHeading"
+    class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md"
+    data-on-click="closeSwapModalBackdrop"
+  >
+    <div
+      class="relative w-full max-w-md rounded-2xl bg-[#0D131F] border border-amber-400/35 shadow-[0_24px_70px_rgba(2,6,23,0.9)] p-5 sm:p-6 flex flex-col items-center text-center select-none"
+      data-on-click="stopPropagation"
+    >
+      <button
+        type="button"
+        data-on-click="closeSwapModal"
+        class="absolute top-3 right-3 w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl flex items-center justify-center text-slate-400 hover:text-white bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 cursor-pointer text-sm transition-colors"
+        title="Close (Esc)"
+        aria-label="Close modal"
+      >
+        ✕
+      </button>
+      <div class="px-3 py-1 rounded-full bg-amber-500/15 border border-amber-400/35 text-amber-300 text-xs font-semibold mb-3">
+        Pre-Launch Notice
+      </div>
+      <h3 id="swapModalHeading" class="text-lg font-bold text-white mb-2">
+        $NARA Swaps Open Soon
+      </h3>
+      <p class="text-xs text-slate-300 leading-relaxed max-w-xs mb-4">
+        When active, CryptoSLIP opens in a new tab for $NARA swaps, commitments, and $0-gas payment links.
+      </p>
+      <button
+        type="button"
+        data-on-click="closeSwapModal"
+        class="w-full min-h-[42px] py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-white text-xs font-semibold cursor-pointer"
+      >
+        Close
+      </button>
+    </div>
+  </div>
+
+  <!-- 1-Click Buy / Sell $NARA Modal (Uniswap v4 Hook on Base 8453) -->
+  <div
+    id="buyNaraModal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="buyModalHeading"
+    class="hidden fixed inset-0 z-[65] flex items-center justify-center p-2.5 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto"
+    data-on-click="closeBuyModalBackdrop"
+  >
+    <div
+      class="relative w-full max-w-[380px] sm:max-w-[420px] max-h-[94dvh] rounded-2xl bg-[#0D131F] border border-white/15 shadow-[0_24px_80px_rgba(2,6,23,0.95)] p-4 sm:p-5 flex flex-col gap-3 font-sans overflow-y-auto overscroll-contain my-auto"
+      data-on-click="stopPropagation"
+    >
+      <div class="flex items-center justify-between gap-2 pr-11">
+        <div class="min-w-0">
+          <h3 id="buyModalHeading" class="text-base sm:text-lg font-bold text-white tracking-tight m-0">
+            Swap $NARA
+          </h3>
+          <div class="flex flex-wrap items-center gap-1.5 mt-0.5 text-xs font-mono tabular-nums">
+            <span class="w-1.5 h-1.5 rounded-full bg-naraGreen shrink-0"></span>
+            <span id="buyModalSpotBadge" class="font-semibold text-emerald-300 truncate">Base 8453</span>
+            <span class="text-slate-500">·</span>
+            <span id="buyModalCircBadge" class="text-slate-400 truncate">1M Cap</span>
+          </div>
+        </div>
+        <button
+          type="button"
+          data-on-click="closeBuyModal"
+          class="absolute top-3 right-3 w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl flex items-center justify-center text-slate-400 hover:text-white bg-white/[0.05] hover:bg-white/[0.12] border border-white/10 cursor-pointer text-sm transition-colors focus-visible:ring-2 focus-visible:ring-naraGreen outline-none"
+          title="Close (Esc)"
+          aria-label="Close Buy NARA modal"
+        >
+          ✕
+        </button>
+      </div>
+
+      <!-- Buy / Sell Tabs -->
+      <div class="grid grid-cols-2 gap-1 bg-[#080C14] p-1 rounded-xl border border-white/10">
+        <button
+          id="buyTabBuyBtn"
+          type="button"
+          data-on-click="setBuyModalDirection:buy"
+          class="flex-1 min-h-[44px] py-1.5 rounded-lg bg-naraGreen text-slate-950 font-sans font-bold text-xs cursor-pointer transition-all"
+        >
+          ⚡ Buy $NARA
+        </button>
+        <button
+          id="buyTabSellBtn"
+          type="button"
+          data-on-click="setBuyModalDirection:sell"
+          class="flex-1 min-h-[44px] py-1.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.08] text-slate-300 hover:text-white font-sans font-semibold text-xs cursor-pointer transition-all"
+        >
+          Sell $NARA
+        </button>
+      </div>
+
+      <!-- Wallet Status Bar -->
+      <div id="buyWalletBox" class="hidden px-3 py-2.5 rounded-xl bg-[#090E18] border border-white/10 space-y-1.5">
+        <div id="buyWalletConnectedRow" class="hidden space-y-0.5">
+          <div class="flex items-center justify-between gap-2">
+            <span id="buyWalletAddrText" class="text-xs font-mono font-semibold text-emerald-300 truncate">Wallet Connected</span>
+            <button
+              type="button"
+              data-on-click="disconnectBuyWallet"
+              class="px-2 py-0.5 rounded-md bg-white/[0.05] hover:bg-white/[0.12] border border-white/15 text-[11px] text-slate-300 hover:text-white cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+          <div id="buyWalletBalText" class="text-[11px] font-mono text-slate-400 truncate">
+            Reading Base balances…
+          </div>
+        </div>
+
+        <div id="buyWalletPicker" class="hidden space-y-1.5">
+          <div class="text-xs text-slate-400 font-medium">Select Wallet:</div>
+          <div id="buyWalletPickerList" class="space-y-1"></div>
+        </div>
+
+        <div id="buyNoWalletLinks" class="hidden space-y-1.5">
+          <div class="text-xs text-slate-400">Open directly in wallet app:</div>
+          <div class="grid grid-cols-3 gap-1.5">
+            <a
+              id="buyOpenMetaMaskMobile"
+              href="https://link.metamask.io/dapp/naraprotocol.io/vault?buy=1"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="min-h-[36px] px-2 py-1 rounded-lg bg-white/[0.05] hover:bg-white/[0.12] border border-white/15 text-[11px] font-semibold text-white flex items-center justify-center text-center no-underline"
+            >
+              MetaMask
+            </a>
+            <a
+              id="buyOpenCoinbaseMobile"
+              href="https://go.cb-w.com/dapp?cb_url=https%3A%2F%2Fnaraprotocol.io%2Fvault%3Fbuy%3D1"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="min-h-[36px] px-2 py-1 rounded-lg bg-white/[0.05] hover:bg-white/[0.12] border border-white/15 text-[11px] font-semibold text-white flex items-center justify-center text-center no-underline"
+            >
+              Coinbase
+            </a>
+            <a
+              id="buyOpenCryptoSlipApp"
+              href="https://slip.naraprotocol.io/?tab=nara&action=buy"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="min-h-[36px] px-2 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/35 text-[11px] font-semibold text-emerald-300 flex items-center justify-center text-center no-underline"
+            >
+              CryptoSLIP
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pay Input -->
+      <div class="p-3 rounded-xl bg-[#080C14] border border-white/12 focus-within:border-emerald-400/60 space-y-2.5">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-xs font-medium text-slate-400">You pay</span>
+          <div id="buyAssetSelectorRow" class="flex items-center gap-1">
+            <button
+              id="buyModalAssetEthBtn"
+              type="button"
+              data-on-click="setBuyModalAsset:ETH"
+              class="min-h-[28px] px-2.5 py-0.5 rounded-lg bg-emerald-500/20 border border-naraGreen text-naraGreen text-xs font-mono font-bold uppercase cursor-pointer transition-all"
+            >
+              ETH
+            </button>
+            <button
+              id="buyModalAssetUsdcBtn"
+              type="button"
+              data-on-click="setBuyModalAsset:USDC"
+              class="min-h-[28px] px-2.5 py-0.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 text-slate-300 hover:text-white text-xs font-mono font-semibold uppercase cursor-pointer transition-all"
+            >
+              USDC
+            </button>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <input
+            id="buyModalAmountInput"
+            type="text"
+            inputmode="decimal"
+            autocomplete="off"
+            spellcheck="false"
+            value="0.01"
+            aria-label="Amount to swap"
+            data-on-input="handleBuyModalAmountInput"
+            class="w-full min-w-0 bg-transparent text-white font-mono font-bold text-2xl tabular-nums outline-none"
+          />
+          <button
+            type="button"
+            data-on-click="setBuyModalMax"
+            class="min-h-[28px] px-2.5 py-0.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.14] border border-white/15 text-[11px] text-emerald-300 font-semibold cursor-pointer shrink-0"
+          >
+            MAX
+          </button>
+          <span id="buyModalPayUnit" class="px-2.5 py-0.5 rounded-lg bg-white/[0.07] border border-white/15 text-xs font-mono font-bold text-white shrink-0">
+            ETH
+          </span>
+        </div>
+
+        <div id="buyModalPresetsWrap" class="grid grid-cols-4 gap-1.5 font-mono">
+          <button type="button" data-modal-preset-asset="ETH" data-on-click="setBuyModalPreset:0.005" class="min-h-[30px] py-0.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 text-xs text-slate-200 cursor-pointer">0.005</button>
+          <button type="button" data-modal-preset-asset="ETH" data-on-click="setBuyModalPreset:0.01" class="min-h-[30px] py-0.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 text-xs text-slate-200 cursor-pointer">0.01</button>
+          <button type="button" data-modal-preset-asset="ETH" data-on-click="setBuyModalPreset:0.05" class="min-h-[30px] py-0.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 text-xs text-slate-200 cursor-pointer">0.05</button>
+          <button type="button" data-modal-preset-asset="ETH" data-on-click="setBuyModalPreset:0.1" class="min-h-[30px] py-0.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 text-xs text-slate-200 cursor-pointer">0.10</button>
+
+          <button type="button" data-modal-preset-asset="USDC" data-on-click="setBuyModalPreset:25" class="hidden min-h-[30px] py-0.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 text-xs text-slate-200 cursor-pointer">$25</button>
+          <button type="button" data-modal-preset-asset="USDC" data-on-click="setBuyModalPreset:100" class="hidden min-h-[30px] py-0.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 text-xs text-slate-200 cursor-pointer">$100</button>
+          <button type="button" data-modal-preset-asset="USDC" data-on-click="setBuyModalPreset:250" class="hidden min-h-[30px] py-0.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 text-xs text-slate-200 cursor-pointer">$250</button>
+          <button type="button" data-modal-preset-asset="USDC" data-on-click="setBuyModalPreset:500" class="hidden min-h-[30px] py-0.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 text-xs text-slate-200 cursor-pointer">$500</button>
+
+          <button type="button" data-modal-preset-asset="NARA" data-on-click="setBuyModalPreset:0.01" class="hidden min-h-[30px] py-0.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 text-xs text-slate-200 cursor-pointer">0.01</button>
+          <button type="button" data-modal-preset-asset="NARA" data-on-click="setBuyModalPreset:0.05" class="hidden min-h-[30px] py-0.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 text-xs text-slate-200 cursor-pointer">0.05</button>
+          <button type="button" data-modal-preset-asset="NARA" data-on-click="setBuyModalPreset:0.25" class="hidden min-h-[30px] py-0.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 text-xs text-slate-200 cursor-pointer">0.25</button>
+          <button type="button" data-modal-preset-asset="NARA" data-on-click="setBuyModalPreset:1" class="hidden min-h-[30px] py-0.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 text-xs text-slate-200 cursor-pointer">1.00</button>
+        </div>
+      </div>
+
+      <!-- Output Box -->
+      <div class="p-3 rounded-xl bg-[#080C14] border border-emerald-400/25 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-medium text-slate-400">Estimated output</span>
+          <button
+            type="button"
+            data-on-click="refreshBuyQuote"
+            class="text-xs font-medium text-emerald-300 hover:underline cursor-pointer"
+          >
+            ↻ Quote
+          </button>
+        </div>
+        <div class="flex items-baseline justify-between gap-2">
+          <span id="buyModalOutValue" class="text-2xl font-mono font-bold text-emerald-300 tabular-nums truncate">—</span>
+          <span id="buyModalOutUnit" class="text-xs font-mono font-bold text-slate-200 shrink-0">$NARA</span>
+        </div>
+
+        <div class="pt-2 border-t border-white/[0.07] space-y-1.5 text-xs text-slate-400">
+          <div class="flex items-center justify-between gap-2">
+            <span class="shrink-0">Minimum received</span>
+            <span id="buyModalMinOut" class="text-white font-mono font-semibold text-right truncate">—</span>
+          </div>
+          <div id="buyModalSurgeHint" class="hidden flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-amber-500/10 border border-amber-400/30 text-amber-300 text-xs">
+            <span id="buyModalSurgeText" class="truncate">Surge hook fee active</span>
+            <button
+              type="button"
+              data-on-click="applyLowFeeSwapSize"
+              class="px-2 py-0.5 rounded bg-amber-400 text-slate-950 font-bold text-[10px] uppercase cursor-pointer shrink-0"
+              title="Set trade size to base 4.63% hook fee clip"
+            >
+              Low-Fee Size
+            </button>
+          </div>
+          <div class="flex items-center justify-between gap-2">
+            <span class="shrink-0">Slippage</span>
+            <div class="flex items-center gap-1">
+              <button id="buySlipBtn-200" type="button" data-on-click="setBuyModalSlippage:200" class="px-2 py-0.5 min-h-[28px] rounded-md bg-white/[0.03] border border-white/10 text-slate-400 text-xs font-mono cursor-pointer">2%</button>
+              <button id="buySlipBtn-500" type="button" data-on-click="setBuyModalSlippage:500" class="px-2 py-0.5 min-h-[28px] rounded-md bg-emerald-500/20 border border-naraGreen text-naraGreen text-xs font-mono font-bold cursor-pointer">5%</button>
+              <button id="buySlipBtn-1000" type="button" data-on-click="setBuyModalSlippage:1000" class="px-2 py-0.5 min-h-[28px] rounded-md bg-white/[0.03] border border-white/10 text-slate-400 text-xs font-mono cursor-pointer">10%</button>
+              <button id="buySlipBtn-2000" type="button" data-on-click="setBuyModalSlippage:2000" class="px-2 py-0.5 min-h-[28px] rounded-md bg-white/[0.03] border border-white/10 text-slate-400 text-xs font-mono cursor-pointer">20%</button>
+            </div>
+          </div>
+
+          <details class="pt-0.5 text-slate-400">
+            <summary class="cursor-pointer select-none hover:text-slate-200 text-xs">
+              Route &amp; fees (Uniswap v4 Hook)
+            </summary>
+            <div class="mt-2 pt-2 border-t border-white/[0.06] space-y-1 text-[11px]">
+              <div class="flex items-center justify-between gap-2">
+                <span>Hook + LP fee</span>
+                <span id="buyModalHookFee" class="text-emerald-300 font-mono text-right">4.63% V5 Hook + 0.30% LP</span>
+              </div>
+              <div id="buyModalRouteText" class="text-slate-400 font-mono truncate">
+                1-Click Atomic · ETH → USDC → NARA V5 Hook
+              </div>
+              <div class="text-slate-500 leading-snug">
+                Non-custodial Universal Router (<code class="text-slate-300 font-mono">0x6fF5…b43</code>) → <code class="text-slate-300 font-mono">NARALiquidityHookV5</code> (<code class="text-slate-300 font-mono">0x07d8…6aCC</code>).
+              </div>
+            </div>
+          </details>
+        </div>
+      </div>
+
+      <!-- Status / Error Notice -->
+      <div id="buyModalStatusBox" role="status" aria-live="polite" class="hidden"></div>
+
+      <!-- Confirmed Swap Receipt -->
+      <div id="buyModalReceiptBox" class="hidden p-3 rounded-xl bg-emerald-500/15 border border-emerald-400/50 space-y-2">
+        <div class="text-xs font-bold text-emerald-300">✓ Swap Confirmed on Base</div>
+        <div id="buyModalReceiptSummary" class="text-xs text-white"></div>
+        <div class="grid grid-cols-2 gap-2">
+          <a
+            id="buyModalReceiptLink"
+            href="https://basescan.org/token/0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="min-h-[36px] px-2.5 py-1 rounded-lg bg-black/50 hover:bg-black border border-white/15 text-xs font-semibold text-white flex items-center justify-center no-underline"
+          >
+            BaseScan Tx ↗
+          </a>
+          <button
+            id="buyReceiptWatchBtn"
+            type="button"
+            data-on-click="addNaraToMetaMask"
+            class="min-h-[36px] px-2.5 py-1 rounded-lg bg-black/50 hover:bg-black border border-white/15 text-xs font-semibold text-emerald-300 cursor-pointer"
+          >
+            + Show $NARA in Wallet
+          </button>
+        </div>
+        <a
+          id="buyModalCommitLink"
+          href="https://slip.naraprotocol.io/?tab=nara"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="w-full min-h-[44px] px-3 py-1.5 rounded-lg bg-naraGreen text-slate-950 font-bold text-xs flex items-center justify-center no-underline"
+        >
+          Commit 1+ NARA for 900s Rewards ↗
+        </a>
+      </div>
+
+      <!-- Primary Execute Button -->
+      <button
+        id="buyModalSubmitBtn"
+        type="button"
+        data-on-click="executeBuyModalSwap"
+        class="w-full min-h-[46px] py-3 rounded-xl bg-naraGreen hover:bg-[#52ff33] active:bg-emerald-400 text-slate-950 font-sans font-bold text-sm cursor-pointer transition-colors"
+      >
+        <span id="buyModalSubmitLabel">Connect Wallet</span>
+      </button>
+
+      <div class="text-[11px] text-slate-500 text-center leading-snug">
+        18+ · Non-sanctioned · Irreversible Base swap · <a href="/terms" class="text-slate-400 hover:text-white underline">Terms</a> &amp; <a href="/privacy" class="text-slate-400 hover:text-white underline">Privacy</a>
+      </div>
+
+      <!-- Quick Links Row -->
+      <div class="flex items-center justify-between gap-2 pt-0.5 text-xs text-slate-400">
+        <button
+          type="button"
+          data-on-click="copyBuyModalCA"
+          class="hover:text-emerald-300 cursor-pointer font-medium"
+        >
+          <span id="buyModalCopyCaLabel">Copy CA</span>
+        </button>
+        <div class="flex items-center gap-3">
+          <a
+            href="https://dexscreener.com/base/0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-slate-400 hover:text-white no-underline font-medium"
+          >Chart ↗</a>
+          <a
+            href="https://slip.naraprotocol.io/?tab=nara&action=buy"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-emerald-300 hover:text-white no-underline font-medium"
+          >CryptoSLIP ↗</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/meme/vaultPage.js"></script>
+</body>
+</html>
