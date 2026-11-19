@@ -1,20 +1,24 @@
 # Static asset headers. These rules do NOT apply to Pages Function responses (/api/*);
 # functions/api/leaderboard.js sets its own headers.
 /*
-  X-Frame-Options: DENY
+  Cache-Control: public, max-age=0, must-revalidate, no-transform
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Strict-Transport-Security: max-age=31536000; includeSubDomains
   Permissions-Policy: accelerometer=(), autoplay=(self), camera=(), encrypted-media=(self), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), sync-xhr=(), usb=()
-  Cross-Origin-Opener-Policy: same-origin
-  Content-Security-Policy: default-src 'self'; script-src 'self' https://challenges.cloudflare.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; media-src 'self'; connect-src 'self' https://mainnet.base.org https://base-rpc.publicnode.com https://base.drpc.org https://base.llamarpc.com https://1rpc.io/base https://cloudflareinsights.com; frame-src https://challenges.cloudflare.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests
+  Cross-Origin-Opener-Policy: same-origin-allow-popups
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://challenges.cloudflare.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; media-src 'self'; connect-src 'self' https://mainnet.base.org https://base.gateway.tenderly.co https://base-rpc.publicnode.com https://base.drpc.org https://base.llamarpc.com https://1rpc.io/base https://cloudflareinsights.com; frame-src https://challenges.cloudflare.com; frame-ancestors 'self' https://web.telegram.org https://*.telegram.org https://warpcast.com https://*.warpcast.com https://farcaster.xyz https://*.farcaster.xyz https://base.app https://*.base.app https://wallet.coinbase.com; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests
 
 /assets/*
-  Cache-Control: public, max-age=31536000, immutable
+  Cache-Control: public, max-age=31536000, immutable, no-transform
 
 /fonts/*
-  Cache-Control: public, max-age=604800
+  Cache-Control: public, max-age=604800, no-transform
 
 /sw.js
-  Cache-Control: no-cache
+  Cache-Control: no-cache, no-transform
 
+/.well-known/webauthn
+  Content-Type: application/json; charset=utf-8
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=300

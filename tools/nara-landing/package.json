@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "check:denylist": "node scripts/check-denylist.cjs",
-    "test:api": "node --test tests/leaderboard.test.mjs tests/supply.test.mjs tests/quote.test.mjs",
+    "test:api": "node --test tests/leaderboard.test.mjs tests/supply.test.mjs tests/quote.test.mjs tests/anchorSeats.test.mjs tests/webauthnAndTelegramLink.test.mjs tests/erc8021.test.mjs tests/geoblock.test.mjs",
     "test:smoke": "node tests/smoke.mjs",
     "check": "npm run check:denylist && npm run test:api && npm run build",
     "pages:dev": "wrangler pages dev dist --port 8788 --kv NARA_LEADERBOARD_KV",

@@ -1,0 +1,29 @@
+{
+  "baseBuilder": {
+    "allowedAddresses": ["0xe320C281c86079eA85f2Bc67864E873A61D551E3"]
+  },
+  "miniapp": {
+    "version": "1",
+    "name": "NARA Protocol",
+    "subtitle": "Uniswap v4 Hook & 15m Epochs on Base",
+    "description": "35-contract formally and fuzz-verified Uniswap v4 dynamic-fee Hook, 900-second tri-asset reward engine, and ETH Vault Receipt terminal on Base.",
+    "iconUrl": "https://naraprotocol.io/icon-512.png",
+    "homeUrl": "https://naraprotocol.io/vault",
+    "imageUrl": "https://naraprotocol.io/og.png",
+    "buttonTitle": "Open NARA Vaults & Swap",
+    "splashImageUrl": "https://naraprotocol.io/icon-192.png",
+    "splashBackgroundColor": "#05070A",
+    "primaryCategory": "finance",
+    "tags": ["defi", "uniswap-v4", "dex", "base", "liquidity"]
+  },
+  "frame": {
+    "version": "1",
+    "name": "NARA Protocol",
+    "iconUrl": "https://naraprotocol.io/icon-512.png",
+    "homeUrl": "https://naraprotocol.io/vault",
+    "imageUrl": "https://naraprotocol.io/og.png",
+    "buttonTitle": "Open NARA Vaults & Swap",
+    "splashImageUrl": "https://naraprotocol.io/icon-192.png",
+    "splashBackgroundColor": "#05070A"
+  }
+}

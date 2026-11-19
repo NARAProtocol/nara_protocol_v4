@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "include": ["/", "/index.html", "/vault", "/vault/*", "/vault.html", "/api/*", "/.well-known/webauthn"],
+  "exclude": []
+}

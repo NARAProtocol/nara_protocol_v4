@@ -1,50 +1,69 @@
-# NARA landing (naraprotocol.io)
+<div align="center">
 
-Single static page: the NARA toilet/frog meme landing with the flush game, live Uniswap v4 swap modal (`#buyNaraModal`), post forge, sticker cards, and the self-reported Fame Board + Award Claim Pass. Built with Vite 5 and Tailwind 3 (compiled at build time), served by Cloudflare Pages with five Pages Functions (`/api/leaderboard`, `/api/quote`, `/api/supply`, `/api/circulating-supply`, and `/api/total-supply`).
+# NARA Protocol — Official Web Portal (`naraprotocol.io`)
 
-This directory is the canonical landing source. The public mirror repo
-`NARAProtocol/nara-landing` is updated from an immutable commit here, following
-`docs/NARA_CROSS_REPOSITORY_RELEASE_PROTOCOL.md`.
+**Open-source, non-custodial Base Mainnet (`8453`) Web Portal, Uniswap v4 Hook Swap Terminal & Wave 1 Vault Receipts Console.**
 
-## Layout
+[![Live Portal](https://img.shields.io/badge/Live-naraprotocol.io-00FF9D?style=flat-square)](https://naraprotocol.io)
+[![Vault Receipts](https://img.shields.io/badge/Vault_Receipts-naraprotocol.io/vault-00E5FF?style=flat-square)](https://naraprotocol.io/vault)
+[![CryptoSLIP](https://img.shields.io/badge/CryptoSLIP-slip.naraprotocol.io-111111?style=flat-square)](https://slip.naraprotocol.io)
+[![Base Mainnet](https://img.shields.io/badge/Base_Mainnet-8453-0052FF?style=flat-square)](https://basescan.org/token/0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f)
+[![ERC-8021](https://img.shields.io/badge/Base_Builder-bc__g71jff6u-16A34A?style=flat-square)](https://basescan.org/address/0xe320C281c86079eA85f2Bc67864E873A61D551E3)
+[![Tests](https://img.shields.io/badge/Unit_Tests-53_passing-2ea44f?style=flat-square)](#commands)
+[![Zero Cookies](https://img.shields.io/badge/Tracking-Zero_Cookies_%7C_no--transform-334155?style=flat-square)](https://naraprotocol.io/privacy)
+
+</div>
+
+---
+
+Two-page static web portal (`/` Overview & Interactive Terminal + `/vault` Dedicated Wave 1 Sealed Vault Receipts console), built with Vite 5 and Tailwind 3 (compiled at build time), served by Cloudflare Pages with an edge `HTTP 451` jurisdiction middleware (`functions/_middleware.js`), five read/write Pages Functions (`/api/leaderboard`, `/api/quote`, `/api/supply`, `/api/circulating-supply`, `/api/total-supply`), standalone open-source legal/accessibility documentation (`/privacy`, `/terms`, `/accessibility`), and RFC 9116 vulnerability disclosure (`/.well-known/security.txt`).
+
+> **Canonical Release Mirror:** The public repository `NARAProtocol/nara-landing` tracks verified releases from `tools/nara-landing/` in the upstream protocol repository in accordance with the NARA Cross-Repository Release Protocol.
+
+---
+
+## Architecture & Directory Layout
 
 | Path | Purpose |
-|---|---|
-| `index.html` | Markup only. No inline scripts, no inline `on*=` handlers (`data-on-<event>="action[:arg]"` instead). |
-| `src/meme/config.js` | Public constants: token address, chain, canonical URL, CryptoSLIP URL (`https://slip.naraprotocol.io`), `SWAP_PUBLIC_LAUNCHED`, Turnstile site key. |
-| `src/meme/v4SwapEngine.js` | Zero-dependency BigInt ABI + Uniswap v4 `NARALiquidityHookV5` quote & `UniversalRouter` calldata engine (100% V4-Hook-only). |
-| `src/meme/buyModal.js` | First-screen live spot/supply telemetry, Instant Buy controller, and EIP-6963 Web3 swap modal (`#buyNaraModal`, preflight `eth_call` simulation guard, L2 clock-skew safety). |
-| `src/meme/main.js` | Game, audio, share, sticker and board logic. `ACTIONS` + `bindActions()` at the bottom wire the markup. |
-| `src/meme/styles.css` | Tailwind directives, self-hosted `@font-face`, page CSS. |
-| `public/_headers` | Security headers incl. the CSP (`script-src 'self' https://challenges.cloudflare.com …`), `Referrer-Policy: no-referrer`, and `Cross-Origin-Resource-Policy: same-origin` on HTML/assets (`cross-origin` only on `/nara_token_256.png`). |
-| `public/_redirects` | `/swap*`, `/app*` → CryptoSLIP (`https://slip.naraprotocol.io`) (302); `/docs*`, `/github`, `/audit` → GitHub Docs (302); `/meme*` → `/` (301). |
-| `public/llms.txt`, `public/llms-full.txt`, `public/ai-facts.json`, `public/ai.txt`, `public/robots.txt`, `public/research/` | AI / LLM crawler discovery manifests, machine-readable facts feed, full single-file protocol context, and 5 forensic research briefs. |
-| `public/404.html` | Static not-found page (no scripts). |
-| `public/fonts/` | JetBrains Mono + Space Grotesk, latin variable subsets (SIL OFL). |
-| `functions/api/leaderboard.js` | Fame Board & Award Claim Pass API: same-origin check, Turnstile verify (`action === "fame_board_submit"` + hostname allowlist + 8s timeout), KV rate limits, timing-safe admin Bearer auth (`>= 24` chars). |
-| `functions/api/quote.js` | Read-only Base Mainnet Uniswap v4 `NARALiquidityHookV5` live spot & swap quote API (`/api/quote?summary=1` and `/api/quote?direction=...`) with 3 default Base RPCs (`publicnode`, `drpc`, `mainnet.base.org`) + optional `BASE_RPC_URL` override. |
-| `functions/_shared/supplyCore.js` | Shared Base Mainnet on-chain reader querying `NARATokenV5`, `NARAEmissionReserveV5`, `NARAPrincipalLedgerV5`, `NARATreasuryRangeManagerV5`, `NARARewardLedgerV5`, and `CryptoSlipVaultV32` (`v33` & `v32`) with 3-RPC failover + optional `BASE_RPC_URL`. |
-| `functions/api/circulating-supply.js`, `total-supply.js`, `supply.js` | Live Base Mainnet supply disclosure API (`text/plain` decimal numbers + `/api/supply` JSON breakdown; excludes protocol vaults and commitments locked `> 1 day`, while keeping `<= 1 day` locks, unclaimed rewards, slips, LP and wallets circulating). |
-| `scripts/check-denylist.cjs` | Fails on retired addresses, Tailwind CDN, `unsafe-eval`, dead URLs, inline scripts/handlers, "NFT" wording. |
-| `scripts/deploy-pages.mjs` | Runs `npm run check`, verifies `VITE_TURNSTILE_SITE_KEY` is bundled into `dist/assets/*.js`, and runs `wrangler pages deploy dist` (`preview` or `production`). |
-| `tests/leaderboard.test.mjs`, `tests/supply.test.mjs`, `tests/quote.test.mjs` | `node --test` unit tests for the Pages Functions and V4 swap calldata parity. |
-| `tests/smoke.mjs` | Playwright smoke: every control, console/page errors, banned wording, screenshots. |
+| :--- | :--- |
+| `index.html` | Overview & Interactive Terminal home page (`/`), linking cleanly to `/vault` via a 2-column Gateway card and to `/privacy`, `/terms`, and `/accessibility` in the footer with explicit EU AI Act Art. 50 illustration provenance. Markup only (zero inline scripts or `on*=` handlers). |
+| `vault.html` | Dedicated Wave 1 Sealed Vault Receipts page (`/vault`, targeted by `/s/vault` share cards) showcasing `29` multi-tier Vault Receipt NFTs (`#16..#44`), live Chainlink + Uniswap v4 telemetry, and the verified Base Mainnet contract directory. |
+| `src/meme/vaultPage.js` | Entry controller for `/vault`, mounting shared `anchorSeats.js` and `buyModal.js`. |
+| `src/meme/config.js` | Public constants: canonical `NARATokenV5` (`0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f`), Chain ID `8453`, canonical URL (`https://naraprotocol.io`), CryptoSLIP URL (`https://slip.naraprotocol.io`), `BASE_BUILDER_CODE` (`bc_g71jff6u`), `SWAP_PUBLIC_LAUNCHED`, and Turnstile site key. |
+| `src/meme/erc8021.js` | Zero-dependency ERC-8021 Schema `0` Base Builder Code attribution encoder (`appendErc8021DataSuffix`). |
+| `src/meme/v4SwapEngine.js` | Zero-dependency BigInt ABI + Uniswap v4 `NARALiquidityHookV5` quote & `UniversalRouter` calldata engine (**100% Uniswap v4 Hook-only** — never routes `NARA` through V3 or external aggregators). |
+| `src/meme/buyModal.js` | First-screen live spot/supply telemetry, Instant Buy controller, and EIP-6963 Web3 swap modal (`#buyNaraModal`, mandatory preflight `eth_call` simulation guard, L2 clock-skew safety). |
+| `src/meme/anchorSeats.js` | `365D` (`4.00x`) Vault Receipts acquisition controller (`NARAPositionSaleV5` `0x04Ac83045d26259D46400Ce6beb9bBd0641df225`): pins seller (`Treasury Safe`), `ownerOf`, `sellerNonce`, `receiptTransferNonce`, ERC-721 approval, `expectedPriceWei`, all 3 reward credits `[NARA, ETH, USDC]`, `nextCheckpoint`, and `rarityTier` across two independent Base RPCs before fail-closed `eth_call` simulation. |
+| `src/meme/main.js` | Interactive console, audio, share, sticker, sector navigation, Fame Board submit, and 1-click GDPR Art. 17 self-erasure (`#erasePassBtn`). All DOM bindings flow through `data-on-*` + `ACTIONS`. |
+| `src/meme/styles.css` | Tailwind directives, self-hosted `@font-face` (`JetBrains Mono` + `Space Grotesk`), accessible `:focus-visible` outlines, and `prefers-reduced-motion` support. |
+| `public/_headers` | Static security headers: `Cache-Control: public, max-age=0, must-revalidate, no-transform` (prevents proxy/edge beacon injection), strict CSP (`script-src 'self' https://challenges.cloudflare.com ...`), HSTS (`max-age=31536000; includeSubDomains`), `COOP: same-origin-allow-popups`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`, and `frame-ancestors` for Telegram / Farcaster / Base App / Coinbase Wallet. |
+| `public/_redirects` & `public/_routes.json` | `/swap*`, `/app*` → `https://slip.naraprotocol.io` (`302`); `/docs*`, `/github`, `/audit` → `https://github.com/NARAProtocol/nara_protocol` (`302`); `/meme*` → `/` (`301`); `_routes.json` routes HTML + `/api/*` through `_middleware.js`. |
+| `public/privacy.html`, `public/terms.html`, `public/accessibility.html` | Standalone open-source Privacy Notice (GDPR/UK GDPR/ePrivacy/CCPA, zero cookies, self-erasure, `privacy@naraprotocol.io`), Terms & Risk Disclosure (non-custodial software, EU AI Act Art. 50 disclosure, MiCA/FCA risk prominence), and Accessibility Statement (EAA / WCAG 2.2 AA). |
+| `public/.well-known/` | `security.txt` (RFC 9116, `security@naraprotocol.io`), `webauthn` (WebAuthn Related Origin Requests sharing passkeys across `naraprotocol.io`, `slip.naraprotocol.io`, and `cryptoslip.eth.limo`), and `farcaster.json` (Mini App & `baseBuilder` manifest). |
+| `public/llms.txt`, `public/llms-full.txt`, `public/ai-facts.json`, `public/ai.txt`, `public/robots.txt`, `public/research/` | AI/LLM crawler discovery manifests, machine-readable protocol facts feed, full single-file protocol context, and 5 forensic research briefs. |
+| `functions/_middleware.js` & `functions/_shared/geoblockCore.js` | Edge jurisdiction middleware returning `HTTP 451 Unavailable For Legal Reasons` (`Cache-Control: no-store, no-transform`) for sanctioned jurisdictions (`CU`, `IR`, `KP`, `SY`, and restricted `UA` regions `43/40/14/09`) while keeping `/privacy`, `/terms`, `/accessibility`, and `/.well-known/*` accessible. |
+| `functions/api/leaderboard.js` | Fame Board & Award Claim Pass API: same-origin validation, Turnstile verify (`action === "fame_board_submit"` + hostname allowlist + 8s timeout), KV rate limits, 1-click user GDPR self-erasure (`action=delete_own_entry` verified via timing-safe `operatorKey` hash), and timing-safe admin Bearer auth (`>= 24` chars). |
+| `functions/api/quote.js` | Read-only Base Mainnet Uniswap v4 `NARALiquidityHookV5` live spot & swap quote API (`/api/quote?summary=1` and `/api/quote?direction=...`) with 3 default Base RPCs + optional `BASE_RPC_URL` override. |
+| `functions/_shared/supplyCore.js` & `functions/api/*supply*.js` | Live Base Mainnet on-chain supply reader (`/api/supply`, `/api/circulating-supply`, `/api/total-supply`) querying `NARATokenV5`, `NARAEmissionReserveV5`, `NARAPrincipalLedgerV5`, `NARATreasuryRangeManagerV5`, `NARARewardLedgerV5`, and `CryptoSlipVaultV32` (`v33` & `v32`) with 3-RPC failover. |
+| `scripts/check-denylist.cjs` | Automated security & honesty gate failing on retired addresses, Tailwind CDN, `unsafe-eval`, dead URLs, inline scripts/handlers, or misrepresenting device-local stickers as NFTs. |
+| `scripts/deploy-pages.mjs` | Runs `npm run check`, verifies `VITE_TURNSTILE_SITE_KEY` is bundled into `dist/assets/*.js`, and deploys to Cloudflare Pages (`preview` or `production`). |
+| `tests/*.test.mjs` | `node --test` unit suite (**53 tests**) covering all Pages Functions, GDPR self-erasure, `HTTP 451` geofencing, V4 swap calldata parity, ERC-8021 Schema `0` parity, WebAuthn ROR, and `NARAPositionSaleV5` `BuyerBounds` fail-closed simulation guards. |
+| `tests/smoke.mjs` | Playwright browser smoke harness verifying interactive controls, `0` console/page errors, `0` cookies, accessibility/legal links, banned wording, and responsive captures (`1440px` and `390px`). |
 
-Archived (read-only): the former React "Sovereign Grid" app and v4-wired swap live in
-`../nara-landing-archive/sovereign-grid-2026-11/`. Never redeploy or import from it.
+---
 
 ## Commands
 
 ```bash
-npm ci                 # install (Node 20+)
-npm run dev            # Vite dev server on http://127.0.0.1:5180 (mounts live in-memory KV + all 5 /api/* handlers)
-npm run check          # denylist + 33 unit tests + production build
-npm run preview        # serve dist on http://127.0.0.1:4173 (mounts live in-memory KV + all 5 /api/* handlers)
-npm run test:smoke     # Playwright smoke against SMOKE_URL (default: http://127.0.0.1:4173)
-npm run pages:dev      # Wrangler Pages dev on :8788 with a local KV (real _headers/_redirects/Functions)
+npm ci                 # Install dependencies (Node 20+)
+npm run dev            # Vite dev server on http://127.0.0.1:5180 (mounts in-memory KV + all /api/* handlers)
+npm run check          # Denylist gate + 53 unit tests + Vite production build
+npm run preview        # Serve dist on http://127.0.0.1:4173 (mounts in-memory KV + all /api/* handlers)
+npm run test:smoke     # Playwright browser smoke against SMOKE_URL (default: http://127.0.0.1:4173)
+npm run pages:dev      # Wrangler Pages dev on :8788 with local KV (tests real _headers, _redirects, _middleware)
 ```
 
-Turnstile + Award Claim Pass end-to-end locally (Cloudflare's documented always-pass test keys):
+End-to-end Turnstile + Award Claim Pass + GDPR Self-Erasure locally (using Cloudflare's documented always-pass test keys):
 
 ```bash
 VITE_TURNSTILE_SITE_KEY=1x00000000000000000000AA npm run build
@@ -52,64 +71,42 @@ npx wrangler pages dev dist --port 8788 --kv NARA_LEADERBOARD_KV --binding TURNS
 SMOKE_URL=http://127.0.0.1:8788 SMOKE_EXPECT_SUBMIT="POSTED TO BOARD" npm run test:smoke
 ```
 
+---
+
 ## Hosting (Cloudflare Pages)
 
-Project name: `nara-landing` (`nara-landing-6wd.pages.dev`, `wrangler.jsonc`). Static
-catch-all hosts (IPFS gateways) ignore `_headers`, `_redirects` and `functions/`, so the
-security headers, live supply/quote functions, and global board only work on Cloudflare Pages / Workers.
+Project: `nara-landing` (`wrangler.jsonc`). Static-only gateways ignore `_headers`, `_redirects`, `_middleware.js`, and `functions/`, so security headers, `HTTP 451` middleware, live Base Mainnet quote/supply endpoints, and the Fame Board run on Cloudflare Pages.
 
 | Setting | Value |
-|---|---|
-| Root directory | `tools/nara-landing` (monorepo: without it the build finds neither `functions/` nor `dist`) |
+| :--- | :--- |
 | Build command | `npm run check` (or `npm run build`) |
 | Output directory | `dist` |
-| KV binding (`NARA_LEADERBOARD_KV`) | Production ID `7923b1171b884f1c904e9480d1abc5c8` / Preview ID `77d680f7bd3944ce984de5c8791e9907` |
-| Secret | `TURNSTILE_SECRET_KEY` (Turnstile widget secret). Absent → `POST /api/leaderboard` returns 503 `board_disabled`, UI issues a device-local Claim Pass and says "SAVED ON DEVICE". |
-| Secret (optional) | `AWARD_CLAIM_SALT` (HMAC-SHA256 key/salt for deterministic `NARA-AWARD:v1:...` Award Claim Pass codes; falls back to `TURNSTILE_SECRET_KEY` when omitted). |
-| Secret (optional) | `AWARD_ADMIN_TOKEN` (**`24+` char** Bearer token authorizing `GET /api/leaderboard?admin=1` & `POST` `action=mark_awarded` / `action=delete_entry` via timing-safe SHA-256 comparison). |
-| Env var (optional) | `BASE_RPC_URL` (custom Base Mainnet JSON-RPC endpoint prepended to the 3 default Base RPCs in `/api/quote` and `/api/supply`). |
-| Build variable | `VITE_TURNSTILE_SITE_KEY` (public site key). Absent → the page never calls the API for posting; `scripts/deploy-pages.mjs` fails closed if missing from the built JS bundle. |
+| KV binding (`NARA_LEADERBOARD_KV`) | Configured per Cloudflare Pages environment (`wrangler.jsonc`) |
+| Secret `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile server secret (if absent, `POST /api/leaderboard` returns `503 board_disabled` and UI stores a device-local Claim Pass) |
+| Secret `AWARD_CLAIM_SALT` (optional) | HMAC-SHA256 salt for deterministic `NARA-AWARD:v1:...` Award Claim Pass codes |
+| Secret `AWARD_ADMIN_TOKEN` (optional) | `>= 24`-char Bearer token for timing-safe admin moderation (`GET ?admin=1`, `mark_awarded`, `delete_entry`) |
+| Env var `BASE_RPC_URL` (optional) | Custom Base Mainnet JSON-RPC endpoint prepended to the 3 public Base RPCs in `/api/quote` and `/api/supply` |
+| Build var `VITE_TURNSTILE_SITE_KEY` | Public Cloudflare Turnstile site key (`scripts/deploy-pages.mjs` fails closed if missing from `dist/assets/*.js`) |
 
-Deploy: `npm run deploy:cf:preview` (branch `preview`) or `npm run deploy:cf:prod`. A
-production deploy is a production switch under the root `AGENTS.md`: it needs explicit owner
-authorization for that action, not just a green check.
-Verify on the `*.pages.dev` URL before pointing DNS: `curl -I` for CSP/HSTS/XFO,
-`/swap` → 302 to `https://slip.naraprotocol.io/?tab=nara&action=buy`, `/meme.html` → 301 `/`,
-`/api/leaderboard` → JSON, `/api/supply` → JSON, `/flush.mp3` → `audio/mpeg`, then run `tests/smoke.mjs` against it.
+---
 
-## Launch switch
+## Privacy, Legal & Security Posture
 
-`SWAP_PUBLIC_LAUNCHED` in `src/meme/config.js` is `true`. When true, `initSwapControl()` opens the
-in-page Uniswap v4 `#buyNaraModal` on click and `https://slip.naraprotocol.io/?tab=nara&action=buy`
-links are wired across the Buy modal footer and `_redirects` (`/swap*` and `/app*` → 302). Verify with `npm run test:smoke`.
+- **Zero Cookies & Zero Third-Party Analytics:** Sets zero HTTP cookies (`0` cookies across all routes) and emits `Cache-Control: ..., no-transform` on HTML and static assets so no edge RUM or third-party tracking beacon is injected.
+- **GDPR Art. 17 Self-Erasure (`/api/leaderboard`):** Public `GET /api/leaderboard` masks wallet addresses to `walletHint` (`0x1234…abcd`) and never exposes contact fields or hashes. Any participant can permanently erase their own board entry in 1 click (`#erasePassBtn` -> `POST /api/leaderboard` `action=delete_own_entry` verified via timing-safe `operatorKey` hash) or email `privacy@naraprotocol.io`.
+- **EU AI Act Art. 50 Transparency:** Satirical arcade/sticker artwork is explicitly labeled on-page (`AI-assisted satirical illustrations`) and documented on `/terms` and `/ai.txt`.
+- **Accessibility (EAA / WCAG 2.2 AA):** Full keyboard navigation, visible `:focus-visible` outlines, `prefers-reduced-motion` compliance, skip links, and published statement at `/accessibility`.
+- **OFAC Jurisdiction Enforcement (`HTTP 451`):** `functions/_middleware.js` enforces sanctioned-territory filtering on interactive app and API routes while keeping `/privacy`, `/terms`, `/accessibility`, and `/.well-known/*` accessible.
+- **Strict On-Chain Execution Safety:**
+  - `#buyNaraModal` routes **100% of `NARA` swaps exclusively through Uniswap v4 `NARALiquidityHookV5`** (`0x07d8F2Dfd121B10dE3176DeAb6A8C0eaa2646aCC`) with mandatory preflight `eth_call` simulation and ERC-8021 attribution (`bc_g71jff6u`).
+  - `/vault` (`anchorSeats.js`) pins canonical seller (`Treasury Safe`), nonces, approvals, price, and all 3 reward credits `[NARA, ETH, USDC]` across two independent Base RPCs before fail-closed simulation against `NARAPositionSaleV5` (`0x04Ac83045d26259D46400Ce6beb9bBd0641df225`).
+- **Vulnerability Disclosure:** See [`SECURITY.md`](SECURITY.md) or [`https://naraprotocol.io/.well-known/security.txt`](https://naraprotocol.io/.well-known/security.txt) (`security@naraprotocol.io`).
 
-## Participant Award Claim Pass API
+---
 
-- `POST /api/leaderboard` accepts optional `platform` (`x` | `tg` | `fc`), Base `wallet` (`0x...`), validated X/Warpcast `postUrl`, optional masked contact, and per-browser `operatorKey` (`16..80` chars) to prevent handle hijacking (`403 handle_locked`) and return an HMAC-SHA256 signed `claimPass` (`NARA-AWARD:v1:<handle>.<nonce>.<mac>`) + `claimCode` (`NARA-XXXX-XXXX`).
-- Public `GET /api/leaderboard` masks `wallet` into `walletHint` (`0x1234…abcd`) and never exposes `wallet`, `contact`, or `keyHash` (stored privately in KV `claim:<id>`).
-- Public `GET /api/leaderboard?verify=1&handle=@name&claim=...` (or `POST` `action=verify_claim`, rate-limited `30/hr/IP`) checks cryptographic validity and `awarded` status without exposing payout details.
-- Private admin `GET /api/leaderboard?admin=1` & `POST` `action=mark_awarded` / `action=delete_entry` (requires `Authorization: Bearer <AWARD_ADMIN_TOKEN>` >= 24 chars, locked after `5` failed auth attempts/hr/IP) manages the unmasked participant payout roster for distributing CryptoSLIP / Base awards.
+## Editorial & Honesty Invariants (Enforced in CI)
 
-## Security posture
-
-- **Web3 Wallet & Swap Execution (`#buyNaraModal`):**
-  - Supports user-initiated EIP-1193 / EIP-6963 wallets, `wallet_switchEthereumChain`, `wallet_addEthereumChain` (Base `8453`), `wallet_watchAsset`, and **100% Uniswap v4 Hook-only swaps** via Uniswap `UniversalRouter` (`0x6fF5693b99212Da76ad316178A184AB56D299b43`) + `Permit2` (`0x000000000022D473030F116dDEE9F6B43aC78BA3`) → `NARALiquidityHookV5` (`0x07d8F2Dfd121B10dE3176DeAb6A8C0eaa2646aCC`).
-  - Zero Uniswap V3 NARA pools or third-party aggregators are ever invoked for `NARA` swaps.
-  - Every swap runs a mandatory preflight `eth_call` simulation (`Safety simulation blocked` fail-closed guard) with 3-RPC fallback and L2 clock-skew safety on deadlines.
-- **CSP & HTTP Security Headers:**
-  - `default-src 'self'`; scripts only from `'self'` plus `challenges.cloudflare.com` (Turnstile, loaded only when needed) and `static.cloudflareinsights.com`. No `unsafe-inline`/`unsafe-eval` for scripts. Styles allow `'unsafe-inline'` for the inline `style=` attributes the game sets.
-  - HSTS (1 year, `includeSubDomains`; `preload` omitted until all subdomains are confirmed HTTPS-only), `X-Frame-Options: DENY`, `frame-ancestors 'none'`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, restrictive `Permissions-Policy`, `Cross-Origin-Opener-Policy: same-origin`, `Cross-Origin-Resource-Policy: same-origin` (explicitly overridden to `cross-origin` only on `/nara_token_256.png` so wallets can load the token icon for `wallet_watchAsset`).
-  - `_headers` applies to static files only. All `/api/*` Functions set their own `nosniff`, `XFO: DENY`, `default-src 'none'` CSP, and explicit `Cache-Control`.
-- **Anti-Abuse & Fail-Closed Server Validation:**
-  - Build keeps `console.error` (other console calls are stripped) so any broken `data-on-*` binding is reported in production and caught by `data-nara-bind-error`.
-  - Browser storage holds game/quest progress only. `POST /api/leaderboard` normalizes handles server-side, validates Turnstile `action === "fame_board_submit"` + allowed hostname + `8s` abort timeout, enforces 2 KB body cap, `8` accepted posts/IP/hr, `30` verify checks/IP/hr, `5` failed admin attempts/IP/hr, same-origin only, and re-validates rows on every read.
-  - Share links always use the canonical origin (`https://naraprotocol.io`), never a preview host.
-
-## Honesty rules (enforced by `check-denylist.cjs` and `tests/smoke.mjs`)
-
-- Stickers are device-local cards. Never call them NFTs, on-chain or collectibles with value.
-- The Fame Board is self-reported. Never label it verified.
-- The grid log shows only this browser's events and true tips. No invented users or feeds.
-- No unverified APY promises; protocol metrics match live Base Mainnet contracts.
-- The disclaimer line in the footer stays.
-- The flush SFX path (`/flush.mp3` with procedural fallback, three modes) is a keep-as-is feature.
+- Device-local sticker cards are never called NFTs, on-chain collectibles, or assets with financial value.
+- The Fame Board is self-reported and never labeled verified.
+- Protocol supply and price displays read live Base Mainnet contracts; no guaranteed yields or APY promises are ever made.
+- Non-custodial open-source risk disclosures, privacy/terms/accessibility links, and AI-illustration disclosures remain visible in the footer.
