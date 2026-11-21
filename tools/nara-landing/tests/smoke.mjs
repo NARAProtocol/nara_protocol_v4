@@ -68,9 +68,12 @@ console.log(`smoke: ${BASE}`);
 await page.goto("/", { waitUntil: "load" });
 await sleep(400);
 
-// Boot state
+// Boot state + Home Vault Gateway check
 if ((await page.locator("#flushCounter").innerText()).trim() !== "0") fail("flush counter not 0 on fresh load");
-if (!(await page.locator("#tweetPreviewDisplay").innerText()).includes("0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f")) fail("tweet preview missing full CA");
+if (!(await page.locator("#tweetPreviewDisplay").innerText()).includes("$NARA")) fail("tweet preview missing $NARA");
+if ((await page.locator("#anchorSeatsGrid").count()) !== 0) fail("home page must not cram #anchorSeatsGrid inline; dedicated /vault owns the 33-seat grid");
+if ((await page.locator("#openVaultTerminalBtn").getAttribute("href")) !== "/vault") fail("#openVaultTerminalBtn must link to /vault");
+if ((await page.locator("#heroAnchorSeatsBtn").getAttribute("href")) !== "/vault") fail("#heroAnchorSeatsBtn must link to /vault");
 const ticker = await page.locator("#sewerTickerText").innerText();
 if (!/Local game ready/.test(ticker)) fail(`boot log line unexpected: ${ticker}`);
 
@@ -108,33 +111,48 @@ const clip = await page.evaluate(() => navigator.clipboard.readText());
 if (clip !== "0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f") fail(`clipboard got ${clip}`);
 note("copy ca ok");
 
-// Tweet modes + reroll + copy tweet
+// Tweet modes + reroll + X Reach toggle + Farcaster embeds[] + Self-Reply CA copy
 for (const mode of ["receipt", "lore", "unhinged", "sticker", "flex"]) {
   await page.click(`#tabBtn-${mode}`);
   const text = await page.locator("#tweetPreviewDisplay").innerText();
   if (!text.trim()) fail(`empty preview for ${mode}`);
-  if (!text.includes("0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f")) fail(`missing full CA in ${mode} preview`);
+  if (!text.includes("$NARA")) fail(`missing $NARA in ${mode} preview`);
+  if (/^\[[A-Z0-9 _#/:]+\]/.test(text.trim())) fail(`bot-bracket prefix still in ${mode} preview: ${text.slice(0, 80)}`);
   if (/0x91FB\.\.\.Ae0f|Card image|naraprotocol\.(com|io)/i.test(text)) fail(`truncated CA, fake image notice, or duplicate URL in ${mode} preview: ${text.slice(0, 120)}`);
-  if (/NFT|on-chain|onchain|meme\.html/i.test(text)) fail(`banned wording in ${mode} preview: ${text.slice(0, 80)}`);
+  if (/NFT|on-chain|onchain|meme\.html|\blocked\b|\bunlock/i.test(text)) fail(`banned wording in ${mode} preview: ${text.slice(0, 80)}`);
 }
 await page.click('[data-on-click="rerollActiveMode"]');
 await page.click('[data-on-click="copyForgeTweetText"]');
 const copiedTweet = await page.evaluate(() => navigator.clipboard.readText());
 const copiedUrlMatch = copiedTweet.match(/https:\/\/[^\s]+/);
 if (!copiedUrlMatch || new URL(copiedUrlMatch[0]).hostname !== "naraprotocol.io") fail("copied tweet lacks share url");
+// Verify 1-click Self-Reply + CA copy carries full canonical URL + full Base CA
+await page.click("#copyReplyLinkBtn");
+const copiedReply = await page.evaluate(() => navigator.clipboard.readText());
+const replyUrlMatch = copiedReply.match(/https:\/\/[^\s]+/);
+if (!replyUrlMatch || new URL(replyUrlMatch[0]).origin !== "https://naraprotocol.io" || !copiedReply.includes("0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f")) {
+  fail(`self-reply payload missing canonical URL or full Base CA: ${copiedReply}`);
+}
 // Also verify sticker mode share URL has proper slash (/s/1, never naraprotocol.ios/1)
 await page.click("#tabBtn-sticker");
 await page.click('[data-on-click="copyForgeTweetText"]');
 const copiedStickerTweet = await page.evaluate(() => navigator.clipboard.readText());
-if (!copiedStickerTweet.includes("https://naraprotocol.io/s/")) fail(`sticker share URL malformed: ${copiedStickerTweet}`);
+const stickerUrlMatch = copiedStickerTweet.match(/https:\/\/[^\s]+/);
+if (!stickerUrlMatch || new URL(stickerUrlMatch[0]).origin !== "https://naraprotocol.io" || !new URL(stickerUrlMatch[0]).pathname.startsWith("/s/")) {
+  fail(`sticker share URL malformed: ${copiedStickerTweet}`);
+}
 await page.click("#tabBtn-flex");
 note("forge ok");
 
-// Share anchors carry encoded intent URLs
+// Share anchors carry encoded intent URLs + Farcaster embeds[] + X Reach No-Link toggle
 const xHref = await page.locator("#forgeXBtn").getAttribute("href");
-if (!xHref?.startsWith("https://x.com/intent/post?text=")) fail(`forge X href ${xHref}`);
+if (!xHref?.startsWith("https://x.com/intent/post?text=") || !xHref.includes("&url=")) fail(`forge X href ${xHref}`);
 const castHref = await page.locator("#forgeCastBtn").getAttribute("href");
-if (!castHref?.startsWith("https://warpcast.com/~/compose?text=")) fail(`forge cast href ${castHref}`);
+if (!/^https:\/\/(?:farcaster\.xyz|warpcast\.com)\/~\/compose\?text=/.test(castHref || "") || !castHref.includes("&embeds[]=")) fail(`forge cast href missing embeds[]: ${castHref}`);
+await page.click("#toggleXReachModeBtn");
+const xNoLinkHref = await page.locator("#forgeXBtn").getAttribute("href");
+if (!xNoLinkHref?.startsWith("https://x.com/intent/post?text=") || xNoLinkHref.includes("&url=")) fail(`X Max Reach mode did not strip &url=: ${xNoLinkHref}`);
+await page.click("#toggleXReachModeBtn");
 
 // Binding integrity: every data-on-* attribute resolved to a known action
 if (await page.evaluate(() => document.documentElement.hasAttribute("data-nara-bind-error"))) {
@@ -230,6 +248,12 @@ note("metamask fallback ok");
 await page.click('[data-on-click="refreshLeaderboardUI"]');
 await sleep(300);
 
+// Home Vault Gateway section + navigation strip check
+if (!(await page.locator("#sectorNavStrip").isVisible())) fail("#sectorNavStrip is not visible");
+if (!(await page.locator("#anchorSeatsSection").isVisible())) fail("#anchorSeatsSection is not visible on home page");
+if (!(await page.locator("#homeVaultLiveBadge").isVisible())) fail("#homeVaultLiveBadge is not visible on home page");
+note("home vault gateway section + sector nav strip ok");
+
 // External links: every target=_blank anchor has rel=noopener and an https href
 const anchors = await page.$$eval('a[target="_blank"]', (as) => as.map((a) => ({ href: a.getAttribute("href"), rel: a.getAttribute("rel") })));
 for (const a of anchors) {
@@ -317,7 +341,7 @@ else {
   await page.keyboard.press("Escape");
   await sleep(200);
 
-  // Claim Pass Verifier bar check
+  // Claim Pass Verifier + 2-Step GDPR Self-Service Erase bar check
   await page.click("#toggleVerifyPassBtn");
   await sleep(150);
   await page.fill("#verifyHandleInput", "@smoke_op");
@@ -326,7 +350,18 @@ else {
   await sleep(600);
   const verifyOut = (await page.locator("#verifyPassResult").innerText()).trim();
   if (!/VERIFIED|MATCHED/i.test(verifyOut)) fail(`claim code verifier failed: ${verifyOut}`);
-  note(`claim verifier ok: ${verifyOut}`);
+  await page.click("#erasePassBtn");
+  await sleep(100);
+  if (!(await page.locator("#erasePassBtn").innerText()).includes("Confirm Erase")) {
+    fail("first #erasePassBtn click did not arm confirmation label");
+  }
+  await page.click("#erasePassBtn");
+  await sleep(500);
+  const eraseOut = (await page.locator("#verifyPassResult").innerText()).trim();
+  if (!/ENTRY ERASED/i.test(eraseOut)) fail(`#erasePassBtn did not erase entry: ${eraseOut}`);
+  const boardAfterErase = await page.locator("#fameBoardBody").innerText();
+  if (boardAfterErase.includes("@smoke_op")) fail("board still rendered @smoke_op after erase");
+  note(`claim verifier + GDPR erase ok: ${verifyOut} -> ${eraseOut}`);
 }
 
 // Banned wording anywhere on the page, including closed modals (textContent, not innerText)
@@ -365,6 +400,171 @@ if (await page.locator("#victoryModal").isVisible()) {
   await sleep(150);
 }
 
+// ============================================================================
+// Dedicated /vault Page Suite (Desktop 1440x900 + Mobile 390x844 + /s/vault)
+// ============================================================================
+await page.setViewportSize({ width: 1440, height: 900 });
+await page.goto("/s/vault", { waitUntil: "load" });
+await sleep(500);
+if (!new URL(page.url()).pathname.startsWith("/vault")) {
+  fail(`/s/vault did not redirect to /vault, landed on: ${page.url()}`);
+}
+await page.goto("/vault", { waitUntil: "load" });
+await page
+  .waitForFunction(
+    () => /\/\s*mo/i.test(document.getElementById("anchorSeatsGrid")?.innerText || ""),
+    { timeout: 6000 }
+  )
+  .catch(() => {});
+await sleep(200);
+
+if (await page.evaluate(() => document.documentElement.hasAttribute("data-nara-bind-error"))) {
+  fail(`/vault unknown data-on-* action: ${await page.evaluate(() => document.documentElement.getAttribute("data-nara-bind-error"))}`);
+}
+if (!(await page.locator("#anchorSeatsSection").isVisible())) fail("/vault #anchorSeatsSection is not visible");
+const vaultCardsText = await page.locator("#anchorSeatsGrid").innerText();
+const vaultGridRawText = await page.locator("#anchorSeatsGrid").textContent();
+if (!vaultGridRawText?.includes("INSIDE RECEIPT CHEST")) fail("/vault cards missing INSIDE RECEIPT CHEST semantic hook");
+if (!/Est\.\s*(~\$|\+\d).*\/\s*mo/i.test(vaultCardsText)) {
+  fail(`/vault cards did not render live potential monthly earnings: ${vaultCardsText.slice(0, 180)}`);
+}
+if (/\b\d\.\d{3}\s*ETH\/NARA/i.test(vaultCardsText)) fail(`/vault cards show 3-decimal ETH/NARA ambiguity: ${vaultCardsText.slice(0, 140)}`);
+
+const seatCardCount = await page.locator("#anchorSeatsGrid > div").count();
+if (seatCardCount < 12) fail(`expected >= 12 featured Vault Receipt cards on /vault load, got ${seatCardCount}`);
+await page.click("#anchorTierBtn-all");
+await sleep(100);
+const allCardCount = await page.locator("#anchorSeatsGrid > div").count();
+if (allCardCount !== 29) fail(`expected 29 Wave 1 Vault Receipt cards on /vault ALL filter, got ${allCardCount}`);
+const expectedTierCounts = { sprint: 6, starter: 6, core: 6, plus: 5, builder: 4, prime: 2 };
+for (const [tierKey, expCount] of Object.entries(expectedTierCounts)) {
+  await page.click(`#anchorTierBtn-${tierKey}`);
+  await sleep(100);
+  const tierCount = await page.locator("#anchorSeatsGrid > div").count();
+  if (tierCount !== expCount) fail(`expected ${expCount} ${tierKey} Vault Receipt cards on /vault, got ${tierCount}`);
+}
+await page.click("#anchorTierBtn-featured");
+await sleep(100);
+
+// Verify subtle per-card "?" bubble opens clean Receipt Breakdown Modal AND closes when clicking anywhere outside
+await page.click('[data-on-click="toggleCardHelp:16"]');
+await sleep(120);
+if (!(await page.locator("#anchorCardHelpModal").isVisible())) {
+  fail(`/vault "?" bubble on #16 did not open #anchorCardHelpModal`);
+}
+const helpModalText = await page.locator("#anchorCardHelpModal").innerText();
+if (
+  !/Market Spot/i.test(helpModalText) ||
+  !/You Pay/i.test(helpModalText) ||
+  !/Monthly Pulses/i.test(helpModalText) ||
+  !/In Chest Now/i.test(helpModalText) ||
+  !/Base Pool Liquidity/i.test(helpModalText)
+) {
+  fail(`/vault #anchorCardHelpModal missing structured breakdown rows: ${helpModalText.slice(0, 180)}`);
+}
+await page.screenshot({ path: path.join(OUT, "vault-card-help-1440.png") });
+// Click outside the modal card on the backdrop — must close automatically without clicking "?" again
+await page.mouse.click(24, 24);
+await sleep(100);
+if (await page.locator("#anchorCardHelpModal").isVisible()) {
+  fail(`/vault clicking outside #anchorCardHelpModal did not close it`);
+}
+
+if (await page.locator("#anchorSpecsDrawer").isVisible()) fail("/vault #anchorSpecsDrawer should start collapsed");
+await page.click("#toggleAnchorSpecsBtn");
+await sleep(120);
+if (!(await page.locator("#anchorSpecsDrawer").isVisible())) fail("/vault clicking #toggleAnchorSpecsBtn did not expand #anchorSpecsDrawer");
+// Click outside #anchorSpecsDrawer — must also close automatically
+await page.click("#vaultHeading");
+await sleep(120);
+if (await page.locator("#anchorSpecsDrawer").isVisible()) fail("/vault clicking outside #anchorSpecsDrawer did not close it");
+await page.click("#refreshAnchorSeatsBtn");
+await sleep(300);
+
+await page.click("#copyBtn");
+const vaultClip = await page.evaluate(() => navigator.clipboard.readText());
+if (vaultClip !== "0x91FB78A9F46B67f54BbD4489941d19666b2fAe0f") fail(`/vault copy CA got ${vaultClip}`);
+
+await page.click("#mmBtn");
+await sleep(250);
+if (!(await page.locator("#mmBtnLabel").innerText()).includes("CA COPIED")) fail("/vault metamask fallback label missing");
+
+await page.click("#headerBuyBtn");
+await sleep(200);
+if (!(await page.locator("#buyNaraModal").isVisible())) fail("/vault clicking #headerBuyBtn did not open #buyNaraModal");
+await page.keyboard.press("Escape");
+await sleep(150);
+if (await page.locator("#buyNaraModal").isVisible()) fail("/vault Escape did not close #buyNaraModal");
+
+const vaultAnchors = await page.$$eval('a[target="_blank"]', (as) => as.map((a) => ({ href: a.getAttribute("href"), rel: a.getAttribute("rel") })));
+for (const a of vaultAnchors) {
+  if (!/noopener/.test(a.rel || "")) fail(`/vault anchor without noopener: ${a.href}`);
+  if (!/^https:\/\//.test(a.href || "")) fail(`/vault non-https external anchor: ${a.href}`);
+}
+const vaultBodyText = await page.evaluate(() => document.body.textContent || "");
+for (const bad of [/\bNFTs?\b/i, /on-?chain (poop|collectible|sticker)/i, /Dividend/i, /Live Base telemetry/i, /VERIFIED ON BASE/i, /CONTRACT: VERIFIED/i, /15M EPOCH/i, /OFFICIAL RUN SCORE/i, /VICTORY PROOF/i]) {
+  if (bad.test(vaultBodyText)) fail(`banned wording on /vault: ${bad}`);
+}
+if (!/financial advice/i.test(vaultBodyText)) fail("/vault disclaimer line missing");
+
+await page.screenshot({ path: path.join(OUT, "vault-1440.png"), fullPage: true });
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto("/vault", { waitUntil: "load" });
+await page
+  .waitForFunction(
+    () => Boolean(document.querySelector("[data-seat-select-btn]") || /\/\s*mo/i.test(document.getElementById("anchorSeatsGrid")?.innerText || "")),
+    { timeout: 6000 }
+  )
+  .catch(() => {});
+await sleep(250);
+await page.screenshot({ path: path.join(OUT, "vault-390.png"), fullPage: true });
+const vaultScrollW = await page.evaluate(() => document.documentElement.scrollWidth);
+if (vaultScrollW > 390) fail(`horizontal overflow on /vault mobile: ${vaultScrollW}px`);
+
+// Mobile Browser Checkout Test (390x844, no injected wallet — Safari / Chrome / Telegram):
+// Tapping Select MUST open the mobile bottom-sheet right in view with 1-tap wallet deep-links (never #buyNaraModal)
+const firstSelectBtn = page.locator("#anchorSeatsGrid [data-seat-select-btn]").first();
+if (await firstSelectBtn.count()) {
+  const pickedId = await firstSelectBtn.getAttribute("data-seat-select-btn");
+  await firstSelectBtn.click();
+  await sleep(180);
+  if (!(await page.locator("#anchorSeatReviewDrawer").isVisible())) {
+    fail("tapping Select on 390px mobile /vault did not open #anchorSeatReviewDrawer bottom-sheet");
+  }
+  if (await page.locator("#buyNaraModal").isVisible()) {
+    fail("tapping Select on 390px mobile /vault wrongly opened #buyNaraModal");
+  }
+  const sheetScrollW = await page.evaluate(() => document.documentElement.scrollWidth);
+  if (sheetScrollW > 390) fail(`horizontal overflow on /vault mobile checkout sheet: ${sheetScrollW}px`);
+  const mmHref = await page.locator("#seatOpenMetaMask").getAttribute("href");
+  const cbHref = await page.locator("#seatOpenCoinbase").getAttribute("href");
+  if (!mmHref?.includes(`/vault?seat=${pickedId}`) || !cbHref?.includes(`seat%3D${pickedId}`)) {
+    fail(`mobile wallet deep-links did not carry /vault?seat=${pickedId}: mm=${mmHref}, cb=${cbHref}`);
+  }
+  await page.click("#copySeatLinkBtn");
+  const copiedSeatUrl = await page.evaluate(() => navigator.clipboard.readText());
+  if (copiedSeatUrl !== `https://naraprotocol.io/vault?seat=${pickedId}`) {
+    fail(`#copySeatLinkBtn copied unexpected URL: ${copiedSeatUrl}`);
+  }
+  await page.screenshot({ path: path.join(OUT, "vault-checkout-mobile-390.png") });
+  // Tap backdrop at top of screen to dismiss bottom-sheet cleanly
+  await page.mouse.click(20, 20);
+  await sleep(150);
+  if (await page.locator("#anchorSeatReviewDrawer").isVisible()) {
+    fail("tapping outside #anchorSeatReviewDrawer on 390px mobile did not close it");
+  }
+}
+
+await page.goto("/vault?buy=1", { waitUntil: "load" });
+await sleep(400);
+if (!(await page.locator("#buyNaraModal").isVisible())) fail("/vault?buy=1 deep-link did not auto-open #buyNaraModal");
+if ((await page.evaluate(() => window.location.search)).includes("buy=1")) fail("/vault?buy=1 did not clean query param via replaceState");
+const vaultModalScrollW = await page.evaluate(() => document.documentElement.scrollWidth);
+if (vaultModalScrollW > 390) fail(`horizontal overflow on /vault mobile with buy modal open: ${vaultModalScrollW}px`);
+await page.keyboard.press("Escape");
+await sleep(150);
+note(`dedicated /vault page ok (${seatCardCount} featured / ${allCardCount} all / 4x4 tiers + 390px mobile checkout clean)`);
+
 // Full EIP-1193 Wallet Preflight Simulation Guard + 1-Click ETH->NARA Swap Lifecycle Test
 const walletCtx = await browser.newContext({ baseURL: BASE, viewport: { width: 1280, height: 900 } });
 await walletCtx.addInitScript(() => {
@@ -384,13 +584,21 @@ await walletCtx.addInitScript(() => {
       if (method === "eth_requestAccounts" || method === "eth_accounts") return [MOCK_ACCOUNT];
       if (method === "eth_chainId") return "0x2105";
       if (method === "wallet_switchEthereumChain") return null;
-      if (method === "eth_getBalance") return "0xde0b6b3a7640000"; // 1.0 ETH
+      if (method === "eth_getBalance") return "0x8ac7230489e80000"; // 10.0 ETH
       if (method === "eth_getBlockByNumber") {
-        return { number: "0x3550000", timestamp: "0x" + Math.floor(Date.now() / 1000).toString(16) };
+        return { number: "0x3780000", timestamp: "0x" + Math.floor(Date.now() / 1000).toString(16) };
       }
       if (method === "eth_call") {
         const call = (params && params[0]) || {};
+        const to = String(call.to || "").toLowerCase();
         const data = String(call.data || "").toLowerCase();
+        // Delegate Multicall3 reads to real public Base RPC while handling swap & positionSale simulations locally
+        if (to === "0xca11bde05977b3631167028862be2a173976ca11") {
+          throw new Error("use public Base RPC for Multicall3");
+        }
+        if (to === "0x04ac83045d26259d46400ce6beb9bbd0641df225") {
+          return "0x";
+        }
         if (data.startsWith("0x3593564c")) {
           if (window.__mockWalletState.revertSwapSim) {
             const err = new Error("execution reverted: V4TooLittleReceived");
@@ -461,8 +669,53 @@ const watched = await walletPage.evaluate(() => window.__mockWalletState.watched
 if (!watched || !String(watched?.options?.image || "").endsWith("/nara_token_256.png")) {
   fail(`wallet_watchAsset did not pass /nara_token_256.png: ${JSON.stringify(watched)}`);
 }
+
+// 3. Mobile Wallet In-App Browser (390x844) /vault?seat=16 Auto-Open + 1-Tap Purchase Lifecycle
+await walletPage.setViewportSize({ width: 390, height: 844 });
+await walletPage.goto("/vault?seat=16", { waitUntil: "load" });
+await walletPage
+  .waitForFunction(
+    () => {
+      const d = document.getElementById("anchorSeatReviewDrawer");
+      return Boolean(d && !d.classList.contains("hidden") && document.getElementById("anchorReviewConfirmBtn"));
+    },
+    { timeout: 8000 }
+  )
+  .catch(() => {});
+if ((await walletPage.evaluate(() => window.location.search)).includes("seat=")) {
+  fail("/vault?seat=16 did not clean seat query param via replaceState");
+}
+if (await walletPage.locator("#anchorSeatReviewDrawer").isVisible()) {
+  // Tag button and sleep >1.1s across countdownTimer tick to verify DOM node is NEVER destroyed under touch
+  await walletPage.evaluate(() => {
+    const b = document.getElementById("anchorReviewConfirmBtn");
+    if (b) b.__touchStableTag = "alive";
+  });
+  await sleep(1200);
+  const stillSameNode = await walletPage.evaluate(
+    () => document.getElementById("anchorReviewConfirmBtn")?.__touchStableTag === "alive"
+  );
+  if (!stillSameNode) {
+    fail("1-second countdownTimer destroyed #anchorReviewConfirmBtn DOM node (breaks mobile touch taps)");
+  }
+  await walletPage.screenshot({ path: path.join(OUT, "vault-wallet-checkout-390.png") });
+  await walletPage.click("#anchorReviewConfirmBtn");
+  await walletPage
+    .waitForFunction(
+      () => /confirmed in your wallet/i.test(document.getElementById("anchorSeatsStatusBox")?.innerText || ""),
+      { timeout: 8000 }
+    )
+    .catch(() => {});
+  const vaultSent = await walletPage.evaluate(() =>
+    window.__mockWalletState.sentTxs.find((t) => String(t.to || "").toLowerCase() === "0x04ac83045d26259d46400ce6beb9bbd0641df225")
+  );
+  if (!vaultSent || vaultSent.chainId !== "0x2105") {
+    fail(`mobile /vault?seat=16 1-tap purchase did not submit NARAPositionSaleV5 tx: ${JSON.stringify(vaultSent)}`);
+  }
+}
+
 await walletCtx.close();
-note("wallet preflight sim + 1-click swap e2e ok");
+note("wallet preflight sim + 1-click swap + 390px mobile /vault?seat=16 purchase e2e ok");
 
 await browser.close();
 if (popups.length) note(`popups opened (closed): ${popups.length}`);

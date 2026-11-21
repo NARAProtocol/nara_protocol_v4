@@ -6,7 +6,14 @@
 // Universal Router (0x6fF5693b99212Da76ad316178A184AB56D299b43). Zero V3 NARA pools,
 // zero external aggregators, zero cross-wallet transfers (recipient === connectedAccount).
 
-import { BASE_CHAIN_ID_HEX, CRYPTOSLIP_URL, CRYPTOSLIP_COMMIT_URL, NARA_CONTRACT } from "./config.js";
+import {
+  BASE_BUILDER_CODE,
+  BASE_CHAIN_ID_HEX,
+  resolveCryptoSlipBuyUrl,
+  resolveCryptoSlipCommitUrl,
+  NARA_CONTRACT,
+} from "./config.js";
+import { appendErc8021DataSuffix, trySendCallsWithErc8021 } from "./erc8021.js";
 import {
   V4_SWAP_CONSTANTS,
   isValidAddress,
@@ -61,11 +68,29 @@ let currentModalStatusKind = "idle";
 
 // EIP-6963 + window.ethereum wallet registry
 const discoveredWallets = [];
+let eip6963ListenersBound = false;
+const walletStateListeners = new Set();
 let activeWalletEntry = null; // { id, name, provider }
 let connectedAccount = null;
 let connectedChainId = null;
 let balances = { ethWei: 0n, usdcWei: 0n, naraWei: 0n, loaded: false };
 let cleanupProviderListeners = null;
+
+function notifyWalletStateListeners() {
+  walletStateListeners.forEach((fn) => {
+    try {
+      fn();
+    } catch {
+      // Ignore listener errors
+    }
+  });
+}
+
+export function onWalletStateChange(fn) {
+  if (typeof fn !== "function") return () => {};
+  walletStateListeners.add(fn);
+  return () => walletStateListeners.delete(fn);
+}
 
 let soundClickFn = () => {};
 let soundSuccessFn = () => {};
@@ -244,26 +269,63 @@ function formatWalletError(err) {
 
 // --- EIP-6963 & Injected Wallet Discovery ---
 
-function registerWalletCandidate(id, name, provider) {
-  if (!provider || typeof provider.request !== "function") return;
-  const exists = discoveredWallets.some((w) => w.provider === provider || (id && w.id === id));
-  if (exists) return;
-  const safeName = String(name || "Browser Wallet").replace(/[^\w\s.+-]/g, "").trim().slice(0, 28) || "Browser Wallet";
+function registerWalletCandidate(id, name, provider, isEip6963 = false) {
+  if (!provider || typeof provider.request !== "function") return false;
+  const safeName =
+    String(name || "Browser Wallet")
+      .replace(/[^\w\s.+-]/g, "")
+      .trim()
+      .slice(0, 28) || "Browser Wallet";
+
+  const exactExists = discoveredWallets.some((w) => w.provider === provider || (id && w.id === id));
+  if (exactExists) return false;
+
+  // Deduplicate mobile/extension proxy wrappers where EIP-6963 announces the same wallet as window.ethereum
+  const legacyIdx = discoveredWallets.findIndex(
+    (w) =>
+      w.name.toLowerCase() === safeName.toLowerCase() &&
+      (w.id === "window-ethereum" || w.id.startsWith("legacy-") || !isEip6963)
+  );
+  if (legacyIdx !== -1) {
+    if (isEip6963) {
+      discoveredWallets[legacyIdx] = { id: id || discoveredWallets[legacyIdx].id, name: safeName, provider };
+      return true;
+    }
+    return false;
+  }
+
   discoveredWallets.push({ id: id || `wallet-${discoveredWallets.length + 1}`, name: safeName, provider });
+  return true;
 }
 
-function discoverInjectedWallets() {
+export function discoverInjectedWallets() {
   if (typeof window === "undefined") return;
 
-  window.addEventListener("eip6963:announceProvider", (event) => {
-    const detail = event?.detail;
-    if (detail?.provider) {
-      const id = detail.info?.rdns || detail.info?.uuid || detail.info?.name;
-      const name = detail.info?.name || "Web3 Wallet";
-      registerWalletCandidate(id, name, detail.provider);
-      renderModalWalletSection();
-    }
-  });
+  if (!eip6963ListenersBound) {
+    eip6963ListenersBound = true;
+    window.addEventListener("eip6963:announceProvider", (event) => {
+      const detail = event?.detail;
+      if (detail?.provider) {
+        const id = detail.info?.rdns || detail.info?.uuid || detail.info?.name;
+        const name = detail.info?.name || "Web3 Wallet";
+        if (registerWalletCandidate(id, name, detail.provider, true)) {
+          renderModalWalletSection();
+          notifyWalletStateListeners();
+        }
+      }
+    });
+
+    // Android MetaMask Mobile & Trust Wallet sometimes inject window.ethereum 100-500ms after load
+    window.addEventListener(
+      "ethereum#initialized",
+      () => {
+        discoverInjectedWallets();
+        renderModalWalletSection();
+        notifyWalletStateListeners();
+      },
+      { once: true }
+    );
+  }
 
   try {
     window.dispatchEvent(new Event("eip6963:requestProvider"));
@@ -271,6 +333,7 @@ function discoverInjectedWallets() {
     // Ignore older browsers
   }
 
+  let changed = false;
   if (window.ethereum) {
     if (Array.isArray(window.ethereum.providers) && window.ethereum.providers.length > 0) {
       window.ethereum.providers.forEach((p, idx) => {
@@ -278,10 +341,14 @@ function discoverInjectedWallets() {
           ? "Rabby Wallet"
           : p?.isCoinbaseWallet
             ? "Coinbase Wallet"
-            : p?.isMetaMask
-              ? "MetaMask"
-              : `Wallet #${idx + 1}`;
-        registerWalletCandidate(`legacy-${idx}`, label, p);
+            : p?.isPhantom
+              ? "Phantom"
+              : p?.isTrust || p?.isTrustWallet
+                ? "Trust Wallet"
+                : p?.isMetaMask
+                  ? "MetaMask"
+                  : `Wallet #${idx + 1}`;
+        if (registerWalletCandidate(`legacy-${idx}`, label, p, false)) changed = true;
       });
     } else {
       const p = window.ethereum;
@@ -291,12 +358,22 @@ function discoverInjectedWallets() {
           ? "Coinbase Wallet"
           : p.isPhantom
             ? "Phantom"
-            : p.isMetaMask
-              ? "MetaMask"
-              : "Browser Wallet";
-      registerWalletCandidate("window-ethereum", label, p);
+            : p.isTrust || p.isTrustWallet
+              ? "Trust Wallet"
+              : p.isMetaMask
+                ? "MetaMask"
+                : "Browser Wallet";
+      if (registerWalletCandidate("window-ethereum", label, p, false)) changed = true;
     }
   }
+  if (changed) {
+    notifyWalletStateListeners();
+  }
+}
+
+export function getDiscoveredWallets() {
+  discoverInjectedWallets();
+  return [...discoveredWallets];
 }
 
 async function ensureBaseChain(provider) {
@@ -381,6 +458,10 @@ export function getConnectedAccount() {
   return connectedAccount || "";
 }
 
+export function getConnectedWalletName() {
+  return activeWalletEntry?.name || "Wallet";
+}
+
 function attachProviderEvents(walletEntry) {
   if (cleanupProviderListeners) {
     cleanupProviderListeners();
@@ -440,12 +521,48 @@ async function connectSpecificWallet(walletEntry) {
     }
 
     setModalStatus("idle", "");
+    notifyWalletStateListeners();
     await refreshConnectedBalances();
     triggerModalQuote(true);
+    return { provider: walletEntry.provider, account: connectedAccount, name: walletEntry.name };
   } catch (err) {
     setModalStatus("error", formatWalletError(err));
     renderModalWalletSection();
+    notifyWalletStateListeners();
+    return null;
   }
+}
+
+/**
+ * Direct wallet connector for Vault Receipts (/vault) that never opens #buyNaraModal.
+ * Throws descriptive errors so the Vault Checkout Sheet can display them inline.
+ */
+export async function connectWalletDirect(preferredWalletId = "") {
+  discoverInjectedWallets();
+  if (discoveredWallets.length === 0) {
+    return null;
+  }
+  const target =
+    (preferredWalletId && discoveredWallets.find((w) => w.id === preferredWalletId)) ||
+    discoveredWallets.find((w) => w.provider?.isMetaMask) ||
+    discoveredWallets[0];
+  if (!target?.provider) return null;
+
+  const accs = await target.provider.request({ method: "eth_requestAccounts" });
+  if (!Array.isArray(accs) || !accs[0] || !isValidAddress(accs[0])) {
+    throw new Error("No valid Base wallet address returned.");
+  }
+  activeWalletEntry = target;
+  connectedAccount = accs[0].trim();
+  const chainHex = await target.provider.request({ method: "eth_chainId" }).catch(() => null);
+  connectedChainId = chainHex ? parseInt(String(chainHex), 16) : null;
+  attachProviderEvents(target);
+  if (connectedChainId !== V4_SWAP_CONSTANTS.chainId) {
+    await ensureBaseChain(target.provider);
+  }
+  notifyWalletStateListeners();
+  refreshConnectedBalances().catch(() => {});
+  return { provider: target.provider, account: connectedAccount, name: target.name };
 }
 
 export async function connectBuyWallet() {
@@ -504,6 +621,7 @@ export function disconnectBuyWallet() {
   balances = { ethWei: 0n, usdcWei: 0n, naraWei: 0n, loaded: false };
   renderModalWalletSection();
   updateModalSubmitButton();
+  notifyWalletStateListeners();
 }
 
 // --- Live Spot & Supply Telemetry ---
@@ -644,9 +762,13 @@ function renderModalWalletSection() {
   const cbDeepLink = document.getElementById("buyOpenCoinbaseMobile");
   const csDeepLink = document.getElementById("buyOpenCryptoSlipApp");
 
-  if (mmDeepLink) mmDeepLink.href = "https://metamask.app.link/dapp/naraprotocol.io/?buy=1";
-  if (cbDeepLink) cbDeepLink.href = "https://go.cb-w.com/dapp?cb_url=https%3A%2F%2Fnaraprotocol.io%2F%3Fbuy%3D1";
-  if (csDeepLink) csDeepLink.href = CRYPTOSLIP_URL;
+  const onVaultPath =
+    typeof window !== "undefined" && window.location.pathname.startsWith("/vault");
+  const buyTargetPath = onVaultPath ? "/vault?buy=1" : "/?buy=1";
+  const fullBuyUrl = `https://naraprotocol.io${buyTargetPath}`;
+  if (mmDeepLink) mmDeepLink.href = `https://link.metamask.io/dapp/naraprotocol.io${buyTargetPath}`;
+  if (cbDeepLink) cbDeepLink.href = `https://go.cb-w.com/dapp?cb_url=${encodeURIComponent(fullBuyUrl)}`;
+  if (csDeepLink) csDeepLink.href = resolveCryptoSlipBuyUrl();
 
   if (connectedAccount) {
     if (walletBox) walletBox.classList.remove("hidden");
@@ -664,6 +786,12 @@ function renderModalWalletSection() {
         balText.textContent = `${formatEthDisplay(balances.ethWei)} ETH · $${formatDisplayUsdc(balances.usdcWei)} USDC · ${formatDisplayNara(balances.naraWei)} NARA`;
       }
     }
+  } else if (discoveredWallets.length === 0) {
+    // On mobile browsers / Telegram / X where no EIP-1193 wallet is injected, surface 1-tap wallet deep-links immediately
+    if (connectedRow) connectedRow.classList.add("hidden");
+    if (picker) picker.classList.add("hidden");
+    if (walletBox) walletBox.classList.remove("hidden");
+    if (noWalletBox) noWalletBox.classList.remove("hidden");
   } else {
     if (connectedRow) connectedRow.classList.add("hidden");
     if (picker) picker.classList.add("hidden");
@@ -686,13 +814,13 @@ function renderModalControls() {
   const outUnit = document.getElementById("buyModalOutUnit");
   const commitLink = document.getElementById("buyModalCommitLink");
 
-  if (heading) heading.textContent = modalDirection === "sell" ? "SELL $NARA" : "BUY $NARA";
-  if (commitLink) commitLink.href = CRYPTOSLIP_COMMIT_URL;
+  if (heading) heading.textContent = modalDirection === "sell" ? "Sell $NARA" : "Buy $NARA";
+  if (commitLink) commitLink.href = resolveCryptoSlipCommitUrl();
 
   const tabActive =
-    "flex-1 min-h-[38px] py-1.5 bg-naraGreen text-black font-mono font-extrabold text-[11px] uppercase tracking-wider cursor-pointer transition-all";
+    "flex-1 min-h-[38px] py-1.5 rounded-lg bg-naraGreen text-slate-950 font-sans font-bold text-xs cursor-pointer transition-all";
   const tabInactive =
-    "flex-1 min-h-[38px] py-1.5 bg-white/[0.03] hover:bg-white/[0.08] text-white/65 hover:text-white font-mono font-bold text-[11px] uppercase tracking-wider cursor-pointer transition-all";
+    "flex-1 min-h-[38px] py-1.5 rounded-lg bg-transparent hover:bg-white/[0.06] text-slate-400 hover:text-white font-sans font-semibold text-xs cursor-pointer transition-all";
 
   if (tabBuy) tabBuy.className = modalDirection === "buy" ? tabActive : tabInactive;
   if (tabSell) tabSell.className = modalDirection === "sell" ? tabActive : tabInactive;
@@ -700,9 +828,9 @@ function renderModalControls() {
   if (assetRow) assetRow.classList.toggle("hidden", modalDirection === "sell");
 
   const pillActive =
-    "min-h-[28px] px-2.5 py-0.5 bg-emerald-500/20 border border-naraGreen text-naraGreen text-[10px] font-mono font-bold uppercase cursor-pointer transition-all";
+    "min-h-[28px] px-2.5 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-400 text-emerald-300 text-xs font-mono font-semibold cursor-pointer transition-all";
   const pillInactive =
-    "min-h-[28px] px-2.5 py-0.5 bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 text-white/65 hover:text-white text-[10px] font-mono font-bold uppercase cursor-pointer transition-all";
+    "min-h-[28px] px-2.5 py-0.5 rounded-md bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 text-slate-400 hover:text-white text-xs font-mono font-medium cursor-pointer transition-all";
 
   if (ethBtn) ethBtn.className = modalAsset === "ETH" ? pillActive : pillInactive;
   if (usdcBtn) usdcBtn.className = modalAsset === "USDC" ? pillActive : pillInactive;
@@ -728,8 +856,8 @@ function renderModalControls() {
     if (!el) return;
     el.className =
       modalSlippageBps === bps
-        ? "px-2 py-0.5 min-h-[28px] bg-emerald-500/20 border border-naraGreen text-naraGreen text-[10px] font-mono font-bold cursor-pointer"
-        : "px-2 py-0.5 min-h-[28px] bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 text-white/60 hover:text-white text-[10px] font-mono cursor-pointer";
+        ? "px-2.5 py-0.5 min-h-[28px] rounded-md bg-emerald-500/20 border border-emerald-400 text-emerald-300 text-xs font-mono font-semibold cursor-pointer"
+        : "px-2.5 py-0.5 min-h-[28px] rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-slate-400 hover:text-white text-xs font-mono cursor-pointer";
   });
 
   updateModalSubmitButton();
@@ -743,49 +871,49 @@ function updateModalSubmitButton() {
   if (isExecutingSwap) {
     btn.disabled = true;
     btn.className =
-      "w-full min-h-[48px] py-3 bg-emerald-500/30 border border-emerald-400/50 text-white font-mono font-bold text-xs uppercase tracking-wider cursor-wait opacity-80";
+      "w-full min-h-[48px] py-3 rounded-xl bg-emerald-500/25 border border-emerald-400/50 text-white font-sans font-bold text-sm cursor-wait opacity-85";
     return;
   }
 
   if (!connectedAccount) {
     btn.disabled = false;
     btn.className =
-      "w-full min-h-[48px] py-3 bg-naraGreen hover:bg-[#52ff33] active:bg-emerald-400 text-black font-mono font-extrabold text-xs uppercase tracking-wider cursor-pointer shadow-[0_0_24px_rgba(57,255,20,0.35)] transition-all";
-    label.textContent = "⚡ CONNECT WALLET";
+      "w-full min-h-[48px] py-3 rounded-xl bg-naraGreen hover:bg-[#52ff33] active:bg-emerald-400 text-slate-950 font-sans font-bold text-sm cursor-pointer nara-press transition-all";
+    label.textContent = "Connect Wallet";
     return;
   }
 
   if (connectedChainId !== V4_SWAP_CONSTANTS.chainId) {
     btn.disabled = false;
     btn.className =
-      "w-full min-h-[48px] py-3 bg-amber-400 hover:bg-amber-300 text-black font-mono font-extrabold text-xs uppercase tracking-wider cursor-pointer transition-all";
-    label.textContent = "SWITCH TO BASE [8453]";
+      "w-full min-h-[48px] py-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-sans font-bold text-sm cursor-pointer transition-all";
+    label.textContent = "Switch to Base (8453)";
     return;
   }
 
   if (isQuotingModal) {
     btn.disabled = true;
     btn.className =
-      "w-full min-h-[48px] py-3 bg-white/10 border border-white/15 text-white/60 font-mono font-bold text-xs uppercase tracking-wider cursor-wait";
-    label.textContent = "QUOTING…";
+      "w-full min-h-[48px] py-3 rounded-xl bg-white/10 border border-white/15 text-slate-300 font-sans font-semibold text-sm cursor-wait";
+    label.textContent = "Quoting…";
     return;
   }
 
   if (!modalQuote || !modalQuote.tradingOpen || BigInt(modalQuote.minOutWei || "0") <= 0n) {
     btn.disabled = true;
     btn.className =
-      "w-full min-h-[48px] py-3 bg-white/[0.06] border border-white/15 text-white/45 font-mono font-bold text-xs uppercase tracking-wider cursor-not-allowed";
-    label.textContent = modalQuote && !modalQuote.tradingOpen ? "POOL PAUSED" : "ENTER AMOUNT";
+      "w-full min-h-[48px] py-3 rounded-xl bg-white/[0.06] border border-white/15 text-slate-400 font-sans font-semibold text-sm cursor-not-allowed";
+    label.textContent = modalQuote && !modalQuote.tradingOpen ? "Pool Paused" : "Enter Amount";
     return;
   }
 
   btn.disabled = false;
   btn.className =
-    "w-full min-h-[48px] py-3 bg-naraGreen hover:bg-[#52ff33] active:bg-emerald-400 text-black font-mono font-extrabold text-xs uppercase tracking-wider cursor-pointer shadow-[0_0_24px_rgba(57,255,20,0.35)] transition-all";
+    "w-full min-h-[48px] py-3 rounded-xl bg-naraGreen hover:bg-[#52ff33] active:bg-emerald-400 text-slate-950 font-sans font-bold text-sm cursor-pointer nara-press transition-all";
   if (modalDirection === "sell") {
-    label.textContent = `SELL ${modalQuote.amountIn} $NARA → ~$${modalQuote.expectedOutDisplay}`;
+    label.textContent = `Sell ${modalQuote.amountIn} $NARA → ~$${modalQuote.expectedOutDisplay}`;
   } else {
-    label.textContent = `⚡ BUY ~${modalQuote.expectedOutDisplay} $NARA`;
+    label.textContent = `Buy ~${modalQuote.expectedOutDisplay} $NARA`;
   }
 }
 
@@ -937,7 +1065,19 @@ export function applyLowFeeSwapSize() {
   if (isExecutingSwap) return;
   soundClickFn();
   const activePayAsset = modalDirection === "sell" ? "NARA" : modalAsset;
-  modalAmount = activePayAsset === "USDC" ? "10" : activePayAsset === "NARA" ? "0.01" : "0.005";
+  const depthUpgraded = Date.now() >= 1794921300_000; // 2026-11-17T13:15:00Z (20,000 USDC / 10 NARA Hook depth)
+  modalAmount =
+    activePayAsset === "USDC"
+      ? depthUpgraded
+        ? "500"
+        : "10"
+      : activePayAsset === "NARA"
+        ? depthUpgraded
+          ? "0.25"
+          : "0.01"
+        : depthUpgraded
+          ? "0.25"
+          : "0.005";
   const input = document.getElementById("buyModalAmountInput");
   if (input) input.value = modalAmount;
   hideTxReceiptBox();
@@ -1250,6 +1390,7 @@ export async function executeBuyModalSwap() {
     const deadlineSec = BigInt(chainNowSec + 1200); // 20-minute execution deadline anchored to Base block time
 
     let swapTxPayload;
+    let smartWalletConfirmedTxHash = null;
 
     if (modalDirection === "buy" && activePayAsset === "ETH") {
       const minUsdcWei = BigInt(freshQuote.intermediateUsdcWei || "0");
@@ -1269,83 +1410,157 @@ export async function executeBuyModalSwap() {
       const tokenIn = isBuy ? V4_SWAP_CONSTANTS.usdc : V4_SWAP_CONSTANTS.nara;
       const tokenSymbol = isBuy ? "USDC" : "$NARA";
 
-      // Step A: Exact ERC-20 allowance to Permit2 (never infinite MaxUint256)
-      const erc20AllowHex = await smartEthCall(
-        tokenIn,
-        encodeErc20Allowance(signerAccount, V4_SWAP_CONSTANTS.permit2)
-      );
+      const [erc20AllowHex, p2AllowHex, latestNowSec] = await Promise.all([
+        smartEthCall(tokenIn, encodeErc20Allowance(signerAccount, V4_SWAP_CONSTANTS.permit2)),
+        smartEthCall(
+          V4_SWAP_CONSTANTS.permit2,
+          encodePermit2Allowance(signerAccount, tokenIn, V4_SWAP_CONSTANTS.universalRouter)
+        ),
+        getSafeChainNowSec(provider),
+      ]);
       const currentErc20Allowance = decodeFirstUint256(erc20AllowHex);
-      if (currentErc20Allowance < amountInWei) {
-        await assertActiveSignerAndChain(provider, signerAccount);
-        if (submitLabel) submitLabel.textContent = `STEP 1/3 · APPROVE ${tokenSymbol} IN WALLET…`;
-        setModalStatus("info", `Approve exact ${freshQuote.amountIn} ${tokenSymbol} for Uniswap Permit2 in your wallet.`);
-        const approveHash = await provider.request({
-          method: "eth_sendTransaction",
-          params: [
-            {
-              chainId: BASE_CHAIN_ID_HEX,
-              from: signerAccount,
-              to: tokenIn,
-              data: encodeErc20Approve(V4_SWAP_CONSTANTS.permit2, amountInWei),
-              value: "0x0",
-            },
-          ],
-        });
-        if (submitLabel) submitLabel.textContent = "CONFIRMING TOKEN APPROVAL…";
-        await waitForReceipt(provider, approveHash);
-        await waitForErc20AllowanceSync(signerAccount, tokenIn, V4_SWAP_CONSTANTS.permit2, amountInWei);
-      }
-
-      // Step B: Exact Permit2 allowance to UniversalRouter (1-hour expiry anchored to Base block time)
-      const latestNowSec = await getSafeChainNowSec(provider);
-      const p2AllowHex = await smartEthCall(
-        V4_SWAP_CONSTANTS.permit2,
-        encodePermit2Allowance(signerAccount, tokenIn, V4_SWAP_CONSTANTS.universalRouter)
-      );
       const p2Allow = decodePermit2Allowance(p2AllowHex);
-      if (p2Allow.amount < amountInWei || p2Allow.expiration <= latestNowSec + 120) {
-        await assertActiveSignerAndChain(provider, signerAccount);
-        if (submitLabel) submitLabel.textContent = `STEP 2/3 · AUTHORIZE PERMIT2 ROUTER…`;
-        setModalStatus("info", `Confirm 1-hour Permit2 spending cap for Universal Router in your wallet.`);
-        const p2ExpSec = latestNowSec + 3600;
-        const p2Hash = await provider.request({
-          method: "eth_sendTransaction",
-          params: [
-            {
-              chainId: BASE_CHAIN_ID_HEX,
-              from: signerAccount,
-              to: V4_SWAP_CONSTANTS.permit2,
-              data: encodePermit2Approve(
-                tokenIn,
-                V4_SWAP_CONSTANTS.universalRouter,
-                amountInWei,
-                p2ExpSec
-              ),
-              value: "0x0",
-            },
-          ],
-        });
-        if (submitLabel) submitLabel.textContent = "CONFIRMING PERMIT2 CAP…";
-        await waitForReceipt(provider, p2Hash);
-        await waitForPermit2AllowanceSync(
-          signerAccount,
-          tokenIn,
-          V4_SWAP_CONSTANTS.universalRouter,
+      const needErc20Approve = currentErc20Allowance < amountInWei;
+      const needPermit2Approve = p2Allow.amount < amountInWei || p2Allow.expiration <= latestNowSec + 120;
+
+      // Smart Wallet (Base Account / Coinbase Smart Wallet) 1-Click Atomic ERC-5792 Batch + ERC-8021 dataSuffix
+      if (needErc20Approve || needPermit2Approve) {
+        const candidateSwapPayload = encodeV4HookSwapUniversalRouter(
+          isBuy,
           amountInWei,
-          latestNowSec + 60
+          minOutWei,
+          BigInt(latestNowSec + 1200),
+          signerAccount
         );
+        if (candidateSwapPayload.valueHex !== "0x0") {
+          throw new Error("Internal safety check failed: ERC-20 swap must send 0 native ETH.");
+        }
+        const batchCalls = [];
+        if (needErc20Approve) {
+          batchCalls.push({
+            to: tokenIn,
+            value: "0x0",
+            data: encodeErc20Approve(V4_SWAP_CONSTANTS.permit2, amountInWei),
+          });
+        }
+        if (needPermit2Approve) {
+          batchCalls.push({
+            to: V4_SWAP_CONSTANTS.permit2,
+            value: "0x0",
+            data: encodePermit2Approve(
+              tokenIn,
+              V4_SWAP_CONSTANTS.universalRouter,
+              amountInWei,
+              latestNowSec + 3600
+            ),
+          });
+        }
+        batchCalls.push({
+          to: candidateSwapPayload.to,
+          value: "0x0",
+          data: candidateSwapPayload.data,
+        });
+
+        await assertActiveSignerAndChain(provider, signerAccount);
+        const batchRes = await trySendCallsWithErc8021({
+          provider,
+          chainIdHex: BASE_CHAIN_ID_HEX,
+          from: signerAccount,
+          calls: batchCalls,
+          codesInput: BASE_BUILDER_CODE,
+          onSubmitted: () => {
+            if (submitLabel) submitLabel.textContent = "CONFIRMING ON BASE MAINNET…";
+            setModalStatus("info", "1-click atomic swap submitted — waiting for sub-second Base confirmation…");
+          },
+        });
+        if (batchRes.usedSendCalls && batchRes.txHash) {
+          smartWalletConfirmedTxHash = batchRes.txHash;
+          swapTxPayload = candidateSwapPayload;
+        }
       }
 
-      const postApproveNowSec = await getSafeChainNowSec(provider);
-      swapTxPayload = encodeV4HookSwapUniversalRouter(
-        isBuy,
-        amountInWei,
-        minOutWei,
-        BigInt(postApproveNowSec + 1200),
-        signerAccount
-      );
-      if (swapTxPayload.valueHex !== "0x0") {
-        throw new Error("Internal safety check failed: ERC-20 swap must send 0 native ETH.");
+      if (!smartWalletConfirmedTxHash) {
+        // Sequential EOA path: Step A Exact ERC-20 allowance to Permit2 (never infinite MaxUint256)
+        if (needErc20Approve) {
+          await assertActiveSignerAndChain(provider, signerAccount);
+          if (submitLabel) submitLabel.textContent = `STEP 1/3 · APPROVE ${tokenSymbol} IN WALLET…`;
+          setModalStatus("info", `Approve exact ${freshQuote.amountIn} ${tokenSymbol} for Uniswap Permit2 in your wallet.`);
+          const approveHash = await provider.request({
+            method: "eth_sendTransaction",
+            params: [
+              {
+                chainId: BASE_CHAIN_ID_HEX,
+                from: signerAccount,
+                to: tokenIn,
+                data: appendErc8021DataSuffix(
+                  encodeErc20Approve(V4_SWAP_CONSTANTS.permit2, amountInWei),
+                  BASE_BUILDER_CODE
+                ),
+                value: "0x0",
+              },
+            ],
+          });
+          if (submitLabel) submitLabel.textContent = "CONFIRMING TOKEN APPROVAL…";
+          await waitForReceipt(provider, approveHash);
+          await waitForErc20AllowanceSync(signerAccount, tokenIn, V4_SWAP_CONSTANTS.permit2, amountInWei);
+        }
+
+        // Step B: Exact Permit2 allowance to UniversalRouter (1-hour expiry anchored to Base block time)
+        const postErc20NowSec = await getSafeChainNowSec(provider);
+        const freshP2AllowHex = needErc20Approve
+          ? await smartEthCall(
+              V4_SWAP_CONSTANTS.permit2,
+              encodePermit2Allowance(signerAccount, tokenIn, V4_SWAP_CONSTANTS.universalRouter)
+            )
+          : p2AllowHex;
+        const freshP2Allow = decodePermit2Allowance(freshP2AllowHex);
+        if (freshP2Allow.amount < amountInWei || freshP2Allow.expiration <= postErc20NowSec + 120) {
+          await assertActiveSignerAndChain(provider, signerAccount);
+          if (submitLabel) submitLabel.textContent = `STEP 2/3 · AUTHORIZE PERMIT2 ROUTER…`;
+          setModalStatus("info", `Confirm 1-hour Permit2 spending cap for Universal Router in your wallet.`);
+          const p2ExpSec = postErc20NowSec + 3600;
+          const p2Hash = await provider.request({
+            method: "eth_sendTransaction",
+            params: [
+              {
+                chainId: BASE_CHAIN_ID_HEX,
+                from: signerAccount,
+                to: V4_SWAP_CONSTANTS.permit2,
+                data: appendErc8021DataSuffix(
+                  encodePermit2Approve(
+                    tokenIn,
+                    V4_SWAP_CONSTANTS.universalRouter,
+                    amountInWei,
+                    p2ExpSec
+                  ),
+                  BASE_BUILDER_CODE
+                ),
+                value: "0x0",
+              },
+            ],
+          });
+          if (submitLabel) submitLabel.textContent = "CONFIRMING PERMIT2 CAP…";
+          await waitForReceipt(provider, p2Hash);
+          await waitForPermit2AllowanceSync(
+            signerAccount,
+            tokenIn,
+            V4_SWAP_CONSTANTS.universalRouter,
+            amountInWei,
+            postErc20NowSec + 60
+          );
+        }
+
+        const postApproveNowSec = await getSafeChainNowSec(provider);
+        swapTxPayload = encodeV4HookSwapUniversalRouter(
+          isBuy,
+          amountInWei,
+          minOutWei,
+          BigInt(postApproveNowSec + 1200),
+          signerAccount
+        );
+        if (swapTxPayload.valueHex !== "0x0") {
+          throw new Error("Internal safety check failed: ERC-20 swap must send 0 native ETH.");
+        }
       }
     }
 
@@ -1353,31 +1568,50 @@ export async function executeBuyModalSwap() {
       throw new Error("Internal safety check failed: router target mismatch.");
     }
 
-    await assertActiveSignerAndChain(provider, signerAccount);
+    let txHash = smartWalletConfirmedTxHash;
+    if (!txHash) {
+      await assertActiveSignerAndChain(provider, signerAccount);
 
-    const finalTxRequest = {
-      chainId: BASE_CHAIN_ID_HEX,
-      from: signerAccount,
-      to: swapTxPayload.to,
-      data: swapTxPayload.data,
-      value: swapTxPayload.valueHex,
-    };
+      const finalTxRequest = {
+        chainId: BASE_CHAIN_ID_HEX,
+        from: signerAccount,
+        to: swapTxPayload.to,
+        data: appendErc8021DataSuffix(swapTxPayload.data, BASE_BUILDER_CODE),
+        value: swapTxPayload.valueHex,
+      };
 
-    if (submitLabel) submitLabel.textContent = "SIMULATING SWAP ON BASE MAINNET…";
-    await simulateUniversalRouterSwap(provider, finalTxRequest);
+      if (submitLabel) submitLabel.textContent = "SIMULATING SWAP ON BASE MAINNET…";
+      await simulateUniversalRouterSwap(provider, finalTxRequest);
 
-    if (submitLabel) submitLabel.textContent = "CONFIRM SWAP IN YOUR WALLET…";
-    setModalStatus("info", "Simulation passed ✓ Confirm the Uniswap v4 NARA V5 Hook swap in your wallet.");
+      if (submitLabel) submitLabel.textContent = "CONFIRM SWAP IN YOUR WALLET…";
+      setModalStatus("info", "Simulation passed ✓ Confirm the Uniswap v4 NARA V5 Hook swap in your wallet.");
 
-    const txHash = await provider.request({
-      method: "eth_sendTransaction",
-      params: [finalTxRequest],
-    });
+      const singleSendCallsRes = await trySendCallsWithErc8021({
+        provider,
+        chainIdHex: BASE_CHAIN_ID_HEX,
+        from: signerAccount,
+        calls: [{ to: swapTxPayload.to, value: swapTxPayload.valueHex, data: swapTxPayload.data }],
+        codesInput: BASE_BUILDER_CODE,
+        onSubmitted: () => {
+          if (submitLabel) submitLabel.textContent = "CONFIRMING ON BASE MAINNET…";
+          setModalStatus("info", "Broadcasted — waiting for sub-second Base confirmation…");
+        },
+      });
 
-    if (submitLabel) submitLabel.textContent = "CONFIRMING ON BASE MAINNET…";
-    setModalStatus("info", `Broadcasted ${txHash.slice(0, 10)}… Waiting for Base confirmation (~2s)…`);
+      if (singleSendCallsRes.usedSendCalls && singleSendCallsRes.txHash) {
+        txHash = singleSendCallsRes.txHash;
+      } else {
+        txHash = await provider.request({
+          method: "eth_sendTransaction",
+          params: [finalTxRequest],
+        });
 
-    await waitForReceipt(provider, txHash);
+        if (submitLabel) submitLabel.textContent = "CONFIRMING ON BASE MAINNET…";
+        setModalStatus("info", `Broadcasted ${txHash.slice(0, 10)}… Waiting for sub-second Base confirmation…`);
+
+        await waitForReceipt(provider, txHash);
+      }
+    }
 
     soundSuccessFn();
     setModalStatus("idle", "");
@@ -1408,6 +1642,10 @@ export function initBuyExperience({ playClick, playSuccess, copyCA, onModalVisib
   void NARA_CONTRACT;
 
   discoverInjectedWallets();
+  if (typeof window !== "undefined") {
+    setTimeout(() => discoverInjectedWallets(), 200);
+    setTimeout(() => discoverInjectedWallets(), 800);
+  }
   refreshHeroMarketTelemetry();
 
   // Deep-link support: https://naraprotocol.io/?buy=1 or #buy

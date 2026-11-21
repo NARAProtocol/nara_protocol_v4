@@ -7,7 +7,7 @@
  * the leaderboard Function behave exactly as they do without a service worker.
  */
 
-const CACHE_NAME = "nara-landing-shell-v20261113c";
+const CACHE_NAME = "nara-landing-shell-v20261115a";
 const SHELL_KEY = "/";
 
 // Only paths that exist and answer 200 directly. Never list "/index.html": Cloudflare Pages
@@ -20,6 +20,7 @@ const PRECACHE_ASSETS = [
   "/favicon-32x32.png",
   "/favicon-16x16.png",
   "/apple-touch-icon.png",
+  "/nara-circle-128.png",
   "/nara_meme_hero.jpg",
   "/flush.mp3",
   "/fonts/JetBrainsMono-latin.woff2",

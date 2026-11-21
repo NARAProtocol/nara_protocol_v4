@@ -5,7 +5,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const ROOT = path.resolve(__dirname, "..");
-const SCAN = ["index.html", "src", "public", "functions", "tests", "vite.config.ts", "tailwind.config.js", "wrangler.jsonc", "package.json", "README.md"];
+const SCAN = ["index.html", "vault.html", "src", "public", "functions", "tests", "vite.config.ts", "tailwind.config.js", "wrangler.jsonc", "package.json", "README.md"];
 const SKIP_DIRS = new Set(["node_modules", "dist", "smoke-out"]);
 const BINARY = /\.(png|jpg|jpeg|webp|gif|ico|mp3|woff2?|svg)$/i;
 const SELF = path.join("scripts", "check-denylist.cjs");
