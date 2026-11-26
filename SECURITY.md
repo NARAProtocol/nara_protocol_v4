@@ -2,34 +2,18 @@
 
 ## Current security posture
 
-NARA v4 has a fresh core deployment on Base from the immutable release commit
-identified in `docs/CURRENT_STATE.md`. The token, engine, reward reserve,
-liquidity hook, liquidity vault, and CREATE2 Hook deployer are deployed and
-source-verified. The Compounder is deployed, source-verified, live-validated,
-and permanently bound to the Vault. The NARA/USDC pool is registered,
-initialized, seeded, and trading. The Safe owns seed LP NFT `2898124`; the
-Compounder owns validated LP NFT `2898486`. Public locking and reward use have
-not been presented as generally available. The epoch and liquidity maintainers
-are active under separate bounded policies, credentials, schedules, and
-deployment bindings; neither is authorized for Treasury Range Manager
-settlement. The Position NFT Phase-2 baseline is deployed and finalized but
-remains `integrationReady: false`.
+The live Base Mainnet (`Chain ID: 8453`) deployment is **NARA Protocol V5** (`36` source-verified contracts including ownerless `NARAGenesisShieldVaultV5`, paired with `6` verified CryptoSLIP `v33`/`v32` contracts — `42/42` total), tracked at [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md) and verified independently in [`NARAProtocol/nara_protocol`](https://github.com/NARAProtocol/nara_protocol). All August 2026 `contracts/v4/` contracts in this repository are **permanently retired, frozen, and read-only** (`npm run verify:frozen-v4`).
 
-The canonical contracts and pool are in technical live testing with real assets
-on Base mainnet. Deployment and observed operation do not imply public product
-availability, audit completion, economic safety, legal approval, or a
-recommendation to transact. Transactions are irreversible; liquidity can be
-limited or unavailable; token values can fall to zero. This repository contains
-no evidence of completed jurisdiction-specific
-qualified legal review. Canonical state and addresses are maintained in
-[`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md).
+Official web interfaces (`https://naraprotocol.io`, `https://slip.naraprotocol.io`) publish RFC 9116 disclosure endpoints at [`/.well-known/security.txt`](https://naraprotocol.io/.well-known/security.txt), alongside public [Privacy Policy](https://naraprotocol.io/privacy), [Terms & Risk Disclosure](https://naraprotocol.io/terms), and [Accessibility Statement](https://naraprotocol.io/accessibility) notices.
+
+The live contracts and pools operate with real assets on Base Mainnet. Deployment and observed operation do not imply a warranty, guaranteed liquidity, or a recommendation to transact. Transactions are irreversible; liquidity can be limited or unavailable; token values can fall to zero. Canonical state and verified addresses are maintained in [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md).
 
 ## Reporting a vulnerability
 
-Do not open a public issue, pull request, discussion, or social-media post for a
-suspected exploitable vulnerability.
+Do not open a public issue, pull request, discussion, or social-media post for a suspected exploitable vulnerability.
 
-Email: **security@naraprotocol.io**
+- **Security Email (RFC 9116 `security.txt`):** **security@naraprotocol.io**
+- **Privacy & GDPR Inquiries:** **privacy@naraprotocol.io** ([`https://naraprotocol.io/privacy`](https://naraprotocol.io/privacy))
 
 Include, when possible:
 

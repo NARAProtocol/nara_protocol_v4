@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Accessibility Statement (WCAG 2.2 AA &amp; EAA) — NARA Protocol &amp; CryptoSLIP</title>
+  <meta name="description" content="Digital Accessibility Statement (WCAG 2.2 Level AA &amp; European Accessibility Act EN 301 549) for NARA Protocol (naraprotocol.io) and CryptoSLIP (slip.naraprotocol.io / cryptoslip.eth.limo)." />
+  <meta name="robots" content="index, follow" />
+  <link rel="icon" href="/favicon.svg?v=20261102d" type="image/svg+xml" />
+  <link rel="icon" href="/favicon-32x32.png?v=20261102d" sizes="32x32" type="image/png" />
+  <link rel="canonical" href="https://naraprotocol.io/accessibility" />
+  <style>
+    @font-face { font-family: 'Space Grotesk'; font-style: normal; font-weight: 400 700; font-display: swap; src: url('/fonts/SpaceGrotesk-latin.woff2') format('woff2'); }
+    @font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 400 800; font-display: swap; src: url('/fonts/JetBrainsMono-latin.woff2') format('woff2'); }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #080C14; color: #E6EDF5; font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif; line-height: 1.65; }
+    .skip-link { position: absolute; left: -9999px; top: 8px; z-index: 999; background: #39FF14; color: #020617; padding: 8px 14px; border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 12px; text-decoration: none; }
+    .skip-link:focus { left: 12px; }
+    .wrap { max-width: 900px; margin: 0 auto; padding: 28px 20px 64px; }
+    .nav-bar { display: flex; flex-wrap: wrap; gap: 14px; font-family: 'JetBrains Mono', monospace; font-size: 12px; margin-bottom: 24px; padding-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .nav-bar a { color: #6EE7B7; text-decoration: none; }
+    .nav-bar a:hover { text-decoration: underline; color: #FFF; }
+    header { margin-bottom: 28px; }
+    .eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #6EE7B7; text-transform: uppercase; letter-spacing: 0.12em; }
+    h1 { font-size: clamp(24px, 4vw, 34px); line-height: 1.2; margin: 8px 0 10px; color: #FFF; }
+    .meta { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #94A3B8; }
+    section { background: #0D131F; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 20px 22px; margin: 16px 0; }
+    h2 { font-size: 18px; color: #FFF; margin: 0 0 10px; }
+    p, li { color: #CBD5E1; font-size: 14.5px; margin: 0 0 10px; }
+    ul { margin: 0 0 10px; padding-left: 20px; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: #6EE7B7; background: rgba(16,185,129,0.1); padding: 2px 6px; border-radius: 4px; }
+    a { color: #6EE7B7; text-decoration: underline; text-underline-offset: 3px; }
+    a:focus-visible { outline: 2px solid #39FF14; outline-offset: 2px; }
+    footer { margin-top: 28px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 12.5px; color: #94A3B8; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; }
+  </style>
+</head>
+<body>
+  <a href="#mainContent" class="skip-link">Skip to main content</a>
+  <div class="wrap">
+    <nav class="nav-bar" aria-label="Legal navigation">
+      <a href="/">&larr; NARA Overview</a>
+      <a href="/vault">Vault Receipts</a>
+      <a href="https://slip.naraprotocol.io" target="_blank" rel="noopener noreferrer">CryptoSLIP App &nearr;</a>
+      <a href="/privacy">Privacy Policy</a>
+      <a href="/terms">Terms of Use</a>
+      <a href="/accessibility" aria-current="page">Accessibility</a>
+    </nav>
+
+    <main id="mainContent">
+      <header>
+        <div class="eyebrow">WCAG 2.2 Level AA &middot; EN 301 549 Alignment</div>
+        <h1>Accessibility Statement</h1>
+        <div class="meta">Last Reviewed: November 19, 2026 &middot; Covers <code>naraprotocol.io</code> (and <code>naraprotocol.com</code>), <code>slip.naraprotocol.io</code> &amp; <code>cryptoslip.eth.limo</code></div>
+      </header>
+
+      <section>
+        <h2>1. Commitment &amp; Conformance Target</h2>
+        <p>NARA Protocol &amp; CryptoSLIP Open-Source Contributors are committed to ensuring that self-custodial Web3 tools work reliably for everyone, including people using screen readers, keyboard-only navigation, mobile zoom, and reduced-motion preferences. We design and test our public web interfaces against the <strong>Web Content Accessibility Guidelines (WCAG) 2.2 Level AA</strong> and European standard <strong>EN 301 549</strong> (aligned with the European Accessibility Act).</p>
+      </section>
+
+      <section>
+        <h2>2. Implemented Accessibility Measures</h2>
+        <ul>
+          <li><strong>Keyboard &amp; Focus Navigation:</strong> Skip-to-main-content links on top-level pages, visible high-contrast focus outlines (<code>focus-visible</code>), logical tab order, and <code>Escape</code> key dismissal across all modals and bottom sheets.</li>
+          <li><strong>Touch Targets &amp; Viewport Zoom:</strong> Primary interactive controls meet <code>40px&ndash;48px</code> minimum touch targets; pinch-to-zoom and text scaling are never disabled (<code>maximum-scale</code> / <code>user-scalable=no</code> are banned), and form inputs in CryptoSLIP use <code>&ge; 16px</code> font sizes to prevent unintended mobile viewport jumps.</li>
+          <li><strong>Screen-Reader Semantics &amp; Live Announcements:</strong> Semantic landmarks (<code>&lt;header&gt;</code>, <code>&lt;nav&gt;</code>, <code>&lt;main&gt;</code>, <code>&lt;footer&gt;</code>), ARIA modal roles (<code>role="dialog"</code>, <code>aria-modal="true"</code>), programmatic input labels, and polite live regions (<code>role="status"</code>, <code>aria-live="polite"</code>) for quote updates, clipboard copies, and transaction progress.</li>
+          <li><strong>Color, Contrast &amp; Non-Color Indicators:</strong> High-contrast obsidian dark surfaces paired with text labels, symbols, and monospaced tabular numerals so status is never conveyed by color alone (WCAG 1.4.1 &amp; 1.4.3).</li>
+          <li><strong>Audio &amp; Motion Control:</strong> Sound effects include explicit one-tap mute controls, victory and decorative motion effects honor the OS <code>prefers-reduced-motion</code> setting, and layouts respect device viewport and safe-area constraints.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>3. Known Third-Party Limitations</h2>
+        <p>External wallet extensions and mobile wallet browsers (such as MetaMask, Coinbase Wallet, Rabby, or Phantom), Cloudflare Turnstile anti-bot challenges, and external block explorers (BaseScan, DexScreener) render their own third-party interfaces outside our codebase. Where an injected wallet popup presents barriers, CryptoSLIP provides a built-in browser wallet with WebAuthn passkeys and a standalone plain-HTML offline recovery page (<code>recover-wallet.html</code>).</p>
+      </section>
+
+      <section>
+        <h2>4. Feedback &amp; Barrier Reporting</h2>
+        <p>If you encounter any accessibility barrier, screen-reader issue, or keyboard trap on <code>naraprotocol.io</code> or <code>slip.naraprotocol.io</code>, please email <a href="mailto:contact@naraprotocol.io">contact@naraprotocol.io</a> with the page URL and assistive technology used. Open-source contributors review and aim to acknowledge accessibility reports within 10 business days.</p>
+      </section>
+    </main>
+
+    <footer>
+      <div>NARA Protocol &amp; CryptoSLIP Open-Source Contributors &middot; Base Mainnet (8453)</div>
+      <div>
+        <a href="/">Home</a> &middot;
+        <a href="/vault">Vaults</a> &middot;
+        <a href="/privacy">Privacy Policy</a> &middot;
+        <a href="/terms">Terms of Use</a> &middot;
+        <a href="mailto:contact@naraprotocol.io">contact@naraprotocol.io</a>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>

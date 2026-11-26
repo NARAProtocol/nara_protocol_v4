@@ -219,7 +219,11 @@ test("failed verification and invalid payloads do not consume rate budget", asyn
   try {
     const res = await onRequestPost(makeContext({ method: "POST", body: GOOD, headers: GOOD_HEADERS, env }));
     assert.equal(res.status, 200, "a valid submission after 12 failures still succeeds");
-    assert.equal(kv.store.get("rl:203.0.113.7"), "1");
+    assert.equal(kv.store.has("rl:203.0.113.7"), false, "raw IP address must never be written to KV");
+    const rlKeys = [...kv.store.keys()].filter((k) => k.startsWith("rl:"));
+    assert.equal(rlKeys.length, 1);
+    assert.match(rlKeys[0], /^rl:[a-f0-9]{32}$/);
+    assert.equal(kv.store.get(rlKeys[0]), "1");
   } finally { restore(); }
 });
 
@@ -522,4 +526,69 @@ test("GET ?admin=1 enforces >=24-char token and rate limits brute force at 429; 
   }));
   assert.equal(throttledVerify.status, 429);
   assert.equal((await throttledVerify.json()).error, "rate_limited");
+});
+
+test("GDPR Art. 17 erasure: self-service delete (claimCode or operatorKey) and admin_delete remove entry cleanly while blocking impostors", async () => {
+  const restore = withTurnstile({ success: true });
+  try {
+    const kv = makeKV();
+    const env = {
+      NARA_LEADERBOARD_KV: kv,
+      TURNSTILE_SECRET_KEY: "s",
+      AWARD_CLAIM_SALT: "salt_gdpr_test",
+      AWARD_ADMIN_TOKEN: "valid_prod_admin_token_0123456789",
+    };
+
+    const post1 = await onRequestPost(makeContext({
+      method: "POST",
+      body: { ...GOOD, handle: "@erase_me", wallet: "0x2222222222222222222222222222222222222222", operatorKey: "secret_op_key_erase_1" },
+      headers: GOOD_HEADERS,
+      env,
+    }));
+    assert.equal(post1.status, 200);
+    const { claimCode } = await post1.json();
+
+    await onRequestPost(makeContext({
+      method: "POST",
+      body: { ...GOOD, handle: "@admin_erase", score: 30, operatorKey: "secret_op_key_erase_2" },
+      headers: GOOD_HEADERS,
+      env,
+      ip: "203.0.113.44",
+    }));
+
+    // Unauthorized delete rejected with 403
+    const badDel = await onRequestPost(makeContext({
+      method: "POST",
+      body: { action: "delete", handle: "@erase_me", claimCode: "NARA-DEAD-BEEF" },
+      headers: GOOD_HEADERS,
+      env,
+    }));
+    assert.equal(badDel.status, 403);
+
+    // Self-service delete with valid Award Claim Pass removes entry & wallet from KV
+    const okDel = await onRequestPost(makeContext({
+      method: "POST",
+      body: { action: "delete", handle: "@erase_me", claimCode },
+      headers: GOOD_HEADERS,
+      env,
+    }));
+    assert.equal(okDel.status, 200);
+    const delBody = await okDel.json();
+    assert.equal(delBody.deleted, true);
+    assert.equal(delBody.board.length, 1);
+    assert.equal(delBody.board[0].handle, "@admin_erase");
+
+    // Admin erasure removes remaining entry
+    const adminDel = await onRequestPost(makeContext({
+      method: "POST",
+      body: { action: "admin_delete", handle: "@admin_erase" },
+      headers: { "Content-Type": "application/json", Authorization: "Bearer valid_prod_admin_token_0123456789" },
+      env,
+    }));
+    assert.equal(adminDel.status, 200);
+    assert.equal((await adminDel.json()).deleted, true);
+    assert.deepEqual(await (await onRequestGet(makeContext({ env }))).json(), []);
+  } finally {
+    restore();
+  }
 });

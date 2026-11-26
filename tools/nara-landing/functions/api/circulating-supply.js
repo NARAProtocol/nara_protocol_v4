@@ -13,25 +13,29 @@ import {
   jsonResponse,
   methodNotAllowedResponse,
   optionsResponse,
+  withEdgeCache,
 } from "../_shared/supplyCore.js";
 
-export async function onRequestGet({ request, env }) {
-  const url = new URL(request.url);
-  const mode = url.searchParams.get("mode");
-  const format = url.searchParams.get("format");
+export async function onRequestGet(ctx) {
+  const { request, env } = ctx;
+  return withEdgeCache(ctx, "https://naraprotocol.io/api/circulating-supply", async () => {
+    const url = new URL(request.url);
+    const mode = url.searchParams.get("mode");
+    const format = url.searchParams.get("format");
 
-  try {
-    const snap = await readSupplySnapshot(env);
-    if (format === "json") {
-      return jsonResponse(buildPublicSupplyReport(snap), 200);
+    try {
+      const snap = await readSupplySnapshot(env);
+      if (format === "json") {
+        return jsonResponse(buildPublicSupplyReport(snap), 200);
+      }
+      const value = mode === "protocol-only" ? snap.protocolOnlyCirculatingSupply : snap.circulatingSupply;
+      return textResponse(value, 200);
+    } catch {
+      return format === "json"
+        ? jsonResponse({ error: "upstream_rpc_unavailable" }, 503)
+        : textResponse("upstream_rpc_unavailable", 503);
     }
-    const value = mode === "protocol-only" ? snap.protocolOnlyCirculatingSupply : snap.circulatingSupply;
-    return textResponse(value, 200);
-  } catch {
-    return format === "json"
-      ? jsonResponse({ error: "upstream_rpc_unavailable" }, 503)
-      : textResponse("upstream_rpc_unavailable", 503);
-  }
+  });
 }
 
 export async function onRequestHead(ctx) {

@@ -50,6 +50,7 @@ function encodeAggregateReply(blockNumber, returnDataHexList) {
 }
 
 function buildPositionWords({
+  owner = 1n,
   maturity,
   duration,
   principalWei,
@@ -57,7 +58,7 @@ function buildPositionWords({
   withdrawn = false,
 }) {
   const words = new Array(16).fill(0n);
-  words[0] = 1n; // generationOwner placeholder
+  words[0] = typeof owner === "string" ? BigInt(owner) : BigInt(owner);
   words[1] = 1n; // generation
   words[4] = BigInt(maturity);
   words[5] = BigInt(maturity);
@@ -106,7 +107,9 @@ function makeMockRpcFetch({
   principalLedgerWei = 2n * WAD,
   slipVaultWei = 2_438656000000000000n,
   slipVaultV33Wei = 0n,
-  treasurySafeWei = 209666000000000000n,
+  treasurySafeWei = 0n,
+  rewardIngressWei = 0n,
+  shieldClaimableNaraWei = 0n,
   sqrtPriceX96 = getSqrtPriceX96AtTick(190500),
   rangeOrders = [],
   positions = [
@@ -125,13 +128,15 @@ function makeMockRpcFetch({
     if (failFirstRpc && String(url).includes("broken-rpc")) {
       return new Response("upstream error", { status: 502 });
     }
-    // First multicall has 14 base calls; second multicall fetches positionHead(1..N) + getOrder(...)
+    // First multicall has 16 base calls; second multicall fetches positionHead(1..N) + getOrder(...)
     const isBaseBatch = (failFirstRpc ? callIndex - 1 : callIndex) === 1;
     if (isBaseBatch) {
       const clockWords = [1n, 1793611800n, wallEpoch, wallEpoch - 2n, 2n, 1794240900n];
       const pAccWords = [1n, wallEpoch, principalLedgerWei, principalLedgerWei, 0n, 0n, 0n, BigInt(positions.length)];
       const slot0Words = [BigInt(sqrtPriceX96), 190500n, 0n, 0n];
       const orderIds = rangeOrders.map((_, i) => i + 1);
+      const shieldWords = new Array(18).fill(0n);
+      shieldWords[15] = BigInt(shieldClaimableNaraWei);
       const reply = encodeAggregateReply(blockNumber, [
         encodeWords([totalSupplyWei]),
         encodeWords([emissionReserveWei]),
@@ -147,6 +152,8 @@ function makeMockRpcFetch({
         encodeWords(pAccWords),
         encodeWords(slot0Words),
         encodeActiveOrderIdsReply(orderIds),
+        encodeWords([rewardIngressWei]),
+        encodeWords(shieldWords),
       ]);
       return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: reply }), { status: 200 });
     }
@@ -187,7 +194,7 @@ test("encodeMulticallAggregate and decodeMulticallAggregate round-trip cleanly",
   assert.equal(BigInt(decoded.results[1]), 949_928n * WAD);
 });
 
-test("classifyPositionHead keeps 1-day commitments and near-expiry commitments circulating, excludes >1d commitments", () => {
+test("classifyPositionHead keeps retail 1d and matured commitments circulating, keeps >1d locked until maturity, and always excludes Safe/Shield", () => {
   const wallEpoch = 700n;
 
   const oneDay = classifyPositionHead(
@@ -205,11 +212,32 @@ test("classifyPositionHead keeps 1-day commitments and near-expiry commitments c
   assert.equal(oneYear.lockedOverThreshold, true);
   assert.equal(oneYear.principal, 5n * WAD);
 
-  const expiringToday = classifyPositionHead(
+  // 24h before maturity: still locked on-chain (withdrawPrincipal reverts until wallEpoch >= maturity), so no fake 24h-early cliff!
+  const oneDayBeforeMaturity = classifyPositionHead(
     buildPositionWords({ maturity: wallEpoch + EPOCHS_PER_DAY, duration: 35040n, principalWei: 5n * WAD }),
     wallEpoch,
   );
-  assert.equal(expiringToday.lockedOverThreshold, false);
+  assert.equal(oneDayBeforeMaturity.lockedOverThreshold, true);
+
+  // At maturity: becomes withdrawable -> circulating!
+  const maturedNow = classifyPositionHead(
+    buildPositionWords({ maturity: wallEpoch, duration: 35040n, principalWei: 5n * WAD }),
+    wallEpoch,
+  );
+  assert.equal(maturedNow.lockedOverThreshold, false);
+
+  // Treasury Safe & GenesisShield positions stay excluded even on 1-day or matured staging slices (CoinGecko sawtooth prevention)
+  const safeShortSlice = classifyPositionHead(
+    buildPositionWords({
+      owner: "0xe320C281c86079eA85f2Bc67864E873A61D551E3",
+      maturity: wallEpoch - 10n,
+      duration: EPOCHS_PER_DAY,
+      principalWei: 1000n * WAD,
+    }),
+    wallEpoch,
+  );
+  assert.equal(safeShortSlice.lockedOverThreshold, true);
+  assert.equal(safeShortSlice.isProtocolOrTreasuryOwner, true);
 
   const earlyExit = classifyPositionHead(
     buildPositionWords({

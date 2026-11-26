@@ -3,19 +3,23 @@
 //   /api/total-supply        (plain-text decimal number)
 //   /api/supply              (full JSON breakdown)
 //
-// Methodology (default mode):
+// Methodology (default mode, CoinGecko / CMC compliant):
 //   circulatingSupply = totalSupply
 //                     - balanceOf(NARAEmissionReserveV5)
 //                     - balanceOf(LegacyNARATreasuryRangeManagerV5)
 //                     - balanceOf(ActiveNARATreasuryRangeManagerV5)
 //                     - unbought NARA inside ActiveNARATreasuryRangeManagerV5 Uniswap v4 range orders
+//                     - balanceOf(TreasurySafeMultisig)
+//                     - balanceOf(NARARewardIngressV5)
+//                     - GenesisShieldVault (0x0) settled recycle-bound NARA inside NARARewardLedgerV5
 //                     - balanceOf(0x000000000000000000000000000000000000dEaD)
-//                     - sum(principal of active non-early-exitable commitments in NARAPrincipalLedgerV5
-//                           whose commitment duration > 1 day AND remaining time > 1 day)
+//                     - sum(principal of active positions in NARAPrincipalLedgerV5 owned by TreasurySafe /
+//                           GenesisShield OR non-early-exitable retail commitments with duration > 1 day
+//                           and wallEpoch < maturity)
 //
-// Short 1-day commitments (duration <= 96 epochs or <= 96 epochs remaining to maturity),
-// all unclaimed rewards in NARARewardLedgerV5, all redeemable payment slips in CryptoSlipVaultV32 (v32 + v33),
-// Treasury Safe multisig balances, market-making pool liquidity, and wallet balances remain in Circulating Supply.
+// Retail short 1-day commitments (duration <= 96 epochs), matured retail commitments (wallEpoch >= maturity),
+// external user unclaimed rewards in NARARewardLedgerV5, redeemable payment slips in CryptoSlipVaultV32 (v32 + v33),
+// market-making pool liquidity, and external wallet balances remain in Circulating Supply.
 
 export const CHAIN_ID = 8453;
 export const DECIMALS = 18n;
@@ -35,14 +39,22 @@ export const ADDRESSES = Object.freeze({
   epochEngine: "0xd93FbEbFb33FAc9288125074625D4750573B1a53",
   principalLedger: "0x7F866a9fbe41D54F0d9C35b6892fcf27Ea766DB2",
   rewardLedger: "0xC72671D9438388638547444524F6542b650C9264",
+  rewardIngress: "0x44130CC47b886D8488041F5eaE271477D1aFA909",
+  genesisShield: "0xe42aD8951f486f19E396Eb23bDE352BA92Dd2e56",
   slipVault: "0x38BF0321FA7489576978353a6a8da4A3e85C2F18",
   slipVaultV33: "0x3f80aa68Fb4834d6E119EE1cf932C14419Cf63EB",
   treasurySafe: "0xe320C281c86079eA85f2Bc67864E873A61D551E3",
 });
 
+const NON_CIRCULATING_POSITION_OWNERS = new Set([
+  ADDRESSES.treasurySafe.toLowerCase(),
+  ADDRESSES.genesisShield.toLowerCase(),
+]);
+
 export const DEFAULT_RPC_URLS = Object.freeze([
-  "https://base-rpc.publicnode.com",
+  "https://base.gateway.tenderly.co",
   "https://base.drpc.org",
+  "https://base-rpc.publicnode.com",
   "https://mainnet.base.org",
 ]);
 
@@ -55,6 +67,7 @@ const SEL_POSITION_HEAD = "9c82fd33"; // positionHead(uint256)
 const SEL_GET_SLOT0 = "c815641c"; // getSlot0(bytes32)
 const SEL_GET_ACTIVE_ORDER_IDS = "52fe5437"; // getActiveOrderIds(uint256,uint256)
 const SEL_GET_ORDER = "d09ef241"; // getOrder(uint256)
+const SEL_VAULT_STATUS = "24a8166e"; // NARAGenesisShieldVaultV5.vaultStatus()
 
 const POSITION_CHUNK_SIZE = 500;
 const MAX_POSITIONS_SCAN = 10000;
@@ -164,6 +177,40 @@ export function optionsResponse() {
       "Cache-Control": "public, max-age=86400",
     },
   });
+}
+
+/**
+ * Coalesces GET responses through Cloudflare's regional PoP edge cache (`caches.default`)
+ * while remaining a transparent no-op in Node.js unit tests where `globalThis.caches` is absent.
+ */
+export async function withEdgeCache(ctx, fallbackUrl, compute) {
+  const edgeCache =
+    typeof caches !== "undefined" && caches?.default ? caches.default : null;
+  const reqMethod = ctx?.request?.method ? String(ctx.request.method).toUpperCase() : "GET";
+  if (!edgeCache || reqMethod !== "GET") {
+    return compute();
+  }
+
+  const rawUrl = ctx?.request?.url || fallbackUrl;
+  const cacheKey = new Request(rawUrl, { method: "GET" });
+  try {
+    const hit = await edgeCache.match(cacheKey);
+    if (hit) return hit;
+  } catch {
+    // Proceed to origin compute if cache lookup fails
+  }
+
+  const res = await compute();
+  const cc = res?.headers?.get("Cache-Control") || "";
+  if (res && res.status === 200 && cc.includes("public")) {
+    const putPromise = edgeCache.put(cacheKey, res.clone()).catch(() => {});
+    if (typeof ctx?.waitUntil === "function") {
+      ctx.waitUntil(putPromise);
+    } else {
+      await putPromise;
+    }
+  }
+  return res;
 }
 
 function padWordHex(hexNoPrefix) {
@@ -369,6 +416,7 @@ async function multicallWithFallback(rpcUrls, calls, blockTag = "latest", fetchI
 //   [8] modelWeight, [9] rewardWeight, [10] earlyExitEnabled, [11] earlyExitBps,
 //   [12] penalty, [13] penaltyCapacityReserved, [14] withdrawn, [15] termsHash
 export function classifyPositionHead(words, wallEpoch, minLockEpochs = EPOCHS_PER_DAY) {
+  const ownerHex = "0x" + (words[0] & ((1n << 160n) - 1n)).toString(16).padStart(40, "0").toLowerCase();
   const maturity = words[4];
   const duration = words[6];
   const principal = words[7];
@@ -376,19 +424,35 @@ export function classifyPositionHead(words, wallEpoch, minLockEpochs = EPOCHS_PE
   const withdrawn = words[14] !== 0n;
 
   if (withdrawn || principal === 0n) {
-    return { active: false, lockedOverThreshold: false, principal: 0n, duration, maturity, earlyExitEnabled };
+    return {
+      active: false,
+      lockedOverThreshold: false,
+      isProtocolOrTreasuryOwner: false,
+      principal: 0n,
+      duration,
+      maturity,
+      earlyExitEnabled,
+      ownerHex,
+    };
   }
 
   const remainingEpochs = maturity > wallEpoch ? maturity - wallEpoch : 0n;
-  const lockedOverThreshold = !earlyExitEnabled && duration > minLockEpochs && remainingEpochs > minLockEpochs;
+  const isProtocolOrTreasuryOwner = NON_CIRCULATING_POSITION_OWNERS.has(ownerHex);
+  // Protocol/Treasury custody is never public circulating supply; retail >1d commitments remain locked
+  // until on-chain maturity (wallEpoch >= maturity, i.e. remainingEpochs === 0n), eliminating fake 24h-early cliffs.
+  const lockedOverThreshold =
+    isProtocolOrTreasuryOwner || (!earlyExitEnabled && duration > minLockEpochs && remainingEpochs > 0n);
+
   return {
     active: true,
     lockedOverThreshold,
+    isProtocolOrTreasuryOwner,
     principal,
     duration,
     maturity,
     remainingEpochs,
     earlyExitEnabled,
+    ownerHex,
   };
 }
 
@@ -410,6 +474,8 @@ export async function readSupplySnapshot(env = {}, { fetchImpl = globalThis.fetc
     { target: ADDRESSES.principalLedger, callData: "0x" + SEL_PRINCIPAL_ACCOUNTING },
     { target: ADDRESSES.uniV4StateView, callData: encodeGetSlot0(ADDRESSES.uniV4PoolId) },
     { target: ADDRESSES.activeRangeManager, callData: encodeGetActiveOrderIds(0, RANGE_ORDER_PAGE_SIZE) },
+    { target: ADDRESSES.naraToken, callData: encodeBalanceOf(ADDRESSES.rewardIngress) },
+    { target: ADDRESSES.genesisShield, callData: "0x" + SEL_VAULT_STATUS },
   ];
 
   const first = await multicallWithFallback(rpcUrls, baseCalls, "latest", fetchImpl);
@@ -427,6 +493,12 @@ export async function readSupplySnapshot(env = {}, { fetchImpl = globalThis.fetc
   const slipVaultV33Bal = decodeWords(r[8], 1)[0];
   const totalSlipVaultsBal = slipVaultV32Bal + slipVaultV33Bal;
   const treasurySafeBal = decodeWords(r[9], 1)[0];
+  const rewardIngressBal = r[14] && r[14].length >= 66 ? decodeWords(r[14], 1)[0] : 0n;
+  const shieldStatusWords = r[15] && r[15].length >= 2 + 18 * 64 ? decodeWords(r[15], 18) : null;
+  const rawShieldClaimableWei = shieldStatusWords ? shieldStatusWords[15] : 0n;
+  const shieldRecycleQueuedNaraWei =
+    rawShieldClaimableWei > rewardLedgerBal ? rewardLedgerBal : rawShieldClaimableWei;
+  const externalUnclaimedRewardsWei = rewardLedgerBal - shieldRecycleQueuedNaraWei;
 
   const clockWords = decodeWords(r[10], 6);
   const wallEpoch = clockWords[2];
@@ -548,7 +620,13 @@ export async function readSupplySnapshot(env = {}, { fetchImpl = globalThis.fetc
 
   const netTotalSupplyWei = rawTotalSupply > deadBurnBal ? rawTotalSupply - deadBurnBal : 0n;
   const protocolVaultsLockedWei =
-    emissionReserveBal + legacyRangeBal + activeRangeBal + activeRangeOrderNaraWei;
+    emissionReserveBal +
+    legacyRangeBal +
+    activeRangeBal +
+    activeRangeOrderNaraWei +
+    treasurySafeBal +
+    rewardIngressBal +
+    shieldRecycleQueuedNaraWei;
   const protocolAndBurnLockedWei = protocolVaultsLockedWei + deadBurnBal;
 
   const protocolOnlyCirculatingWei =
@@ -558,7 +636,7 @@ export async function readSupplySnapshot(env = {}, { fetchImpl = globalThis.fetc
   const circulatingSupplyWei = rawTotalSupply > totalExcludedWei ? rawTotalSupply - totalExcludedWei : 0n;
 
   const accountedCirculatingBuckets =
-    rewardLedgerBal + untradableShortOrResidualPrincipalWei + totalSlipVaultsBal + treasurySafeBal;
+    externalUnclaimedRewardsWei + untradableShortOrResidualPrincipalWei + totalSlipVaultsBal;
   const walletsAndPoolsFloatWei =
     circulatingSupplyWei > accountedCirculatingBuckets ? circulatingSupplyWei - accountedCirculatingBuckets : 0n;
 
@@ -590,6 +668,12 @@ export async function readSupplySnapshot(env = {}, { fetchImpl = globalThis.fetc
           activeOrders: allActiveOrderIds.length,
           balance: formatUnits18(activeRangeOrderNaraWei),
         },
+        treasurySafeMultisig: { address: ADDRESSES.treasurySafe, balance: formatUnits18(treasurySafeBal) },
+        rewardIngress: { address: ADDRESSES.rewardIngress, balance: formatUnits18(rewardIngressBal) },
+        genesisShieldQueuedRecycleRewards: {
+          address: ADDRESSES.genesisShield,
+          balance: formatUnits18(shieldRecycleQueuedNaraWei),
+        },
         deadBurn: { address: ADDRESSES.deadBurn, balance: formatUnits18(deadBurnBal) },
         subtotal: formatUnits18(protocolAndBurnLockedWei),
       },
@@ -603,7 +687,11 @@ export async function readSupplySnapshot(env = {}, { fetchImpl = globalThis.fetc
         circulatingPositionIds,
       },
       includedInCirculating: {
-        unclaimedRewardsInLedger: { address: ADDRESSES.rewardLedger, balance: formatUnits18(rewardLedgerBal) },
+        unclaimedRewardsInLedger: {
+          address: ADDRESSES.rewardLedger,
+          balance: formatUnits18(externalUnclaimedRewardsWei),
+          rawLedgerBalance: formatUnits18(rewardLedgerBal),
+        },
         shortOrMaturedCommitments: formatUnits18(untradableShortOrResidualPrincipalWei),
         activePaymentSlipsInVault: {
           address: ADDRESSES.slipVaultV33,
@@ -614,7 +702,6 @@ export async function readSupplySnapshot(env = {}, { fetchImpl = globalThis.fetc
           },
           note: "Redeemable payment slips have no maturity freeze and remain in circulating supply",
         },
-        treasurySafeMultisig: { address: ADDRESSES.treasurySafe, balance: formatUnits18(treasurySafeBal) },
         walletsAndPoolsFloat: formatUnits18(walletsAndPoolsFloatWei),
       },
     },

@@ -264,25 +264,37 @@ function normalizeIpKey(ip) {
   return trimmed;
 }
 
-async function bucketCount(kv, prefix, ip) {
-  const key = normalizeIpKey(ip);
-  if (!kv || !key) return 0;
-  return Number(await kv.get(`${prefix}:${key}`)) || 0;
+async function hashedIpBucketKey(prefix, ip, env) {
+  const normalized = normalizeIpKey(ip);
+  if (!normalized) return "";
+  const salt =
+    (typeof env?.AWARD_CLAIM_SALT === "string" && env.AWARD_CLAIM_SALT.trim()) ||
+    (typeof env?.TURNSTILE_SECRET_KEY === "string" && env.TURNSTILE_SECRET_KEY.trim()) ||
+    (typeof env?.AWARD_ADMIN_TOKEN === "string" && env.AWARD_ADMIN_TOKEN.trim()) ||
+    "nara-rl-default-v1";
+  const digest = await sha256Hex(`nara-ip-rl-v1:${salt}:${normalized}`);
+  return `${prefix}:${digest.slice(0, 32)}`;
 }
 
-async function bumpBucket(kv, prefix, ip, count) {
-  const key = normalizeIpKey(ip);
-  if (!kv || !key) return;
-  await kv.put(`${prefix}:${key}`, String(count + 1), { expirationTtl: RATE_LIMIT_WINDOW_SEC });
+async function bucketCount(kv, prefix, ip, env) {
+  const fullKey = await hashedIpBucketKey(prefix, ip, env);
+  if (!kv || !fullKey) return 0;
+  return Number(await kv.get(fullKey)) || 0;
 }
 
-async function rateLimitState(kv, ip) {
-  const count = await bucketCount(kv, "rl", ip);
+async function bumpBucket(kv, prefix, ip, count, env) {
+  const fullKey = await hashedIpBucketKey(prefix, ip, env);
+  if (!kv || !fullKey) return;
+  await kv.put(fullKey, String(count + 1), { expirationTtl: RATE_LIMIT_WINDOW_SEC });
+}
+
+async function rateLimitState(kv, ip, env) {
+  const count = await bucketCount(kv, "rl", ip, env);
   return { limited: count >= RATE_LIMIT_MAX, count };
 }
 
-async function consumeRateBudget(kv, ip, count) {
-  await bumpBucket(kv, "rl", ip, count);
+async function consumeRateBudget(kv, ip, count, env) {
+  await bumpBucket(kv, "rl", ip, count, env);
 }
 
 export async function onRequestOptions() {
@@ -298,7 +310,7 @@ export async function onRequestGet(context) {
     // 1. Public Claim Pass verification: GET /api/leaderboard?verify=1&handle=@...&claim=NARA-XXXX-XXXX
     if (url.searchParams.get("verify") === "1") {
       const ip = request.headers.get("CF-Connecting-IP") || "";
-      const vCount = await bucketCount(kv, "rl_verify", ip);
+      const vCount = await bucketCount(kv, "rl_verify", ip, env);
       if (vCount >= VERIFY_FAIL_MAX) {
         return json({ ok: false, valid: false, error: "rate_limited" }, 429, { "Retry-After": String(RATE_LIMIT_WINDOW_SEC) });
       }
@@ -311,13 +323,13 @@ export async function onRequestGet(context) {
       const ranked = rankBoard(cleanBoard(stored));
       const entry = ranked.find((e) => e.handle.toLowerCase() === handle.toLowerCase());
       if (!entry || !entry.claimHash) {
-        await bumpBucket(kv, "rl_verify", ip, vCount);
+        await bumpBucket(kv, "rl_verify", ip, vCount, env);
         return json({ ok: true, valid: false }, 200);
       }
       const expectedHash = await sha256Hex(`nara-claim-verify-v1:${handle.toLowerCase()}:${claimRaw}`);
       const valid = constantTimeEqualHex(expectedHash, entry.claimHash);
       if (!valid) {
-        await bumpBucket(kv, "rl_verify", ip, vCount);
+        await bumpBucket(kv, "rl_verify", ip, vCount, env);
         return json({ ok: true, valid: false }, 200);
       }
       return json({
@@ -342,7 +354,7 @@ export async function onRequestGet(context) {
         return json({ error: "admin_disabled" }, 503);
       }
       const ip = request.headers.get("CF-Connecting-IP") || "";
-      const aCount = await bucketCount(kv, "rl_admin", ip);
+      const aCount = await bucketCount(kv, "rl_admin", ip, env);
       if (aCount >= ADMIN_FAIL_MAX) {
         return json({ error: "rate_limited" }, 429, { "Retry-After": String(RATE_LIMIT_WINDOW_SEC) });
       }
@@ -350,12 +362,12 @@ export async function onRequestGet(context) {
       const match = auth.match(/^Bearer\s+(.+)$/i);
       const provided = match ? match[1].trim() : "";
       if (!provided) {
-        await bumpBucket(kv, "rl_admin", ip, aCount);
+        await bumpBucket(kv, "rl_admin", ip, aCount, env);
         return json({ error: "forbidden" }, 403);
       }
       const [aHash, bHash] = await Promise.all([sha256Hex(provided), sha256Hex(adminSecret)]);
       if (!constantTimeEqualHex(aHash, bHash)) {
-        await bumpBucket(kv, "rl_admin", ip, aCount);
+        await bumpBucket(kv, "rl_admin", ip, aCount, env);
         return json({ error: "forbidden" }, 403);
       }
       const stored = kv ? await kv.get(BOARD_KEY, "json") : [];
@@ -379,10 +391,22 @@ export async function onRequestGet(context) {
       }, 200);
     }
 
-    // 3. Standard Public Leaderboard
+    // 3. Standard Public Leaderboard (edge-cached per PoP when caches.default is available)
     if (kv) {
+      const edgeCache = typeof caches !== "undefined" && caches?.default ? caches.default : null;
+      const cacheKey = edgeCache ? new Request(url.toString(), { method: "GET" }) : null;
+      if (edgeCache && cacheKey) {
+        const hit = await edgeCache.match(cacheKey).catch(() => null);
+        if (hit) return hit;
+      }
       const stored = await kv.get(BOARD_KEY, "json");
-      return json(publicBoard(rankBoard(cleanBoard(stored))), 200, GET_CACHE);
+      const res = json(publicBoard(rankBoard(cleanBoard(stored))), 200, GET_CACHE);
+      if (edgeCache && cacheKey) {
+        const putP = edgeCache.put(cacheKey, res.clone()).catch(() => {});
+        if (typeof context?.waitUntil === "function") context.waitUntil(putP);
+        else await putP;
+      }
+      return res;
     }
   } catch (err) {
     console.warn("leaderboard GET error", err);
@@ -399,11 +423,7 @@ export async function onRequestHead(context) {
 export async function onRequestPost(context) {
   const { request, env } = context;
   try {
-    if (!sameOrigin(request)) return json({ error: "forbidden_origin" }, 403);
-
-    const secret = typeof env?.TURNSTILE_SECRET_KEY === "string" ? env.TURNSTILE_SECRET_KEY.trim() : "";
-    if (!secret) return json({ error: "board_disabled" }, 503);
-
+    const url = new URL(request.url);
     const contentType = request.headers.get("Content-Type") || "";
     if (!contentType.toLowerCase().startsWith("application/json")) return json({ error: "unsupported_media_type" }, 415);
 
@@ -423,7 +443,100 @@ export async function onRequestPost(context) {
 
     const ip = request.headers.get("CF-Connecting-IP") || "";
     const kv = getKV(env);
-    const rate = await rateLimitState(kv, ip);
+
+    // GDPR Art. 17 Erasure — Path A: Admin / Privacy Officer Deletion (`Authorization: Bearer <AWARD_ADMIN_TOKEN>`)
+    if (body.action === "admin_delete") {
+      const adminSecret = typeof env?.AWARD_ADMIN_TOKEN === "string" ? env.AWARD_ADMIN_TOKEN.trim() : "";
+      if (adminSecret.length < 24) return json({ error: "admin_disabled" }, 503);
+      const aCount = await bucketCount(kv, "rl_admin", ip, env);
+      if (aCount >= ADMIN_FAIL_MAX) {
+        return json({ error: "rate_limited" }, 429, { "Retry-After": String(RATE_LIMIT_WINDOW_SEC) });
+      }
+      const auth = request.headers.get("Authorization") || "";
+      const match = auth.match(/^Bearer\s+(.+)$/i);
+      const provided = match ? match[1].trim() : "";
+      if (!provided) {
+        await bumpBucket(kv, "rl_admin", ip, aCount, env);
+        return json({ error: "forbidden" }, 403);
+      }
+      const [aHash, bHash] = await Promise.all([sha256Hex(provided), sha256Hex(adminSecret)]);
+      if (!constantTimeEqualHex(aHash, bHash)) {
+        await bumpBucket(kv, "rl_admin", ip, aCount, env);
+        return json({ error: "forbidden" }, 403);
+      }
+      const targetHandle = normalizeHandle(body.handle);
+      if (!targetHandle || targetHandle.length < 2) return json({ error: "invalid_handle" }, 400);
+      if (!kv) return json({ ok: true, deleted: false, count: 0 }, 200);
+      const list = cleanBoard(await kv.get(BOARD_KEY, "json"));
+      const next = list.filter((e) => e.handle.toLowerCase() !== targetHandle.toLowerCase());
+      const deleted = next.length !== list.length;
+      const ranked = rankBoard(next);
+      if (deleted) {
+        await kv.put(BOARD_KEY, JSON.stringify(ranked));
+        const edgeCache = typeof caches !== "undefined" && caches?.default ? caches.default : null;
+        if (edgeCache) {
+          const boardUrl = new URL("/api/leaderboard", url.origin).toString();
+          const delP = edgeCache.delete(new Request(boardUrl, { method: "GET" })).catch(() => {});
+          if (typeof context?.waitUntil === "function") context.waitUntil(delP);
+          else await delP;
+        }
+      }
+      return json({ ok: true, deleted, count: ranked.length }, 200);
+    }
+
+    if (!sameOrigin(request)) return json({ error: "forbidden_origin" }, 403);
+
+    // GDPR Art. 17 Erasure — Path B: User Self-Service Deletion (verified via operatorKey or Award Claim Pass)
+    if (body.action === "delete") {
+      const vCount = await bucketCount(kv, "rl_verify", ip, env);
+      if (vCount >= VERIFY_FAIL_MAX) {
+        return json({ error: "rate_limited" }, 429, { "Retry-After": String(RATE_LIMIT_WINDOW_SEC) });
+      }
+      const targetHandle = normalizeHandle(body.handle);
+      if (!targetHandle || targetHandle.length < 2) return json({ error: "invalid_handle" }, 400);
+      if (!kv) return json({ ok: true, deleted: false, board: [] }, 200);
+
+      const list = cleanBoard(await kv.get(BOARD_KEY, "json"));
+      const idx = list.findIndex((e) => e.handle.toLowerCase() === targetHandle.toLowerCase());
+      if (idx === -1) {
+        await bumpBucket(kv, "rl_verify", ip, vCount, env);
+        return json({ error: "forbidden" }, 403);
+      }
+      const entry = list[idx];
+      const opKey = normalizeOperatorKey(body.operatorKey);
+      const claimRaw = typeof body.claimCode === "string" ? body.claimCode.trim().toUpperCase() : "";
+
+      let authorized = false;
+      if (opKey && entry.keyHash) {
+        const expectedOpHash = await sha256Hex(`nara-op-key-v1:${targetHandle.toLowerCase()}:${opKey}`);
+        if (constantTimeEqualHex(expectedOpHash, entry.keyHash)) authorized = true;
+      }
+      if (!authorized && CLAIM_CODE_RE.test(claimRaw) && entry.claimHash) {
+        const expectedClaimHash = await sha256Hex(`nara-claim-verify-v1:${targetHandle.toLowerCase()}:${claimRaw}`);
+        if (constantTimeEqualHex(expectedClaimHash, entry.claimHash)) authorized = true;
+      }
+      if (!authorized) {
+        await bumpBucket(kv, "rl_verify", ip, vCount, env);
+        return json({ error: "forbidden" }, 403);
+      }
+
+      list.splice(idx, 1);
+      const ranked = rankBoard(list);
+      await kv.put(BOARD_KEY, JSON.stringify(ranked));
+      const edgeCache = typeof caches !== "undefined" && caches?.default ? caches.default : null;
+      if (edgeCache) {
+        const boardUrl = new URL("/api/leaderboard", url.origin).toString();
+        const delP = edgeCache.delete(new Request(boardUrl, { method: "GET" })).catch(() => {});
+        if (typeof context?.waitUntil === "function") context.waitUntil(delP);
+        else await delP;
+      }
+      return json({ ok: true, deleted: true, handle: entry.handle, board: publicBoard(ranked) }, 200);
+    }
+
+    const secret = typeof env?.TURNSTILE_SECRET_KEY === "string" ? env.TURNSTILE_SECRET_KEY.trim() : "";
+    if (!secret) return json({ error: "board_disabled" }, 503);
+
+    const rate = await rateLimitState(kv, ip, env);
     if (rate.limited) return json({ error: "rate_limited" }, 429, { "Retry-After": String(RATE_LIMIT_WINDOW_SEC) });
 
     // Validate the cheap fields before spending a siteverify call.
@@ -493,7 +606,7 @@ export async function onRequestPost(context) {
       }
     }
 
-    await consumeRateBudget(kv, ip, rate.count);
+    await consumeRateBudget(kv, ip, rate.count, env);
 
     let mutated = false;
     if (idx !== -1) {
@@ -536,6 +649,13 @@ export async function onRequestPost(context) {
     const ranked = rankBoard(list);
     if (mutated) {
       await kv.put(BOARD_KEY, JSON.stringify(ranked));
+      const edgeCache = typeof caches !== "undefined" && caches?.default ? caches.default : null;
+      if (edgeCache) {
+        const boardUrl = new URL("/api/leaderboard", url.origin).toString();
+        const delP = edgeCache.delete(new Request(boardUrl, { method: "GET" })).catch(() => {});
+        if (typeof context?.waitUntil === "function") context.waitUntil(delP);
+        else await delP;
+      }
     }
     return json({
       ok: true,
