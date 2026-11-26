@@ -11,11 +11,11 @@ updates:
       npm-development:
         dependency-type: development
     ignore:
-      # Hardhat >=3.4 requires undici v7 (conflicts with pinned undici 6.28.0 override)
+      # Hardhat >=3.4 and matching plugin minors require undici v7 / definePlugin (conflicts with pinned undici 6.28.0 override)
       - dependency-name: "hardhat"
         update-types: ["version-update:semver-minor", "version-update:semver-major"]
       - dependency-name: "@nomicfoundation/hardhat-*"
-        update-types: ["version-update:semver-major"]
+        update-types: ["version-update:semver-minor", "version-update:semver-major"]
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
       - dependency-name: "mocha"
