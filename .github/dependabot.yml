@@ -10,9 +10,27 @@ updates:
         dependency-type: production
       npm-development:
         dependency-type: development
+    ignore:
+      # Hardhat >=3.4 requires undici v7 (conflicts with pinned undici 6.28.0 override)
+      - dependency-name: "hardhat"
+        update-types: ["version-update:semver-minor", "version-update:semver-major"]
+      - dependency-name: "@nomicfoundation/hardhat-*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "mocha"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "dotenv"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    groups:
+      codeql-action:
+        patterns:
+          - "github/codeql-action*"
